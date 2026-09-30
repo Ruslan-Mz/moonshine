@@ -10,7 +10,7 @@ Ports & adapters (hexagonal). The domain and the UI never know which tool the da
                                 │ view models / commands
 ┌───────────────────────────────▼──────────────────────────────────────┐
 │ MoonShineCore  (pure Swift package, no UI imports, tests on Linux)   │
-│  Domain:   Line · Goal · Artifact · Project · Milestone · Task ·      │
+│  Domain:   Line · Goal · Artifact · Project · Milestone · TaskItem ·  │
 │            Plan · Step · EffortLevels · Scenario · Capacity ·         │
 │            TimeEntry · Measurement · ForecastSnapshot · NoteRef ·     │
 │            Horizon · ExternalRef                                      │
@@ -38,7 +38,7 @@ Ports & adapters (hexagonal). The domain and the UI never know which tool the da
 | `Line`              | id, name, emoji, block, state (`active/maintenance/paused`), budget h/week                                                      | Obsidian budget note frontmatter                          |
 | `Artifact` / `Goal` | title, horizon, target period, parent, line, status                                                                             | Obsidian notes (year artifacts, quarter focus)            |
 | `Project`           | title, line, artifact?, milestones, status                                                                                      | OmniFocus projects (mapped by tag/folder)                 |
-| `Task`              | title, project?, line?, planned/defer/due, estimate, status, completedAt                                                        | OmniFocus tasks                                           |
+| `TaskItem`          | title, project?, line?, planned/defer/due, estimate, status, completedAt                                                        | OmniFocus tasks                                           |
 | `Plan`              | project, steps (DAG), template?                                                                                                 | MoonShine native                                          |
 | `Step`              | criterion (`effort`/`sessions`/`quantity`/`metric`/`checkpoint`), 3-point estimate, prerequisites, minDuration, maxRate, status | MoonShine native (may link to an OmniFocus task)          |
 | `EffortLevels`      | project, min / normal / max (h/week or sessions/week), unit                                                                     | native; initial normal from vault budget                  |

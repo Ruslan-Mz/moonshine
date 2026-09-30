@@ -1,0 +1,140 @@
+import Foundation
+import MoonShineCore
+import MoonShineFixtures
+import Testing
+
+@testable import OmniFocusAdapter
+
+/// `fixtures/omnifocus.snapshot.json` at the repository root (synthetic data).
+let fixtureURL = URL(filePath: #filePath)
+  .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+  .deletingLastPathComponent().appending(path: "fixtures/omnifocus.snapshot.json")
+
+func fixtureDocument() throws -> SnapshotDocument {
+  try JSONDecoder().decode(SnapshotDocument.self, from: Data(contentsOf: fixtureURL))
+}
+
+@Suite struct SnapshotDecodingTests {
+  @Test func decodesTheFixture() throws {
+    let document = try fixtureDocument()
+    #expect(document.schemaVersion == 1)
+    #expect(document.folders.count == 12)
+    #expect(document.tags.count == 23)
+    #expect(document.projects.count == 13)
+    #expect(document.tasks.count == 163)
+  }
+
+  @Test func fixtureSatisfiesEveryContractInvariant() throws {
+    #expect(SnapshotValidator.violations(in: try fixtureDocument()) == [])
+  }
+
+  @Test func noTaskOrProjectCarriesNoteText() throws {
+    let json = try #require(
+      try JSONSerialization.jsonObject(with: Data(contentsOf: fixtureURL)) as? [String: Any])
+    for kind in ["tasks", "projects"] {
+      let items = try #require(json[kind] as? [[String: Any]])
+      #expect(items.allSatisfy { $0["note"] == nil && $0["noteText"] == nil })
+    }
+  }
+
+  @Test func nonStringNameIsRejected() {
+    let json =
+      #"{"id":"x","name":1,"projectId":null,"parentTaskId":null,"tagIds":[],"status":"available","flagged":false,"effectiveFlagged":false,"added":"2026-07-06T10:00:00+03:00","modified":"2026-07-06T10:00:00+03:00","noteLength":0}"#
+    #expect(throws: DecodingError.self) {
+      try JSONDecoder().decode(SnapshotDocument.Task.self, from: Data(json.utf8))
+    }
+  }
+
+  @Test func validatorReportsBrokenDocuments() throws {
+    var document = try fixtureDocument()
+    let index = try #require(document.tasks.firstIndex { $0.status == "completed" })
+    document.tasks[index].completionDate = nil
+    document.tasks[index].projectId = "prj-missing"
+    document.tasks[index].modified = "2026-09-17T11:00:00"
+    let violations = SnapshotValidator.violations(in: document)
+    let id = document.tasks[index].id
+    #expect(violations.contains("task \(id): projectId prj-missing does not resolve"))
+    #expect(violations.contains("task \(id): completed without completionDate"))
+    #expect(violations.contains("task \(id): date without offset 2026-09-17T11:00:00"))
+  }
+
+  @Test func completionBeforeTheWindowIsAViolation() throws {
+    var document = try fixtureDocument()
+    let index = try #require(document.tasks.firstIndex { $0.status == "completed" })
+    document.tasks[index].completionDate = "2026-07-05T23:59:00+03:00"
+    #expect(
+      SnapshotValidator.violations(in: document).contains(
+        "task \(document.tasks[index].id): completed before the window"))
+  }
+}
+
+@Suite struct SnapshotMapperTests {
+  let source: TaskSourceSnapshot
+
+  init() throws {
+    source = try SnapshotMapper.map(try fixtureDocument())
+  }
+
+  @Test func folderPathStartsAtTheTopLevel() throws {
+    let project = try #require(source.projects.first { $0.externalId == "prj-0046" })
+    #expect(project.folderPath == ["Work", "Clients", "Client North"])
+    #expect(project.status == .active)
+  }
+
+  @Test func datesKeepTheirInstantAndEffectiveValuesAreUsed() throws {
+    let task = try #require(source.tasks.first { $0.externalId == "tsk-0167" })
+    #expect(task.dueAt == Date(timeIntervalSince1970: 1_790_780_400))  // 2026-09-30T18:00+03:00
+    #expect(task.flagged)
+    #expect(source.timeZone.identifier == "Europe/Moscow")
+  }
+
+  @Test func repeatOfIsCarriedThrough() throws {
+    let task = try #require(source.tasks.first { $0.externalId == "tsk-0115.0" })
+    #expect(task.repeatOfExternalId == "tsk-0115")
+    #expect(task.status == .completed)
+    #expect(task.completedAt != nil)
+  }
+}
+
+@Suite struct FixtureImportTests {
+  func importFixture() async throws -> Workspace {
+    let service = ImportService(
+      tasks: SnapshotFileTaskProvider(url: fixtureURL), notes: DemoVault(), store: InMemoryStore())
+    return try await service.run(now: Date(timeIntervalSince1970: 1_790_791_200))
+  }
+
+  func lineKey(_ assignment: LineAssignment, in workspace: Workspace) -> String {
+    guard case .line(let id) = assignment else { return "life-ops" }
+    return workspace.lines.first { $0.id == id }?.key.rawValue ?? "?"
+  }
+
+  @Test func everyProjectMapsToTheExpectedLine() async throws {
+    let workspace = try await importFixture()
+    let mapping = Dictionary(
+      uniqueKeysWithValues: workspace.projects.map { ($0.title, lineKey($0.line, in: workspace)) })
+    #expect(
+      mapping == [
+        "Partita — first movement": "violin", "Violin technique": "violin",
+        "Piano upkeep": "piano", "Brush lettering basics": "calligraphy",
+        "Italiano B1": "italian", "Linear algebra course": "math",
+        "Задачник по вероятности": "math", "Pull-up progression": "calisthenics",
+        "Paper draft on spaced repetition": "research", "Reading list — methods": "research",
+        "Client North — mobile release": "work", "Work ops": "work", "Household": "life-ops",
+      ])
+    #expect(workspace.issues == [])
+  }
+
+  @Test func inboxTasksGoToLifeOps() async throws {
+    let workspace = try await importFixture()
+    let inbox = workspace.tasks.filter { $0.projectID == nil }
+    #expect(inbox.count == 5)
+    #expect(inbox.allSatisfy { $0.line == .lifeOps })
+  }
+
+  @Test func rhythmAndProgressAreSeparable() async throws {
+    let workspace = try await importFixture()
+    let completed = workspace.tasks.filter { $0.status == .completed }
+    #expect(completed.count == 98)
+    #expect(completed.filter(\.isOccurrence).count == 32)
+  }
+}

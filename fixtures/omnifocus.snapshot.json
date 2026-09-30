@@ -423,7 +423,7 @@
  "tasks": [
   {
    "id": "tsk-0049",
-   "name": 1,
+   "name": "Partita bars 1",
    "projectId": "prj-0036",
    "parentTaskId": null,
    "tagIds": [
@@ -448,7 +448,7 @@
   },
   {
    "id": "tsk-0050",
-   "name": 2,
+   "name": "Partita bars 2",
    "projectId": "prj-0036",
    "parentTaskId": null,
    "tagIds": [
@@ -472,7 +472,7 @@
   },
   {
    "id": "tsk-0051",
-   "name": 1,
+   "name": "Partita bars 3",
    "projectId": "prj-0036",
    "parentTaskId": null,
    "tagIds": [],
@@ -494,7 +494,7 @@
   },
   {
    "id": "tsk-0052",
-   "name": 0,
+   "name": "Partita bars 4",
    "projectId": "prj-0036",
    "parentTaskId": null,
    "tagIds": [
@@ -519,7 +519,7 @@
   },
   {
    "id": "tsk-0053",
-   "name": 1,
+   "name": "Partita bars 5",
    "projectId": "prj-0036",
    "parentTaskId": null,
    "tagIds": [
@@ -544,7 +544,7 @@
   },
   {
    "id": "tsk-0054",
-   "name": 1,
+   "name": "Partita bars 6",
    "projectId": "prj-0036",
    "parentTaskId": null,
    "tagIds": [
@@ -568,7 +568,7 @@
   },
   {
    "id": "tsk-0055",
-   "name": 0,
+   "name": "Partita bars 7",
    "projectId": "prj-0036",
    "parentTaskId": null,
    "tagIds": [
@@ -593,7 +593,7 @@
   },
   {
    "id": "tsk-0056",
-   "name": 1,
+   "name": "Partita bars 8",
    "projectId": "prj-0036",
    "parentTaskId": null,
    "tagIds": [
@@ -617,7 +617,7 @@
   },
   {
    "id": "tsk-0057",
-   "name": 1,
+   "name": "Partita bars 9",
    "projectId": "prj-0036",
    "parentTaskId": null,
    "tagIds": [],
@@ -639,7 +639,7 @@
   },
   {
    "id": "tsk-0058",
-   "name": 1,
+   "name": "Partita bars 10",
    "projectId": "prj-0036",
    "parentTaskId": null,
    "tagIds": [
@@ -663,7 +663,7 @@
   },
   {
    "id": "tsk-0059",
-   "name": 0,
+   "name": "Partita bars 11",
    "projectId": "prj-0036",
    "parentTaskId": null,
    "tagIds": [
@@ -688,7 +688,7 @@
   },
   {
    "id": "tsk-0060",
-   "name": 0,
+   "name": "Technique drill 1",
    "projectId": "prj-0037",
    "parentTaskId": null,
    "tagIds": [
@@ -712,7 +712,7 @@
   },
   {
    "id": "tsk-0061",
-   "name": 0,
+   "name": "Technique drill 2",
    "projectId": "prj-0037",
    "parentTaskId": null,
    "tagIds": [
@@ -737,7 +737,7 @@
   },
   {
    "id": "tsk-0062",
-   "name": 0,
+   "name": "Technique drill 3",
    "projectId": "prj-0037",
    "parentTaskId": null,
    "tagIds": [
@@ -761,7 +761,7 @@
   },
   {
    "id": "tsk-0063",
-   "name": 0,
+   "name": "Technique drill 4",
    "projectId": "prj-0037",
    "parentTaskId": null,
    "tagIds": [
@@ -785,7 +785,7 @@
   },
   {
    "id": "tsk-0064",
-   "name": 0,
+   "name": "Piano piece 1",
    "projectId": "prj-0038",
    "parentTaskId": null,
    "tagIds": [],
@@ -807,7 +807,7 @@
   },
   {
    "id": "tsk-0065",
-   "name": 0,
+   "name": "Piano piece 2",
    "projectId": "prj-0038",
    "parentTaskId": null,
    "tagIds": [],
@@ -829,7 +829,7 @@
   },
   {
    "id": "tsk-0066",
-   "name": 0,
+   "name": "Piano piece 3",
    "projectId": "prj-0038",
    "parentTaskId": null,
    "tagIds": [
@@ -853,7 +853,7 @@
   },
   {
    "id": "tsk-0067",
-   "name": 0,
+   "name": "Piano piece 4",
    "projectId": "prj-0038",
    "parentTaskId": null,
    "tagIds": [],
@@ -875,7 +875,7 @@
   },
   {
    "id": "tsk-0068",
-   "name": 0,
+   "name": "Piano piece 5",
    "projectId": "prj-0038",
    "parentTaskId": null,
    "tagIds": [
@@ -925,7 +925,7 @@
   },
   {
    "id": "tsk-0070",
-   "name": 1,
+   "name": "Italian lesson 1",
    "projectId": "prj-0040",
    "parentTaskId": null,
    "tagIds": [
@@ -950,7 +950,7 @@
   },
   {
    "id": "tsk-0071",
-   "name": 1,
+   "name": "Italian lesson 2",
    "projectId": "prj-0040",
    "parentTaskId": null,
    "tagIds": [],
@@ -972,7 +972,7 @@
   },
   {
    "id": "tsk-0072",
-   "name": 1,
+   "name": "Italian lesson 3",
    "projectId": "prj-0040",
    "parentTaskId": null,
    "tagIds": [],
@@ -994,7 +994,7 @@
   },
   {
    "id": "tsk-0073",
-   "name": 1,
+   "name": "Italian lesson 4",
    "projectId": "prj-0040",
    "parentTaskId": null,
    "tagIds": [],
@@ -1016,7 +1016,7 @@
   },
   {
    "id": "tsk-0074",
-   "name": 0,
+   "name": "Italian lesson 5",
    "projectId": "prj-0040",
    "parentTaskId": null,
    "tagIds": [
@@ -1041,7 +1041,7 @@
   },
   {
    "id": "tsk-0075",
-   "name": 1,
+   "name": "Italian lesson 6",
    "projectId": "prj-0040",
    "parentTaskId": null,
    "tagIds": [],
@@ -1063,7 +1063,7 @@
   },
   {
    "id": "tsk-0076",
-   "name": 0,
+   "name": "Italian lesson 7",
    "projectId": "prj-0040",
    "parentTaskId": null,
    "tagIds": [],
@@ -1085,7 +1085,7 @@
   },
   {
    "id": "tsk-0077",
-   "name": 0,
+   "name": "Italian lesson 8",
    "projectId": "prj-0040",
    "parentTaskId": null,
    "tagIds": [],
@@ -1344,7 +1344,7 @@
   },
   {
    "id": "tsk-0088",
-   "name": 0,
+   "name": "Paper section 1",
    "projectId": "prj-0044",
    "parentTaskId": null,
    "tagIds": [
@@ -1369,7 +1369,7 @@
   },
   {
    "id": "tsk-0089",
-   "name": 1,
+   "name": "Paper section 2",
    "projectId": "prj-0044",
    "parentTaskId": null,
    "tagIds": [],
@@ -1391,7 +1391,7 @@
   },
   {
    "id": "tsk-0090",
-   "name": 1,
+   "name": "Paper section 3",
    "projectId": "prj-0044",
    "parentTaskId": null,
    "tagIds": [],
@@ -1413,7 +1413,7 @@
   },
   {
    "id": "tsk-0091",
-   "name": 0,
+   "name": "Paper section 4",
    "projectId": "prj-0044",
    "parentTaskId": null,
    "tagIds": [],
@@ -1435,7 +1435,7 @@
   },
   {
    "id": "tsk-0092",
-   "name": 1,
+   "name": "Paper section 5",
    "projectId": "prj-0044",
    "parentTaskId": null,
    "tagIds": [],
@@ -1551,7 +1551,7 @@
   },
   {
    "id": "tsk-0097",
-   "name": 0,
+   "name": "Release ticket 1",
    "projectId": "prj-0046",
    "parentTaskId": null,
    "tagIds": [
@@ -1576,7 +1576,7 @@
   },
   {
    "id": "tsk-0098",
-   "name": 1,
+   "name": "Release ticket 2",
    "projectId": "prj-0046",
    "parentTaskId": null,
    "tagIds": [
@@ -1601,7 +1601,7 @@
   },
   {
    "id": "tsk-0099",
-   "name": 1,
+   "name": "Release ticket 3",
    "projectId": "prj-0046",
    "parentTaskId": null,
    "tagIds": [
@@ -1625,7 +1625,7 @@
   },
   {
    "id": "tsk-0100",
-   "name": 0,
+   "name": "Release ticket 4",
    "projectId": "prj-0046",
    "parentTaskId": null,
    "tagIds": [
@@ -1650,7 +1650,7 @@
   },
   {
    "id": "tsk-0101",
-   "name": 1,
+   "name": "Release ticket 5",
    "projectId": "prj-0046",
    "parentTaskId": null,
    "tagIds": [
@@ -1675,7 +1675,7 @@
   },
   {
    "id": "tsk-0102",
-   "name": 1,
+   "name": "Release ticket 6",
    "projectId": "prj-0046",
    "parentTaskId": null,
    "tagIds": [
@@ -1700,7 +1700,7 @@
   },
   {
    "id": "tsk-0103",
-   "name": 1,
+   "name": "Release ticket 7",
    "projectId": "prj-0046",
    "parentTaskId": null,
    "tagIds": [
@@ -1725,7 +1725,7 @@
   },
   {
    "id": "tsk-0104",
-   "name": 1,
+   "name": "Release ticket 8",
    "projectId": "prj-0046",
    "parentTaskId": null,
    "tagIds": [
@@ -1749,7 +1749,7 @@
   },
   {
    "id": "tsk-0105",
-   "name": 1,
+   "name": "Release ticket 9",
    "projectId": "prj-0046",
    "parentTaskId": null,
    "tagIds": [
@@ -1774,7 +1774,7 @@
   },
   {
    "id": "tsk-0106",
-   "name": 1,
+   "name": "Release ticket 10",
    "projectId": "prj-0046",
    "parentTaskId": null,
    "tagIds": [
@@ -1799,7 +1799,7 @@
   },
   {
    "id": "tsk-0107",
-   "name": 1,
+   "name": "Release ticket 11",
    "projectId": "prj-0046",
    "parentTaskId": null,
    "tagIds": [
@@ -1823,7 +1823,7 @@
   },
   {
    "id": "tsk-0108",
-   "name": 1,
+   "name": "Ops chore 1",
    "projectId": "prj-0047",
    "parentTaskId": null,
    "tagIds": [],
@@ -1845,7 +1845,7 @@
   },
   {
    "id": "tsk-0109",
-   "name": 1,
+   "name": "Ops chore 2",
    "projectId": "prj-0047",
    "parentTaskId": null,
    "tagIds": [],
@@ -1867,7 +1867,7 @@
   },
   {
    "id": "tsk-0110",
-   "name": 1,
+   "name": "Ops chore 3",
    "projectId": "prj-0047",
    "parentTaskId": null,
    "tagIds": [],
@@ -1889,7 +1889,7 @@
   },
   {
    "id": "tsk-0111",
-   "name": 0,
+   "name": "Ops chore 4",
    "projectId": "prj-0047",
    "parentTaskId": null,
    "tagIds": [
@@ -1913,7 +1913,7 @@
   },
   {
    "id": "tsk-0112",
-   "name": 1,
+   "name": "Household chore 1",
    "projectId": "prj-0048",
    "parentTaskId": null,
    "tagIds": [
@@ -1938,7 +1938,7 @@
   },
   {
    "id": "tsk-0113",
-   "name": 1,
+   "name": "Household chore 2",
    "projectId": "prj-0048",
    "parentTaskId": null,
    "tagIds": [],
@@ -1960,7 +1960,7 @@
   },
   {
    "id": "tsk-0114",
-   "name": 0,
+   "name": "Household chore 3",
    "projectId": "prj-0048",
    "parentTaskId": null,
    "tagIds": [
@@ -2966,7 +2966,7 @@
   },
   {
    "id": "tsk-0117",
-   "name": 1,
+   "name": "Partita bars 12",
    "projectId": "prj-0036",
    "parentTaskId": null,
    "tagIds": [],
@@ -2988,7 +2988,7 @@
   },
   {
    "id": "tsk-0118",
-   "name": 1,
+   "name": "Partita bars 13",
    "projectId": "prj-0036",
    "parentTaskId": null,
    "tagIds": [
@@ -3013,7 +3013,7 @@
   },
   {
    "id": "tsk-0119",
-   "name": 2,
+   "name": "Partita bars 14",
    "projectId": "prj-0036",
    "parentTaskId": null,
    "tagIds": [
@@ -3038,7 +3038,7 @@
   },
   {
    "id": "tsk-0120",
-   "name": 1,
+   "name": "Partita bars 15",
    "projectId": "prj-0036",
    "parentTaskId": null,
    "tagIds": [],
@@ -3060,7 +3060,7 @@
   },
   {
    "id": "tsk-0121",
-   "name": 1,
+   "name": "Technique drill 5",
    "projectId": "prj-0037",
    "parentTaskId": null,
    "tagIds": [],
@@ -3082,7 +3082,7 @@
   },
   {
    "id": "tsk-0122",
-   "name": 0,
+   "name": "Technique drill 6",
    "projectId": "prj-0037",
    "parentTaskId": null,
    "tagIds": [
@@ -3107,7 +3107,7 @@
   },
   {
    "id": "tsk-0123",
-   "name": 1,
+   "name": "Technique drill 7",
    "projectId": "prj-0037",
    "parentTaskId": null,
    "tagIds": [],
@@ -3129,7 +3129,7 @@
   },
   {
    "id": "tsk-0124",
-   "name": 0,
+   "name": "Technique drill 8",
    "projectId": "prj-0037",
    "parentTaskId": null,
    "tagIds": [
@@ -3153,7 +3153,7 @@
   },
   {
    "id": "tsk-0125",
-   "name": 1,
+   "name": "Piano piece 6",
    "projectId": "prj-0038",
    "parentTaskId": null,
    "tagIds": [
@@ -3177,7 +3177,7 @@
   },
   {
    "id": "tsk-0126",
-   "name": 0,
+   "name": "Piano piece 7",
    "projectId": "prj-0038",
    "parentTaskId": null,
    "tagIds": [
@@ -3202,7 +3202,7 @@
   },
   {
    "id": "tsk-0127",
-   "name": 1,
+   "name": "Piano piece 8",
    "projectId": "prj-0038",
    "parentTaskId": null,
    "tagIds": [
@@ -3226,7 +3226,7 @@
   },
   {
    "id": "tsk-0128",
-   "name": 0,
+   "name": "Piano piece 9",
    "projectId": "prj-0038",
    "parentTaskId": null,
    "tagIds": [
@@ -3324,7 +3324,7 @@
   },
   {
    "id": "tsk-0132",
-   "name": 1,
+   "name": "Italian lesson 9",
    "projectId": "prj-0040",
    "parentTaskId": null,
    "tagIds": [],
@@ -3346,7 +3346,7 @@
   },
   {
    "id": "tsk-0133",
-   "name": 1,
+   "name": "Italian lesson 10",
    "projectId": "prj-0040",
    "parentTaskId": null,
    "tagIds": [],
@@ -3368,7 +3368,7 @@
   },
   {
    "id": "tsk-0134",
-   "name": 0,
+   "name": "Italian lesson 11",
    "projectId": "prj-0040",
    "parentTaskId": null,
    "tagIds": [
@@ -3393,7 +3393,7 @@
   },
   {
    "id": "tsk-0135",
-   "name": 1,
+   "name": "Italian lesson 12",
    "projectId": "prj-0040",
    "parentTaskId": null,
    "tagIds": [],
@@ -3674,7 +3674,7 @@
   },
   {
    "id": "tsk-0147",
-   "name": 1,
+   "name": "Paper section 6",
    "projectId": "prj-0044",
    "parentTaskId": null,
    "tagIds": [
@@ -3698,7 +3698,7 @@
   },
   {
    "id": "tsk-0148",
-   "name": 0,
+   "name": "Paper section 7",
    "projectId": "prj-0044",
    "parentTaskId": null,
    "tagIds": [
@@ -3723,7 +3723,7 @@
   },
   {
    "id": "tsk-0149",
-   "name": 0,
+   "name": "Paper section 8",
    "projectId": "prj-0044",
    "parentTaskId": null,
    "tagIds": [
@@ -3747,7 +3747,7 @@
   },
   {
    "id": "tsk-0150",
-   "name": 1,
+   "name": "Paper section 9",
    "projectId": "prj-0044",
    "parentTaskId": null,
    "tagIds": [
@@ -3868,7 +3868,7 @@
   },
   {
    "id": "tsk-0155",
-   "name": 1,
+   "name": "Release ticket 12",
    "projectId": "prj-0046",
    "parentTaskId": null,
    "tagIds": [
@@ -3892,7 +3892,7 @@
   },
   {
    "id": "tsk-0156",
-   "name": 1,
+   "name": "Release ticket 13",
    "projectId": "prj-0046",
    "parentTaskId": null,
    "tagIds": [
@@ -3917,7 +3917,7 @@
   },
   {
    "id": "tsk-0157",
-   "name": 1,
+   "name": "Release ticket 14",
    "projectId": "prj-0046",
    "parentTaskId": null,
    "tagIds": [
@@ -3941,7 +3941,7 @@
   },
   {
    "id": "tsk-0158",
-   "name": 1,
+   "name": "Release ticket 15",
    "projectId": "prj-0046",
    "parentTaskId": null,
    "tagIds": [
@@ -3966,7 +3966,7 @@
   },
   {
    "id": "tsk-0159",
-   "name": 1,
+   "name": "Ops chore 5",
    "projectId": "prj-0047",
    "parentTaskId": null,
    "tagIds": [
@@ -3990,7 +3990,7 @@
   },
   {
    "id": "tsk-0160",
-   "name": 0,
+   "name": "Ops chore 6",
    "projectId": "prj-0047",
    "parentTaskId": null,
    "tagIds": [
@@ -4015,7 +4015,7 @@
   },
   {
    "id": "tsk-0161",
-   "name": 0,
+   "name": "Ops chore 7",
    "projectId": "prj-0047",
    "parentTaskId": null,
    "tagIds": [
@@ -4039,7 +4039,7 @@
   },
   {
    "id": "tsk-0162",
-   "name": 1,
+   "name": "Ops chore 8",
    "projectId": "prj-0047",
    "parentTaskId": null,
    "tagIds": [
@@ -4064,7 +4064,7 @@
   },
   {
    "id": "tsk-0163",
-   "name": 1,
+   "name": "Household chore 4",
    "projectId": "prj-0048",
    "parentTaskId": null,
    "tagIds": [
@@ -4089,7 +4089,7 @@
   },
   {
    "id": "tsk-0164",
-   "name": 0,
+   "name": "Household chore 5",
    "projectId": "prj-0048",
    "parentTaskId": null,
    "tagIds": [
@@ -4113,7 +4113,7 @@
   },
   {
    "id": "tsk-0165",
-   "name": 0,
+   "name": "Household chore 6",
    "projectId": "prj-0048",
    "parentTaskId": null,
    "tagIds": [
@@ -4138,7 +4138,7 @@
   },
   {
    "id": "tsk-0166",
-   "name": 0,
+   "name": "Household chore 7",
    "projectId": "prj-0048",
    "parentTaskId": null,
    "tagIds": [

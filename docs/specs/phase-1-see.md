@@ -12,7 +12,7 @@
 
 ### Week
 
-- 7 columns (Mon–Sun, ISO week), tasks by planned/defer/due date; "No plan" tray for available tasks in active lines without any date (mirrors the owner's "Без плана" perspective).
+- 7 columns (Mon–Sun, ISO week); each task appears once, on its planned date, else defer date, else due date; a due date inside the same week adds a due badge on the item; "No plan" tray for available tasks in active lines without any date (mirrors the owner's "Без плана" perspective).
 - Header: per line completions this week vs. last 4-week average (numbers, not red/green).
 
 ### Month
@@ -34,9 +34,10 @@
 
 ## Slices (one PR each)
 
-- [ ] **S1 — Core:** domain types (ARCHITECTURE.md v0 subset: Line, Artifact, Project, Task, NoteRef, ExternalRef, Horizon), ports, fixture adapters, Overview/Trace/Stats services with tests (ISO weeks, local time zone).
+- [x] **S1a — Core model:** domain types (ARCHITECTURE.md v0 subset: Line, Artifact, Project, TaskItem, Tag, NoteRef, ExternalRef, Horizon; UUIDv7 ids), ports (TaskProvider, NoteProvider, Store), identity map, line mapping (task tag → project tag → project name → top-level folder → Life ops), importer (repeat occurrences), OmniFocus snapshot decoder + contract validator, fixture adapters (Demo vault, in-memory store), with tests (ISO weeks, local time zone).
+- [ ] **S1b — Core services:** Overview (Today, Week, Lines)/Trace/Stats (rhythm and progress per line per ISO week) with tests. The Month overview model comes with the Month view in S5.
 - [ ] **S2 — Store:** GRDB records (core columns + `attrs` JSON), numbered migrations, `changes` log table, upsert by ExternalRef, re-import idempotency test (ADR-0002). Only phase-1 entities; plan/forecast tables come in phase 2.
-- [ ] **S3 — Adapters:** OmniFocus JXA bridge (`bridge/snapshot.js`) + Obsidian vault reader; measure the full live import (target ≤ 20 s, runs in the background) and an incremental refresh (only items modified since the last import) → method log. If the full import is > 20 s: stop, propose ADR.
+- [ ] **S3 — Adapters:** OmniFocus JXA bridge (`bridge/snapshot.js`) + Obsidian vault reader (golden test: its output on `fixtures/vault/` equals `DemoVault`); measure the full live import (target ≤ 20 s, runs in the background) and an incremental refresh (only items modified since the last import) → method log. If the full import is > 20 s: stop, propose ADR.
 - [ ] **S4 — App shell + Today + Lines** on the store (Demo mode first).
 - [ ] **S5 — Week + Month + ⌘K palette.**
 - [ ] **S6 — README (English):** vision in 3 lines, Demo-mode GIF, architecture diagram, "How this was built" → `docs/method/`, ADR index, licence.
