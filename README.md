@@ -1,6 +1,6 @@
 # MoonShine
 
-*Working name.* A macOS-first app to see, ask about and eventually run everything you plan — from today's next action to a lifetime horizon — on top of the tools you already use (OmniFocus and Obsidian today, swappable tomorrow), with an AI assistant that proposes and never silently changes anything.
+_Working name._ A macOS-first app to see, ask about and eventually run everything you plan — from today's next action to a lifetime horizon — on top of the tools you already use (OmniFocus and Obsidian today, swappable tomorrow), with an AI assistant that proposes and never silently changes anything.
 
 Signature ideas: **forecasts for any project** (a violin piece, a calisthenics progression, a language course) as honest date ranges that drift when effort slips, and a **planning board** where min / normal / max effort per project can be moved to see what fits and when.
 

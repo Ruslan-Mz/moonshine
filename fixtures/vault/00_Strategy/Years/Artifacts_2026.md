@@ -35,15 +35,16 @@ artifacts:
     lines: [work]
     status: done
 ---
+
 # 🎯 Artifacts 2026
 
 Synthetic fixture. Human table kept for reading; `artifacts:` is what MoonShine reads.
 
-| № | Artifact | Line | Status |
-|---|---|---|---|
-| 1 | First paper draft submitted | Research | in progress |
-| 2 | Partita first movement performed | Violin | in progress |
-| 3 | Italian B1 certificate | Italiano | planned |
-| 4 | 10 strict pull-ups | Calisthenics | in progress |
-| 5 | Linear algebra course finished | Математика | in progress |
-| 6 | Client North app v2 released | Client work | done |
+| №   | Artifact                         | Line         | Status      |
+| --- | -------------------------------- | ------------ | ----------- |
+| 1   | First paper draft submitted      | Research     | in progress |
+| 2   | Partita first movement performed | Violin       | in progress |
+| 3   | Italian B1 certificate           | Italiano     | planned     |
+| 4   | 10 strict pull-ups               | Calisthenics | in progress |
+| 5   | Linear algebra course finished   | Математика   | in progress |
+| 6   | Client North app v2 released     | Client work  | done        |

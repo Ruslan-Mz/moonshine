@@ -18,18 +18,23 @@ focus:
     line: calisthenics
     artifact: a26-04
 ---
+
 # 🎯 Q4 2026 — focus
 
 Synthetic fixture.
 
 ### 1. 🎻 Violin back to a steady habit
+
 Twenty minutes minimum on practice days; the partita comes second.
 
 ### 2. 🔬 Paper draft to co-author
+
 Methods and results drafted by mid-November.
 
 ### 3. 💪 Pull-up progression
+
 Three short sessions a week; test max at the end of each month.
 
 ## Parked
+
 ✒️ Calligraphy — paused on purpose until January.

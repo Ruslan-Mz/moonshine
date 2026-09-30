@@ -1,0 +1,13 @@
+{
+  "name": "moonshine-docs-tooling",
+  "private": true,
+  "description": "Dev tooling for markdown formatting only; the app is Swift.",
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "format:md": "prettier --write '**/*.md'",
+    "check:md": "prettier --check '**/*.md'"
+  },
+  "devDependencies": {
+    "prettier": "3.9.9"
+  }
+}

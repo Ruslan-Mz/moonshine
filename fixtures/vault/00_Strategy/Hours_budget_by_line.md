@@ -76,17 +76,18 @@ lines:
     omnifocus:
       folders: [Work]
 ---
+
 # Hours budget by line
 
 Synthetic fixture. The YAML block above is authoritative for MoonShine; this table is for humans and may drift.
 
-| Line | Block | h/week | State |
-|---|---|---|---|
-| 🎻 Violin | Creative | 6 | active |
-| 🎹 Piano | Creative | 1.25 | maintenance |
-| ✒️ Calligraphy | Creative | 0 | paused on purpose |
-| 🇮🇹 Italiano | Languages | 2 | active |
-| 📐 Математика | Foundation | 1.5 | active |
-| 💪 Calisthenics | Foundation | 2 | active |
-| 🔬 Research | Professional | 4 | active |
-| 💻 Client work | Professional | 13 | active |
+| Line            | Block        | h/week | State             |
+| --------------- | ------------ | ------ | ----------------- |
+| 🎻 Violin       | Creative     | 6      | active            |
+| 🎹 Piano        | Creative     | 1.25   | maintenance       |
+| ✒️ Calligraphy  | Creative     | 0      | paused on purpose |
+| 🇮🇹 Italiano     | Languages    | 2      | active            |
+| 📐 Математика   | Foundation   | 1.5    | active            |
+| 💪 Calisthenics | Foundation   | 2      | active            |
+| 🔬 Research     | Professional | 4      | active            |
+| 💻 Client work  | Professional | 13     | active            |
