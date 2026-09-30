@@ -1,0 +1,14 @@
+# Private data — never commit (ADR-0003)
+data/
+snapshots/
+*.local.*
+deny-list.txt
+
+# Xcode / SwiftPM
+*.xcodeproj/
+DerivedData/
+.build/
+.swiftpm/
+xcuserdata/
+*.xcuserstate
+.DS_Store
