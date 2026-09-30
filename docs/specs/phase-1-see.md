@@ -8,7 +8,8 @@
 
 - Available tasks with planned/defer = today, flagged, and real `due` ≤ today (only these may use the urgent colour).
 - Grouped by line (emoji + name); each task shows project and trace chip (`project → line → artifact`).
-- Right rail: lines touched today, "quiet lines" (active, no completion ≥ 14 days), neutral wording.
+- **From earlier:** available tasks planned on an earlier day, in their own section with the planned age ("planned 3 days ago"); urgent only with a real `due` (decision 2026-09-30).
+- Right rail: lines touched today, "quiet lines" (active, no completion ≥ 14 days), neutral wording. An active line with no completions at all is "no activity yet", not quiet.
 
 ### Week
 
@@ -22,7 +23,7 @@
 
 ### Lines
 
-- One row per line from the vault, grouped by `block`, ordered active → maintenance → paused: budget h/week (from vault), 8-week completions sparkline, last activity, available next actions, planned effort (estimate, labelled as estimate).
+- One row per line from the vault, grouped by `block`, ordered active → maintenance → paused: budget h/week (from vault), 8-week completions sparkline (current week marked partial), last activity, available next actions, planned effort (estimate, labelled as estimate).
 - Line detail: parent artifact (open in Obsidian via `obsidian://open`), projects, next actions, last 10 completions.
 
 ### Global
@@ -35,10 +36,10 @@
 ## Slices (one PR each)
 
 - [x] **S1a — Core model:** domain types (ARCHITECTURE.md v0 subset: Line, Artifact, Project, TaskItem, Tag, NoteRef, ExternalRef, Horizon; UUIDv7 ids), ports (TaskProvider, NoteProvider, Store), identity map, line mapping (task tag → project tag → project name → top-level folder → Life ops), importer (repeat occurrences), OmniFocus snapshot decoder + contract validator, fixture adapters (Demo vault, in-memory store), with tests (ISO weeks, local time zone).
-- [ ] **S1b — Core services:** Overview (Today, Week, Lines)/Trace/Stats (rhythm and progress per line per ISO week) with tests. The Month overview model comes with the Month view in S5.
+- [x] **S1b — Core services:** Overview (Today, Week, Lines)/Trace/Stats (rhythm and progress per line per ISO week) with tests. The Month overview model comes with the Month view in S5. A completed repeating group counts one session per line it touches (its own line and each other line of its completed children).
 - [ ] **S2 — Store:** GRDB records (core columns + `attrs` JSON), numbered migrations, `changes` log table, upsert by ExternalRef, re-import idempotency test (ADR-0002). Only phase-1 entities; plan/forecast tables come in phase 2.
-- [ ] **S3 — Adapters:** OmniFocus JXA bridge (`bridge/snapshot.js`) + Obsidian vault reader (golden test: its output on `fixtures/vault/` equals `DemoVault`); measure the full live import (target ≤ 20 s, runs in the background) and an incremental refresh (only items modified since the last import) → method log. If the full import is > 20 s: stop, propose ADR.
-- [ ] **S4 — App shell + Today + Lines** on the store (Demo mode first).
+- [ ] **S3 — Adapters:** OmniFocus JXA bridge (`bridge/snapshot.js`) + Obsidian vault reader (golden test: its output on `fixtures/vault/` equals `DemoVault`); measure the full live import (target ≤ 20 s, runs in the background) and an incremental refresh (only items modified since the last import) → method log. If the full import is > 20 s: stop, propose ADR. **Required:** the bridge exports `effectiveDeferDate` / `effectiveDueDate` / `effectivePlannedDate` (snapshot contract), `TaskItem` carries them, and Today/Week placement and urgency use the effective dates (an inherited project due date is a real due date).
+- [ ] **S4 — App shell + Today + Lines** on the store (Demo mode first), including the Line detail model (moved from S1b).
 - [ ] **S5 — Week + Month + ⌘K palette.**
 - [ ] **S6 — README (English):** vision in 3 lines, Demo-mode GIF, architecture diagram, "How this was built" → `docs/method/`, ADR index, licence.
 

@@ -1,0 +1,92 @@
+import Foundation
+
+@testable import MoonShineCore
+
+/// Builds a `Workspace` by hand for service tests. Moscow time; invented data only.
+struct TestWorld {
+  static let timeZone = TimeZone(identifier: "Europe/Moscow")!
+  static let calendar = Calendar.iso8601(in: timeZone)
+
+  static func date(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 12, _ min: Int = 0) -> Date {
+    calendar.date(from: DateComponents(year: y, month: m, day: d, hour: h, minute: min))!
+  }
+
+  var workspace = Workspace(timeZone: TestWorld.timeZone)
+
+  @discardableResult
+  mutating func line(
+    _ key: LineKey, block: String = "Creative", state: LineState = .active,
+    budget: Double? = nil, parent: String? = nil
+  ) -> Line {
+    let line = Line(
+      id: .generate(), refs: [], key: key, name: key.rawValue.capitalized, emoji: nil,
+      block: block, state: state, budgetHoursPerWeek: budget, parentLink: parent,
+      taskRules: LineTaskRules())
+    workspace.lines.append(line)
+    return line
+  }
+
+  @discardableResult
+  mutating func project(_ title: String, line: LineAssignment) -> Project {
+    let project = Project(
+      id: .generate(), refs: [], title: title, status: .active, tagIDs: [], line: line)
+    workspace.projects.append(project)
+    return project
+  }
+
+  @discardableResult
+  mutating func task(
+    _ title: String, line: LineAssignment, project: ProjectID? = nil,
+    parent: TaskItemID? = nil, status: TaskItemStatus = .available, flagged: Bool = false,
+    planned: Date? = nil, defer deferUntil: Date? = nil, due: Date? = nil,
+    estimate: Int? = nil, completed: Date? = nil, occurrenceOf: TaskItemID? = nil
+  ) -> TaskItem {
+    let task = TaskItem(
+      id: .generate(), refs: [], title: title, projectID: project, parentTaskID: parent,
+      tagIDs: [], status: completed == nil ? status : .completed, flagged: flagged,
+      plannedAt: planned, deferUntil: deferUntil, dueAt: due, estimateMinutes: estimate,
+      completedAt: completed, modifiedAt: nil, occurrenceOf: occurrenceOf, line: line)
+    workspace.tasks.append(task)
+    return task
+  }
+
+  /// A completed occurrence of a fresh live repeating task.
+  @discardableResult
+  mutating func session(
+    _ title: String, line: LineAssignment, at date: Date, parent: TaskItemID? = nil
+  ) -> TaskItem {
+    let live = task(title, line: line)
+    return task(title, line: line, parent: parent, completed: date, occurrenceOf: live.id)
+  }
+
+  @discardableResult
+  mutating func note(
+    _ path: String, type: String? = nil, scale: Scale? = nil, period: Horizon? = nil
+  ) -> NoteRef {
+    let note = NoteRef(
+      id: .generate(), refs: [], path: path, title: path, type: type, scale: scale,
+      period: period, parentLink: nil, lineKey: nil, status: nil)
+    workspace.notes.append(note)
+    return note
+  }
+
+  @discardableResult
+  mutating func yearNote(_ year: Int) -> NoteRef {
+    note(
+      "Years/Artifacts_\(year).md", type: "year_artifacts", scale: .year,
+      period: Horizon.containing(
+        TestWorld.date(year, 6, 1), scale: .year, calendar: TestWorld.calendar))
+  }
+
+  @discardableResult
+  mutating func artifact(
+    _ key: String, lines: [LineID], status: ArtifactStatus = .inProgress,
+    priority: Bool = false, note: NoteID?
+  ) -> Artifact {
+    let artifact = Artifact(
+      id: .generate(), refs: [], key: key, title: key, lineIDs: lines, status: status,
+      priority: priority, noteID: note)
+    workspace.artifacts.append(artifact)
+    return artifact
+  }
+}
