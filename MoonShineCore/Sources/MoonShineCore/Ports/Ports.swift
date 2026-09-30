@@ -1,0 +1,206 @@
+import Foundation
+
+/// A task manager (OmniFocus today). Read-only until phase 6.
+public protocol TaskProvider: Sendable {
+  /// All items, or only those modified since the given date (incremental refresh).
+  func snapshot(modifiedSince: Date?) async throws -> TaskSourceSnapshot
+}
+
+/// A notes vault (Obsidian today): lines, artifacts and horizon notes. Read-only until phase 6.
+public protocol NoteProvider: Sendable {
+  func vault() async throws -> VaultSnapshot
+}
+
+/// The local store. The UI and services read only from here.
+public protocol Store: Sendable {
+  func identityMap() async throws -> IdentityMap
+  func commit(_ workspace: Workspace, identities: IdentityMap) async throws
+  func workspace() async throws -> Workspace
+}
+
+// MARK: - Task-manager records, keyed by the provider's own ids
+
+public struct TaskSourceSnapshot: Sendable {
+  public let provider: ProviderID
+  public let generatedAt: Date
+  public let timeZone: TimeZone
+  public let tags: [SourceTag]
+  public let projects: [SourceProject]
+  public let tasks: [SourceTask]
+
+  public init(
+    provider: ProviderID, generatedAt: Date, timeZone: TimeZone,
+    tags: [SourceTag], projects: [SourceProject], tasks: [SourceTask]
+  ) {
+    self.provider = provider
+    self.generatedAt = generatedAt
+    self.timeZone = timeZone
+    self.tags = tags
+    self.projects = projects
+    self.tasks = tasks
+  }
+}
+
+public struct SourceTag: Sendable {
+  public let externalId: String
+  public let name: String
+  public let parentExternalId: String?
+
+  public init(externalId: String, name: String, parentExternalId: String? = nil) {
+    self.externalId = externalId
+    self.name = name
+    self.parentExternalId = parentExternalId
+  }
+}
+
+public struct SourceProject: Sendable {
+  public let externalId: String
+  public let name: String
+  public let status: ProjectStatus
+  public let tagExternalIds: [String]
+  /// Folder names from the top level down; the first one drives folder mapping.
+  public let folderPath: [String]
+
+  public init(
+    externalId: String, name: String, status: ProjectStatus = .active,
+    tagExternalIds: [String] = [], folderPath: [String] = []
+  ) {
+    self.externalId = externalId
+    self.name = name
+    self.status = status
+    self.tagExternalIds = tagExternalIds
+    self.folderPath = folderPath
+  }
+}
+
+public struct SourceTask: Sendable {
+  public let externalId: String
+  public let name: String
+  public let projectExternalId: String?
+  public let parentExternalId: String?
+  public let tagExternalIds: [String]
+  public let status: TaskItemStatus
+  public let flagged: Bool
+  public let plannedAt: Date?
+  public let deferUntil: Date?
+  public let dueAt: Date?
+  public let estimateMinutes: Int?
+  public let completedAt: Date?
+  public let modifiedAt: Date?
+  public let repeatOfExternalId: String?
+
+  public init(
+    externalId: String, name: String, projectExternalId: String? = nil,
+    parentExternalId: String? = nil, tagExternalIds: [String] = [],
+    status: TaskItemStatus = .available, flagged: Bool = false, plannedAt: Date? = nil,
+    deferUntil: Date? = nil, dueAt: Date? = nil, estimateMinutes: Int? = nil,
+    completedAt: Date? = nil, modifiedAt: Date? = nil, repeatOfExternalId: String? = nil
+  ) {
+    self.externalId = externalId
+    self.name = name
+    self.projectExternalId = projectExternalId
+    self.parentExternalId = parentExternalId
+    self.tagExternalIds = tagExternalIds
+    self.status = status
+    self.flagged = flagged
+    self.plannedAt = plannedAt
+    self.deferUntil = deferUntil
+    self.dueAt = dueAt
+    self.estimateMinutes = estimateMinutes
+    self.completedAt = completedAt
+    self.modifiedAt = modifiedAt
+    self.repeatOfExternalId = repeatOfExternalId
+  }
+}
+
+// MARK: - Vault records
+
+public struct VaultSnapshot: Sendable {
+  public let lines: [SourceLine]
+  public let artifacts: [SourceArtifact]
+  public let notes: [SourceNote]
+  public let issues: [ImportIssue]
+
+  public init(
+    lines: [SourceLine], artifacts: [SourceArtifact], notes: [SourceNote],
+    issues: [ImportIssue] = []
+  ) {
+    self.lines = lines
+    self.artifacts = artifacts
+    self.notes = notes
+    self.issues = issues
+  }
+}
+
+public struct SourceLine: Sendable {
+  public let key: LineKey
+  public let name: String
+  public let emoji: String?
+  public let block: String
+  public let state: LineState
+  public let budgetHoursPerWeek: Double?
+  public let parentLink: String?
+  public let taskRules: LineTaskRules
+
+  public init(
+    key: LineKey, name: String, emoji: String? = nil, block: String, state: LineState,
+    budgetHoursPerWeek: Double? = nil, parentLink: String? = nil,
+    tags: [String] = [], folders: [String] = [], projects: [String] = []
+  ) {
+    self.key = key
+    self.name = name
+    self.emoji = emoji
+    self.block = block
+    self.state = state
+    self.budgetHoursPerWeek = budgetHoursPerWeek
+    self.parentLink = parentLink
+    self.taskRules = LineTaskRules(tags: tags, folders: folders, projects: projects)
+  }
+}
+
+public struct SourceArtifact: Sendable {
+  public let key: String
+  public let title: String
+  public let lineKeys: [LineKey]
+  public let status: ArtifactStatus
+  public let priority: Bool
+  public let notePath: String
+
+  public init(
+    key: String, title: String, lineKeys: [LineKey], status: ArtifactStatus,
+    priority: Bool = false, notePath: String
+  ) {
+    self.key = key
+    self.title = title
+    self.lineKeys = lineKeys
+    self.status = status
+    self.priority = priority
+    self.notePath = notePath
+  }
+}
+
+public struct SourceNote: Sendable {
+  public let path: String
+  public let title: String
+  public let type: String?
+  public let scale: Scale?
+  public let period: Horizon?
+  public let parentLink: String?
+  public let lineKey: LineKey?
+  public let status: String?
+
+  public init(
+    path: String, title: String, type: String? = nil, scale: Scale? = nil,
+    period: Horizon? = nil, parentLink: String? = nil, lineKey: LineKey? = nil,
+    status: String? = nil
+  ) {
+    self.path = path
+    self.title = title
+    self.type = type
+    self.scale = scale
+    self.period = period
+    self.parentLink = parentLink
+    self.lineKey = lineKey
+    self.status = status
+  }
+}

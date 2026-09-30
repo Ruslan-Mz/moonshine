@@ -11,7 +11,7 @@ See `docs/ROADMAP.md`. **Only build what the current phase's spec asks for.** La
 ## Hard rules
 
 1. **Spec first.** Every change starts from `docs/specs/`. Missing/ambiguous spec → propose a spec change and stop.
-2. **One slice = one PR**, < ~400 changed lines excluding fixtures and generated files.
+2. **One slice = one PR**, < ~400 changed lines of production code (tests, fixtures and generated files excluded).
 3. **Ports & adapters (ADR-0001).** `MoonShineCore` imports no AppKit/SwiftUI/OSAKit/GRDB. UI talks to view models/services, never to adapters.
 4. **Tests first in Core.** New domain logic → failing test → code.
 5. **Privacy.** Never commit or paste into PRs/commits/logs anything from `~/ObsidianV`, OmniFocus, `data/`, `snapshots/`, `*.local.*`. Fixtures are invented.
@@ -28,6 +28,7 @@ Tests green · `swift format lint` clean · `prettier --check '**/*.md'` clean �
 ## Commands
 
 - Core tests (any OS): `swift test --package-path MoonShineCore`
+- Adapter tests: `swift test --package-path Adapters`
 - Generate Xcode project: `xcodegen generate`
 - Build app: `xcodebuild -scheme MoonShineMac -destination 'platform=macOS' build`
 - Lint: `swift format lint --recursive MoonShineCore Adapters Apps`
