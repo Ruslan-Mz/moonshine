@@ -65,6 +65,15 @@ import Testing
     #expect(Horizon.containing(Date(), scale: .lifetime, calendar: moscow) == nil)
   }
 
+  @Test func isoWeekHorizonAndArithmeticCrossTheISOYear() throws {
+    let w53 = ISOWeek(year: 2026, week: 53)
+    let horizon = try #require(w53.horizon(calendar: moscow))
+    #expect(horizon.start == date(moscow, 2026, 12, 28, 0))
+    #expect(horizon.end == date(moscow, 2027, 1, 4, 0))
+    #expect(w53.adding(1, calendar: moscow) == ISOWeek(year: 2027, week: 1))
+    #expect(w53.adding(-53, calendar: moscow) == ISOWeek(year: 2025, week: 52))
+  }
+
   @Test func containsIsHalfOpen() throws {
     let day = try #require(
       Horizon.containing(date(moscow, 2026, 9, 30), scale: .day, calendar: moscow))

@@ -67,6 +67,22 @@ public struct ISOWeek: Hashable, Comparable, Sendable, CustomStringConvertible {
   }
 
   public var description: String { String(format: "%04d-W%02d", year, week) }
+
+  /// Monday 00:00 to the next Monday 00:00 in the calendar's time zone.
+  public func horizon(calendar: Calendar) -> Horizon? {
+    let monday = DateComponents(weekday: 2, weekOfYear: week, yearForWeekOfYear: year)
+    guard let start = calendar.date(from: monday),
+      let end = calendar.date(byAdding: .weekOfYear, value: 1, to: start)
+    else { return nil }
+    return Horizon(scale: .week, start: start, end: end)
+  }
+
+  public func adding(_ weeks: Int, calendar: Calendar) -> ISOWeek {
+    guard let start = horizon(calendar: calendar)?.start,
+      let moved = calendar.date(byAdding: .weekOfYear, value: weeks, to: start)
+    else { return self }
+    return ISOWeek(containing: moved, calendar: calendar)
+  }
 }
 
 extension Calendar {
