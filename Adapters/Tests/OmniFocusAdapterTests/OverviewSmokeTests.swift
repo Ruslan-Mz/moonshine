@@ -16,20 +16,28 @@ import Testing
     return Overview(workspace: workspace, now: source.generatedAt)
   }
 
-  /// The fixture's quiet line (last completion 29 days ago) is Piano, which the Demo vault
-  /// keeps in maintenance: only active lines are ever reported quiet.
-  @Test func quietLinesAreActiveOnlySoTheMaintenancePianoIsNotReported() async throws {
-    let overview = try await overview()
-    let piano = try #require(
-      overview.lines().blocks.flatMap(\.rows).first { $0.line.key == "piano" })
-    let lastActivity = try #require(piano.activity.lastActivity)
-    let daysAgo = overview.calendar.dateComponents(
+  func daysSinceLastActivity(_ key: LineKey, in overview: Overview) throws -> Int? {
+    let row = try #require(overview.lines().blocks.flatMap(\.rows).first { $0.line.key == key })
+    let lastActivity = try #require(row.activity.lastActivity)
+    return overview.calendar.dateComponents(
       [.day], from: overview.calendar.startOfDay(for: lastActivity),
       to: overview.calendar.startOfDay(for: overview.now)
     ).day
-    #expect(piano.line.state == .maintenance)
-    #expect(daysAgo == 29)
-    #expect(overview.today().quietLines.isEmpty)
+  }
+
+  /// Italian (active) and Piano (maintenance) both last moved 29 days ago; only the active
+  /// line is quiet, because maintenance is never quiet.
+  @Test func activeItalianIsQuietAndMaintenancePianoIsNot() async throws {
+    let overview = try await overview()
+    #expect(try daysSinceLastActivity("italian", in: overview) == 29)
+    #expect(try daysSinceLastActivity("piano", in: overview) == 29)
+    let quiet = overview.today().quietLines
+    #expect(quiet.map(\.line.key) == ["italian"])
+    #expect(
+      quiet.first?.reason
+        == .lastActivity(
+          DemoVault.calendar.date(
+            from: DateComponents(year: 2026, month: 9, day: 1, hour: 8))!))
   }
 
   @Test func everyViewRendersOnTheFixture() async throws {

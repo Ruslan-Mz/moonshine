@@ -21,6 +21,10 @@ See `docs/ROADMAP.md`. **Only build what the current phase's spec asks for.** La
 9. **UX bar:** keyboard-first on Mac (every view reachable by shortcut, ⌘K command palette from phase 1), dense but calm layout, instant view switching (reads come from the local store).
 10. **Log the method:** append a row to `docs/method/log.md` at the end of each PR. Honest numbers; `n/a` if unknown. Before appending, run `npx ccusage@latest session --json`, take this session's tokens (input / output / cache write / cache read, separately) and its API-equivalent cost, and put them in the Tokens / cost column marked "API-equiv" (e.g. `session <id>: input … · output … · cache write … · cache read …; API-equiv $…`).
 
+## Git
+
+Start every slice with `git fetch && git switch main && git pull --ff-only`, then branch.
+
 ## Definition of done
 
 Tests green · `swift format lint` clean · `prettier --check '**/*.md'` clean · app builds · spec checkboxes ticked · method-log row · ADR if a costly-to-reverse choice was made · screenshots only in Demo mode.
