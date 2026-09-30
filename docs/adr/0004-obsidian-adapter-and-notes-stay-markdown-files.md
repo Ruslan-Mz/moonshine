@@ -25,7 +25,7 @@ The owner's rule: goals, artifacts, plans and budgets live in Obsidian; OmniFocu
 ## Considered Options
 1. Line/goal definitions inside the app.
 2. Parse markdown tables in existing notes.
-3. **YAML frontmatter contracts in existing notes** (`lines:` in the budget note; `type`, `horizon`, `period`, `parent` in artifact notes) + future native notes as **plain markdown files in a folder**.
+3. **YAML frontmatter contracts in existing notes** (`lines:` in the budget note; `type`, `scale`, `period`, `parent` in artifact notes; `artifacts:` list in the year note — see `docs/discovery/vault-contract.md`) + future native notes as **plain markdown files in a folder**.
 4. Future native notes stored in SQLite.
 
 ## Decision Outcome

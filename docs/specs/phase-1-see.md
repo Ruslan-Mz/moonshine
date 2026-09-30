@@ -29,13 +29,15 @@
 ## Slices (one PR each)
 - [ ] **S1 — Core:** domain types (ARCHITECTURE.md v0 subset: Line, Artifact, Project, Task, NoteRef, ExternalRef, Horizon), ports, fixture adapters, Overview/Trace/Stats services with tests (ISO weeks, local time zone).
 - [ ] **S2 — Store:** GRDB records (core columns + `attrs` JSON), numbered migrations, `changes` log table, upsert by ExternalRef, re-import idempotency test (ADR-0002). Only phase-1 entities; plan/forecast tables come in phase 2.
-- [ ] **S3 — Adapters:** OmniFocus JXA bridge (`bridge/snapshot.js`) + Obsidian vault reader; measure live load time (target < 5 s) → method log. If > 5 s: stop, propose ADR.
+- [ ] **S3 — Adapters:** OmniFocus JXA bridge (`bridge/snapshot.js`) + Obsidian vault reader; measure the full live import (target ≤ 20 s, runs in the background) and an incremental refresh (only items modified since the last import) → method log. If the full import is > 20 s: stop, propose ADR.
 - [ ] **S4 — App shell + Today + Lines** on the store (Demo mode first).
 - [ ] **S5 — Week + Month + ⌘K palette.**
 - [ ] **S6 — README (English):** vision in 3 lines, Demo-mode GIF, architecture diagram, "How this was built" → `docs/method/`, ADR index, licence.
 
 ## Acceptance
 - Fresh clone → `xcodegen generate` → run → Demo mode works without OmniFocus or a vault.
-- Live mode renders Today in < 1 s from the store after the first import.
+- The UI always renders from the local store: any view in < 1 s, with or without a running import.
+- Full background import of the live data ≤ 20 s; it never blocks the UI.
+- Refreshes after the first import are incremental (items modified since the last import), not full re-reads.
 - No write APIs to OmniFocus or the vault in the code.
 - Tone rules in CLAUDE.md §8 pass a copy review.
