@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Component sheet</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0A64D8}a:hover{color:#084FA8}
+button{font:inherit;color:inherit;cursor:default}
+</style>
+</helmet>
+<div style="width:1440px;box-sizing:border-box;display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:24px;padding:24px;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;font-size:13px;line-height:1.35;-webkit-font-smoothing:antialiased;background:#E9E9EC"><sc-for list="{{themes}}" as="t" hint-placeholder-count="2"><div style="display:flex;flex-direction:column;gap:26px;padding:24px 26px 28px;border-radius:14px;color:{{t.text}};background:{{t.window}};border:1px solid {{t.windowBorder}}"><div style="display:flex;align-items:baseline;gap:10px"><span style="font-size:19px;font-weight:700">Components</span><span style="font-size:12.5px;color:{{t.sec}}">{{t.name}}</span></div><section style="display:flex;flex-direction:column;gap:10px"><h3 style="margin:0;font-size:11px;font-weight:600;letter-spacing:0.4px;text-transform:uppercase;color:{{t.ter}}">Task row</h3><div style="border-top:1px solid {{t.sep}}"><sc-for list="{{t.rows}}" as="task" hint-placeholder-count="4"><div style="display:grid;grid-template-columns:30px minmax(0, 1fr) 236px 76px 96px;align-items:center;height:28px;padding:0 8px;border-bottom:1px solid {{t.rowSep}};background:{{task.bg}}"><span style="display:flex;justify-content:center"><sc-if value="{{task.done}}" hint-placeholder-val="{{false}}"><button aria-label="Completed" style="width:16px;height:16px;border-radius:8px;border:0;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:{{t.checkDone}};color:#FFFFFF"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M4 8.3l2.6 2.6L12 5.5"></path></svg></button></sc-if><sc-if value="{{task.open}}" hint-placeholder-val="{{true}}"><button aria-label="Complete task" style="width:16px;height:16px;border-radius:8px;border:1.5px solid {{t.check}};padding:0;flex-shrink:0;background:transparent;box-sizing:border-box"></button></sc-if></span><span style="display:flex;align-items:center;gap:6px;min-width:0"><span style="font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{task.tc}};text-decoration:{{task.td}}">{{task.title}}</span><sc-if value="{{task.repeat}}" hint-placeholder-val="{{false}}"><span style="display:flex;color:{{t.ter}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M3 7V6a2 2 0 0 1 2-2h7.5M10.5 2l2 2-2 2M13 9v1a2 2 0 0 1-2 2H3.5M5.5 14l-2-2 2-2"></path></svg></span></sc-if></span><span style="display:flex;min-width:0;padding-inline-end:8px"><span style="max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:1px 7px;border-radius:5px;font-size:11px;background:{{t.chip}};color:{{t.chipText}}">{{task.project}} → 🎻 Violin → Spring recital 2027</span></span><span style="font-size:12px;color:{{t.sec}}">{{task.est}}</span><span style="display:flex"><sc-if value="{{task.due}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;gap:4px;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap;color:{{t.dueText}};background:{{t.dueBg}}"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.8V8l2.2 1.4"></path></svg>{{task.due}}</span></sc-if><sc-if value="{{task.age}}" hint-placeholder-val="{{false}}"><span style="font-size:11.5px;color:{{t.ter}}">{{task.age}}</span></sc-if></span></div></sc-for></div><div style="font-size:11.5px;color:{{t.ter}}">open · selected · done (repeating = session) · real due · from earlier</div></section><section style="display:flex;flex-direction:column;gap:10px"><h3 style="margin:0;font-size:11px;font-weight:600;letter-spacing:0.4px;text-transform:uppercase;color:{{t.ter}}">Line header</h3><div style="border:1px solid {{t.sep}};border-radius:8px;padding-bottom:4px"><div style="display:flex;align-items:center;gap:9px;height:30px;padding:6px 16px 0;box-sizing:border-box;border-bottom:1px solid {{t.sep}}"><span style="font-size:15px">🎻</span><span style="font-size:14px;font-weight:600">Violin</span><span style="font-size:12px;color:{{t.ter}}">Spring recital 2027</span><span style="margin-inline-start:auto;font-size:12px;color:{{t.ter}}">4 open · ≈ 1 h 35 min est.</span></div></div><div style="border:1px solid {{t.sep}};border-radius:8px;padding-bottom:4px"><div style="display:flex;align-items:center;gap:9px;height:30px;padding:6px 16px 0;box-sizing:border-box;border-bottom:1px solid {{t.sep}}"><span style="display:flex;color:{{t.sec}}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M6 4L2.5 7.5 6 11M2.5 7.5H10a3.5 3.5 0 0 1 0 7H8"></path></svg></span><span style="font-size:14px;font-weight:600">From earlier</span><span style="font-size:12px;color:{{t.ter}}">planned on past days, still available</span><span style="margin-inline-start:auto;font-size:12px;color:{{t.ter}}">3 open · ≈ 1 h est.</span></div></div></section><section style="display:flex;flex-direction:column;gap:10px"><h3 style="margin:0;font-size:11px;font-weight:600;letter-spacing:0.4px;text-transform:uppercase;color:{{t.ter}}">Chip, badges, labels</h3><div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px"><span style="max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:1px 7px;border-radius:5px;font-size:11px;background:{{t.chip}};color:{{t.chipText}}">Bach Partita No. 2 → 🎻 Violin → Spring recital 2027</span><span style="display:inline-flex;align-items:center;gap:4px;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:600;color:{{t.dueText}};background:{{t.dueBg}}"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.8V8l2.2 1.4"></path></svg>Due 18:00</span><span style="display:inline-flex;align-items:center;gap:4px;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:600;color:{{t.dueText}};background:{{t.dueBg}}"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.8V8l2.2 1.4"></path></svg>Due Fri 12:00</span><span style="font-size:11.5px;color:{{t.ter}}">planned 3 days ago</span><span style="font-size:12px;color:{{t.sec}}">≈ 45 min est.</span><span style="display:inline-flex;align-items:center;gap:5px;padding:1px 8px;border-radius:10px;border:1px solid {{t.badgeBorder}};font-size:11.5px;color:{{t.sec}}"><span style="width:6px;height:6px;border-radius:3px;background:{{t.sec}}"></span>Demo data</span><span style="display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:11px;border:1px dashed {{t.future}};font-size:11px;font-weight:600;color:{{t.future}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M8 2v3M8 11v3M2 8h3M11 8h3M4 4l2 2M10 10l2 2M4 12l2-2M10 6l2-2"></path></svg>Future · phase 2–3</span></div><div style="font-size:11.5px;color:{{t.ter}}">Amber appears only on a real external due date. Nothing else is ever urgent.</div></section><section style="display:flex;flex-direction:column;gap:10px"><h3 style="margin:0;font-size:11px;font-weight:600;letter-spacing:0.4px;text-transform:uppercase;color:{{t.ter}}">Sparkline — 8 weeks</h3><div style="display:flex;align-items:flex-end;gap:28px"><span style="display:flex;align-items:flex-end;gap:6px;height:28px;border-bottom:1px solid {{t.sep}}"><sc-for list="{{t.weeks}}" as="w" hint-placeholder-count="8"><span style="display:flex;align-items:flex-end;gap:1px;height:28px;padding:0 1px;box-sizing:border-box;border-radius:3px 3px 0 0;background:{{w.bg}};outline:{{w.ol}};opacity:{{w.op}}"><span style="width:5px;height:{{w.rh}}px;border-radius:2px 2px 0 0;background:{{t.rhythm}}"></span><span style="width:5px;height:{{w.ph}}px;border-radius:2px 2px 0 0;background:{{t.progress}}"></span></span></sc-for></span><div style="display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:{{t.sec}}"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:{{t.rhythm}}"></span>Rhythm — repeated sessions</span><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:{{t.progress}}"></span>Progress — one-off tasks done</span><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:12px;height:10px;border-radius:2px;background:{{t.track}};border:1px dashed {{t.badgeBorder}}"></span>current week, partial</span></div></div><div style="font-size:11.5px;color:{{t.ter}}">Two series, one shared scale per line; never summed into one score. Blue and teal also differ in lightness.</div></section><section style="display:flex;flex-direction:column;gap:10px"><h3 style="margin:0;font-size:11px;font-weight:600;letter-spacing:0.4px;text-transform:uppercase;color:{{t.ter}}">Quiet line · no activity yet</h3><div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:12px"><div style="padding:14px;border-radius:10px;background:{{t.card}};border:1px solid {{t.cardBorder}};display:flex;flex-direction:column;gap:7px"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:15px">🇮🇹</span><span style="font-weight:600">Italian</span><span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:{{t.sec}}"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M13 9.5A5.5 5.5 0 1 1 6.5 3a4.5 4.5 0 0 0 6.5 6.5z"></path></svg>quiet for 29 days</span></div><div style="font-size:11px;color:{{t.ter}}">Suggested next step</div><div style="font-size:13px">Read one page of the graded reader aloud</div><div style="display:flex;font-size:11.5px;color:{{t.ter}}"><span>≈ 10 min est.</span><a href="#" style="margin-inline-start:auto;text-decoration:none;color:{{t.accent}}">Open in OmniFocus</a></div></div><div style="padding:14px;border-radius:10px;border:1px dashed {{t.badgeBorder}};display:flex;flex-direction:column;gap:7px"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:15px">🇯🇵</span><span style="font-weight:600">Japanese</span><span style="margin-inline-start:auto;font-size:11.5px;color:{{t.sec}}">no activity yet</span></div><div style="font-size:11px;color:{{t.ter}}">First step</div><div style="font-size:13px">Hiragana row あ–お, 10 min</div></div></div></section><section style="display:flex;flex-direction:column;gap:10px"><h3 style="margin:0;font-size:11px;font-weight:600;letter-spacing:0.4px;text-transform:uppercase;color:{{t.ter}}">Line states</h3><div style="display:flex;flex-direction:column;border-top:1px solid {{t.sep}}"><div style="display:grid;grid-template-columns:200px 180px minmax(0, 1fr);align-items:center;height:34px;border-bottom:1px solid {{t.rowSep}}"><span style="display:flex;gap:8px;font-weight:600"><span>🎻</span>Violin</span><span>active</span><span style="font-size:12.5px">today</span></div><div style="display:grid;grid-template-columns:200px 180px minmax(0, 1fr);align-items:center;height:34px;border-bottom:1px solid {{t.rowSep}}"><span style="display:flex;gap:8px;font-weight:600"><span>🎹</span>Piano</span><span style="color:{{t.sec}}">maintenance</span><span style="font-size:12.5px">29 days ago · never flagged</span></div><div style="display:grid;grid-template-columns:200px 180px minmax(0, 1fr);align-items:center;height:34px;border-bottom:1px solid {{t.rowSep}};color:{{t.paused}}"><span style="display:flex;gap:8px;font-weight:600"><span style="opacity:0.5">✒️</span>Calligraphy</span><span style="display:flex;align-items:center;gap:5px"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M6 4v8M10 4v8"></path></svg>paused on purpose</span><span style="font-size:12.5px">paused since 14 July</span></div><div style="display:grid;grid-template-columns:200px 180px minmax(0, 1fr);align-items:center;height:34px;border-bottom:1px solid {{t.rowSep}}"><span style="display:flex;gap:8px;font-weight:600"><span>🇯🇵</span>Japanese</span><span>active</span><span style="font-size:12.5px;color:{{t.sec}}">no activity yet</span></div></div></section><section style="display:flex;flex-direction:column;gap:10px"><h3 style="margin:0;font-size:11px;font-weight:600;letter-spacing:0.4px;text-transform:uppercase;color:{{t.ter}}">Status bar</h3><div style="height:28px;display:flex;align-items:center;gap:12px;padding:0 12px;border-radius:6px;font-size:11.5px;color:{{t.ter}};border:1px solid {{t.sep}};background:{{t.sidebar}}"><span style="display:inline-flex;align-items:center;gap:5px;padding:1px 8px;border-radius:10px;border:1px solid {{t.badgeBorder}};color:{{t.sec}}"><span style="width:6px;height:6px;border-radius:3px;background:{{t.sec}}"></span>Demo data</span><span>Updated 3 min ago</span><span style="margin-inline-start:auto">⌘K Search · ⌘R Refresh</span></div></section></div></sc-for></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark": {"editor": "boolean", "default": false}, "lang": {"editor": "enum", "options": ["en", "ru", "he"], "default": "en"}, "$preview": {"width": 1440, "height": 1320}}'>
+
+function theme(d) {
+  return d ? {
+    dark:true, window:'#1E1E21', sidebar:'#28272C', rail:'#232326', band:'#252528', text:'#EDEDF0', sec:'#A6A6AD', ter:'#8D8D95',
+    sep:'rgba(255,255,255,0.08)', rowSep:'rgba(255,255,255,0.045)', chip:'rgba(255,255,255,0.075)', chipText:'#BDBDC4',
+    accent:'#5A9DFF', accentFill:'#2F6BD0', selBg:'rgba(90,157,255,0.16)', navSel:'rgba(255,255,255,0.09)', check:'#64646C', checkDone:'#4C8DF0',
+    dueText:'#FFC266', dueBg:'rgba(255,176,64,0.15)', card:'#2A2A2E', cardBorder:'rgba(255,255,255,0.07)',
+    field:'rgba(255,255,255,0.07)', fieldBorder:'rgba(255,255,255,0.12)', badgeBorder:'rgba(255,255,255,0.2)', paused:'#7E7E86',
+    windowBorder:'rgba(255,255,255,0.14)', rhythm:'#5E92EE', progress:'#3FA690', done:'#7E7E86', track:'rgba(255,255,255,0.07)',
+    heat:'94,146,238', scrim:'rgba(0,0,0,0.42)', sheet:'#2A2A2E', shadow:'0 24px 70px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.1)',
+    band1:'rgba(94,146,238,0.22)', bandLine:'#5E92EE', grid:'rgba(255,255,255,0.07)', seg:'#4A5468', segAlt:'#596378', segText:'#EDEDF0',
+    hatch:'rgba(255,255,255,0.22)', ctrl:'#3A3A3F', ctrlSel:'#5C5C63', knob:'#E6E6EA', future:'#B9A6F0'
+  } : {
+    dark:false, window:'#FFFFFF', sidebar:'#EFEEF2', rail:'#F8F8FA', band:'#F6F6F8', text:'#1D1D1F', sec:'#5F5F67', ter:'#74747C',
+    sep:'rgba(0,0,0,0.08)', rowSep:'rgba(0,0,0,0.045)', chip:'rgba(0,0,0,0.045)', chipText:'#4F4F57',
+    accent:'#0A64D8', accentFill:'#0A64D8', selBg:'rgba(10,100,216,0.08)', navSel:'rgba(0,0,0,0.07)', check:'#B4B4BB', checkDone:'#0A64D8',
+    dueText:'#8A4B00', dueBg:'#FFEFD6', card:'#FFFFFF', cardBorder:'rgba(0,0,0,0.08)',
+    field:'rgba(0,0,0,0.045)', fieldBorder:'rgba(0,0,0,0.12)', badgeBorder:'rgba(0,0,0,0.18)', paused:'#8E8E95',
+    windowBorder:'rgba(0,0,0,0.16)', rhythm:'#2F68C8', progress:'#14917A', done:'#9A9AA2', track:'rgba(0,0,0,0.05)',
+    heat:'47,104,200', scrim:'rgba(0,0,0,0.18)', sheet:'#FFFFFF', shadow:'0 24px 70px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.08)',
+    band1:'rgba(47,104,200,0.16)', bandLine:'#2F68C8', grid:'rgba(0,0,0,0.06)', seg:'#C9D3E6', segAlt:'#B4C1DA', segText:'#1D2A44',
+    hatch:'rgba(0,0,0,0.22)', ctrl:'#E4E4E8', ctrlSel:'#FFFFFF', knob:'#FFFFFF', future:'#5B3FA8'
+  };
+}
+var SS = {
+  en:{ lang:'en', dir:'ltr', today:'Today', week:'Week', month:'Month', lines:'Lines', search:'Search', demo:'Demo data', updated:'Updated 3 min ago',
+       keys:'⌘1–⌘4 Views · ⌘K Search · ⌘R Refresh', tiers:{ foundation:'Foundation', active:'Active this season', maintenance:'Maintenance', paused:'Not in focus — on purpose' } },
+  ru:{ lang:'ru', dir:'ltr', today:'Сегодня', week:'Неделя', month:'Месяц', lines:'Линии', search:'Поиск', demo:'Демо-данные', updated:'Обновлено 3 мин назад',
+       keys:'⌘1–⌘4 Виды · ⌘K Поиск · ⌘R Обновить', tiers:{ foundation:'Фундамент', active:'Активные в сезоне', maintenance:'На поддержании', paused:'Не в фокусе — намеренно' } },
+  he:{ lang:'he', dir:'rtl', today:'היום', week:'שבוע', month:'חודש', lines:'תחומים', search:'חיפוש', demo:'נתוני הדגמה', updated:'עודכן לפני 3 דק׳',
+       keys:'⌘1–⌘4 תצוגות · ⌘K חיפוש · ⌘R רענון', tiers:{ foundation:'יסוד', active:'פעילים העונה', maintenance:'תחזוקה', paused:'לא בפוקוס — בכוונה' } }
+};
+var SIDE_T = [
+  ['foundation', [['🧘','Core practice'],['💪','Calisthenics']], true],
+  ['active', [['🎻','Violin'],['🇮🇹','Italian'],['🇯🇵','Japanese'],['📐','Math'],['🤖','AI/ML'],['🔬','Research'],['👨‍👩‍👧','Family']], true],
+  ['maintenance', [['🎹','Piano']], true],
+  ['paused', [['✒️','Calligraphy']], false]
+];
+function side(c, lang) {
+  var ss = SS[lang] || SS.en;
+  return SIDE_T.map(function (t) { var paused = t[0] === 'paused';
+    return { n: ss.tiers[t[0]], open: t[2], count: t[2] ? '' : String(t[1].length), chev: t[2] ? 'M3.5 6L8 10.5 12.5 6' : (ss.dir === 'rtl' ? 'M10 3.5L5.5 8 10 12.5' : 'M6 3.5L10.5 8 6 12.5'),
+      rows: t[1].map(function (r) { return { e:r[0], n:r[1], fg: paused ? c.paused : c.text, op: paused ? 0.5 : 1 }; }) }; });
+}
+function fmt(m) { if (m < 60) return '≈ ' + m + ' min est.'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : '') + ' est.'; }
+function short(m) { if (m < 60) return '≈ ' + m + ' min'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : ''); }
+var L = {
+  violin:{e:'🎻',n:'Violin',a:'Spring recital 2027'},
+  piano:{e:'🎹',n:'Piano',a:'Keep repertoire alive'},
+  italian:{e:'🇮🇹',n:'Italian',a:'B1 by summer 2027'},
+  japanese:{e:'🇯🇵',n:'Japanese',a:'Kana and first 300 words'},
+  math:{e:'📐',n:'Math',a:'Linear algebra foundation'},
+  ai:{e:'🤖',n:'AI/ML',a:'Eval toolkit v1'},
+  research:{e:'🔬',n:'Research',a:'Practice-drift paper'},
+  cal:{e:'💪',n:'Calisthenics',a:'20 strict pull-ups'},
+  core:{e:'🧘',n:'Core practice',a:'Daily practice 2026'},
+  family:{e:'👨‍👩‍👧',n:'Family',a:'Family year 2026'},
+  life:{e:'🧺',n:'Life ops',a:'Household'}
+};
+
+
+function build(c) {
+  var R = [6,5,2,1,3,6,6,4], P = [1,2,0,0,1,2,1,1];
+  var themes = [false, true].map(function (d) {
+    var t = theme(d);
+    t.name = d ? 'Dark' : 'Light';
+    t.rows = [
+      { title:'Kreutzer No. 2 — détaché, slow bow', project:'Études', est:'≈ 25 min', open:true, done:false, tc:t.text, td:'none', bg:'transparent', due:'', age:'', repeat:false },
+      { title:'Allemande, bars 1–16 at ♩ = 60', project:'Bach Partita No. 2', est:'≈ 45 min', open:true, done:false, tc:t.text, td:'none', bg:t.selBg, due:'', age:'', repeat:false },
+      { title:'Scales & arpeggios — G minor', project:'Daily technique', est:'≈ 20 min', open:false, done:true, tc:t.done, td:'line-through', bg:'transparent', due:'', age:'', repeat:true },
+      { title:'Send recital repertoire list to teacher', project:'Recital prep', est:'≈ 10 min', open:true, done:false, tc:t.text, td:'none', bg:'transparent', due:'Due 18:00', age:'', repeat:false },
+      { title:'Book rehearsal room for November', project:'Recital prep', est:'≈ 10 min', open:true, done:false, tc:t.text, td:'none', bg:'transparent', due:'', age:'planned 3 days ago', repeat:false }
+    ];
+    t.weeks = R.map(function (rv, i) { var cur = i === 7;
+      return { rh: Math.round(rv / 6 * 24), ph: Math.max(P[i] ? 3 : 0, Math.round(P[i] / 6 * 24)), bg: cur ? t.track : 'transparent', ol: cur ? '1px dashed ' + t.badgeBorder : 'none', op: cur ? 0.6 : 1 }; });
+    return t;
+  });
+  return { themes: themes };
+}
+
+class Component extends DCLogic {
+  renderVals() {
+    var c = theme(!!this.props.dark);
+    var v = build.call(this, c, this.props.lang || 'en') || {};
+    var lang = this.props.lang || 'en'; v.c = c; v.ss = SS[lang] || SS.en; v.side = side(c, lang);
+    return v;
+  }
+}
+</script>
+</body>
+</html>
