@@ -49,6 +49,7 @@ MoonShine keeps a local cache of provider data (OmniFocus, Obsidian) and native 
 - Bad — sync logic is ours when it comes (or a CRDT layer then).
 - Neutral — notes stay markdown files (ADR-0004), not rows.
 - Note (2026-10-01, P1-S2) — history outlives the provider. A full import never removes a completed task: the snapshot only covers a 12-week window, so a completed task missing from it has aged out and stays in the store. Anything else missing from an import is soft-deleted (`removed_at`, logged as `delete`) and restored with the same id if it reappears. Trade-off: a completed task deleted in OmniFocus stays in MoonShine's history; the provider cannot tell "deleted" from "aged out", and history matters more for stats and forecasts. The rule lives in Core (`StoredWorkspace.merging`), so every `Store` applies it.
+- Note (2026-10-01, P1-S2) — single writer process by design: imports are single-flight per `ImportService`, and a commit carries the store version its identity map was read at; an `IdentityConflict` means a second writer exists (an architecture violation), so it is never retried and stays loud.
 
 ### Confirmation
 
