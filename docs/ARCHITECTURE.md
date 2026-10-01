@@ -54,7 +54,7 @@ Ports & adapters (hexagonal). The domain and the UI never know which tool the da
 
 ## Key flows
 
-- **Sync-in (phase 1):** providers produce snapshots → `Store` upserts by `ExternalRef` → Services read only from `Store`. UI is fast and works offline; providers refresh on launch / ⌘R / timer.
+- **Sync-in (phase 1):** providers produce snapshots → `Store` upserts by `ExternalRef` → Services read only from `Store`. Completed tasks outlive the import window; other missing items are soft-deleted (ADR-0002). Imports are single-flight per service, and a commit names the store version its identity map was read at (stale → `IdentityConflict`). UI is fast and works offline; providers refresh on launch / ⌘R / timer.
 - **Commands (phase 6):** UI or assistant emits `Command` (e.g. `CompleteTask(id)`) → CommandBus checks provider **capabilities** → adapter executes → Store refreshed → undo entry logged.
 - **Forecast (phase 2–3):** evidence → Calibration (bias, adherence per line) → ForecastEngine simulates the scenario over Capacity → bands per step/project → Planner view models; weekly job stores ForecastSnapshots.
 - **Assistant (phase 4):** conversation → `AIProvider` with tool schemas from `ToolRegistry` → read tools execute immediately; write tools return a _proposal_ (a `Command` preview) the user confirms.

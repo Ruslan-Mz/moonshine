@@ -127,11 +127,15 @@ public struct Importer: Sendable {
 }
 
 /// Reads both providers, builds the workspace with the store's identities and commits it.
-public struct ImportService: Sendable {
+public actor ImportService {
   public let tasks: any TaskProvider
   public let notes: any NoteProvider
   public let store: any Store
   public let importer: Importer
+  private var current: Task<Workspace, any Error>?
+  private var followUp: Task<Workspace, any Error>?
+  /// Requests waiting on the queued follow-up run (observable by tests).
+  private(set) var followUpRequests = 0
 
   public init(
     tasks: any TaskProvider, notes: any NoteProvider, store: any Store,
@@ -144,15 +148,47 @@ public struct ImportService: Sendable {
   }
 
   /// Full import. Incremental refresh (`modifiedSince`) arrives with the live adapters (S3).
+  /// Single-flight: imports run one at a time (identity map → workspace → commit is not atomic
+  /// otherwise); requests arriving during an import share at most one follow-up run, which
+  /// starts when the current one ends, so the latest provider state is still read.
   @discardableResult
   public func run(now: Date = Date()) async throws -> Workspace {
+    let task: Task<Workspace, any Error>
+    if let followUp {
+      task = followUp
+      followUpRequests += 1
+    } else if let current {
+      task = Task { [current] in
+        _ = await current.result
+        promoteFollowUp()
+        return try await importOnce(now: now)
+      }
+      followUp = task
+      followUpRequests = 1
+    } else {
+      task = Task { try await importOnce(now: now) }
+      current = task
+    }
+    let result = await task.result
+    if current == task { current = nil }
+    return try result.get()
+  }
+
+  private func promoteFollowUp() {
+    current = followUp
+    followUp = nil
+    followUpRequests = 0
+  }
+
+  private func importOnce(now: Date) async throws -> Workspace {
     async let taskSnapshot = tasks.snapshot(modifiedSince: nil)
     async let vaultSnapshot = notes.vault()
     let (source, vault) = try await (taskSnapshot, vaultSnapshot)
     var identities = try await store.identityMap()
     let workspace = importer.makeWorkspace(
-      tasks: source, vault: vault, identities: &identities, now: now)
-    try await store.commit(workspace, identities: identities)
+      tasks: source, vault: vault, identities: &identities.map, now: now)
+    try await store.commit(
+      workspace, identities: identities.map, expectedVersion: identities.version, at: now)
     return workspace
   }
 }

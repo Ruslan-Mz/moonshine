@@ -78,6 +78,20 @@ public struct Artifact: Hashable, Sendable, Identifiable {
   public let status: ArtifactStatus
   public let priority: Bool
   public let noteID: NoteID?
+
+  public init(
+    id: ArtifactID, refs: [ExternalRef], key: String, title: String, lineIDs: [LineID],
+    status: ArtifactStatus, priority: Bool, noteID: NoteID?
+  ) {
+    self.id = id
+    self.refs = refs
+    self.key = key
+    self.title = title
+    self.lineIDs = lineIDs
+    self.status = status
+    self.priority = priority
+    self.noteID = noteID
+  }
 }
 
 public enum ProjectStatus: String, Hashable, Sendable {
@@ -91,6 +105,18 @@ public struct Project: Hashable, Sendable, Identifiable {
   public let status: ProjectStatus
   public let tagIDs: [TagID]
   public let line: LineAssignment
+
+  public init(
+    id: ProjectID, refs: [ExternalRef], title: String, status: ProjectStatus, tagIDs: [TagID],
+    line: LineAssignment
+  ) {
+    self.id = id
+    self.refs = refs
+    self.title = title
+    self.status = status
+    self.tagIDs = tagIDs
+    self.line = line
+  }
 }
 
 public enum TaskItemStatus: String, Hashable, Sendable {
@@ -118,6 +144,30 @@ public struct TaskItem: Hashable, Sendable, Identifiable {
   public let occurrenceOf: TaskItemID?
   public let line: LineAssignment
 
+  public init(
+    id: TaskItemID, refs: [ExternalRef], title: String, projectID: ProjectID?,
+    parentTaskID: TaskItemID?, tagIDs: [TagID], status: TaskItemStatus, flagged: Bool,
+    plannedAt: Date?, deferUntil: Date?, dueAt: Date?, estimateMinutes: Int?,
+    completedAt: Date?, modifiedAt: Date?, occurrenceOf: TaskItemID?, line: LineAssignment
+  ) {
+    self.id = id
+    self.refs = refs
+    self.title = title
+    self.projectID = projectID
+    self.parentTaskID = parentTaskID
+    self.tagIDs = tagIDs
+    self.status = status
+    self.flagged = flagged
+    self.plannedAt = plannedAt
+    self.deferUntil = deferUntil
+    self.dueAt = dueAt
+    self.estimateMinutes = estimateMinutes
+    self.completedAt = completedAt
+    self.modifiedAt = modifiedAt
+    self.occurrenceOf = occurrenceOf
+    self.line = line
+  }
+
   /// Occurrences of repeating tasks count as rhythm (sessions); everything else as progress.
   public var isOccurrence: Bool { occurrenceOf != nil }
 }
@@ -129,6 +179,14 @@ public struct Tag: Hashable, Sendable, Identifiable {
   public let parentID: TagID?
   /// Meta tags (energy, context, time…) are task attributes and never map a line.
   public let isMeta: Bool
+
+  public init(id: TagID, refs: [ExternalRef], name: String, parentID: TagID?, isMeta: Bool) {
+    self.id = id
+    self.refs = refs
+    self.name = name
+    self.parentID = parentID
+    self.isMeta = isMeta
+  }
 }
 
 public struct NoteRef: Hashable, Sendable, Identifiable {
@@ -143,6 +201,22 @@ public struct NoteRef: Hashable, Sendable, Identifiable {
   public let parentLink: String?
   public let lineKey: LineKey?
   public let status: String?
+
+  public init(
+    id: NoteID, refs: [ExternalRef], path: String, title: String, type: String?,
+    scale: Scale?, period: Horizon?, parentLink: String?, lineKey: LineKey?, status: String?
+  ) {
+    self.id = id
+    self.refs = refs
+    self.path = path
+    self.title = title
+    self.type = type
+    self.scale = scale
+    self.period = period
+    self.parentLink = parentLink
+    self.lineKey = lineKey
+    self.status = status
+  }
 }
 
 /// Everything the store holds for phase 1. Services read only this.
