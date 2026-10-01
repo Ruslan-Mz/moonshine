@@ -126,12 +126,34 @@ import Testing
   @Test func changesTableIsAppendOnly() async throws {
     let store = try SQLiteStore()
     try await run(try fixtureSnapshot(), store, at: first)
-    await #expect(throws: DatabaseError.self) {
-      try await store.writer.write { db in try db.execute(sql: "UPDATE changes SET op = 'x'") }
+    let (exists, before) = try await store.writer.read { db in
+      (try db.tableExists("changes"), try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM changes"))
     }
-    await #expect(throws: DatabaseError.self) {
-      try await store.writer.write { db in try db.execute(sql: "DELETE FROM changes") }
+    #expect(exists)
+
+    try await store.writer.write { db in
+      try db.execute(
+        sql:
+          "INSERT INTO changes (at, entity_kind, entity_id, op) VALUES (0, 'task', x'00', 'insert')"
+      )
     }
+    let afterInsert = try await store.writer.read { db in
+      try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM changes")
+    }
+    #expect(afterInsert == before.map { $0 + 1 })
+
+    for sql in ["UPDATE changes SET op = 'x'", "DELETE FROM changes"] {
+      let error = await #expect(throws: DatabaseError.self, "\(sql)") {
+        try await store.writer.write { db in try db.execute(sql: sql) }
+      }
+      #expect(error?.resultCode == .SQLITE_CONSTRAINT, "\(sql)")
+      #expect(error?.extendedResultCode == .SQLITE_CONSTRAINT_TRIGGER, "\(sql)")
+      #expect(error?.message == "changes is append-only", "\(sql)")
+    }
+    let afterAttempts = try await store.writer.read { db in
+      try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM changes")
+    }
+    #expect(afterAttempts == afterInsert)
   }
 
   /// The fixture ×20 (~3k tasks) committed to a file in one transaction. Logged target < 1 s;
