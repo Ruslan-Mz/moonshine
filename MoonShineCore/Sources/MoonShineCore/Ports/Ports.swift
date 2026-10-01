@@ -13,13 +13,41 @@ public protocol NoteProvider: Sendable {
 
 /// The local store. The UI and services read only from here.
 public protocol Store: Sendable {
-  func identityMap() async throws -> IdentityMap
+  /// The identity map and the store version it was read at.
+  func identityMap() async throws -> VersionedIdentityMap
   /// Applies a full import through `StoredWorkspace.merging(_:at:)` and saves the identities.
-  func commit(_ workspace: Workspace, identities: IdentityMap, at now: Date) async throws
+  /// Optimistic concurrency: throws `IdentityConflict` unless the store is still at
+  /// `expectedVersion` (the version `identityMap()` returned); every commit bumps the version.
+  func commit(
+    _ workspace: Workspace, identities: IdentityMap, expectedVersion: Int, at now: Date
+  ) async throws
   /// What services read: everything not removed from its provider.
   func workspace() async throws -> Workspace
   /// Everything kept, including history its providers no longer return.
   func stored() async throws -> StoredWorkspace
+}
+
+public struct VersionedIdentityMap: Sendable {
+  public var map: IdentityMap
+  /// 0 for an empty store; +1 on every commit.
+  public let version: Int
+
+  public init(map: IdentityMap, version: Int) {
+    self.map = map
+    self.version = version
+  }
+}
+
+/// A commit built from an identity map another commit has since replaced. Its ids may
+/// disagree with the stored ones, so it is rejected instead of merged.
+public struct IdentityConflict: Error, Equatable, Sendable {
+  public let expectedVersion: Int
+  public let actualVersion: Int
+
+  public init(expectedVersion: Int, actualVersion: Int) {
+    self.expectedVersion = expectedVersion
+    self.actualVersion = actualVersion
+  }
 }
 
 // MARK: - Task-manager records, keyed by the provider's own ids

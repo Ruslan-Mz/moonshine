@@ -5,16 +5,25 @@ import MoonShineCore
 public actor InMemoryStore: Store {
   private var identities = IdentityMap()
   private var current: StoredWorkspace
+  private var version = 0
 
   public init(timeZone: TimeZone = .current) {
     current = StoredWorkspace(timeZone: timeZone)
   }
 
-  public func identityMap() -> IdentityMap { identities }
+  public func identityMap() -> VersionedIdentityMap {
+    VersionedIdentityMap(map: identities, version: version)
+  }
 
-  public func commit(_ workspace: Workspace, identities: IdentityMap, at now: Date) {
+  public func commit(
+    _ workspace: Workspace, identities: IdentityMap, expectedVersion: Int, at now: Date
+  ) throws {
+    guard expectedVersion == version else {
+      throw IdentityConflict(expectedVersion: expectedVersion, actualVersion: version)
+    }
     current = current.merging(workspace, at: now)
     self.identities = identities
+    version += 1
   }
 
   public func workspace() -> Workspace { current.workspace }

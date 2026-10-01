@@ -171,10 +171,10 @@ import Testing
         tasks: source, vault: vault, identities: &identities, now: first)
     }
     let commit = try await clock.measure {
-      try await store.commit(workspace, identities: identities, at: first)
+      try await store.commit(workspace, identities: identities, expectedVersion: 0, at: first)
     }
     let recommit = try await clock.measure {
-      try await store.commit(workspace, identities: identities, at: second)
+      try await store.commit(workspace, identities: identities, expectedVersion: 1, at: second)
     }
     var read = Workspace(timeZone: .gmt)
     let readTime = try await clock.measure { read = try await store.workspace() }

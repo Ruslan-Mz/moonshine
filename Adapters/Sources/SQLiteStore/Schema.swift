@@ -10,6 +10,8 @@ extension SQLiteStore {
         t.primaryKey("id", .integer)
         t.column("time_zone", .text).notNull()
         t.column("committed_at", .integer).notNull()
+        // Optimistic concurrency: +1 per commit; a commit names the version it was built on.
+        t.column("version", .integer).notNull()
         t.column("attrs", .jsonText).notNull()
       }
       // The identity map: one MoonShine id per provider ref. `last_seen` is set for refs an

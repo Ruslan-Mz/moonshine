@@ -2,9 +2,10 @@ import Foundation
 import GRDB
 import MoonShineCore
 
-/// The local store on SQLite (ADR-0002). A commit is one transaction: the identity map is
-/// upserted by `ExternalRef`, the import is merged by Core's retention rule, and only rows
-/// that changed are written, each with an entry in the append-only `changes` log.
+/// The local store on SQLite (ADR-0002). A commit is one transaction: the version is checked
+/// (optimistic concurrency), the identity map is upserted by `ExternalRef`, the import is
+/// merged by Core's retention rule, and only rows that changed are written, each with an
+/// entry in the append-only `changes` log.
 public struct SQLiteStore: Store {
   let writer: any DatabaseWriter
   let fallbackTimeZone: TimeZone
@@ -25,7 +26,7 @@ public struct SQLiteStore: Store {
     try Self.migrator.migrate(writer)
   }
 
-  public func identityMap() async throws -> IdentityMap {
+  public func identityMap() async throws -> VersionedIdentityMap {
     try await writer.read { db in
       var entries: [IdentityMap.Key: UUID] = [:]
       let rows = try Row.fetchCursor(
@@ -36,15 +37,20 @@ public struct SQLiteStore: Store {
           externalId: row["external_id"])
         entries[key] = row["entity_id"]
       }
-      return IdentityMap(entries: entries)
+      return VersionedIdentityMap(
+        map: IdentityMap(entries: entries), version: try WorkspaceRecord.fetchOne(db)?.version ?? 0)
     }
   }
 
-  public func commit(_ workspace: Workspace, identities: IdentityMap, at now: Date)
-    async throws
-  {
+  public func commit(
+    _ workspace: Workspace, identities: IdentityMap, expectedVersion: Int, at now: Date
+  ) async throws {
     let fallback = fallbackTimeZone
     try await writer.write { db in
+      let version = try WorkspaceRecord.fetchOne(db)?.version ?? 0
+      guard version == expectedVersion else {
+        throw IdentityConflict(expectedVersion: expectedVersion, actualVersion: version)
+      }
       try Self.saveIdentities(identities, seenIn: workspace, db)
       let merged = try Self.load(db, includeRemoved: true, fallback: fallback)
         .merging(workspace, at: now)
@@ -55,7 +61,7 @@ public struct SQLiteStore: Store {
       try Self.sync(merged.tags, as: TagRecord.self, db, at: at)
       try Self.sync(merged.projects, as: ProjectRecord.self, db, at: at)
       try Self.sync(merged.tasks, as: TaskRecord.self, db, at: at)
-      try WorkspaceRecord(merged, committedAt: at).save(db)
+      try WorkspaceRecord(merged, committedAt: at, version: version + 1).save(db)
     }
   }
 

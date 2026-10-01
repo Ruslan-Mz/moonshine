@@ -325,11 +325,13 @@ struct WorkspaceRecord: Codable, FetchableRecord, PersistableRecord {
   var id = 1
   var timeZone: String
   var committedAt: Millis
+  var version: Int
   var attrs: Attrs
 
-  init(_ stored: StoredWorkspace, committedAt: Millis) {
+  init(_ stored: StoredWorkspace, committedAt: Millis, version: Int) {
     timeZone = stored.timeZone.identifier
     self.committedAt = committedAt
+    self.version = version
     attrs = Attrs(
       issues: stored.issues.map { issue in
         switch issue {

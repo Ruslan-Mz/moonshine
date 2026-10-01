@@ -11,7 +11,7 @@ let package = Package(
   targets: [
     .target(name: "MoonShineCore"),
     .target(name: "MoonShineFixtures", dependencies: ["MoonShineCore"]),
-    .testTarget(name: "MoonShineCoreTests", dependencies: ["MoonShineCore"]),
+    .testTarget(name: "MoonShineCoreTests", dependencies: ["MoonShineCore", "MoonShineFixtures"]),
     .testTarget(
       name: "MoonShineFixturesTests", dependencies: ["MoonShineCore", "MoonShineFixtures"]),
   ]
