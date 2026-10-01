@@ -10,9 +10,9 @@ artboards: [mockups/Today.dc.html, mockups/Today-Dark.dc.html]
 
 ## Layout
 
-Sidebar (Today selected) · toolbar: title "Today", subtitle `Thursday, 1 October · Week 40 · 22 open · 3 done · ≈ 10 h 15 min est.` · main table · right rail 300 · status bar.
+Sidebar (Today selected) · toolbar: title "Today", subtitle `Thursday, 1 October · Week 40 · 23 open · 6 done · ≈ 11 h 15 min est.` · main table · right rail 300 · status bar.
 
-Main, top to bottom: 0. **Draft-2 — Anchors strip** (40): `Anchors · 3 of 5 done`, then up to 5 compact chips (checkbox + short title + line emoji) for today's tasks tagged `anchor`. Done chips are checked and dimmed, not hidden. Absent if no anchors.
+Main, top to bottom: 0. **Draft-2 — Anchors strip** (40): `Anchors · 3 of 5 done`, then up to 5 compact chips (checkbox + short title + line emoji) for today's tasks tagged `anchor`. Done chips are checked and dimmed, not hidden. Absent if no anchors. Anchor tasks are **not repeated** in their line sections.
 0b. **Draft-2 — Top 3 today**: flagged tasks, max 3 rows, as normal `TaskRow`s under a section header `Top 3 today`. If more than 3 are flagged: caption `5 flagged — 3 shown` and a "Show all" link. These tasks are **not repeated** in their line sections.
 
 1. Column header (26): blank · Task · Project → Line → Artifact · Estimate · When.
@@ -46,7 +46,7 @@ Right rail:
 
 ## Acceptance
 
-- [ ] 25 demo tasks fit at 1440×900 without scrolling, Life ops collapsed.
+- [ ] 29 demo tasks (anchors and Top 3 included) fit at 1440×900 without scrolling, Life ops collapsed.
 - [ ] Only the 2 tasks with real due dates show amber.
 - [ ] "From earlier" rows show the planned age and no urgency colour.
 - [ ] Italian is listed as quiet; Piano (maintenance) is not; Calligraphy appears only under "Paused on purpose".

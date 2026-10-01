@@ -21,7 +21,7 @@ An invented dataset; no real people. "Today" = **Thursday 1 October 2026, ISO we
 | ✒️    | Calligraphy   | Creative   | paused                        | —             | —                         | paused since 14 Jul                         |
 | 🇮🇹    | Italian       | Languages  | active                        | 2             | B1 by summer 2027         | last activity 2 Sep → **quiet for 29 days** |
 | 🇯🇵    | Japanese      | Languages  | active                        | 1             | Kana and first 300 words  | **no activity yet**                         |
-| 📐    | Math          | Foundation | active                        | 4             | Linear algebra foundation |                                             |
+| 📐    | Math          | Science    | active                        | 4             | Linear algebra foundation |                                             |
 | 👨‍👩‍👧    | Family        | Life       | active                        | —             | Family year 2026          |                                             |
 | 🧺    | Life ops      | —          | (bucket)                      | —             | —                         | household, errands, inbox                   |
 
@@ -46,33 +46,39 @@ The Violin dip in W35–W37 is the same story the forecast drift chart tells.
 - **Flagged (Top 3):** 🤖 Submit workshop abstract (due 23:59) · 🎻 Allemande, bars 1–16 · 📐 Chapter 3.A exercises — plus 2 more flagged (`5 flagged — 3 shown`).
 - **Quarter focus (Q4, 5 artifacts):** Spring recital programme chosen 🎻 (done) · Eval toolkit v1 published 🤖 · Practice-drift paper draft 🔬 · Linear algebra ch. 1–4 📐 (done) · 10 strict pull-ups 💪.
 
-## Today (17 line tasks + 3 from earlier + 5 Life ops)
+## Today (21 line tasks + 3 from earlier + 5 Life ops)
 
-| Line | Task                                           | Project                 | Est. | Flags               |
-| ---- | ---------------------------------------------- | ----------------------- | ---- | ------------------- |
-| 🎻   | Scales & arpeggios — G minor, 3 octaves        | Daily technique         | 20   | repeat, **done**    |
-| 🎻   | Allemande, bars 1–16 at ♩ = 60                 | Bach Partita No. 2      | 45   | selected in mock    |
-| 🎻   | Record bars 1–8, listen back with the score    | Bach Partita No. 2      | 15   |                     |
-| 🎻   | Kreutzer No. 2 — détaché, slow bow             | Études                  | 25   |                     |
-| 🎻   | Send recital repertoire list to teacher        | Recital prep            | 10   | **due today 18:00** |
-| 📐   | Chapter 3.A — exercises 1–6                    | Linear algebra textbook | 60   |                     |
-| 📐   | Re-derive rank–nullity from memory             | Linear algebra textbook | 20   |                     |
-| 📐   | Definitions deck — 15 cards                    | Definitions deck        | 10   | repeat              |
-| 🤖   | Eval harness — deterministic seeds             | Eval toolkit            | 90   |                     |
-| 🤖   | Notes on conformal prediction intervals        | Paper reading           | 40   |                     |
-| 🤖   | Submit workshop abstract                       | Workshop 2026           | 30   | **due today 23:59** |
-| 🔬   | Outline section 3 — method                     | Drift paper draft       | 45   |                     |
-| 🔬   | Export 12 weeks of session logs                | Drift paper draft       | 30   |                     |
-| 💪   | Pull session — 5 × 5 band-assisted + negatives | Pull-up progression     | 40   | repeat              |
-| 💪   | Mobility — hips & shoulders                    | Daily mobility          | 15   | repeat, **done**    |
-| 👨‍👩‍👧   | Evening reading with the kids                  | Evenings                | 20   | repeat              |
-| 👨‍👩‍👧   | Plan Saturday trip to the lake                 | Weekends                | 15   | **done**            |
+Anchor and Top 3 tasks are part of this table; the UI shows them in the Anchors strip and Top 3 and does not repeat them in their line sections.
+
+| Line | Task                                           | Project                 | Est. | Flags                        |
+| ---- | ---------------------------------------------- | ----------------------- | ---- | ---------------------------- |
+| 🧘   | Morning session                                | Daily practice          | 90   | anchor, repeat, **done**     |
+| 🧘   | Evening session                                | Daily practice          | 60   | anchor, repeat               |
+| 🎻   | Violin 15 min                                  | Daily technique         | 15   | anchor, repeat, **done**     |
+| 🎻   | Scales & arpeggios — G minor, 3 octaves        | Daily technique         | 20   | repeat, **done**             |
+| 🎻   | Allemande, bars 1–16 at ♩ = 60                 | Bach Partita No. 2      | 45   | flagged, selected in mock    |
+| 🎻   | Record bars 1–8, listen back with the score    | Bach Partita No. 2      | 15   |                              |
+| 🎻   | Kreutzer No. 2 — détaché, slow bow             | Études                  | 25   |                              |
+| 🎻   | Send recital repertoire list to teacher        | Recital prep            | 10   | **due today 18:00**          |
+| 📐   | Chapter 3.A — exercises 1–6                    | Linear algebra textbook | 60   | flagged                      |
+| 📐   | Re-derive rank–nullity from memory             | Linear algebra textbook | 20   |                              |
+| 📐   | Definitions deck — 15 cards                    | Definitions deck        | 10   | repeat                       |
+| 🤖   | Eval harness — deterministic seeds             | Eval toolkit            | 90   | flagged (not in Top 3)       |
+| 🤖   | Notes on conformal prediction intervals        | Paper reading           | 40   |                              |
+| 🤖   | Submit workshop abstract                       | Workshop 2026           | 30   | flagged, **due today 23:59** |
+| 🔬   | Outline section 3 — method                     | Drift paper draft       | 45   | flagged (not in Top 3)       |
+| 🔬   | Export 12 weeks of session logs                | Drift paper draft       | 30   |                              |
+| 💪   | Walk 30 min                                    | Daily mobility          | 30   | anchor, repeat, **done**     |
+| 💪   | Pull session — 5 × 5 band-assisted + negatives | Pull-up progression     | 40   | repeat                       |
+| 💪   | Mobility — hips & shoulders                    | Daily mobility          | 15   | repeat, **done**             |
+| 👨‍👩‍👧   | Evening reading with the kids                  | Evenings                | 20   | anchor, repeat               |
+| 👨‍👩‍👧   | Plan Saturday trip to the lake                 | Weekends                | 15   | **done**                     |
 
 From earlier: 🔬 Email co-author about the dataset licence (planned Mon 28 Sep, 10) · 🤖 Refactor tokenizer benchmark script (Tue 29 Sep, 45) · 👨‍👩‍👧 Book dentist appointment for the kids (Sat 26 Sep, 5).
 
 Life ops: Pay electricity bill (5) · Return parcel at the post office (20) · Compare car insurance quotes (30) · Process inbox — 3 items (15) · Order printer toner (5).
 
-Totals: 22 open, 3 done, ≈ 10 h 15 min est.
+Totals: 29 tasks — 23 open, 6 done, ≈ 11 h 15 min est. (open tasks only). Anchors 3 of 5 done; 5 flagged, 3 shown in Top 3.
 
 ## Week 40 extras
 

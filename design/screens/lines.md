@@ -10,7 +10,7 @@ artboards: [mockups/Lines.dc.html, mockups/Lines-Dark.dc.html]
 
 ## Layout
 
-Toolbar: `Lines`, subtitle `11 lines · 2 foundation · 6 active · 1 maintenance · 1 paused`.
+Toolbar: `Lines`, subtitle `11 lines · 2 foundation · 7 active · 1 maintenance · 1 paused`.
 
 Legend row: rhythm swatch "Rhythm — repeated sessions per week", progress swatch "Progress — one-off tasks done per week", "current week, partial", and "Weeks 33–40" on the right.
 
@@ -32,7 +32,7 @@ The selected row has the `selection` fill and a chevron: ↵ opens Line detail.
 
 ## SwiftUI
 
-`Table` with `Section`s per block; the sparkline column hosts a small Swift Charts `Chart`. Navigation to detail via `NavigationStack` (`.navigationDestination(for: Line.ID.self)`).
+`Table` with `Section`s per tier; the sparkline column hosts a small Swift Charts `Chart`. Navigation to detail via `NavigationStack` (`.navigationDestination(for: Line.ID.self)`).
 
 ## Acceptance
 
@@ -41,4 +41,4 @@ The selected row has the `selection` fill and a chevron: ↵ opens Line detail.
 - [ ] Checked in Russian at 1440×900 and 1100×700 (no clipped labels).
 - [ ] Current week visibly partial in every sparkline.
 - [ ] Rhythm and progress never summed; both visible even when one is zero (baseline only).
-- [ ] The word "hours" or "h" appears only in the Budget column and block summaries.
+- [ ] The word "hours" or "h" appears only in the Budget column, tier summaries and estimates labelled `est.`.

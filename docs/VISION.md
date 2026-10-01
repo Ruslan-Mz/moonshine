@@ -25,7 +25,7 @@
 2. **One timeline, semantic zoom.** Day → week → month → quarter → year → 5/10/25 years → lifetime (any configured length) is one continuous zoom, not seven screens. What is shown adapts to the zoom level (tasks → projects → artifacts → horizons).
 3. **Honest, never punishing.** Drift and quiet lines are shown as facts with a suggested next step. No red, no "failed/overdue" language for intentions. Real deadlines (external consequences) are the only urgent colour.
 4. **The assistant proposes, I confirm.** Every AI write is a visible, reversible command.
-5. **Local-first and private by default.** Works offline; no server needed for a single user; data never leaves the device unless I choose a cloud AI provider.
+5. **Local-first and private by default.** Works offline; no server needed for a single user; data never leaves my devices and my private iCloud unless I turn on sync or choose a cloud AI provider. Sync is opt-in and off by default (ADR-0010).
 6. **Fast and keyboard-first on Mac,** touch-first on iOS later.
 
 ## Signature features (what makes it more than a dashboard)

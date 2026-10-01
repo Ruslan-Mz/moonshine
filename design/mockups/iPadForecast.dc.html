@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>iPad — Project forecast (future), full scroll height</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0A64D8}a:hover{color:#084FA8}
+button{font:inherit;color:inherit;cursor:default}
+</style>
+</helmet>
+<div dir="{{ss.dir}}" lang="{{ss.lang}}" style="width:1210px;height:1180px;box-sizing:border-box;position:relative;overflow:hidden;border-radius:18px;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;font-size:17px;line-height:1.3;color:{{c.text}};background:{{i.bg}};-webkit-font-smoothing:antialiased;display:flex;flex-direction:column"><div style="display:flex;align-items:flex-end;gap:12px;padding:16px 22px 12px;flex-shrink:0"><button aria-label="Show sidebar" style="width:44px;height:44px;border:0;border-radius:22px;background:{{i.bar}};border:1px solid {{i.barBorder}};display:flex;align-items:center;justify-content:center;color:{{c.accent}}"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><rect x="1.5" y="2.5" width="13" height="11" rx="2"></rect><path d="M6 2.5v11"></path></svg></button><div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1"><h1 style="margin:0;font-size:30px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Bach Partita No. 2 — Allemande</h1><span style="font-size:15px;color:{{c.sec}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🎻 Violin → Spring recital 2027 · plan of 4 steps</span></div><span role="group" style="display:inline-flex;padding:2px;border-radius:22px;background:{{i.fill}}"><button aria-pressed="false" style="height:40px;padding:0 16px;border:0;border-radius:20px;font-size:15px;white-space:nowrap;background:transparent">Actual pace</button><button aria-pressed="true" style="height:40px;padding:0 16px;border:0;border-radius:20px;font-size:15px;white-space:nowrap;background:{{i.cell}};box-shadow:0 1px 3px rgba(0,0,0,0.16);font-weight:600">Scenario</button><button aria-pressed="false" style="height:40px;padding:0 16px;border:0;border-radius:20px;font-size:15px;white-space:nowrap;background:transparent">Target date</button></span><span style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;border-radius:15px;border:1px dashed {{c.future}};font-size:13px;font-weight:600;color:{{c.future}};white-space:nowrap"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M8 2v3M8 11v3M2 8h3M11 8h3M4 4l2 2M10 10l2 2M4 12l2-2M10 6l2-2"></path></svg>Future · phase 2–3</span></div><main style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:14px;padding:0 22px 22px"><section style="display:flex;flex-direction:column;gap:12px;padding:18px 22px;border-radius:20px;background:{{i.cell}};box-sizing:border-box;flex-direction:row;align-items:stretch;gap:28px"><div style="display:flex;flex-direction:column;gap:3px;min-width:250px"><span style="font-size:13px;font-weight:600;color:{{c.ter}}">Likely finish · p50</span><span style="font-size:40px;font-weight:700;letter-spacing:-0.6px">{{p50}}</span><span style="font-size:15px;color:{{c.sec}}">{{range}}</span><span style="font-size:15px;margin-top:8px">{{sentence}}</span><span style="font-size:13px;color:{{c.ter}}">1 000 simulated runs · scenario, not history</span></div><div style="flex:1;display:flex;flex-direction:column;gap:14px;padding-inline-start:28px;border-inline-start:1px solid {{i.sep}}"><div style="display:flex;align-items:center;gap:14px"><span style="font-size:15px;font-weight:600">Effort level</span><span role="group" style="display:inline-flex;padding:2px;border-radius:24px;background:{{i.fill}}"><sc-for list="{{levels}}" as="l" hint-placeholder-count="3"><button onClick="{{l.pick}}" aria-pressed="{{l.on}}" style="min-width:96px;height:44px;padding:0 18px;border:0;border-radius:22px;font-size:16px;background:{{l.bg}};font-weight:{{l.fw}};box-shadow:{{l.sh}}">{{l.n}}</button></sc-for></span><span style="margin-inline-start:auto;font-size:28px;font-weight:700;font-variant-numeric:tabular-nums">{{valL}}</span></div><label style="position:relative;display:block;height:56px" aria-label="Effort, hours per week"><span style="position:absolute;left:0;right:0;top:24px;height:8px;border-radius:4px;background:{{i.fill2}}"></span><span style="position:absolute;left:0;top:24px;height:8px;border-radius:4px;width:{{pct}}%;background:{{c.accent}}"></span><sc-for list="{{ticks}}" as="t" hint-placeholder-count="3"><span style="position:absolute;left:{{t.x}}%;top:40px;transform:translateX(-50%);font-size:12px;color:{{c.ter}}">{{t.n}}</span><span style="position:absolute;left:{{t.x}}%;top:18px;width:2px;height:20px;border-radius:1px;background:{{i.sep}}"></span></sc-for><span style="position:absolute;left:{{pct}}%;top:8px;width:40px;height:40px;margin-left:-20px;border-radius:20px;background:{{c.knob}};box-shadow:0 2px 8px rgba(0,0,0,0.3), 0 0 0 0.5px rgba(0,0,0,0.15)"></span><input type="range" min="0.5" max="5" step="0.1" value="{{val}}" onChange="{{onV}}" style="position:absolute;inset:0;width:100%;height:56px;margin:0;opacity:0"></label><span style="display:flex;align-items:center;gap:6px;font-size:13px;color:{{c.ter}}"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M11 2.5l2.5 2.5L6 12.5 3 13l.5-3z"></path><path d="M9.5 4l2.5 2.5"></path></svg>Drag with a finger or Apple Pencil — dates update as you move. Hover with Pencil to preview a value.</span></div></section><section style="display:flex;flex-direction:column;gap:12px;padding:18px 22px;border-radius:20px;background:{{i.cell}};box-sizing:border-box"><div style="display:flex;align-items:baseline;gap:10px"><h2 style="margin:0;font-size:20px;font-weight:700">Plan</h2><span style="font-size:15px;color:{{c.ter}}">bars are p10–p90, the tick is p50 · Sep → Mar</span></div><div style="position:relative"><div style="position:absolute;left:260px;top:0;bottom:0;width:820px"><sc-for list="{{months}}" as="m" hint-placeholder-count="7"><span style="position:absolute;left:{{m.x}}px;top:0;bottom:0;border-left:1px solid {{c.grid}}"></span><span style="position:absolute;left:{{m.lx}}px;top:-2px;font-size:12px;color:{{c.ter}}">{{m.n}}</span></sc-for><span style="position:absolute;left:{{todayX}}px;top:-6px;bottom:0;border-left:2px solid {{c.accent}}"></span></div><div style="height:20px"></div><sc-for list="{{steps}}" as="s" hint-placeholder-count="5"><div style="display:grid;grid-template-columns:260px 820px;align-items:center;height:52px;border-top:1px solid {{i.sep}}"><div style="display:flex;align-items:center;gap:12px;min-width:0"><span style="width:28px;height:28px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;background:{{s.nbg}};color:{{s.nfg}};border:{{s.nb}};box-sizing:border-box">{{s.num}}</span><span style="display:flex;flex-direction:column;min-width:0"><span style="font-size:16px;font-weight:{{s.fw}};color:{{s.tc}}">{{s.name}}</span><span style="font-size:13px;color:{{c.ter}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{s.sub}}</span></span></div><div style="position:relative;height:30px"><span style="position:absolute;left:{{s.a}}px;width:{{s.w}}px;top:{{s.top}}px;height:{{s.h}}px;border-radius:9px;background:{{s.bg}};border:{{s.bd}};box-sizing:border-box"></span><span style="position:absolute;left:{{s.p}}px;top:3px;width:3px;height:24px;border-radius:2px;background:{{s.pc}}"></span><span style="position:absolute;left:{{s.lx}}px;top:6px;font-size:13px;font-weight:{{s.fw}};color:{{c.sec}};white-space:nowrap">{{s.lab}}</span></div></div></sc-for></div></section><section style="display:flex;flex-direction:column;gap:12px;padding:18px 22px;border-radius:20px;background:{{i.cell}};box-sizing:border-box;gap:6px"><div style="display:flex;align-items:baseline;gap:10px"><h2 style="margin:0;font-size:20px;font-weight:700">Drift</h2><span style="font-size:15px;color:{{c.ter}}">projected finish, recorded every week · history, not the scenario</span></div><svg width="1100" height="190" style="display:block;max-width:100%" viewBox="0 0 1100 190" role="img" aria-label="Projected finish date per week, W29 to W40: steady near 26 November, later to 8 January in W37, back to 3 December now" style="display:block"><line x1="64" x2="980" y1="14.0" y2="14.0" stroke="{{c.grid}}" stroke-width="1"></line><text x="54" y="18.0" font-size="11" fill="{{c.ter}}" text-anchor="end">1 Nov</text><line x1="64" x2="980" y1="52.3" y2="52.3" stroke="{{c.grid}}" stroke-width="1"></line><text x="54" y="56.3" font-size="11" fill="{{c.ter}}" text-anchor="end">1 Dec</text><line x1="64" x2="980" y1="91.9" y2="91.9" stroke="{{c.grid}}" stroke-width="1"></line><text x="54" y="95.9" font-size="11" fill="{{c.ter}}" text-anchor="end">1 Jan</text><line x1="64" x2="980" y1="131.5" y2="131.5" stroke="{{c.grid}}" stroke-width="1"></line><text x="54" y="135.5" font-size="11" fill="{{c.ter}}" text-anchor="end">1 Feb</text><path d="M64.0 21.7 L147.3 22.9 L230.5 21.7 L313.8 22.9 L397.1 24.2 L480.4 25.5 L563.6 40.8 L646.9 62.5 L730.2 70.2 L813.5 51.0 L896.7 37.0 L980.0 29.3 L980.0 102.1 L896.7 114.9 L813.5 132.8 L730.2 157.1 L646.9 149.4 L563.6 121.3 L480.4 99.6 L397.1 95.7 L313.8 93.2 L230.5 89.4 L147.3 93.2 L64.0 91.9 Z" fill="{{c.band1}}"></path><path d="M64.0 45.9 L147.3 47.2 L230.5 44.7 L313.8 47.2 L397.1 48.5 L480.4 51.0 L563.6 68.9 L646.9 93.2 L730.2 100.9 L813.5 79.1 L896.7 63.8 L980.0 54.9" fill="none" stroke="{{c.bandLine}}" stroke-width="2" stroke-linejoin="round"></path><circle cx="64.0" cy="45.9" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="147.3" cy="47.2" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="230.5" cy="44.7" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="313.8" cy="47.2" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="397.1" cy="48.5" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="480.4" cy="51.0" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="563.6" cy="68.9" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="646.9" cy="93.2" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="730.2" cy="100.9" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="813.5" cy="79.1" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="896.7" cy="63.8" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="980.0" cy="54.9" r="5" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><text x="730.2" y="120.9" font-size="11.5" font-weight="600" fill="{{c.text}}" text-anchor="middle">8 Jan</text><text x="990.0" y="58.9" font-size="11.5" font-weight="600" fill="{{c.text}}">3 Dec · now</text><text x="990.0" y="106.1" font-size="11" fill="{{c.ter}}">p10–p90</text><text x="64.0" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W29</text><text x="147.3" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W30</text><text x="230.5" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W31</text><text x="313.8" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W32</text><text x="397.1" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W33</text><text x="480.4" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W34</text><text x="563.6" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W35</text><text x="646.9" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W36</text><text x="730.2" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W37</text><text x="813.5" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W38</text><text x="896.7" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W39</text><text x="980.0" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W40</text></svg><div style="display:flex;gap:28px;padding-left:64px;font-size:14px;color:{{c.sec}}"><span>W35–W37: practice at about 35 % of normal — the date moved 6 weeks later.</span><span>Back to normal since W38 — the date returned to 3 December.</span></div></section></main></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark": {"editor": "boolean", "default": false}, "lang": {"editor": "enum", "options": ["en", "ru", "he"], "default": "en"}, "$preview": {"width": 1210, "height": 1180}}'>
+
+function theme(d) {
+  return d ? {
+    dark:true, window:'#1E1E21', sidebar:'#28272C', rail:'#232326', band:'#252528', text:'#EDEDF0', sec:'#A6A6AD', ter:'#8D8D95',
+    sep:'rgba(255,255,255,0.08)', rowSep:'rgba(255,255,255,0.045)', chip:'rgba(255,255,255,0.075)', chipText:'#BDBDC4',
+    accent:'#5A9DFF', accentFill:'#2F6BD0', selBg:'rgba(90,157,255,0.16)', navSel:'rgba(255,255,255,0.09)', check:'#64646C', checkDone:'#4C8DF0',
+    dueText:'#FFC266', dueBg:'rgba(255,176,64,0.15)', card:'#2A2A2E', cardBorder:'rgba(255,255,255,0.07)',
+    field:'rgba(255,255,255,0.07)', fieldBorder:'rgba(255,255,255,0.12)', badgeBorder:'rgba(255,255,255,0.2)', paused:'#7E7E86',
+    windowBorder:'rgba(255,255,255,0.14)', rhythm:'#5E92EE', progress:'#3FA690', done:'#7E7E86', track:'rgba(255,255,255,0.07)',
+    heat:'94,146,238', scrim:'rgba(0,0,0,0.42)', sheet:'#2A2A2E', shadow:'0 24px 70px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.1)',
+    band1:'rgba(94,146,238,0.22)', bandLine:'#5E92EE', grid:'rgba(255,255,255,0.07)', seg:'#4A5468', segAlt:'#596378', segText:'#EDEDF0',
+    hatch:'rgba(255,255,255,0.22)', ctrl:'#3A3A3F', ctrlSel:'#5C5C63', knob:'#E6E6EA', future:'#B9A6F0'
+  } : {
+    dark:false, window:'#FFFFFF', sidebar:'#EFEEF2', rail:'#F8F8FA', band:'#F6F6F8', text:'#1D1D1F', sec:'#5F5F67', ter:'#74747C',
+    sep:'rgba(0,0,0,0.08)', rowSep:'rgba(0,0,0,0.045)', chip:'rgba(0,0,0,0.045)', chipText:'#4F4F57',
+    accent:'#0A64D8', accentFill:'#0A64D8', selBg:'rgba(10,100,216,0.08)', navSel:'rgba(0,0,0,0.07)', check:'#B4B4BB', checkDone:'#0A64D8',
+    dueText:'#8A4B00', dueBg:'#FFEFD6', card:'#FFFFFF', cardBorder:'rgba(0,0,0,0.08)',
+    field:'rgba(0,0,0,0.045)', fieldBorder:'rgba(0,0,0,0.12)', badgeBorder:'rgba(0,0,0,0.18)', paused:'#8E8E95',
+    windowBorder:'rgba(0,0,0,0.16)', rhythm:'#2F68C8', progress:'#14917A', done:'#9A9AA2', track:'rgba(0,0,0,0.05)',
+    heat:'47,104,200', scrim:'rgba(0,0,0,0.18)', sheet:'#FFFFFF', shadow:'0 24px 70px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.08)',
+    band1:'rgba(47,104,200,0.16)', bandLine:'#2F68C8', grid:'rgba(0,0,0,0.06)', seg:'#C9D3E6', segAlt:'#B4C1DA', segText:'#1D2A44',
+    hatch:'rgba(0,0,0,0.22)', ctrl:'#E4E4E8', ctrlSel:'#FFFFFF', knob:'#FFFFFF', future:'#5B3FA8'
+  };
+}
+var SS = {
+  en:{ lang:'en', dir:'ltr', today:'Today', week:'Week', month:'Month', lines:'Lines', search:'Search', demo:'Demo data', updated:'Updated 3 min ago',
+       keys:'⌘1–⌘4 Views · ⌘K Search · ⌘R Refresh', tiers:{ foundation:'Foundation', active:'Active this season', maintenance:'Maintenance', paused:'Not in focus — on purpose' } },
+  ru:{ lang:'ru', dir:'ltr', today:'Сегодня', week:'Неделя', month:'Месяц', lines:'Линии', search:'Поиск', demo:'Демо-данные', updated:'Обновлено 3 мин назад',
+       keys:'⌘1–⌘4 Виды · ⌘K Поиск · ⌘R Обновить', tiers:{ foundation:'Фундамент', active:'Активные в сезоне', maintenance:'На поддержании', paused:'Не в фокусе — намеренно' } },
+  he:{ lang:'he', dir:'rtl', today:'היום', week:'שבוע', month:'חודש', lines:'תחומים', search:'חיפוש', demo:'נתוני הדגמה', updated:'עודכן לפני 3 דק׳',
+       keys:'⌘1–⌘4 תצוגות · ⌘K חיפוש · ⌘R רענון', tiers:{ foundation:'יסוד', active:'פעילים העונה', maintenance:'תחזוקה', paused:'לא בפוקוס — בכוונה' } }
+};
+var SIDE_T = [
+  ['foundation', [['🧘','Core practice'],['💪','Calisthenics']], true],
+  ['active', [['🎻','Violin'],['🇮🇹','Italian'],['🇯🇵','Japanese'],['📐','Math'],['🤖','AI/ML'],['🔬','Research'],['👨‍👩‍👧','Family']], true],
+  ['maintenance', [['🎹','Piano']], true],
+  ['paused', [['✒️','Calligraphy']], false]
+];
+function side(c, lang) {
+  var ss = SS[lang] || SS.en;
+  return SIDE_T.map(function (t) { var paused = t[0] === 'paused';
+    return { n: ss.tiers[t[0]], open: t[2], count: t[2] ? '' : String(t[1].length), chev: t[2] ? 'M3.5 6L8 10.5 12.5 6' : (ss.dir === 'rtl' ? 'M10 3.5L5.5 8 10 12.5' : 'M6 3.5L10.5 8 6 12.5'),
+      rows: t[1].map(function (r) { return { e:r[0], n:r[1], fg: paused ? c.paused : c.text, op: paused ? 0.5 : 1 }; }) }; });
+}
+function fmt(m) { if (m < 60) return '≈ ' + m + ' min est.'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : '') + ' est.'; }
+function short(m) { if (m < 60) return '≈ ' + m + ' min'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : ''); }
+var L = {
+  violin:{e:'🎻',n:'Violin',a:'Spring recital 2027'},
+  piano:{e:'🎹',n:'Piano',a:'Keep repertoire alive'},
+  italian:{e:'🇮🇹',n:'Italian',a:'B1 by summer 2027'},
+  japanese:{e:'🇯🇵',n:'Japanese',a:'Kana and first 300 words'},
+  math:{e:'📐',n:'Math',a:'Linear algebra foundation'},
+  ai:{e:'🤖',n:'AI/ML',a:'Eval toolkit v1'},
+  research:{e:'🔬',n:'Research',a:'Practice-drift paper'},
+  cal:{e:'💪',n:'Calisthenics',a:'20 strict pull-ups'},
+  core:{e:'🧘',n:'Core practice',a:'Daily practice 2026'},
+  family:{e:'👨‍👩‍👧',n:'Family',a:'Family year 2026'},
+  life:{e:'🧺',n:'Life ops',a:'Household'}
+};
+
+
+function ios(c) {
+  return c.dark ? {
+    bg:'#000000', cell:'#1C1C1E', cell2:'#2C2C2E', sep:'rgba(84,84,88,0.45)', fill:'rgba(120,120,128,0.24)', fill2:'rgba(120,120,128,0.36)',
+    bar:'rgba(30,30,32,0.86)', barBorder:'rgba(255,255,255,0.12)', panel:'#1C1C1E', sheet:'#1C1C1E', grabber:'rgba(235,235,245,0.3)',
+    scrim:'rgba(0,0,0,0.5)', lift:'0 18px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.12)', hover:'rgba(255,255,255,0.07)',
+    ghost:'rgba(120,120,128,0.18)', menu:'rgba(44,44,46,0.96)', wall:'#1D2330', ofbg:'#2C2C2E', island:'#000000'
+  } : {
+    bg:'#F2F2F7', cell:'#FFFFFF', cell2:'#F2F2F7', sep:'rgba(60,60,67,0.18)', fill:'rgba(120,120,128,0.12)', fill2:'rgba(120,120,128,0.2)',
+    bar:'rgba(249,249,251,0.9)', barBorder:'rgba(0,0,0,0.08)', panel:'#FFFFFF', sheet:'#F2F2F7', grabber:'rgba(60,60,67,0.3)',
+    scrim:'rgba(0,0,0,0.22)', lift:'0 18px 40px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.06)', hover:'rgba(0,0,0,0.045)',
+    ghost:'rgba(120,120,128,0.1)', menu:'rgba(250,250,252,0.97)', wall:'#C9D2DE', ofbg:'#E5E5EA', island:'#000000'
+  };
+}
+
+var TB = { en:{ today:'Today', week:'Week', lines:'Lines', log:'Log' }, ru:{ today:'Сегодня', week:'Неделя', lines:'Линии', log:'Журнал' }, he:{ today:'היום', week:'שבוע', lines:'תחומים', log:'יומן' } };
+var PL = { en:{ plan:'Plan' }, ru:{ plan:'План' }, he:{ plan:'תכנון' } };
+
+var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], MONL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+function dfmt(d, long) { var x = new Date(2026, 8, 1 + Math.round(d)); return x.getDate() + ' ' + (long ? MONL : MON)[x.getMonth()]; }
+function build(c, lang) {
+  var self = this, v = (this.state && this.state.v != null) ? this.state.v : 2.1, TW = 820, SPAN = 211, TODAY = 30;
+  function X(d) { return Math.round(d / SPAN * TW); }
+  var T = 18 / v * 7;               // p50 days from today for the remaining 18 h
+  var cum = [3 / 18, 12 / 18, 1];   // remaining effort per step: 3 h, 9 h, 6 h
+  var defs = [['Slow tempo, ♩ = 60','sessions · 6 of 10 · ≤ 5 per week'],['Tempo ♩ = 80','metric · 60 → 80 bpm · ≥ 2 weeks adaptation'],['Performance-ready','checkpoint · teacher sign-off']];
+  var steps = [{ num:'✓', name:'Learn the notes', sub:'effort · 12 h est. · done 18 Sep', a:X(0), w:X(17), top:10, h:10, bg:c.done, bd:'0', p:-10, pc:'transparent', lx:X(17) + 10, lab:'done',
+    nbg:c.checkDone, nfg:'#FFFFFF', nb:'0', fw:500, tc:c.done }];
+  var prev = 0;
+  defs.forEach(function (d, i) {
+    var p = TODAY + Math.max(T * cum[i], prev + (i === 1 ? 14 : 0)); prev = p - TODAY;
+    var lo = TODAY + (p - TODAY) * 0.72, hi = Math.min(SPAN, TODAY + (p - TODAY) * 1.55);
+    steps.push({ num:String(i + 2), name:d[0], sub:d[1], a:X(lo), w:Math.max(8, X(hi) - X(lo)), top:8, h:14, bg:c.band1, bd:'0', p:X(p) - 1, pc:c.bandLine,
+      lx:Math.min(TW - 60, X(hi) + 10), lab:dfmt(p), nbg:'transparent', nfg:c.sec, nb:'1.5px solid ' + c.check, fw:500, tc:c.text });
+  });
+  var g = steps[3], p50 = TODAY + Math.max(T, prev), lo = TODAY + (p50 - TODAY) * 0.72, hi = TODAY + (p50 - TODAY) * 1.55;
+  steps.push({ num:'◎', name:'Goal: performance-ready', sub:'p10 ' + dfmt(lo) + ' · p50 ' + dfmt(p50) + ' · p90 ' + dfmt(Math.min(hi, 400)), a:X(lo), w:Math.max(8, Math.min(TW, X(hi)) - X(lo)), top:4, h:22,
+    bg:c.band1, bd:'1.5px solid ' + c.bandLine, p:X(p50) - 1, pc:c.bandLine, lx:Math.min(TW - 70, X(Math.min(hi, SPAN)) + 10), lab:dfmt(p50), nbg:'transparent', nfg:c.text, nb:'0', fw:700, tc:c.text });
+  var LV = [['min',1.2],['normal',2.1],['max',3.5]];
+  return {
+    val: v, valL: v.toFixed(1) + ' h/week', pct: Math.round((v - 0.5) / 4.5 * 1000) / 10,
+    onV: function (e) { self.setState({ v: parseFloat(e.target.value) }); },
+    levels: LV.map(function (l) { var on = Math.abs(v - l[1]) < 0.05; return { n:l[0] + ' · ' + l[1] + ' h', on:on, bg: on ? ios(c).cell : 'transparent', fw: on ? 600 : 400, sh: on ? '0 1px 3px rgba(0,0,0,0.16)' : 'none',
+      pick: function () { self.setState({ v: l[1] }); } }; }),
+    ticks: [['0.5', 0], ['2.5', 44.4], ['5 h', 100]].map(function (t) { return { n:t[0], x:t[1] }; }),
+    p50: dfmt(p50, true), range: 'range ' + dfmt(lo, true) + ' – ' + dfmt(hi, true) + ' (p10–p90)',
+    sentence: 'At ' + v.toFixed(1) + ' h/week the remaining 18 h take ~' + Math.round(18 / v) + ' weeks.',
+    steps: steps, todayX: X(TODAY),
+    months: [['Sep',0],['Oct',30],['Nov',61],['Dec',91],['Jan',122],['Feb',153],['Mar',181]].map(function (m) { return { n:m[0], x:X(m[1]), lx:X(m[1]) + 4 }; })
+  };
+}
+
+
+var __b = build;
+build = function (c, lang) { var v = __b.call(this, c, lang) || {}; v.i = ios(c); v.tb = TB[lang] || TB.en; v.pl = PL[lang] || PL.en;
+  if (typeof extra === 'function') { var x = extra.call(this, c, lang, v) || {}; for (var k in x) v[k] = x[k]; } return v; };
+
+class Component extends DCLogic {
+  renderVals() {
+    var c = theme(!!this.props.dark);
+    var v = build.call(this, c, this.props.lang || 'en') || {};
+    var lang = this.props.lang || 'en'; v.c = c; v.ss = SS[lang] || SS.en; v.side = side(c, lang);
+    return v;
+  }
+}
+</script>
+</body>
+</html>

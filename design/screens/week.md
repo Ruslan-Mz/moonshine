@@ -33,7 +33,7 @@ The owner's Sunday review, inside Week. Toggle `Weekly review` (toolbar, ⇧⌘R
 4. Next week's real due dates.
 5. Links: month note, quarter note.
 
-Each section has a "seen" circle (draft-2 mockup). Its state is **MoonShine-native** data (local store, keyed by ISO week) — not a write to OmniFocus or Obsidian, so it is allowed in phase 1. No counter (`3 of 5`), no scores, no completion percentage for the review itself.
+Each section has a "seen" circle (draft-2 mockup). **Phase 1: the state is ephemeral** — view state for the current window session (`@SceneStorage`, keyed by ISO week), not in the store; no new entity or `Store` API in S5. Stored "seen" marks are MoonShine-native data and arrive with the phase-2 native tables (synced in 3b, ADR-0010). No counter (`3 of 5`), no scores, no completion percentage for the review itself.
 
 ## SwiftUI
 

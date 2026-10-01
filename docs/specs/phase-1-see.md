@@ -7,9 +7,11 @@
 ### Today
 
 - Available tasks with planned/defer = today, flagged, and real `due` ≤ today (only these may use the urgent colour).
-- Grouped by line (emoji + name); each task shows project and trace chip (`project → line → artifact`).
+- **Anchors strip** (decision 2026-10-01, design draft-2) at the top: today's tasks with the tag `anchor` (leaf name), up to 5 compact chips with a `3 of 5 done` count; done anchors stay visible, checked and dimmed. Absent when there are none. Anchor tasks are not repeated in their line sections.
+- **Top 3 today**: flagged tasks (`effectiveFlagged`), at most 3 rows — real due today first, then source order; when more are flagged, a `5 flagged — 3 shown` caption and "Show all". These tasks are not repeated in their line sections. The snapshot contract already carries `flagged` / `effectiveFlagged` and `tagIds` (no S3a change).
+- Grouped by line (emoji + name), **foundation lines first**, then vault order; each task shows project and trace chip (`project → line → artifact`).
 - **From earlier:** available tasks planned on an earlier day, in their own section with the planned age ("planned 3 days ago"); urgent only with a real `due` (decision 2026-09-30).
-- Right rail: lines touched today, "quiet lines" (active, no completion ≥ 14 days), neutral wording. An active line with no completions at all is "no activity yet", not quiet.
+- Right rail: **Quarter focus card** on top (the current quarter note's `artifacts:` with a neutral done/not-done glyph and line emoji, `2 of 5 done`, link "Open quarter note"; absent without a quarter note), then lines touched today, "quiet lines" (active, no completion ≥ 14 days), neutral wording. An active line with no completions at all is "no activity yet", not quiet.
 
 ### Week
 
@@ -23,7 +25,7 @@
 
 ### Lines
 
-- One row per line from the vault, grouped by `block`, ordered active → maintenance → paused: budget h/week (from vault), 8-week completions sparkline (current week marked partial), last activity, available next actions, planned effort (estimate, labelled as estimate).
+- One row per line from the vault, grouped by **tier** (decision 2026-10-01, design draft-2 — replaces grouping by `block`): Foundation → Active this season → Maintenance → Paused on purpose (titled "Not in focus — on purpose", collapsed by default); vault order inside a tier. The `block` is a small label under the line name. Foundation lines are never "quiet". Columns: budget h/week (from vault; foundation lines show `floor N h/day` instead), 8-week completions sparkline (current week marked partial), last activity, available next actions, planned effort (estimate, labelled as estimate).
 - Line detail: parent artifact (open in Obsidian via `obsidian://open`), projects, next actions, last 10 completions.
 
 ### Global
@@ -41,7 +43,7 @@
 - [x] **CI:** GitHub Actions on pull requests and pushes to `main` (macos-latest, newest stable Xcode): Core and Adapter tests, `swift format lint --strict`, `prettier --check` on Markdown; `.build` cached. README carries the CI badge.
 - [x] **S2 — Store:** GRDB records (core columns + `attrs` JSON), numbered migrations, `changes` log table, upsert by ExternalRef, re-import idempotency test (ADR-0002). Only phase-1 entities; plan/forecast tables come in phase 2. Retention (decision 2026-10-01): completed tasks are never removed by an import; anything else missing is soft-deleted (`removed_at`) and restored with its id when it reappears. Effective date columns exist (NULL until S3); one shared contract suite runs against both stores.
 - [ ] **S3a — OmniFocus bridge:** JXA bridge (`bridge/snapshot.js`); measure the full live import (target ≤ 20 s, runs in the background) and an incremental refresh (only items modified since the last import) → method log. If the full import is > 20 s: stop, propose ADR. **Required:** the bridge exports `effectiveDeferDate` / `effectiveDueDate` / `effectivePlannedDate` (snapshot contract), `TaskItem` carries them, and Today/Week placement and urgency use the effective dates (an inherited project due date is a real due date).
-- [ ] **S3b — Obsidian vault reader:** golden test: its output on `fixtures/vault/` equals `DemoVault`. Vault contract additions (draft-2 design, all optional, absent = today's behaviour): in the budget note's `lines:` block, `foundation: true` and `floor_h_day: <number ≥ 0>` (a foundation line has a floor instead of `budget_h_week`); a quarter note with `scale: quarter` and an `artifacts:` list (same shape as the year note) feeds the Quarter focus card; quarter-note `artifacts:` items take optional `done: <date>` and `carried_to: <YYYY-Qn>` (quarterly review outcome, R1); the budget note takes optional `active_lines: {min, max}` (the "3–5 active lines" rule as data; absent = no such row).
+- [ ] **S3b — Obsidian vault reader:** golden test: its output on `fixtures/vault/` equals `DemoVault`. Vault contract additions (draft-2 design, all optional, absent = today's behaviour): in the budget note's `lines:` block, `foundation: true` and `floor_h_day: <number ≥ 0>` (a foundation line has a floor instead of `budget_h_week`), and `language: <BCP-47>` on a line (**parse only**: stored on the line, a content-language detection hint later, `design/i18n.md`); a quarter note with `scale: quarter` and an `artifacts:` list (same shape as the year note) feeds the Quarter focus card. Contract: `docs/discovery/vault-contract.md` v0.2. The R1 keys (`done`, `carried_to` on artifacts, `active_lines` in the budget note) may appear in fixtures; the reader ignores them until R1.
 - [ ] **Demo data (before S4):** align `fixtures/` and `DemoVault` with `design/demo-data.md`, including its "Draft-2 additions": foundation lines with a floor (🧘 Core practice, 💪 Calisthenics), `anchor`-tagged tasks, flagged tasks, and the Q4 quarter note with its artifacts. Invented data only.
 - [ ] **S4 — App shell + Today + Lines** on the store (Demo mode first), including the Line detail model (moved from S1b). Follows `design/screens/` (today, lines, line-detail, settings); where a screen spec and its mockup differ, the screen spec wins.
 - [ ] **S5 — Week + Month + ⌘K palette.** Follows `design/screens/` (week, month, command-palette); where a screen spec and its mockup differ, the screen spec wins.

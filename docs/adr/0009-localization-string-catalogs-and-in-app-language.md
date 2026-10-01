@@ -31,12 +31,14 @@ The owner works in Russian, English and Latvian, studies Italian and German, and
 ## Considered Options
 
 1. English only now, localise later.
-2. **String Catalog (`Localizable.xcstrings`) from the first view; Core returns values, never display text; app-level language override (stored choice + relaunch), with macOS per-app language as the underlying mechanism.**
+2. **String Catalog (`Localizable.xcstrings`) from the first view; Core returns values, never display text; app-level language override: the in-app picker writes `AppleLanguages` to the app's own `UserDefaults` domain and relaunches; formatting follows `.environment(\.locale)`.**
 3. Live in-app switch via a custom bundle/locale injection at runtime.
 
 ## Decision Outcome
 
-**Chosen option: "2"**, extended with: a `LanguageDetector` port (NaturalLanguage adapter on macOS) for per-item content language; SwiftUI layout that mirrors for RTL; per-text language attributes and Unicode bidi isolation for mixed-script rows; SQLite FTS5 `trigram` search (script-agnostic). UI languages ship in waves (EN+RU in phase 1; LV/IT/DE next; others on demand) — see `design/i18n.md`. Chosen because it costs almost nothing when started with the first view (S4), gives correct plurals and formatting from Apple's tooling, and keeps Core language-agnostic. A live switch (option 3) is evaluated in a short S4 spike; if SwiftUI resolves catalog strings from the environment locale reliably, the relaunch is dropped — recorded as an amendment, not a new architecture.
+**Chosen option: "2"**, extended with: a `LanguageDetector` port (NaturalLanguage adapter on macOS) for per-item content language; SwiftUI layout that mirrors for RTL; per-text language attributes and Unicode bidi isolation for mixed-script rows; SQLite FTS5 `trigram` search (script-agnostic). UI languages ship in waves (EN+RU in phase 1; LV/IT/DE next; others on demand) — see `design/i18n.md`. **Mechanism:** the picker writes `UserDefaults.standard.set([code], forKey: "AppleLanguages")` (the app's own domain — the same key macOS per-app language uses; "System" removes it), then offers a relaunch, after which `Bundle.main` resolves String Catalog lookups in that language. Dates, numbers, plurals and sorting take the selected `Locale` injected at the root with `.environment(\.locale, uiLocale)` (and passed explicitly to non-SwiftUI formatters and comparisons, `design/i18n.md`). **The S4 spike validates this** on the current macOS and iOS: catalog lookup after relaunch, `Text` plurals and `Date.FormatStyle` under the injected locale, RTL layout direction; if it fails, the in-app picker leaves the S4 acceptance and the ADR is amended before S4 ends.
+
+Chosen because it costs almost nothing when started with the first view (S4), gives correct plurals and formatting from Apple's tooling, and keeps Core language-agnostic. A live switch (option 3) is evaluated in the same spike; if SwiftUI resolves catalog strings from the environment locale reliably, the relaunch is dropped — recorded as an amendment, not a new architecture.
 
 ### Consequences
 

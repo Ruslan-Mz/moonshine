@@ -11,16 +11,16 @@ related: ["[[weekly review — screens/week.md]]"]
 
 The owner's end-of-quarter ritual: look back at the quarter's artifacts and lines, then set up the next quarter. **Read-only.** The app shows facts and questions. Decisions are written in the quarter note in Obsidian (writes come in phase 6).
 
-Opened from: ⌘K ("Quarterly review"), the Quarter focus card ("Open quarter review") and, during the first 14 days of a quarter, a link in the Today rail. No sidebar item for now.
+Opened from: ⌘K ("Quarterly review"), a second footer link `Open quarter review` that R1 adds to the Quarter focus card (next to phase 1's `Open quarter note`, `components.md`) and, during the first 14 days of a quarter, a link in the Today rail. No sidebar item for now.
 
 ## Layout (artboard drawn at full scroll height, 1440 × 1280)
 
-Toolbar: `Q3 2026 review`, subtitle `July – September · 13 weeks · read-only — decisions go into the quarter note`, button `Open Квартал_2026-Q4`.
+Toolbar: `Q3 2026 review`, subtitle `July – September · 14 ISO weeks · read-only — decisions go into the quarter note`, button `Open Квартал_2026-Q4`.
 
 1. **Q3 focus — what happened.** One row per artifact in the previous quarter note: status glyph · line emoji · artifact · outcome · evidence · `Open in Obsidian`.
    - Outcomes: `done` (check), `carried to Q4` (arrow), `to decide` (dashed circle). Neutral colours only. `to decide` is in primary text so it stands out without colour.
    - Evidence is one plain fact (`learned by 18 Sep`, `line quiet since 2 Sep · exam date not booked`).
-2. **Lines over the quarter.** Columns: Line · Tier · 13-week sparkline (rhythm and progress pairs, 4 pt bars) · `Sessions · avg / week` · Tasks done · Facts (dip and return, quiet since, paused since, no activity yet). Ordered by tier. Caption: hours per line arrive with the hours-tracker import (phase 2).
+2. **Lines over the quarter.** Columns: Line · Tier · quarter sparkline (one rhythm/progress pair per ISO week that intersects the quarter, 4 pt bars; boundary weeks drawn partial) · `Sessions · avg / week` · Tasks done · Facts (dip and return, quiet since, paused since, no activity yet). Ordered by tier. Caption: hours per line arrive with the hours-tracker import (phase 2).
 3. **Q4 setup.**
    - Left: chips by tier for the next quarter (Foundation with floor, Active this season, Maintenance, Not in focus). When there are more than 5 active lines, a neutral fact row: `7 active lines — the plan says 3–5. Move one or two to maintenance or not in focus?`
    - Right: the Q4 focus artifacts (from the next quarter note), then **Questions for this review**, each with a link to where it is answered (Obsidian note, budget note, OmniFocus).
@@ -45,7 +45,8 @@ Right inspector 340: the previous quarter note, read-only (frontmatter + body), 
   Outcome shown: `status: done` → **done**; `carried_to` present → **carried to Q4**; `status: dropped` → **dropped on purpose**; anything else → **to decide**. No new enum; the owner sets `carried_to` / `status` in Obsidian during the review. A linked completed project never overrides what the note says (the note is the truth, ADR-0004).
 
 - **"The plan says 3–5"** is data, not a constant: budget note frontmatter `active_lines: {min: 3, max: 5}` (owner's rule from the strategy notes). Absent → the row is not shown.
-- Line facts come from the Stats service over 13 ISO weeks; "dip" means two or more consecutive weeks below 50 % of the line's quarter median.
+- **Week buckets are derived from the quarter's date range**: every ISO week that intersects it (Q3 2026 = 1 Jul–30 Sep = W27–W40, 14 buckets). A boundary week shared with the next or previous quarter counts only its days inside the quarter and is drawn partial. The mockups still draw 13 weeks; the spec wins.
+- Line facts come from the Stats service over those weeks; "dip" means two or more consecutive weeks below 50 % of the line's quarter median.
 
 ## Tone
 
@@ -53,7 +54,7 @@ No scores, percentages, grades or streaks. "to decide", never "failed" or "misse
 
 ## SwiftUI
 
-`ScrollView` with three `GroupBox`-like cards + `.inspector`. Focus rows and lines: `Grid` (or `Table` for lines). Sparklines: the shared Swift Charts sparkline with 13 weeks. Chips: `FlowLayout` (custom `Layout`).
+`ScrollView` with three `GroupBox`-like cards + `.inspector`. Focus rows and lines: `Grid` (or `Table` for lines). Sparklines: the shared Swift Charts sparkline with one pair per quarter week (13 or 14). Chips: `FlowLayout` (custom `Layout`).
 
 ## Acceptance
 

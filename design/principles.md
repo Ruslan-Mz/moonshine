@@ -38,7 +38,7 @@ date: 2026-10-01
 3. Never use "overdue", "failed", "behind", "late" or "missed". See `copy.md`.
 4. Quiet lines are a fact plus a next step: "quiet for 29 days" + a suggested action.
 5. Maintenance lines are never flagged as quiet. Paused lines are greyed and labelled "paused on purpose".
-6. "Hours" appears only next to a weekly budget (`h/week`, "hours / week"). Task estimates are "≈ 45 min est.".
+6. "Hours" / "h" appears only next to real time data or the vault budget (CLAUDE.md §8, ADR-0006): a weekly budget (`h/week`), a foundation floor (`floor 3 h/day`), real time entries (phase 2+), or an estimate explicitly labelled as one (`≈ 1 h 30 min est.`; task estimates under an hour are `≈ 45 min est.`).
 7. Rhythm (repeated sessions) and progress (one-off tasks) are always two separate numbers or series, never summed into a score.
 8. Up and down are not coloured. Week-over-week comparisons are plain numbers with "avg".
 

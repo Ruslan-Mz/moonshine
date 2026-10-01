@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>iPad — Split View ½ with OmniFocus (Week as a day list)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0A64D8}a:hover{color:#084FA8}
+button{font:inherit;color:inherit;cursor:default}
+</style>
+</helmet>
+<div dir="{{ss.dir}}" lang="{{ss.lang}}" style="width:1210px;height:834px;box-sizing:border-box;position:relative;overflow:hidden;border-radius:18px;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;font-size:17px;line-height:1.3;color:{{c.text}};background:{{i.bg}};-webkit-font-smoothing:antialiased;display:flex;background:#000000"><div style="width:600px;flex-shrink:0;position:relative;overflow:hidden;border-radius:18px 10px 10px 18px;background:{{i.bg}};display:flex;flex-direction:column"><div style="display:flex;flex-direction:column;gap:2px;padding:18px 18px 10px;flex-shrink:0"><div style="display:flex;justify-content:flex-end;gap:6px;height:36px"><button aria-label="Search" style="width:44px;height:36px;border:0;border-radius:18px;background:{{i.fill}};display:flex;align-items:center;justify-content:center;color:{{c.accent}}"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg></button></div><h1 style="margin:0;font-size:30px;font-weight:700">Week 40</h1><span style="font-size:14px;color:{{c.sec}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">28 Sep – 4 Oct · compact width: one column, day by day</span></div><main style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:16px;padding:0 16px 100px"><div style="display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;border-radius:14px;background:{{i.cell}};font-size:15px;color:{{c.sec}}"><span style="display:flex;color:{{c.ter}}"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M6 3.5L10.5 8 6 12.5"></path></svg></span>Mon 28 – Wed 30 · {{pastDone}} done · {{pastOpen}} still open</div><sc-for list="{{ahead}}" as="d" hint-placeholder-count="4"><section style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:baseline;gap:8px;padding:0 6px"><span style="font-size:17px;font-weight:700">{{d.wd}} {{d.n}} <span style="font-size:13px;font-weight:600;color:{{c.accent}}">{{d.tag}}</span></span><span style="margin-inline-start:auto;font-size:13px;color:{{c.ter}}">{{d.sum}}</span></div><div style="border-radius:14px;overflow:hidden;background:{{i.cell}}"><sc-for list="{{d.items}}" as="task" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:12px;min-height:52px;padding:6px 14px;box-sizing:border-box;border-bottom:1px solid {{i.sep}}"><sc-if value="{{task.done}}" hint-placeholder-val="{{false}}"><button aria-label="Completed" style="width:22px;height:22px;border-radius:11px;border:0;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:{{c.checkDone}};color:#FFFFFF"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M4 8.3l2.6 2.6L12 5.5"></path></svg></button></sc-if><sc-if value="{{task.open}}" hint-placeholder-val="{{true}}"><button aria-label="Complete task" style="width:22px;height:22px;border-radius:11px;border:1.5px solid {{c.check}};padding:0;flex-shrink:0;background:transparent;box-sizing:border-box"></button></sc-if><div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span dir="auto" lang="{{task.tl}}" style="font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:{{task.tc}};text-decoration:{{task.td}}">{{task.title}}</span><span style="font-size:13px;color:{{c.ter}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{task.le}} {{task.ln}} · {{task.estShort}}</span></div><sc-if value="{{task.due}}" hint-placeholder-val="{{false}}"><span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:12px;font-weight:600;white-space:nowrap;color:{{c.dueText}};background:{{c.dueBg}}"><svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><circle cx="8" cy="8" r="6"></circle><path d="M8 4.8V8l2.2 1.4"></path></svg>{{task.due}}</span></sc-if></div></sc-for></div></section></sc-for><div style="display:flex;align-items:center;gap:10px;min-height:52px;padding:0 14px;border-radius:14px;background:{{i.cell}}"><span style="display:flex;color:{{c.sec}}"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M2 9.5l1.8-5.2A1.5 1.5 0 0 1 5.2 3.3h5.6a1.5 1.5 0 0 1 1.4 1l1.8 5.2V12a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12z"></path><path d="M2 9.5h3.5l1 1.5h3l1-1.5H14"></path></svg></span><span style="font-size:16px;font-weight:600">No plan</span><span style="font-size:14px;color:{{c.ter}}">12 tasks</span><span style="margin-inline-start:auto;display:flex;color:{{c.ter}}"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M6 3.5L10.5 8 6 12.5"></path></svg></span></div></main><div style="position:absolute;left:14px;right:14px;bottom:18px;display:flex;gap:4px;padding:4px;border-radius:30px;background:{{i.bar}};border:1px solid {{i.barBorder}};box-shadow:0 8px 24px rgba(0,0,0,0.12)"><button style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;height:50px;justify-content:center;border:0;border-radius:25px;background:transparent;font-size:10.5px;font-weight:600;color:{{c.text}}"><svg width="21" height="21" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><circle cx="8" cy="8" r="3"></circle><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"></path></svg><span>Today</span></button><button style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;height:50px;justify-content:center;border:0;border-radius:25px;background:{{i.fill}};font-size:10.5px;font-weight:600;color:{{c.accent}}"><svg width="21" height="21" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><rect x="2" y="3" width="12" height="11" rx="2"></rect><path d="M2 6.5h12M5 1.8v2.4M11 1.8v2.4M6 6.5v7.5M10 6.5v7.5"></path></svg><span>Week</span></button><button style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;height:50px;justify-content:center;border:0;border-radius:25px;background:transparent;font-size:10.5px;font-weight:600;color:{{c.text}}"><svg width="21" height="21" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M2.5 4h11M2.5 8h11M2.5 12h7"></path></svg><span>Lines</span></button><button style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;height:50px;justify-content:center;border:0;border-radius:25px;background:transparent;font-size:10.5px;font-weight:600;color:{{c.text}}"><svg width="21" height="21" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M2.5 4h6M5.5 8h8M3.5 12h6"></path></svg><span>Plan</span></button></div></div><div style="width:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center"><span style="width:4px;height:44px;border-radius:2px;background:rgba(255,255,255,0.45)"></span></div><div style="width:600px;flex-shrink:0;border-radius:10px 18px 18px 10px;background:{{i.ofbg}};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px"><span style="font-size:28px;font-weight:700;color:{{c.ter}}">OmniFocus</span><span style="font-size:15px;color:{{c.ter}}">placeholder · ½ width</span></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark": {"editor": "boolean", "default": false}, "lang": {"editor": "enum", "options": ["en", "ru", "he"], "default": "en"}, "$preview": {"width": 1210, "height": 834}}'>
+
+function theme(d) {
+  return d ? {
+    dark:true, window:'#1E1E21', sidebar:'#28272C', rail:'#232326', band:'#252528', text:'#EDEDF0', sec:'#A6A6AD', ter:'#8D8D95',
+    sep:'rgba(255,255,255,0.08)', rowSep:'rgba(255,255,255,0.045)', chip:'rgba(255,255,255,0.075)', chipText:'#BDBDC4',
+    accent:'#5A9DFF', accentFill:'#2F6BD0', selBg:'rgba(90,157,255,0.16)', navSel:'rgba(255,255,255,0.09)', check:'#64646C', checkDone:'#4C8DF0',
+    dueText:'#FFC266', dueBg:'rgba(255,176,64,0.15)', card:'#2A2A2E', cardBorder:'rgba(255,255,255,0.07)',
+    field:'rgba(255,255,255,0.07)', fieldBorder:'rgba(255,255,255,0.12)', badgeBorder:'rgba(255,255,255,0.2)', paused:'#7E7E86',
+    windowBorder:'rgba(255,255,255,0.14)', rhythm:'#5E92EE', progress:'#3FA690', done:'#7E7E86', track:'rgba(255,255,255,0.07)',
+    heat:'94,146,238', scrim:'rgba(0,0,0,0.42)', sheet:'#2A2A2E', shadow:'0 24px 70px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.1)',
+    band1:'rgba(94,146,238,0.22)', bandLine:'#5E92EE', grid:'rgba(255,255,255,0.07)', seg:'#4A5468', segAlt:'#596378', segText:'#EDEDF0',
+    hatch:'rgba(255,255,255,0.22)', ctrl:'#3A3A3F', ctrlSel:'#5C5C63', knob:'#E6E6EA', future:'#B9A6F0'
+  } : {
+    dark:false, window:'#FFFFFF', sidebar:'#EFEEF2', rail:'#F8F8FA', band:'#F6F6F8', text:'#1D1D1F', sec:'#5F5F67', ter:'#74747C',
+    sep:'rgba(0,0,0,0.08)', rowSep:'rgba(0,0,0,0.045)', chip:'rgba(0,0,0,0.045)', chipText:'#4F4F57',
+    accent:'#0A64D8', accentFill:'#0A64D8', selBg:'rgba(10,100,216,0.08)', navSel:'rgba(0,0,0,0.07)', check:'#B4B4BB', checkDone:'#0A64D8',
+    dueText:'#8A4B00', dueBg:'#FFEFD6', card:'#FFFFFF', cardBorder:'rgba(0,0,0,0.08)',
+    field:'rgba(0,0,0,0.045)', fieldBorder:'rgba(0,0,0,0.12)', badgeBorder:'rgba(0,0,0,0.18)', paused:'#8E8E95',
+    windowBorder:'rgba(0,0,0,0.16)', rhythm:'#2F68C8', progress:'#14917A', done:'#9A9AA2', track:'rgba(0,0,0,0.05)',
+    heat:'47,104,200', scrim:'rgba(0,0,0,0.18)', sheet:'#FFFFFF', shadow:'0 24px 70px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.08)',
+    band1:'rgba(47,104,200,0.16)', bandLine:'#2F68C8', grid:'rgba(0,0,0,0.06)', seg:'#C9D3E6', segAlt:'#B4C1DA', segText:'#1D2A44',
+    hatch:'rgba(0,0,0,0.22)', ctrl:'#E4E4E8', ctrlSel:'#FFFFFF', knob:'#FFFFFF', future:'#5B3FA8'
+  };
+}
+var SS = {
+  en:{ lang:'en', dir:'ltr', today:'Today', week:'Week', month:'Month', lines:'Lines', search:'Search', demo:'Demo data', updated:'Updated 3 min ago',
+       keys:'⌘1–⌘4 Views · ⌘K Search · ⌘R Refresh', tiers:{ foundation:'Foundation', active:'Active this season', maintenance:'Maintenance', paused:'Not in focus — on purpose' } },
+  ru:{ lang:'ru', dir:'ltr', today:'Сегодня', week:'Неделя', month:'Месяц', lines:'Линии', search:'Поиск', demo:'Демо-данные', updated:'Обновлено 3 мин назад',
+       keys:'⌘1–⌘4 Виды · ⌘K Поиск · ⌘R Обновить', tiers:{ foundation:'Фундамент', active:'Активные в сезоне', maintenance:'На поддержании', paused:'Не в фокусе — намеренно' } },
+  he:{ lang:'he', dir:'rtl', today:'היום', week:'שבוע', month:'חודש', lines:'תחומים', search:'חיפוש', demo:'נתוני הדגמה', updated:'עודכן לפני 3 דק׳',
+       keys:'⌘1–⌘4 תצוגות · ⌘K חיפוש · ⌘R רענון', tiers:{ foundation:'יסוד', active:'פעילים העונה', maintenance:'תחזוקה', paused:'לא בפוקוס — בכוונה' } }
+};
+var SIDE_T = [
+  ['foundation', [['🧘','Core practice'],['💪','Calisthenics']], true],
+  ['active', [['🎻','Violin'],['🇮🇹','Italian'],['🇯🇵','Japanese'],['📐','Math'],['🤖','AI/ML'],['🔬','Research'],['👨‍👩‍👧','Family']], true],
+  ['maintenance', [['🎹','Piano']], true],
+  ['paused', [['✒️','Calligraphy']], false]
+];
+function side(c, lang) {
+  var ss = SS[lang] || SS.en;
+  return SIDE_T.map(function (t) { var paused = t[0] === 'paused';
+    return { n: ss.tiers[t[0]], open: t[2], count: t[2] ? '' : String(t[1].length), chev: t[2] ? 'M3.5 6L8 10.5 12.5 6' : (ss.dir === 'rtl' ? 'M10 3.5L5.5 8 10 12.5' : 'M6 3.5L10.5 8 6 12.5'),
+      rows: t[1].map(function (r) { return { e:r[0], n:r[1], fg: paused ? c.paused : c.text, op: paused ? 0.5 : 1 }; }) }; });
+}
+function fmt(m) { if (m < 60) return '≈ ' + m + ' min est.'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : '') + ' est.'; }
+function short(m) { if (m < 60) return '≈ ' + m + ' min'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : ''); }
+var L = {
+  violin:{e:'🎻',n:'Violin',a:'Spring recital 2027'},
+  piano:{e:'🎹',n:'Piano',a:'Keep repertoire alive'},
+  italian:{e:'🇮🇹',n:'Italian',a:'B1 by summer 2027'},
+  japanese:{e:'🇯🇵',n:'Japanese',a:'Kana and first 300 words'},
+  math:{e:'📐',n:'Math',a:'Linear algebra foundation'},
+  ai:{e:'🤖',n:'AI/ML',a:'Eval toolkit v1'},
+  research:{e:'🔬',n:'Research',a:'Practice-drift paper'},
+  cal:{e:'💪',n:'Calisthenics',a:'20 strict pull-ups'},
+  core:{e:'🧘',n:'Core practice',a:'Daily practice 2026'},
+  family:{e:'👨‍👩‍👧',n:'Family',a:'Family year 2026'},
+  life:{e:'🧺',n:'Life ops',a:'Household'}
+};
+
+
+function ios(c) {
+  return c.dark ? {
+    bg:'#000000', cell:'#1C1C1E', cell2:'#2C2C2E', sep:'rgba(84,84,88,0.45)', fill:'rgba(120,120,128,0.24)', fill2:'rgba(120,120,128,0.36)',
+    bar:'rgba(30,30,32,0.86)', barBorder:'rgba(255,255,255,0.12)', panel:'#1C1C1E', sheet:'#1C1C1E', grabber:'rgba(235,235,245,0.3)',
+    scrim:'rgba(0,0,0,0.5)', lift:'0 18px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.12)', hover:'rgba(255,255,255,0.07)',
+    ghost:'rgba(120,120,128,0.18)', menu:'rgba(44,44,46,0.96)', wall:'#1D2330', ofbg:'#2C2C2E', island:'#000000'
+  } : {
+    bg:'#F2F2F7', cell:'#FFFFFF', cell2:'#F2F2F7', sep:'rgba(60,60,67,0.18)', fill:'rgba(120,120,128,0.12)', fill2:'rgba(120,120,128,0.2)',
+    bar:'rgba(249,249,251,0.9)', barBorder:'rgba(0,0,0,0.08)', panel:'#FFFFFF', sheet:'#F2F2F7', grabber:'rgba(60,60,67,0.3)',
+    scrim:'rgba(0,0,0,0.22)', lift:'0 18px 40px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.06)', hover:'rgba(0,0,0,0.045)',
+    ghost:'rgba(120,120,128,0.1)', menu:'rgba(250,250,252,0.97)', wall:'#C9D2DE', ofbg:'#E5E5EA', island:'#000000'
+  };
+}
+
+var TB = { en:{ today:'Today', week:'Week', lines:'Lines', log:'Log' }, ru:{ today:'Сегодня', week:'Неделя', lines:'Линии', log:'Журнал' }, he:{ today:'היום', week:'שבוע', lines:'תחומים', log:'יומן' } };
+var PL = { en:{ plan:'Plan' }, ru:{ plan:'План' }, he:{ plan:'תכנון' } };
+
+function t(c, k, title, m, o) { o = o || {}; var l = L[k];
+  return { title:title, le:l.e, ln:l.n, estShort:short(m), op:o.done ? 0.55 : 1, done:!!o.done, open:!o.done, due:o.due || '', tc:o.done ? c.done : c.text, td:o.done ? 'line-through' : 'none' }; }
+function build(c) {
+  var self = this, st = this.state || {};
+  var review = st.review != null ? st.review : !!this.props.review;
+  var D = [
+    ['Mon', 28, [['violin','Scales & arpeggios — G minor',20,{done:1}],['ai','Eval harness — config schema',60,{done:1}],['math','Chapter 2.C — exercises',45,{done:1}],['cal','Pull session — 5 × 5',40,{done:1}],['family','Evening reading with the kids',20,{done:1}],['research','Email co-author about the dataset licence',10]]],
+    ['Tue', 29, [['violin','Scales & arpeggios — G minor',20,{done:1}],['violin','Allemande, bars 1–8 at ♩ = 60',45,{done:1}],['cal','Mobility — hips & shoulders',15,{done:1}],['math','Definitions deck — 15 cards',10,{done:1}],['ai','Refactor tokenizer benchmark script',45]]],
+    ['Wed', 30, [['violin','Scales & arpeggios — G minor',20,{done:1}],['cal','Pull session — 5 × 5',40,{done:1}],['research','Related work — skim 5 papers',60,{done:1}],['ai','Notes: calibration metrics',40,{done:1}],['family','Evening reading with the kids',20,{done:1}]]],
+    ['Thu', 1, [['violin','Scales & arpeggios — G minor',20,{done:1}],['violin','Allemande, bars 1–16 at ♩ = 60',45],['violin','Send recital repertoire list to teacher',10,{due:'Due 18:00'}],['ai','Submit workshop abstract',30,{due:'Due 23:59'}],['math','Chapter 3.A — exercises 1–6',60],['cal','Pull session — 5 × 5',40]], '+ 11 more'],
+    ['Fri', 2, [['violin','Book rehearsal room for November',10,{due:'Due Fri 12:00'}],['violin','Allemande, bars 17–32 at ♩ = 60',45],['ai','Review PR: seed plumbing',30],['research','Draft section 3.1',60],['cal','Mobility — hips & shoulders',15],['family','Evening reading with the kids',20]]],
+    ['Sat', 3, [['family','Lake trip',240],['violin','Scales & arpeggios — G minor',20],['cal','Pull session — 5 × 5',40],['math','Chapter 3.B — reading',45]]],
+    ['Sun', 4, [['life','Weekly review',30],['violin','Scales & arpeggios — G minor',20],['family','Evening reading with the kids',20]]]
+  ];
+  var days = D.map(function (d, i) {
+    var today = d[1] === 1 && d[0] === 'Thu', past = i < 3, done = 0, est = 0;
+    var items = d[2].map(function (r) { var x = t(c, r[0], r[1], r[2], r[3]); if (x.done) done++; else est += r[2]; return x; });
+    var extra = d[3] ? parseInt(d[3].replace(/\D/g, ''), 10) : 0;
+    if (review && items.length > 3) { extra += items.length - 3; items = items.slice(0, 3); }
+    return { wd:d[0], n:d[1], items:items, more: extra ? '+ ' + extra + ' more' : '', bg: today ? c.selBg : (i > 4 ? c.band : 'transparent'),
+      nc: today ? '#FFFFFF' : c.text, nb: today ? c.accentFill : 'transparent', wc: today ? c.accent : c.sec,
+      sum: past ? done + ' done' : (today ? '3 done · ' + short(480) : short(est)) };
+  });
+  var S = [['🧘','Core practice','12','12.0','0','—',1],['💪','Calisthenics','4','3.5','0','0.3',1],['🎻','Violin','4','5.5','1','1.3',1],['🎹','Piano','0','0.3','0','0',1],['🇮🇹','Italian','0','0.8','0','0.3',1],['🇯🇵','Japanese','0','—','0','—',1],['📐','Math','1','2.0','1','1.8',1],['🤖','AI/ML','—','—','3','2.8',1],['🔬','Research','—','—','1','1.3',1],['👨‍👩‍👧','Family','3','4.8','1','0.8',1]];
+  var strip = S.map(function (s) { return { e:s[0], n:s[1], r:s[2], ra:s[3], p:s[4], pa:s[5], op:s[6] }; });
+  var TR = [['violin','Choose an encore piece',30],['violin','Restring with the new set',20],['math','Find a problem book for ch. 4',15],['math','Write a one-page summary of ch. 2',45],
+    ['ai','Read: scaling-law replication notes',40],['ai','Clean up the experiments folder',30],['research','Pick a venue for submission',20],['research','Ask the lab for a compute quota',10],
+    ['italian','Lesson 15 — passato prossimo',30],['italian','Podcast episode 12, with transcript',25],['cal','Buy parallettes',15],['family','Photo book for 2026',90]];
+  var tray = TR.map(function (r) { return t(c, r[0], r[1], r[2]); });
+  var seen = st.seen || {}, nSeen = 0;
+  var rv = {};
+  ['quiet','nna','noplan','due','notes'].forEach(function (k) { var on = !!seen[k]; if (on) nSeen++;
+    rv[k] = { on:on, col: on ? c.accent : c.check, mark: on ? 'M5.2 8.2l2 2L11 6.2' : '',
+      toggle: function () { var s2 = Object.assign({}, seen); s2[k] = !on; self.setState({ seen: s2 }); } }; });
+  var NNA = [['🔬','Conference talk 2027','Research'],['🎻','Sarabande — Partita No. 2','Violin'],['🤖','Benchmark dataset v2','AI/ML']];
+  var ND = [['ai','Renew conference registration',20,'Due Tue 6 Oct'],['research','Submit reviewer form',45,'Due Thu 8 Oct'],['violin','Pay for October lessons',5,'Due Fri 9 Oct']];
+  return { days:days, strip:strip, tray:tray, trayCount: tray.length + ' tasks', review: review, plan: !review,
+    sub: '28 September – 4 October 2026 · ' + (review ? 'weekly review' : 'ISO week'),
+    toggleReview: function () { self.setState({ review: !review }); },
+    rvBg: review ? c.accentFill : 'transparent', rvFg: review ? '#FFFFFF' : c.text, rvBorder: review ? c.accentFill : c.fieldBorder,
+    rv: rv, rvSeen: '',
+    nna: NNA.map(function (p) { return { e:p[0], n:p[1], line:p[2] }; }),
+    trayShort: tray.slice(0, 8), trayMore: '+ ' + (tray.length - 8) + ' more in the No plan tray',
+    nextDue: ND.map(function (r) { var x = t(c, r[0], r[1], r[2]); x.due = r[3]; return x; }) };
+}
+
+function extra(c, lang, v) {
+
+var past = v.days.slice(0, 3), pd = 0, po = 0;
+past.forEach(function (d) { d.items.forEach(function (t) { if (t.done) pd++; else po++; }); });
+var ahead = v.days.slice(3).map(function (d, k) { return { wd:d.wd, n:d.n + ' Oct', tag: k === 0 ? 'today' : '', sum:d.sum, items:d.items.slice(0, k === 0 ? 4 : 3) }; });
+return { pastDone: pd, pastOpen: po, ahead: ahead };
+
+}
+
+var __b = build;
+build = function (c, lang) { var v = __b.call(this, c, lang) || {}; v.i = ios(c); v.tb = TB[lang] || TB.en; v.pl = PL[lang] || PL.en;
+  if (typeof extra === 'function') { var x = extra.call(this, c, lang, v) || {}; for (var k in x) v[k] = x[k]; } return v; };
+
+class Component extends DCLogic {
+  renderVals() {
+    var c = theme(!!this.props.dark);
+    var v = build.call(this, c, this.props.lang || 'en') || {};
+    var lang = this.props.lang || 'en'; v.c = c; v.ss = SS[lang] || SS.en; v.side = side(c, lang);
+    return v;
+  }
+}
+</script>
+</body>
+</html>

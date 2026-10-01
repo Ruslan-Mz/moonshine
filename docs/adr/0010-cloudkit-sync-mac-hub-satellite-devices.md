@@ -23,7 +23,8 @@ Phase 3b brings an iPad "planning studio" (and an iPhone capture app). OmniFocus
 
 ## Decision Drivers
 
-- Single user, several Apple devices; private by default (ADR principle 5); no own server before phase 8.
+- Single user, several Apple devices; private by default (VISION principle 5); no own server before phase 8.
+- Data leaves the Mac only with the owner's explicit consent.
 - Imported provider data must have exactly one writer to avoid divergent truths.
 - Native planning data is edited on iPad and Mac — conflicts are possible but rare.
 - Reuse the store and change log from ADR-0002; offline-first on every device.
@@ -37,7 +38,11 @@ Phase 3b brings an iPad "planning studio" (and an iPhone capture app). OmniFocus
 
 ## Decision Outcome
 
-**Chosen option: "1"**, because `CKSyncEngine` handles change tracking, retries and account changes, keeps data in the owner's iCloud (sensitive fields via `encryptedValues`), and needs no server. Splitting ownership — **provider-sourced records are written only by the Mac importer; native records are multi-writer** — removes most conflicts by construction. Option 3 is revisited if real conflicts on plans appear in the conflict log.
+**Chosen option: "1"**, because `CKSyncEngine` handles change tracking, retries and account changes, keeps data in the owner's iCloud (sensitive fields via `encryptedValues`), and needs no server. Splitting ownership — **provider-sourced records are written only by the Mac importer; native records are multi-writer** — removes most conflicts by construction.
+
+**Sync is opt-in and off by default.** Nothing is uploaded until the owner turns it on in Settings → Sync, after a consent screen that states what is synced (the MoonShine store: imported OmniFocus and vault data, plans, time entries) and where (the owner's private iCloud database). Turning it off stops sync; a separate, confirmed action deletes the CloudKit data. Without sync, the iPad and iPhone apps have no data (Demo mode only). VISION principle 5 is amended to match.
+
+Option 3 is revisited if real conflicts on plans appear in the conflict log.
 
 ### Consequences
 
@@ -50,6 +55,7 @@ Phase 3b brings an iPad "planning studio" (and an iPhone capture app). OmniFocus
 
 ### Confirmation
 
+- A fresh install makes no CloudKit request until sync is turned on (test with a mock `SyncEngine`); turning sync off stops all pushes.
 - Contract tests: a provider-sourced record written on a non-Mac device is rejected; native edits on two simulated devices converge; conflicting edits produce a conflict-log entry, never a silent loss without a record.
 - 3b acceptance: airplane-mode edits on iPad sync after reconnect; first sync of the full demo store < 30 s.
 

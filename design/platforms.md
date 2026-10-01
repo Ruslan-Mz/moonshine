@@ -15,9 +15,9 @@ One product, three roles. The owner plans on the iPad (OmniFocus is great for do
 | Typical context            | Desk, deep work                                        | Sofa, Sunday review, side by side with OmniFocus                                             | Between things, during practice                                       |
 | Writes (when phases allow) | All                                                    | MoonShine-native planning data (plans, levels, scenarios, review "seen")                     | Time entries, measurements                                            |
 
-## Architecture consequence (to be decided in an ADR before building iPad)
+## Architecture consequence (ADR-0010)
 
-- The **Mac stays the importer** (JXA exists only on macOS). The iPad and iPhone read a **replicated MoonShine store** and write only MoonShine-native data. Candidates: CloudKit private database, or the ADR-0002 change log shipped through iCloud Drive. Sync of user-written data needs the conflict rules ADR planned for phase 7.
+- The **Mac stays the importer** (JXA exists only on macOS). The iPad and iPhone read a **replicated MoonShine store** and write only MoonShine-native data. Decided in **ADR-0010**: CloudKit private database via `CKSyncEngine`; provider-sourced records have one writer (the Mac importer), native records are multi-writer with per-field last-writer-wins and a conflict log. Sync is **opt-in, off by default**, turned on in Settings after explicit consent (VISION principle 5).
 - Core and Adapters are already multiplatform Swift packages (ADR-0007); the iPad app reuses them.
 
 ## Design rules for iPad and iPhone

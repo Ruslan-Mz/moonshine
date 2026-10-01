@@ -85,7 +85,7 @@ Native `Picker(.segmented)` and `Slider`. Drawn segmented: track `ctrl`, the sel
 
 ## QuarterFocusCard (draft-2)
 
-Right-rail card (radius 10, `card`): title `Q4 focus` 13 semibold + `2 of 5 done` 12 tertiary; rows: status glyph (`circle` / `checkmark.circle`, neutral colours) · line emoji · artifact title 12.5 (2 lines max). Footer link `Open quarter note`. No progress bars, no percentages.
+Right-rail card (radius 10, `card`): title `Q4 focus` 13 semibold + `2 of 5 done` 12 tertiary; rows: status glyph (`circle` / `checkmark.circle`, neutral colours) · line emoji · artifact title 12.5 (2 lines max). Footer link `Open quarter note`; from R1 a second link `Open quarter review`. No progress bars, no percentages.
 
 ## FoundationRow / floor (draft-2)
 
