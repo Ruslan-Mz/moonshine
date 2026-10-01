@@ -14,8 +14,12 @@ public protocol NoteProvider: Sendable {
 /// The local store. The UI and services read only from here.
 public protocol Store: Sendable {
   func identityMap() async throws -> IdentityMap
-  func commit(_ workspace: Workspace, identities: IdentityMap) async throws
+  /// Applies a full import through `StoredWorkspace.merging(_:at:)` and saves the identities.
+  func commit(_ workspace: Workspace, identities: IdentityMap, at now: Date) async throws
+  /// What services read: everything not removed from its provider.
   func workspace() async throws -> Workspace
+  /// Everything kept, including history its providers no longer return.
+  func stored() async throws -> StoredWorkspace
 }
 
 // MARK: - Task-manager records, keyed by the provider's own ids

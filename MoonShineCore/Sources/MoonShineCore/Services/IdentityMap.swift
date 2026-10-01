@@ -7,6 +7,12 @@ public struct IdentityMap: Sendable {
     public let kind: String
     public let provider: ProviderID
     public let externalId: String
+
+    public init(kind: String, provider: ProviderID, externalId: String) {
+      self.kind = kind
+      self.provider = provider
+      self.externalId = externalId
+    }
   }
 
   public private(set) var entries: [Key: UUID] = [:]

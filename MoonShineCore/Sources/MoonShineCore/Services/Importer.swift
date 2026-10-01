@@ -152,7 +152,7 @@ public struct ImportService: Sendable {
     var identities = try await store.identityMap()
     let workspace = importer.makeWorkspace(
       tasks: source, vault: vault, identities: &identities, now: now)
-    try await store.commit(workspace, identities: identities)
+    try await store.commit(workspace, identities: identities, at: now)
     return workspace
   }
 }
