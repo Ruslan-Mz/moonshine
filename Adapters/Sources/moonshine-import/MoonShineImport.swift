@@ -51,8 +51,15 @@ struct MoonShineImport {
   // MARK: Modes
 
   static func full(runs: Int) async throws {
+    // Only a missing file is fine: a store that cannot be removed would be measured as empty.
     for suffix in ["", "-wal", "-shm"] {
-      try? FileManager.default.removeItem(atPath: storePath + suffix)
+      do {
+        try FileManager.default.removeItem(atPath: storePath + suffix)
+      } catch let error as NSError
+        where error.domain == NSCocoaErrorDomain && error.code == NSFileNoSuchFileError
+      {
+        continue
+      }
     }
     let store = try SQLiteStore(path: storePath)
     let names = ["bridge", "decode+validate", "import", "commit", "total", "OmniFocus held"]
@@ -74,7 +81,7 @@ struct MoonShineImport {
         workspace, identities: identities.map, expectedVersion: identities.version, at: Date())
       marks.append(clock.now)
       let steps = zip(marks.dropFirst(), marks).map { $0 - $1 }
-      phases.append(steps + [marks[marks.count - 1] - marks[0], output.omniFocusTime ?? .zero])
+      phases.append(steps + [marks[marks.count - 1] - marks[0], output.omniFocusTime])
       print("run \(run)\(run == 1 ? " (empty store)" : ""): " + line(phases[run - 1], names))
       last = document
     }
@@ -93,7 +100,7 @@ struct MoonShineImport {
       let fetched = clock.now
       delta = try SnapshotMapper.map(try SnapshotDocument.decode(output.json))
       phases.append([
-        fetched - start, clock.now - fetched, clock.now - start, output.omniFocusTime ?? .zero,
+        fetched - start, clock.now - fetched, clock.now - start, output.omniFocusTime,
       ])
       print("run \(run): " + line(phases[run - 1], names))
     }
@@ -111,9 +118,9 @@ struct MoonShineImport {
     var probe: ChangeProbe?
     for run in 1...runs {
       let start = clock.now
-      let output = try await bridge.run(.probe)
-      probe = try ChangeProbe.decode(output.json)
-      phases.append([clock.now - start, output.omniFocusTime ?? .zero])
+      let measured = try await bridge.probe()
+      probe = measured.value
+      phases.append([clock.now - start, measured.omniFocusTime])
       print("run \(run): " + line(phases[run - 1], names))
     }
     print("median: " + line(median(phases), names))

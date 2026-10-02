@@ -12,7 +12,7 @@ final class FakeRunner: ScriptRunner, @unchecked Sendable {
   let result: ScriptResult
   private(set) var arguments: [[String]] = []
 
-  init(status: Int32 = 0, stdout: Data, stderr: String = "") {
+  init(status: Int32 = 0, stdout: Data, stderr: String = "moonshine-bridge omnifocus_ms=5\n") {
     result = ScriptResult(status: status, stdout: stdout, stderr: stderr)
   }
 
@@ -35,6 +35,26 @@ final class FakeRunner: ScriptRunner, @unchecked Sendable {
     #expect(runner.arguments == [["-l", "JavaScript", "/repo/bridge/snapshot.js", "full"]])
     let source = try await bridge(runner).snapshot(modifiedSince: nil)
     #expect(source.tasks.count == 163)
+    #expect(try await bridge(runner).document(.full).omniFocusTime == .milliseconds(1234))
+  }
+
+  @Test func aMissingOrMalformedTimingMarkerIsAMalformedResult() async throws {
+    for stderr in ["", "moonshine-bridge omnifocus_ms=abc\n", "omnifocus_ms=12\n"] {
+      let runner = FakeRunner(stdout: try Data(contentsOf: fixtureURL), stderr: stderr)
+      await #expect(throws: BridgeError.malformedOutput) { try await bridge(runner).run(.full) }
+    }
+  }
+
+  @Test func probeIsDecodedAndValidated() async throws {
+    let valid =
+      #"{"schemaVersion":1,"source":"omnifocus","mode":"probe","generatedAt":"2026-09-30T21:00:00+03:00","taskCount":163,"latestModified":null}"#
+    let probe = try await bridge(FakeRunner(stdout: Data(valid.utf8))).probe()
+    #expect(probe.value.taskCount == 163)
+    #expect(probe.omniFocusTime == .milliseconds(5))
+    let negative = valid.replacingOccurrences(of: "163", with: "-1")
+    await #expect(throws: SnapshotError.invalid([.init("taskCount", "is negative")])) {
+      try await bridge(FakeRunner(stdout: Data(negative.utf8))).probe()
+    }
   }
 
   @Test func incrementalRequestPassesTheCutoff() async throws {
@@ -93,6 +113,18 @@ final class FakeRunner: ScriptRunner, @unchecked Sendable {
         sh, arguments: ["-c", "sleep 5"], timeout: .milliseconds(200))
     }
     #expect(clock.now - started < .seconds(3))
+  }
+
+  /// A child that ignores SIGTERM, with a grandchild holding the pipes open: the call still
+  /// returns the typed timeout within timeout + grace (TERM) + grace (KILL) + a margin.
+  @Test func aChildThatIgnoresTermIsKilledAndTheCallReturns() async {
+    let clock = ContinuousClock()
+    let started = clock.now
+    await #expect(throws: BridgeError.timedOut(after: .milliseconds(200))) {
+      try await ProcessScriptRunner(grace: .milliseconds(500)).run(
+        sh, arguments: ["-c", "trap '' TERM; sleep 10"], timeout: .milliseconds(200))
+    }
+    #expect(clock.now - started < .milliseconds(200 + 500 + 500 + 1000))
   }
 
   @Test func bridgeScriptCompiles() async throws {

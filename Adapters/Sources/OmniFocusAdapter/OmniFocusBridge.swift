@@ -38,11 +38,23 @@ public struct OmniFocusBridge: Sendable {
     case probe
   }
 
+  /// The requests that return a snapshot document (the probe has its own call).
+  public enum SnapshotRequest: Sendable, Equatable {
+    case full
+    case incremental(since: Date)
+  }
+
   public struct Output: Sendable {
     /// The snapshot or change-probe JSON. Carries task titles: never log it.
     public let json: Data
     /// How long the export held OmniFocus, as measured inside it.
-    public let omniFocusTime: Duration?
+    public let omniFocusTime: Duration
+  }
+
+  /// A decoded, validated result and how long it held OmniFocus.
+  public struct Measured<Value: Sendable>: Sendable {
+    public let value: Value
+    public let omniFocusTime: Duration
   }
 
   public static let defaultTimeout = Duration.seconds(30)
@@ -78,26 +90,50 @@ public struct OmniFocusBridge: Sendable {
       throw BridgeError.notRunning
     }
     guard result.stdout.first == UInt8(ascii: "{") else { throw BridgeError.malformedOutput }
-    let milliseconds = result.stderr.firstMatch(of: /moonshine-bridge omnifocus_ms=(\d+)/)
-      .flatMap { Int($0.1) }
-    return Output(json: result.stdout, omniFocusTime: milliseconds.map { .milliseconds($0) })
+    // The timing marker is part of the contract: without it the held time would be invented.
+    guard
+      let milliseconds = result.stderr.firstMatch(of: /moonshine-bridge omnifocus_ms=(\d+)\s*$/)
+        .flatMap({ Int($0.1) })
+    else { throw BridgeError.malformedOutput }
+    return Output(json: result.stdout, omniFocusTime: .milliseconds(milliseconds))
   }
 
-  public func document(_ request: Request) async throws -> SnapshotDocument {
-    try SnapshotDocument.decode(try await run(request).json)
+  /// A full or incremental snapshot, decoded (validation happens in `SnapshotMapper.map`).
+  public func document(_ request: SnapshotRequest) async throws -> Measured<SnapshotDocument> {
+    let output: Output
+    switch request {
+    case .full: output = try await run(.full)
+    case .incremental(let since): output = try await run(.incremental(since: since))
+    }
+    return Measured(
+      value: try SnapshotDocument.decode(output.json), omniFocusTime: output.omniFocusTime)
+  }
+
+  /// The change probe, decoded and validated.
+  public func probe() async throws -> Measured<ChangeProbe> {
+    let output = try await run(.probe)
+    let probe = try ChangeProbe.decode(output.json)
+    let violations = SnapshotValidator.violations(in: probe)
+    guard violations.isEmpty else { throw SnapshotError.invalid(violations) }
+    return Measured(value: probe, omniFocusTime: output.omniFocusTime)
   }
 }
 
 extension OmniFocusBridge: TaskProvider {
   public func snapshot(modifiedSince: Date?) async throws -> TaskSourceSnapshot {
     try SnapshotMapper.map(
-      try await document(modifiedSince.map { .incremental(since: $0) } ?? .full))
+      try await document(modifiedSince.map { .incremental(since: $0) } ?? .full).value)
   }
 }
 
 /// Runs a child process, reading both pipes to the end; terminates it after `timeout`.
 public struct ProcessScriptRunner: ScriptRunner {
-  public init() {}
+  /// How long a child gets after SIGTERM, and after SIGKILL, before the runner stops waiting.
+  public let grace: Duration
+
+  public init(grace: Duration = .seconds(2)) {
+    self.grace = grace
+  }
 
   public func run(_ executable: URL, arguments: [String], timeout: Duration) async throws
     -> ScriptResult
@@ -105,22 +141,16 @@ public struct ProcessScriptRunner: ScriptRunner {
     try await withCheckedThrowingContinuation { continuation in
       DispatchQueue.global().async {
         continuation.resume(
-          with: Result { try Self.runBlocking(executable, arguments: arguments, timeout: timeout) })
+          with: Result {
+            try runBlocking(executable, arguments: arguments, timeout: timeout)
+          })
       }
     }
   }
 
-  /// Shared with the watchdog. `Process` is not Sendable; it is only asked `isRunning` and
-  /// told to `terminate()`, both thread-safe.
-  private final class Watch: @unchecked Sendable {
-    let process: Process
-    let timedOut = Mutex(false)
-    let stderr = Mutex(Data())
-
-    init(_ process: Process) { self.process = process }
-  }
-
-  private static func runBlocking(_ executable: URL, arguments: [String], timeout: Duration)
+  /// Every wait is bounded. The pipes are read on their own threads and never awaited after a
+  /// timeout: a child that ignores SIGTERM, or a grandchild holding the pipes, cannot block us.
+  private func runBlocking(_ executable: URL, arguments: [String], timeout: Duration)
     throws -> ScriptResult
   {
     let process = Process()
@@ -131,26 +161,45 @@ public struct ProcessScriptRunner: ScriptRunner {
     process.standardOutput = stdout
     process.standardError = stderr
     process.standardInput = FileHandle.nullDevice
-    let watch = Watch(process)
+    let exited = DispatchSemaphore(value: 0)
+    process.terminationHandler = { _ in exited.signal() }
     try process.run()
 
-    let stderrRead = DispatchGroup()
-    DispatchQueue.global().async(group: stderrRead) {
+    let reads = DispatchGroup()
+    let collected = Collected()
+    DispatchQueue.global().async(group: reads) {
+      let data = stdout.fileHandleForReading.readDataToEndOfFile()
+      collected.stdout.withLock { $0 = data }
+    }
+    DispatchQueue.global().async(group: reads) {
       let data = stderr.fileHandleForReading.readDataToEndOfFile()
-      watch.stderr.withLock { $0 = data }
+      collected.stderr.withLock { $0 = data }
     }
-    let seconds = Double(timeout.components.seconds) + Double(timeout.components.attoseconds) / 1e18
-    DispatchQueue.global().asyncAfter(deadline: .now() + seconds) {
-      guard watch.process.isRunning else { return }
-      watch.timedOut.withLock { $0 = true }
-      watch.process.terminate()
+
+    func deadline(_ duration: Duration) -> DispatchTime {
+      .now() + Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18
     }
-    let output = stdout.fileHandleForReading.readDataToEndOfFile()
-    process.waitUntilExit()
-    stderrRead.wait()
-    if watch.timedOut.withLock({ $0 }) { throw BridgeError.timedOut(after: timeout) }
+    guard exited.wait(timeout: deadline(timeout)) == .success else {
+      process.terminate()
+      if exited.wait(timeout: deadline(grace)) == .timedOut {
+        kill(process.processIdentifier, SIGKILL)
+        _ = exited.wait(timeout: deadline(grace))
+      }
+      throw BridgeError.timedOut(after: timeout)
+    }
+    // Exited: the pipes reach EOF once every writer has closed them, unless a grandchild
+    // still holds them, so this wait is bounded too.
+    guard reads.wait(timeout: deadline(grace)) == .success else {
+      throw BridgeError.timedOut(after: timeout)
+    }
     return ScriptResult(
-      status: process.terminationStatus, stdout: output,
-      stderr: String(decoding: watch.stderr.withLock { $0 }, as: UTF8.self))
+      status: process.terminationStatus, stdout: collected.stdout.withLock { $0 },
+      stderr: String(decoding: collected.stderr.withLock { $0 }, as: UTF8.self))
+  }
+
+  /// What the pipe readers collected, shared with their threads.
+  private final class Collected: Sendable {
+    let stdout = Mutex(Data())
+    let stderr = Mutex(Data())
   }
 }
