@@ -17,7 +17,7 @@ Toolbar: breadcrumb `Lines › 🎻 Violin`, subtitle `Line detail · 4 projects
 Main (scroll):
 
 1. Header: emoji 34, name 24 bold, meta line `Creative · active · budget 6 hours / week · last activity today`.
-2. Two `MetricCard`s side by side: **Rhythm** (sessions per week, 4-week avg 5.5) and **Progress** (tasks done per week, avg 1.3), W33–W40, current week partial.
+2. Two `MetricCard`s side by side: **Rhythm** (sessions per week, 4-week avg 4.0) and **Progress** (tasks done per week, avg 1.0), W33–W40, current week partial.
 3. **Projects** table: Project (folder symbol + name + due badge if the project has a real due) · Kind (`plan · 4 steps`, `repeating sessions`, `one-off tasks`) · Next actions · Remaining (`≈ 2 h 15 min est.`).
 4. **Next actions** (count): `TaskRow`s; the When column shows `today` / `Fri` / `no date`, or a due badge.
 

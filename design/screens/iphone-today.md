@@ -20,7 +20,7 @@ The iPhone is **capture & glance**: what matters today, one hand, between things
 ## Layout (6.3″, 402 × 874 pt)
 
 - Large title `Today` + `Thursday, 1 October · 23 open`; search button (44).
-- **Anchors**: `Anchors · 3 of 5 done`, capsule chips (44 high) that wrap: check + title + line emoji. Done chips are checked and dimmed, not hidden.
+- **Anchors**: `Anchors · 3 of 5 done`, capsule chips (44 high) that wrap: check + title + line emoji. Done chips are checked and dimmed, not hidden. Up to 5 chips; the count covers all anchors (`3 of 6 done`); further anchors stay in their line sections (rule in `today.md`).
 - **Top 3 today**: inset-grouped card, `5 flagged — 3 shown`.
 - **Line sections**, foundation first: card per line, rows 56 pt: check 24 · title 17 (one line) · meta 13 (`🎻 Bach Partita No. 2 · ≈ 45 min`) · due badge (amber, real due only).
 - From earlier and Life ops follow below the fold (same as iPad).

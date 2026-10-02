@@ -36,8 +36,8 @@ A copy-review test greps the String Catalog in every language for these words. E
 | Task estimate                         | `≈ 45 min est.`; cells `≈ 45 min`                                  | `≈ 45 мин (оценка)`; в ячейках `≈ 45 мин`                        |
 | Sum of estimates                      | `≈ 1 h 35 min est.`                                                | `≈ 1 ч 35 мин (оценка)`                                          |
 | Budget                                | `6 h / week`                                                       | `6 ч / нед`                                                      |
-| Rhythm                                | `1 session`, `4 sessions`, `avg 5.5`                               | `1 занятие`, `4 занятия`, `5 занятий`, `ср. 5,5`                 |
-| Progress                              | `1 task`, `3 tasks`, `avg 1.3`                                     | `1 задача`, `3 задачи`, `5 задач`, `ср. 1,3`                     |
+| Rhythm                                | `1 session`, `4 sessions`, `avg 4.0`                               | `1 занятие`, `4 занятия`, `5 занятий`, `ср. 4,0`                 |
+| Progress                              | `1 task`, `3 tasks`, `avg 1.0`                                     | `1 задача`, `3 задачи`, `5 задач`, `ср. 1,0`                     |
 | Partial week                          | `so far`, `week in progress — Mon to Thu`                          | `пока`, `неделя идёт — пн–чт`                                    |
 | Freshness                             | `Updated 3 min ago`                                                | `Обновлено 3 мин назад`                                          |
 | Data source                           | `Demo data`                                                        | `Демо-данные`                                                    |

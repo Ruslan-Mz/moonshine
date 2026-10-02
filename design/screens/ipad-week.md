@@ -25,7 +25,7 @@ The iPad's main job: **plan the week** and run the **Sunday weekly review**.
 **Planning (11″ landscape)**, sidebar hidden to give the days room:
 
 - Toolbar: sidebar button · `Week 40` + range · segmented **Plan | Weekly review** · ‹ Today › group.
-- Line strip: one row of 10 compact cells (emoji, line, rhythm `4 (5.5)`, progress `1 (1.3)` — the number in brackets is the 4-week average). Plain numbers, no colour for up or down.
+- Line strip: one row of 10 compact cells (emoji, line, rhythm `4 (4.0)`, progress `1 (1.0)` — the number in brackets is the 4-week average). Plain numbers, no colour for up or down.
 - Day grid: 7 columns (radius 16). Cards ≥ 56 pt: title (2 lines), line emoji, estimate, due badge if the real due date falls in this week. Past days dimmed. At most 3 cards on 11″ (4 on 13″), then `+ N more`.
 - **No plan tray** (bottom card, 200): grab handle, emoji, title, estimate in 4 columns. Caption: `Drag a card onto a day · writes to OmniFocus in phase 6`.
 - **Drag state** (drawn): the lifted card (scale 1.03, −2°, lift shadow) is over Friday; Friday gets an accent outline, a selection tint and the drop target `Drop to plan for Fri 2 Oct`; the source slot shows a dashed ghost.

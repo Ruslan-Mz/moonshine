@@ -12,7 +12,7 @@ artboards: [mockups/Week.dc.html, mockups/Week-Dark.dc.html]
 
 Toolbar: `Week 40`, subtitle `28 September – 4 October 2026 · ISO week`; ‹ Today › buttons. No right rail.
 
-1. **Line strip** (top): legend (rhythm / progress swatches, "Week in progress — Mon to Thu"), then one cell per line in a 9-column grid. Each cell shows emoji + name, `■ 4  avg 5.5` (rhythm) and `■ 1  avg 1.3` (progress). Plain numbers, no colour for up or down. "—" where a series doesn't apply (a line without repeating tasks has no rhythm).
+1. **Line strip** (top): legend (rhythm / progress swatches, "Week in progress — Mon to Thu"), then one cell per line in a 9-column grid. Each cell shows emoji + name, `■ 4  avg 4.0` (rhythm) and `■ 1  avg 1.0` (progress) — Violin, W40; averages over the previous 4 full weeks (W36–W39), derived from `demo-data.md`. Plain numbers, no colour for up or down. "—" where a series doesn't apply (a line without repeating tasks has no rhythm).
 2. **Days**: 7 equal columns Mon–Sun. Header: weekday + date (today: filled accent circle, column tinted with `selection`) + a summary (`5 done` for past days, `≈ 2 h 50 min` estimated for future days). Cards: checkbox + title (2 lines max), then line emoji + name, estimate and a due badge when the due date falls in this week. More than ~6 → `+ N more` link (opens Today-style list of that day).
 3. **No plan tray** (bottom, 188 high): `No plan` + caption + count; a 4-column grid of compact cards (emoji, title, estimate). Caption on the right: "Drag onto a day to plan — phase 6".
 

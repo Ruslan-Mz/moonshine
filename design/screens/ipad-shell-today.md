@@ -24,7 +24,7 @@ The iPad is the **planning studio** (`platforms.md`). Today exists there so the 
 - **Sidebar** (floating, 300 wide, radius 22, `sidebar` token, inset 10): hide/show button + app name, search field (`⌘K` hint), views **Today · Week · Month · Lines · Plan** (44 pt rows, selected = accent fill), then lines **grouped by tier** (Foundation · Active this season · Maintenance · Not in focus — collapsed with count), 36 pt rows.
 - **Toolbar**: large title 34 bold + subtitle (date · counts · estimate). Trailing glass group: search, refresh. When the sidebar is hidden, a leading sidebar button appears (see Week, Forecast).
 - **Main column** (inset-grouped cards, radius 14, 56 pt rows):
-  1. Anchors: label + `3 of 5 done`, then capsule chips (48 high): check 22 + title + line emoji.
+  1. Anchors: label + `3 of 5 done`, then capsule chips (48 high): check 22 + title + line emoji. Up to 5 chips; the count covers all anchors (`3 of 6 done`); further anchors stay in their line sections (rule in `today.md`).
   2. Top 3 today (flagged), caption `5 flagged — 3 shown`.
   3. One card per line, foundation first; header = emoji + line + summary (`foundation · floor 1 h/day · 1 open · ≈ 40 min est.`).
   4. From earlier, with `· planned 3 days ago` in the meta line.

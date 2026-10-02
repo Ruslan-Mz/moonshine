@@ -13,9 +13,13 @@ The owner's end-of-quarter ritual: look back at the quarter's artifacts and line
 
 Opened from: ⌘K ("Quarterly review"), a second footer link `Open quarter review` that R1 adds to the Quarter focus card (next to phase 1's `Open quarter note`, `components.md`) and, during the first 14 days of a quarter, a link in the Today rail. No sidebar item for now.
 
+## Reviewed quarter
+
+A selector `‹ Q3 2026 ›` in the toolbar (⌘[ / ⌘] step quarters) picks the **reviewed quarter**. Default: the current quarter if it ends within 21 days, otherwise the previous one (on 2026-12-28 → Q4 2026, set-up for Q1 2027; on 2026-10-02 → Q3 2026). Everything derives from the reviewed quarter: the quarter note looked back on, the next quarter's note for the setup, and the statistics range (its ISO weeks; edge weeks that cross the quarter boundary are drawn partial). The text below uses Q3 2026 as the example.
+
 ## Layout (artboard drawn at full scroll height, 1440 × 1280)
 
-Toolbar: `Q3 2026 review`, subtitle `July – September · 14 ISO weeks · read-only — decisions go into the quarter note`, button `Open Квартал_2026-Q4`.
+Toolbar: quarter selector `‹ Q3 2026 ›` + `review`, subtitle `July – September · 14 ISO weeks · read-only — decisions go into the quarter note`, button `Open Квартал_2026-Q4`.
 
 1. **Q3 focus — what happened.** One row per artifact in the previous quarter note: status glyph · line emoji · artifact · outcome · evidence · `Open in Obsidian`.
    - Outcomes: `done` (check), `carried to Q4` (arrow), `to decide` (dashed circle). Neutral colours only. `to decide` is in primary text so it stands out without colour.

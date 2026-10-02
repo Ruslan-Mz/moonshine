@@ -104,6 +104,7 @@ focus:
 A quarter note may carry its own `artifacts:` list, same item shape as the year note (§2.1). Phase 1 shows it in the Today **Quarter focus card** (current quarter; title, line, `status` → done / not done).
 
 ```yaml
+type: quarter_focus
 scale: quarter
 period: 2026-Q4 # or derived from `quarter` / `period_start` as for quarter_focus
 parent: "[[Artifacts_2026]]"

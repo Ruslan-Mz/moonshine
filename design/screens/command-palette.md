@@ -19,7 +19,7 @@ A scrim over the window (black 18 % light / 42 % dark). The panel is 640 wide, 1
 ## Behaviour
 
 - Empty query: recent items + navigation commands (Go to Today ⌘1 … Lines ⌘4, Refresh ⌘R, Settings ⌘,).
-- Search over task titles, project names, line names, note titles and paths. Prefix or fuzzy match, ranked: exact word > prefix > substring; tasks available today rank higher.
+- Search over task titles, project names, line names, note titles and paths. Prefix or fuzzy match (queries under 3 characters: case- and diacritic-insensitive substring scan, `i18n.md`), ranked: exact word > prefix > substring; tasks available today rank higher.
 - ↵: task or project → select in the app (or open in OmniFocus if not shown); line → Line detail; note → Obsidian; command → run.
 - Max ~12 visible rows; the list scrolls.
 

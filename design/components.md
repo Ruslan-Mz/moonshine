@@ -39,7 +39,7 @@ SwiftUI: `Section(header:)` content, or a `DisclosureGroup` label for Life ops.
 
 ## DueBadge
 
-`clock` symbol 10 + `Due 18:00`, 11 semibold `dueText` on `dueFill`, radius 4, padding 1×6. **Only** when `effectiveDueDate` ≤ end of the shown period (today for Today, this week for Week). An inherited project due date is a real due date (phase-1 spec S3).
+`clock` symbol 10 + `Due 18:00`, 11 semibold `dueText` on `dueFill`, radius 4, padding 1×6. **Only** for a real due date in the shown period, local time zone: **Week** — `effectiveDueDate` inside the displayed ISO week (Monday 00:00 ≤ due < next Monday 00:00), so a task due before that week gets no badge there; **Today** — `effectiveDueDate` before the start of tomorrow (earlier due dates included). An inherited project due date is a real due date (phase-1 spec S3).
 
 ## Sparkline (rhythm / progress)
 
@@ -49,7 +49,7 @@ SwiftUI: Swift Charts `BarMark(x: week, y: value).position(by: series)` with axe
 
 ## MetricCard (Line detail)
 
-Title (colour square + "Rhythm" + subtitle), big number (30 bold) + context ("this week so far · Mon–Thu"), a bar chart of 8 weeks with a dashed 4-week average rule labelled "avg 5.5", week labels W33…W40. The current bar is at 50 % opacity, has a dashed outline and the label "4 so far". Two separate cards for rhythm and progress.
+Title (colour square + "Rhythm" + subtitle), big number (30 bold) + context ("this week so far · Mon–Thu"), a bar chart of 8 weeks with a dashed 4-week average rule labelled "avg 4.0", week labels W33…W40. The current bar is at 50 % opacity, has a dashed outline and the label "4 so far". Two separate cards for rhythm and progress.
 
 ## QuietLineCard
 
@@ -81,7 +81,7 @@ Native `Picker(.segmented)` and `Slider`. Drawn segmented: track `ctrl`, the sel
 
 ## AnchorStrip (draft-2)
 
-40 high. Label `Anchors` 12 semibold + `3 of 5 done` 12 tertiary, then up to 5 chips (radius 6, `chipFill`, padding 3×8): checkbox 14 + title 12.5 (one line, ≤ 22 characters, tail truncation) + line emoji. Done = checked, title in `doneText`. Read-only in phase 1 (click opens in OmniFocus).
+40 high. Label `Anchors` 12 semibold + `3 of 5 done` 12 tertiary, then up to 5 chips — the count covers all anchors, further anchors stay in their line sections (radius 6, `chipFill`, padding 3×8): checkbox 14 + title 12.5 (one line, ≤ 22 characters, tail truncation) + line emoji. Done = checked, title in `doneText`. Read-only in phase 1 (click opens in OmniFocus).
 
 ## QuarterFocusCard (draft-2)
 
