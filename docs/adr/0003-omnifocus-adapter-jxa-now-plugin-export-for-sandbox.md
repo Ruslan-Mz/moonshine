@@ -44,7 +44,7 @@ OmniFocus has no cloud API. On macOS it is scriptable via AppleScript/JXA and Om
 
 ### Confirmation
 
-Snapshot contract tests on fixtures. Phase 1 S3 measures on the real database and logs in `docs/method/log.md`: full background import ≤ 20 s, incremental refresh (items modified since the last import), UI reading only from the store in < 1 s. Phase-0 discovery showed a full-database scan costs ~8 s through Omni Automation, which is why the target is a background import rather than a blocking < 5 s load.
+Snapshot contract tests on fixtures. Phase 1 S3 measures on the real database and logs in `docs/method/log.md`: full background import ≤ 20 s; imports are always full, and when they run follows ADR-0011; UI reading only from the store in < 1 s. Phase-0 discovery showed a full-database scan costs ~8 s through Omni Automation, which is why the target is a background import rather than a blocking < 5 s load.
 
 ## More Information
 

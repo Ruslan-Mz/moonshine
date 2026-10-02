@@ -20,7 +20,7 @@ related:
 
 ## Context and Problem Statement
 
-MoonShine is meant to become the owner's main app for time, so its picture of OmniFocus must stay current without pressing a refresh button. OmniFocus offers no change notifications to other apps. The S3a-1 measurements (OmniFocus 4, 6,420 tasks in the database, 1,961 in the snapshot, release build) show what the bridge costs:
+MoonShine is meant to become the owner's main app for time, so its picture of OmniFocus must stay current without pressing a refresh button. OmniFocus offers no change notifications to other apps. The S3a-1 measurements (OmniFocus 4, 6,420 tasks in the database, 1,961 in the snapshot at the time of the B runs (1,962 in later runs), release build) show what the bridge costs:
 
 | Measurement                                          | OmniFocus held                   | Total  |
 | ---------------------------------------------------- | -------------------------------- | ------ |
@@ -52,7 +52,7 @@ Three facts follow. Building the task list is the whole cost; reading properties
 
 ## Decision Outcome
 
-**Chosen option: "1"**, because the moment the owner leaves OmniFocus is both when changes have just been made and when OmniFocus is still unthrottled: the import holds it for 2.7 s while nobody is looking at it. It uses only the documented bridge and keeps a single import path.
+**Chosen option: "1"**, because the moment the owner leaves OmniFocus is both when changes have just been made and when OmniFocus is still unthrottled: the import holds it for 2.7 s while nobody is looking at it. It uses only the documented bridge and keeps a single import path. It replaces ADR-0003's confirmation criterion on incremental refresh.
 
 Rules that follow:
 
