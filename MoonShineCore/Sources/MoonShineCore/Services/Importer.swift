@@ -102,7 +102,9 @@ public struct Importer: Sendable {
         parentTaskID: task.parentExternalId.map { identities.id(for: taskRef($0), now: now) },
         tagIDs: task.tagExternalIds.map { identities.id(for: taskRef($0), now: now) },
         status: task.status, flagged: task.flagged, plannedAt: task.plannedAt,
-        deferUntil: task.deferUntil, dueAt: task.dueAt, estimateMinutes: task.estimateMinutes,
+        deferUntil: task.deferUntil, dueAt: task.dueAt,
+        effectivePlannedAt: task.effectivePlannedAt, effectiveDeferUntil: task.effectiveDeferUntil,
+        effectiveDueAt: task.effectiveDueAt, estimateMinutes: task.estimateMinutes,
         completedAt: task.completedAt, modifiedAt: task.modifiedAt,
         occurrenceOf: liveExternalId.map { identities.id(for: taskRef($0), now: now) },
         line: mapper.assign(
@@ -126,6 +128,12 @@ public struct Importer: Sendable {
   }
 }
 
+/// The provider returned changes only; merging them as a full import would soft-delete
+/// everything outside the delta.
+public struct PartialSnapshotError: Error, Equatable, Sendable {
+  public let modifiedSince: Date
+}
+
 /// Reads both providers, builds the workspace with the store's identities and commits it.
 public actor ImportService {
   public let tasks: any TaskProvider
@@ -147,7 +155,7 @@ public actor ImportService {
     self.importer = importer
   }
 
-  /// Full import. Incremental refresh (`modifiedSince`) arrives with the live adapters (S3).
+  /// Full import. An incremental merge is decided after the S3a-1 measurements (S3a-2).
   /// Single-flight: imports run one at a time (identity map → workspace → commit is not atomic
   /// otherwise); requests arriving during an import share at most one follow-up run, which
   /// starts when the current one ends, so the latest provider state is still read.
@@ -184,6 +192,7 @@ public actor ImportService {
     async let taskSnapshot = tasks.snapshot(modifiedSince: nil)
     async let vaultSnapshot = notes.vault()
     let (source, vault) = try await (taskSnapshot, vaultSnapshot)
+    if let since = source.modifiedSince { throw PartialSnapshotError(modifiedSince: since) }
     var identities = try await store.identityMap()
     let workspace = importer.makeWorkspace(
       tasks: source, vault: vault, identities: &identities.map, now: now)

@@ -57,4 +57,24 @@ import Testing
     try await service.run()
     #expect(await provider.calls == 2)
   }
+
+  struct PartialTaskProvider: TaskProvider {
+    let since = Date(timeIntervalSince1970: 1_790_000_000)
+
+    func snapshot(modifiedSince: Date?) async throws -> TaskSourceSnapshot {
+      TaskSourceSnapshot(
+        provider: .omnifocus, generatedAt: since, timeZone: TestWorld.timeZone,
+        modifiedSince: since, tags: [], projects: [], tasks: [])
+    }
+  }
+
+  @Test func aPartialSnapshotIsNeverCommittedAsAFullImport() async throws {
+    let store = InMemoryStore()
+    let provider = PartialTaskProvider()
+    let service = ImportService(tasks: provider, notes: DemoVault(), store: store)
+    await #expect(throws: PartialSnapshotError(modifiedSince: provider.since)) {
+      try await service.run()
+    }
+    #expect(try await store.identityMap().version == 0)
+  }
 }

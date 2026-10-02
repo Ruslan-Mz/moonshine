@@ -56,17 +56,21 @@ public struct TaskSourceSnapshot: Sendable {
   public let provider: ProviderID
   public let generatedAt: Date
   public let timeZone: TimeZone
+  /// nil = a complete snapshot; otherwise only tasks changed since this date. Only a
+  /// complete snapshot may be merged as a full import (its absences soft-delete).
+  public let modifiedSince: Date?
   public let tags: [SourceTag]
   public let projects: [SourceProject]
   public let tasks: [SourceTask]
 
   public init(
-    provider: ProviderID, generatedAt: Date, timeZone: TimeZone,
+    provider: ProviderID, generatedAt: Date, timeZone: TimeZone, modifiedSince: Date? = nil,
     tags: [SourceTag], projects: [SourceProject], tasks: [SourceTask]
   ) {
     self.provider = provider
     self.generatedAt = generatedAt
     self.timeZone = timeZone
+    self.modifiedSince = modifiedSince
     self.tags = tags
     self.projects = projects
     self.tasks = tasks
@@ -116,6 +120,10 @@ public struct SourceTask: Sendable {
   public let plannedAt: Date?
   public let deferUntil: Date?
   public let dueAt: Date?
+  /// Computed by the provider from parents and project; nil = the own date.
+  public let effectivePlannedAt: Date?
+  public let effectiveDeferUntil: Date?
+  public let effectiveDueAt: Date?
   public let estimateMinutes: Int?
   public let completedAt: Date?
   public let modifiedAt: Date?
@@ -125,7 +133,8 @@ public struct SourceTask: Sendable {
     externalId: String, name: String, projectExternalId: String? = nil,
     parentExternalId: String? = nil, tagExternalIds: [String] = [],
     status: TaskItemStatus = .available, flagged: Bool = false, plannedAt: Date? = nil,
-    deferUntil: Date? = nil, dueAt: Date? = nil, estimateMinutes: Int? = nil,
+    deferUntil: Date? = nil, dueAt: Date? = nil, effectivePlannedAt: Date? = nil,
+    effectiveDeferUntil: Date? = nil, effectiveDueAt: Date? = nil, estimateMinutes: Int? = nil,
     completedAt: Date? = nil, modifiedAt: Date? = nil, repeatOfExternalId: String? = nil
   ) {
     self.externalId = externalId
@@ -138,6 +147,9 @@ public struct SourceTask: Sendable {
     self.plannedAt = plannedAt
     self.deferUntil = deferUntil
     self.dueAt = dueAt
+    self.effectivePlannedAt = effectivePlannedAt ?? plannedAt
+    self.effectiveDeferUntil = effectiveDeferUntil ?? deferUntil
+    self.effectiveDueAt = effectiveDueAt ?? dueAt
     self.estimateMinutes = estimateMinutes
     self.completedAt = completedAt
     self.modifiedAt = modifiedAt

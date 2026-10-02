@@ -115,7 +115,8 @@ import Testing
     let renamed = TaskItem(
       id: c.id, refs: c.refs, title: "C2", projectID: nil, parentTaskID: nil, tagIDs: [],
       status: .completed, flagged: false, plannedAt: nil, deferUntil: nil, dueAt: nil,
-      estimateMinutes: nil, completedAt: second, modifiedAt: second, occurrenceOf: nil,
+      effectivePlannedAt: nil, effectiveDeferUntil: nil, effectiveDueAt: nil, estimateMinutes: nil,
+      completedAt: second, modifiedAt: second, occurrenceOf: nil,
       line: .lifeOps)
     let tokyo = TimeZone(identifier: "Asia/Tokyo")!
     let next = stored.merging(
