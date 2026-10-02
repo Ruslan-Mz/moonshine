@@ -15,7 +15,7 @@ Opened from: ⌘K ("Quarterly review"), a second footer link `Open quarter revie
 
 ## Reviewed quarter
 
-A selector `‹ Q3 2026 ›` in the toolbar (⌘[ / ⌘] step quarters) picks the **reviewed quarter**. Default: the current quarter if it ends within 21 days, otherwise the previous one (on 2026-12-28 → Q4 2026, set-up for Q1 2027; on 2026-10-02 → Q3 2026). Everything derives from the reviewed quarter: the quarter note looked back on, the next quarter's note for the setup, and the statistics range (its ISO weeks; edge weeks that cross the quarter boundary are drawn partial). The text below uses Q3 2026 as the example.
+A selector `‹ Q3 2026 ›` in the toolbar (⌘← / ⌘→ step quarters, same as Month) picks the **reviewed quarter**. Default: the current quarter if it ends within 21 days, otherwise the previous one (on 2026-12-28 → Q4 2026, set-up for Q1 2027; on 2026-10-02 → Q3 2026). Everything derives from the reviewed quarter: the quarter note looked back on, the next quarter's note for the setup, and the statistics range (its ISO weeks; edge weeks that cross the quarter boundary are drawn partial). The text below uses Q3 2026 as the example.
 
 ## Layout (artboard drawn at full scroll height, 1440 × 1280)
 

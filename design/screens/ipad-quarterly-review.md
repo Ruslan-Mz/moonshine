@@ -13,7 +13,7 @@ related: ["[[quarterly-review]]"]
 
 # iPad — Quarterly review (draft-2)
 
-Same content as the Mac screen (`quarterly-review.md`): Q3 focus outcomes · Lines over the quarter · Q4 setup, including the reviewed-quarter selector `‹ Q3 2026 ›` in the toolbar (same default rule: the current quarter if it ends within 21 days, otherwise the previous one; swipe or ⌘[ / ⌘] steps quarters). Note lookups and the statistics range derive from the reviewed quarter; edge ISO weeks are drawn partial. The iPad is where the owner does this review.
+Same content as the Mac screen (`quarterly-review.md`): Q3 focus outcomes · Lines over the quarter · Q4 setup, including the reviewed-quarter selector `‹ Q3 2026 ›` in the toolbar (same default rule: the current quarter if it ends within 21 days, otherwise the previous one; swipe or ⌘← / ⌘→ steps quarters, same as Month). Note lookups and the statistics range derive from the reviewed quarter; edge ISO weeks are drawn partial. The iPad is where the owner does this review.
 
 ## Layout
 
