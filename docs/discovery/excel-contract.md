@@ -1,6 +1,6 @@
 # Excel hours tracker — import contract (draft)
 
-> Structure only, generalised from a structure analysis: no labels, values, names, sheet dates or exact counts from the real workbook. The workbook lives in `data/` (git-ignored); fixtures are invented. Phase 2 builds the import.
+> Structure only, generalised from a structure analysis: no labels, values, names, sheet dates or exact counts from the real workbook. The workbook lives in `data/` (git-ignored); fixtures are invented. Phase 3 builds the import (`docs/ROADMAP.md`).
 
 ## Workbook shape
 

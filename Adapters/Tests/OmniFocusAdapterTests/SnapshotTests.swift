@@ -153,8 +153,27 @@ func fixtureDocument() throws -> SnapshotDocument {
     #expect(
       SnapshotValidator.violations(in: probe) == [
         .init("schemaVersion", "unsupported"), .init("source", "is not omnifocus"),
-        .init("mode", "is not probe"), .init("generatedAt", "date without offset"),
-        .init("taskCount", "is negative"), .init("latestModified", "date without offset"),
+        .init("mode", "is not probe"),
+        .init("generatedAt", "is not an ISO 8601 date with offset"),
+        .init("taskCount", "is negative"),
+        .init("latestModified", "is not an ISO 8601 date with offset"),
+      ])
+  }
+
+  @Test func aSnapshotFromAnotherSourceIsRejected() throws {
+    var document = try fixtureDocument()
+    document.source = "things"
+    #expect(SnapshotValidator.violations(in: document) == [.init("source", "is not omnifocus")])
+  }
+
+  @Test func probeDatesMustParseNotJustEndInAnOffset() throws {
+    var probe = try probe()
+    probe.generatedAt = "not-a-date+03:00"
+    probe.latestModified = "2026-09-30T25:61:00+03:00"
+    #expect(
+      SnapshotValidator.violations(in: probe) == [
+        .init("generatedAt", "is not an ISO 8601 date with offset"),
+        .init("latestModified", "is not an ISO 8601 date with offset"),
       ])
   }
 

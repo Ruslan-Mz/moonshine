@@ -40,6 +40,7 @@ public enum SnapshotValidator {
     }
 
     let isIncremental = document.mode == "incremental"
+    if document.source != "omnifocus" { found.append(.init("source", "is not omnifocus")) }
     checkOffset("generatedAt", document.generatedAt)
     if let mode = document.mode, mode != "full", !isIncremental {
       found.append(.init("mode", "is neither full nor incremental"))
@@ -103,11 +104,15 @@ public enum SnapshotValidator {
     if probe.schemaVersion != 1 { found.append(.init("schemaVersion", "unsupported")) }
     if probe.source != "omnifocus" { found.append(.init("source", "is not omnifocus")) }
     if probe.mode != "probe" { found.append(.init("mode", "is not probe")) }
-    if !hasOffset(probe.generatedAt) { found.append(.init("generatedAt", "date without offset")) }
-    if probe.taskCount < 0 { found.append(.init("taskCount", "is negative")) }
-    if let latest = probe.latestModified, !hasOffset(latest) {
-      found.append(.init("latestModified", "date without offset"))
+    // A probe has no mapping step that would parse its dates later, so parse them here.
+    func checkDate(_ path: String, _ date: String) {
+      if !hasOffset(date) || (try? SnapshotMapper.date(date, at: path)) == nil {
+        found.append(.init(path, "is not an ISO 8601 date with offset"))
+      }
     }
+    checkDate("generatedAt", probe.generatedAt)
+    if probe.taskCount < 0 { found.append(.init("taskCount", "is negative")) }
+    if let latest = probe.latestModified { checkDate("latestModified", latest) }
     return found
   }
 
@@ -175,12 +180,15 @@ public enum SnapshotMapper {
       })
   }
 
+  /// `Date.ISO8601FormatStyle` rolls over out-of-range fields (`25:61` parses), so the
+  /// shape and ranges are checked first.
   static func date(_ string: String, at path: String) throws -> Date {
-    do {
-      return try Date.ISO8601FormatStyle().parse(string)
-    } catch {
-      throw SnapshotError.badValue(path: path)
-    }
+    let shape =
+      /\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:[0-5]\d(\.\d+)?(Z|[+-]([01]\d|2[0-3]):?[0-5]\d)/
+    guard string.wholeMatch(of: shape) != nil,
+      let date = try? Date.ISO8601FormatStyle().parse(string)
+    else { throw SnapshotError.badValue(path: path) }
+    return date
   }
 
   private static func value<T: RawRepresentable>(_: T.Type, _ raw: String, at path: String) throws
