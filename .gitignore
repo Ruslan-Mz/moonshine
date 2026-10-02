@@ -20,3 +20,5 @@ xcuserdata/
 settings.local.json
 # Node tooling (prettier for markdown)
 node_modules/
+
+Claude outputs/

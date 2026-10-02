@@ -1,6 +1,8 @@
-# Vault contract (Obsidian → MoonShine), v0.1
+# Vault contract (Obsidian → MoonShine), v0.2
 
 Status: **draft from phase-0 discovery** (see `data-report.md`). Implements ADR-0004: YAML frontmatter is the machine-readable truth; markdown bodies stay human text and are never parsed for data.
+
+v0.2 (2026-10-01, design draft-2): optional line keys `foundation`, `floor_h_day`, `language`; quarter notes with `scale: quarter` and `artifacts:` (§2.2); R1 keys `done`, `carried_to`, `active_lines` (read from R1 on).
 
 Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault writes before phase 6).
 
@@ -16,6 +18,7 @@ Identified by `moonshine: budget` in frontmatter, or (fallback) filename `Бюд
 
 ```yaml
 moonshine: budget # marker; optional if the filename fallback matches
+active_lines: { min: 3, max: 5 } # optional (v0.2, read from R1): the "3–5 active lines" rule as data
 lines: # order = display order within a block
   - id: violin # required. slug [a-z0-9-]+, unique, never renamed (ids survive renames of `name`)
     name: Violin # required. display name, any script
@@ -23,6 +26,9 @@ lines: # order = display order within a block
     block: Creative # required. free string; blocks are displayed in first-appearance order
     state: active # required. active | maintenance | paused
     budget_h_week: 6 # optional number ≥ 0; null/absent = no weekly budget ("no schedule")
+    foundation: false # optional (v0.2); true = foundation tier (the spine), shown first, never "quiet"
+    floor_h_day: null # optional number ≥ 0 (v0.2); daily floor of a foundation line, shown instead of budget_h_week
+    language: it # optional BCP-47 tag (v0.2); language lines only. Parsed and stored; a content-language detection hint
     parent: "[[Artifacts_2026]]" # optional wikilink to the note that holds this line's artifact(s)
     omnifocus: # how OmniFocus items map to this line (see snapshot-contract.md §Mapping)
       tags: [violin] # tag names, exact match on the tag's own name (not full path)
@@ -32,6 +38,8 @@ lines: # order = display order within a block
 
 Rules
 
+- Tier (UI grouping) = `foundation: true` → Foundation, else `state` → Active this season / Maintenance / Paused on purpose. `block` is a secondary label.
+- `floor_h_day` without `foundation: true` → ignored with a banner; a foundation line with `budget_h_week` keeps both, the UI shows the floor.
 - `state: paused` = "paused on purpose" in the UI. It is never shown as missing activity.
 - Tasks that match no line belong to **Life ops** (not a line; see `snapshot-contract.md`).
 - A task maps to **at most one** line. Precedence: task tag → project tag → project name → folder. Two lines claiming the same tag/folder → banner naming both line ids; first in list wins.
@@ -91,7 +99,27 @@ focus:
     artifact: a26-03 # optional artifact id
 ```
 
-### 2.2 Trace (phase 1)
+### 2.2 Quarter note with artifacts (v0.2)
+
+A quarter note may carry its own `artifacts:` list, same item shape as the year note (§2.1). Phase 1 shows it in the Today **Quarter focus card** (current quarter; title, line, `status` → done / not done).
+
+```yaml
+type: quarter_focus
+scale: quarter
+period: 2026-Q4 # or derived from `quarter` / `period_start` as for quarter_focus
+parent: "[[Artifacts_2026]]"
+artifacts:
+  - id: q4-recital-programme
+    title: Spring recital programme chosen
+    line: violin
+    status: done # planned | in_progress | done | dropped
+    done: 2026-10-12 # optional (R1): date the artifact was finished
+    carried_to: 2027-Q1 # optional (R1): set during the quarterly review
+```
+
+`done` and `carried_to` (and the budget note's `active_lines`) are read from R1 on (quarterly review); before that the reader ignores them like any unknown key. Several quarter notes for the same period → banner, first by path wins.
+
+### 2.3 Trace (phase 1)
 
 `task → project → line (via omnifocus mapping) → artifact (the line's artifact in the current year note, else the line's `parent` note)`. A line with no artifact shows the trace up to the line — neutral, no warning.
 

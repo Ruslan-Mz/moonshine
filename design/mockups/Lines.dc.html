@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lines</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0A64D8}a:hover{color:#084FA8}
+button{font:inherit;color:inherit;cursor:default}
+</style>
+</helmet>
+<div dir="{{ss.dir}}" lang="{{ss.lang}}" style="width:1440px;height:900px;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;border-radius:12px;border:1px solid {{c.windowBorder}};font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;font-size:13px;line-height:1.35;color:{{c.text}};background:{{c.window}};-webkit-font-smoothing:antialiased;position:relative"><div style="flex:1;display:flex;min-height:0"><nav aria-label="Sidebar" style="width:236px;flex-shrink:0;display:flex;flex-direction:column;gap:14px;padding:16px 12px;box-sizing:border-box;overflow:hidden;background:{{c.sidebar}};border-inline-end:1px solid {{c.sep}}"><div style="display:flex;align-items:center;gap:8px;height:20px;padding-inline-start:4px"><span style="width:12px;height:12px;border-radius:6px;background:#FF5F57"></span><span style="width:12px;height:12px;border-radius:6px;background:#FEBC2E"></span><span style="width:12px;height:12px;border-radius:6px;background:#28C840"></span></div><div style="display:flex;flex-direction:column;gap:2px"><button style="display:flex;align-items:center;gap:10px;height:28px;padding:0 8px;border:0;border-radius:7px;background:transparent;text-align:start"><span style="display:flex;color:{{c.sec}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><circle cx="8" cy="8" r="3"></circle><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"></path></svg></span><span style="flex:1">{{ss.today}}</span><span style="font-size:11px;font-weight:400;color:{{c.ter}}">⌘1</span></button><button style="display:flex;align-items:center;gap:10px;height:28px;padding:0 8px;border:0;border-radius:7px;background:transparent;text-align:start"><span style="display:flex;color:{{c.sec}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><rect x="2" y="3" width="12" height="11" rx="2"></rect><path d="M2 6.5h12M5 1.8v2.4M11 1.8v2.4M6 6.5v7.5M10 6.5v7.5"></path></svg></span><span style="flex:1">{{ss.week}}</span><span style="font-size:11px;font-weight:400;color:{{c.ter}}">⌘2</span></button><button style="display:flex;align-items:center;gap:10px;height:28px;padding:0 8px;border:0;border-radius:7px;background:transparent;text-align:start"><span style="display:flex;color:{{c.sec}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><rect x="2" y="3" width="12" height="11" rx="2"></rect><path d="M2 6.5h12M5 1.8v2.4M11 1.8v2.4"></path><path d="M5 9.2h.01M8 9.2h.01M11 9.2h.01M5 11.6h.01M8 11.6h.01" stroke-width="2.2"></path></svg></span><span style="flex:1">{{ss.month}}</span><span style="font-size:11px;font-weight:400;color:{{c.ter}}">⌘3</span></button><button style="display:flex;align-items:center;gap:10px;height:28px;padding:0 8px;border:0;border-radius:7px;background:{{c.navSel}};font-weight:600;text-align:start"><span style="display:flex;color:{{c.accent}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M2.5 4h11M2.5 8h11M2.5 12h7"></path></svg></span><span style="flex:1">{{ss.lines}}</span><span style="font-size:11px;font-weight:400;color:{{c.ter}}">⌘4</span></button></div><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{side}}" as="tier" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:0"><button aria-expanded="{{tier.open}}" style="display:flex;align-items:center;gap:6px;height:22px;padding:0 8px;border:0;background:transparent;text-align:start;font-size:11px;font-weight:600;color:{{c.ter}}"><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{tier.n}}</span><span style="font-weight:400">{{tier.count}}</span><svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="{{tier.chev}}"></path></svg></button><sc-if value="{{tier.open}}" hint-placeholder-val="{{true}}"><sc-for list="{{tier.rows}}" as="l" hint-placeholder-count="3"><button style="display:flex;align-items:center;gap:9px;height:24px;padding:0 8px;border:0;border-radius:6px;background:transparent;text-align:start;color:{{l.fg}}"><span style="width:18px;text-align:center;opacity:{{l.op}}">{{l.e}}</span><span style="flex:1">{{l.n}}</span></button></sc-for></sc-if></div></sc-for></div></nav><div style="flex:1;min-width:0;display:flex;flex-direction:column"><div style="height:56px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 14px 0 22px;box-sizing:border-box;border-bottom:1px solid {{c.sep}}"><div style="display:flex;flex-direction:column;gap:1px;min-width:0"><h1 style="margin:0;font-size:19px;font-weight:700;letter-spacing:-0.2px;white-space:nowrap">{{title}}</h1><span style="font-size:12px;color:{{c.sec}};white-space:nowrap">{{sub}}</span></div><div style="flex:1"></div><button style="width:220px;height:28px;display:flex;align-items:center;gap:7px;padding:0 9px;border:0;border-radius:7px;background:{{c.field}};color:{{c.ter}};text-align:start"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg><span style="flex:1;font-size:12.5px">{{ss.search}}</span><span style="font-size:11px">⌘K</span></button><button aria-label="Refresh (⌘R)" style="width:30px;height:28px;border:0;border-radius:7px;background:transparent;display:flex;align-items:center;justify-content:center;color:{{c.sec}}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M13 8a5 5 0 1 1-1.5-3.55M13 2.5v3h-3"></path></svg></button></div><div style="flex:1;min-height:0;display:flex"><main style="flex:1;min-width:0;overflow-y:auto;display:flex;flex-direction:column"><div style="display:flex;align-items:center;gap:16px;padding:10px 20px;font-size:11.5px;color:{{c.ter}};flex-shrink:0"><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:{{c.rhythm}}"></span>{{s.lgR}}</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:{{c.progress}}"></span>{{s.lgP}}</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:10px;border-radius:2px;background:{{c.track}};border:1px dashed {{c.badgeBorder}}"></span>{{s.lgCur}}</span><span style="margin-inline-start:auto">{{s.weeks}}</span></div><div style="display:grid;grid-template-columns:230px 170px 120px 190px 170px 104px minmax(0, 1fr);align-items:center;height:26px;flex-shrink:0;padding:0 20px;font-size:11px;color:{{c.ter}};border-bottom:1px solid {{c.sep}};border-top:1px solid {{c.sep}}"><span>{{s.cLine}}</span><span>{{s.cState}}</span><span>{{s.cBudget}}</span><span>{{s.c8}}</span><span>{{s.cLast}}</span><span>{{s.cNext}}</span><span>{{s.cEst}}</span></div><sc-for list="{{tiers}}" as="b" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:10px;padding:14px 20px 6px;border-bottom:1px solid {{c.sep}}"><span style="font-size:13px;font-weight:700">{{b.n}}</span><span style="font-size:11.5px;color:{{c.ter}}">{{b.sum}}</span><sc-if value="{{b.collapsed}}" hint-placeholder-val="{{false}}"><span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:{{c.ter}}">{{s.collapsed}}<svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="{{chevC}}"></path></svg></span></sc-if></div><sc-for list="{{b.rows}}" as="r" hint-placeholder-count="2"><div style="display:grid;grid-template-columns:230px 170px 120px 190px 170px 104px minmax(0, 1fr);align-items:center;height:48px;padding:0 20px;border-bottom:1px solid {{c.rowSep}};background:{{r.bg}};color:{{r.fg}}"><span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="font-size:17px;opacity:{{r.op}}">{{r.e}}</span><span style="display:flex;flex-direction:column;gap:0;min-width:0"><span style="font-size:14px;font-weight:600">{{r.n}}</span><span style="font-size:11px;color:{{c.ter}}">{{r.block}}</span></span></span><span style="display:flex;align-items:center;gap:5px;font-size:12px;color:{{r.sc}}"><sc-if value="{{r.paused}}" hint-placeholder-val="{{false}}"><span style="display:flex"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M6 4v8M10 4v8"></path></svg></span></sc-if>{{r.state}}</span><span style="font-size:12.5px;font-variant-numeric:tabular-nums">{{r.budget}}</span><span style="display:flex;align-items:flex-end;gap:6px;height:28px;border-bottom:1px solid {{c.sep}};width:150px"><sc-for list="{{r.weeks}}" as="w" hint-placeholder-count="8"><span style="display:flex;align-items:flex-end;gap:1px;height:28px;padding:0 1px;box-sizing:border-box;border-radius:3px 3px 0 0;background:{{w.bg}};outline:{{w.ol}};opacity:{{w.op}}"><span style="width:5px;height:{{w.rh}}px;border-radius:2px 2px 0 0;background:{{c.rhythm}}"></span><span style="width:5px;height:{{w.ph}}px;border-radius:2px 2px 0 0;background:{{c.progress}}"></span></span></sc-for></span><span style="display:flex;align-items:center;gap:5px;font-size:12.5px;color:{{r.lc}}"><sc-if value="{{r.quiet}}" hint-placeholder-val="{{false}}"><span style="display:flex"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M13 9.5A5.5 5.5 0 1 1 6.5 3a4.5 4.5 0 0 0 6.5 6.5z"></path></svg></span></sc-if>{{r.last}}</span><span style="font-size:12.5px;font-variant-numeric:tabular-nums">{{r.next}}</span><span style="display:flex;align-items:center;font-size:12.5px;color:{{c.sec}}"><span style="flex:1">{{r.est}}</span><sc-if value="{{r.selected}}" hint-placeholder-val="{{false}}"><span style="display:flex;color:{{c.ter}}"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="{{chevC}}"></path></svg></span></sc-if></span></div></sc-for></sc-for></main></div></div></div><footer style="height:28px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 14px;box-sizing:border-box;font-size:11.5px;color:{{c.ter}};border-top:1px solid {{c.sep}};background:{{c.sidebar}}"><span style="display:inline-flex;align-items:center;gap:5px;padding:1px 8px;border-radius:10px;border:1px solid {{c.badgeBorder}};color:{{c.sec}}"><span style="width:6px;height:6px;border-radius:3px;background:{{c.sec}}"></span>{{ss.demo}}</span><span>{{ss.updated}}</span><span style="margin-inline-start:auto">{{ss.keys}}</span></footer></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark": {"editor": "boolean", "default": false}, "lang": {"editor": "enum", "options": ["en", "ru", "he"], "default": "en"}, "$preview": {"width": 1440, "height": 900}}'>
+
+function theme(d) {
+  return d ? {
+    dark:true, window:'#1E1E21', sidebar:'#28272C', rail:'#232326', band:'#252528', text:'#EDEDF0', sec:'#A6A6AD', ter:'#8D8D95',
+    sep:'rgba(255,255,255,0.08)', rowSep:'rgba(255,255,255,0.045)', chip:'rgba(255,255,255,0.075)', chipText:'#BDBDC4',
+    accent:'#5A9DFF', accentFill:'#2F6BD0', selBg:'rgba(90,157,255,0.16)', navSel:'rgba(255,255,255,0.09)', check:'#64646C', checkDone:'#4C8DF0',
+    dueText:'#FFC266', dueBg:'rgba(255,176,64,0.15)', card:'#2A2A2E', cardBorder:'rgba(255,255,255,0.07)',
+    field:'rgba(255,255,255,0.07)', fieldBorder:'rgba(255,255,255,0.12)', badgeBorder:'rgba(255,255,255,0.2)', paused:'#7E7E86',
+    windowBorder:'rgba(255,255,255,0.14)', rhythm:'#5E92EE', progress:'#3FA690', done:'#7E7E86', track:'rgba(255,255,255,0.07)',
+    heat:'94,146,238', scrim:'rgba(0,0,0,0.42)', sheet:'#2A2A2E', shadow:'0 24px 70px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.1)',
+    band1:'rgba(94,146,238,0.22)', bandLine:'#5E92EE', grid:'rgba(255,255,255,0.07)', seg:'#4A5468', segAlt:'#596378', segText:'#EDEDF0',
+    hatch:'rgba(255,255,255,0.22)', ctrl:'#3A3A3F', ctrlSel:'#5C5C63', knob:'#E6E6EA', future:'#B9A6F0'
+  } : {
+    dark:false, window:'#FFFFFF', sidebar:'#EFEEF2', rail:'#F8F8FA', band:'#F6F6F8', text:'#1D1D1F', sec:'#5F5F67', ter:'#74747C',
+    sep:'rgba(0,0,0,0.08)', rowSep:'rgba(0,0,0,0.045)', chip:'rgba(0,0,0,0.045)', chipText:'#4F4F57',
+    accent:'#0A64D8', accentFill:'#0A64D8', selBg:'rgba(10,100,216,0.08)', navSel:'rgba(0,0,0,0.07)', check:'#B4B4BB', checkDone:'#0A64D8',
+    dueText:'#8A4B00', dueBg:'#FFEFD6', card:'#FFFFFF', cardBorder:'rgba(0,0,0,0.08)',
+    field:'rgba(0,0,0,0.045)', fieldBorder:'rgba(0,0,0,0.12)', badgeBorder:'rgba(0,0,0,0.18)', paused:'#8E8E95',
+    windowBorder:'rgba(0,0,0,0.16)', rhythm:'#2F68C8', progress:'#14917A', done:'#9A9AA2', track:'rgba(0,0,0,0.05)',
+    heat:'47,104,200', scrim:'rgba(0,0,0,0.18)', sheet:'#FFFFFF', shadow:'0 24px 70px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.08)',
+    band1:'rgba(47,104,200,0.16)', bandLine:'#2F68C8', grid:'rgba(0,0,0,0.06)', seg:'#C9D3E6', segAlt:'#B4C1DA', segText:'#1D2A44',
+    hatch:'rgba(0,0,0,0.22)', ctrl:'#E4E4E8', ctrlSel:'#FFFFFF', knob:'#FFFFFF', future:'#5B3FA8'
+  };
+}
+var SS = {
+  en:{ lang:'en', dir:'ltr', today:'Today', week:'Week', month:'Month', lines:'Lines', search:'Search', demo:'Demo data', updated:'Updated 3 min ago',
+       keys:'⌘1–⌘4 Views · ⌘K Search · ⌘R Refresh', tiers:{ foundation:'Foundation', active:'Active this season', maintenance:'Maintenance', paused:'Not in focus — on purpose' } },
+  ru:{ lang:'ru', dir:'ltr', today:'Сегодня', week:'Неделя', month:'Месяц', lines:'Линии', search:'Поиск', demo:'Демо-данные', updated:'Обновлено 3 мин назад',
+       keys:'⌘1–⌘4 Виды · ⌘K Поиск · ⌘R Обновить', tiers:{ foundation:'Фундамент', active:'Активные в сезоне', maintenance:'На поддержании', paused:'Не в фокусе — намеренно' } },
+  he:{ lang:'he', dir:'rtl', today:'היום', week:'שבוע', month:'חודש', lines:'תחומים', search:'חיפוש', demo:'נתוני הדגמה', updated:'עודכן לפני 3 דק׳',
+       keys:'⌘1–⌘4 תצוגות · ⌘K חיפוש · ⌘R רענון', tiers:{ foundation:'יסוד', active:'פעילים העונה', maintenance:'תחזוקה', paused:'לא בפוקוס — בכוונה' } }
+};
+var SIDE_T = [
+  ['foundation', [['🧘','Core practice'],['💪','Calisthenics']], true],
+  ['active', [['🎻','Violin'],['🇮🇹','Italian'],['🇯🇵','Japanese'],['📐','Math'],['🤖','AI/ML'],['🔬','Research'],['👨‍👩‍👧','Family']], true],
+  ['maintenance', [['🎹','Piano']], true],
+  ['paused', [['✒️','Calligraphy']], false]
+];
+function side(c, lang) {
+  var ss = SS[lang] || SS.en;
+  return SIDE_T.map(function (t) { var paused = t[0] === 'paused';
+    return { n: ss.tiers[t[0]], open: t[2], count: t[2] ? '' : String(t[1].length), chev: t[2] ? 'M3.5 6L8 10.5 12.5 6' : (ss.dir === 'rtl' ? 'M10 3.5L5.5 8 10 12.5' : 'M6 3.5L10.5 8 6 12.5'),
+      rows: t[1].map(function (r) { return { e:r[0], n:r[1], fg: paused ? c.paused : c.text, op: paused ? 0.5 : 1 }; }) }; });
+}
+function fmt(m) { if (m < 60) return '≈ ' + m + ' min est.'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : '') + ' est.'; }
+function short(m) { if (m < 60) return '≈ ' + m + ' min'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : ''); }
+var L = {
+  violin:{e:'🎻',n:'Violin',a:'Spring recital 2027'},
+  piano:{e:'🎹',n:'Piano',a:'Keep repertoire alive'},
+  italian:{e:'🇮🇹',n:'Italian',a:'B1 by summer 2027'},
+  japanese:{e:'🇯🇵',n:'Japanese',a:'Kana and first 300 words'},
+  math:{e:'📐',n:'Math',a:'Linear algebra foundation'},
+  ai:{e:'🤖',n:'AI/ML',a:'Eval toolkit v1'},
+  research:{e:'🔬',n:'Research',a:'Practice-drift paper'},
+  cal:{e:'💪',n:'Calisthenics',a:'20 strict pull-ups'},
+  core:{e:'🧘',n:'Core practice',a:'Daily practice 2026'},
+  family:{e:'👨‍👩‍👧',n:'Family',a:'Family year 2026'},
+  life:{e:'🧺',n:'Life ops',a:'Household'}
+};
+
+
+var TL = {
+  en:{ title:'Lines', sub:'11 lines · 2 foundation · 7 active · 1 maintenance · 1 paused', lgR:'Rhythm — repeated sessions per week', lgP:'Progress — one-off tasks done per week',
+    lgCur:'current week, partial', weeks:'Weeks 33–40', cLine:'Line', cState:'State', cBudget:'Budget', c8:'Last 8 weeks', cLast:'Last activity', cNext:'Next actions', cEst:'Estimated this week',
+    collapsed:'collapsed', tiers:{ foundation:'Foundation', active:'Active this season', maintenance:'Maintenance', paused:'Not in focus — on purpose' },
+    st:{ foundation:'foundation', active:'active', maintenance:'maintenance', paused:'paused on purpose' },
+    blocks:{ Profession:'Profession', Creative:'Creative', Languages:'Languages', Foundation:'Foundation', Science:'Science', Life:'Life' },
+    last:{ today:'today', yesterday:'yesterday', d29:'29 days ago', quiet:'quiet for 29 days', none:'no activity yet', paused:'paused since 14 July' },
+    floor:function (h) { return 'floor ' + h + ' h/day'; }, wk:function (h) { return h + ' h / week'; },
+    sumF:function (n, h) { return n + ' lines · floor ' + h + ' h/day'; }, sum:function (n, h) { return n + (n === 1 ? ' line' : ' lines') + (h ? ' · ' + h + ' h / week' : ''); },
+    est:function (m) { return fmt(m); } },
+  ru:{ title:'Линии', sub:'11 линий · 2 фундамент · 7 активных · 1 на поддержании · 1 на паузе', lgR:'Ритм — повторяющиеся занятия в неделю', lgP:'Продвижение — разовые задачи в неделю',
+    lgCur:'текущая неделя, неполная', weeks:'Недели 33–40', cLine:'Линия', cState:'Состояние', cBudget:'Бюджет', c8:'8 недель', cLast:'Последняя активность', cNext:'Следующие шаги', cEst:'Оценка на неделю',
+    collapsed:'свёрнуто', tiers:{ foundation:'Фундамент', active:'Активные в сезоне', maintenance:'На поддержании', paused:'Не в фокусе — намеренно' },
+    st:{ foundation:'фундамент', active:'активна', maintenance:'на поддержании', paused:'на паузе намеренно' },
+    blocks:{ Profession:'Профессия', Creative:'Творчество', Languages:'Языки', Foundation:'Фундамент', Science:'Наука', Life:'Жизнь' },
+    last:{ today:'сегодня', yesterday:'вчера', d29:'29 дней назад', quiet:'тихо 29 дней', none:'пока без активности', paused:'на паузе с 14 июля' },
+    floor:function (h) { return 'пол ' + h + ' ч/день'; }, wk:function (h) { return h + ' ч / нед'; },
+    sumF:function (n, h) { return n + ' линии · пол ' + h + ' ч/день'; },
+    sum:function (n, h) { var w = (n % 10 === 1 && n % 100 !== 11) ? 'линия' : ((n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? 'линии' : 'линий'); return n + ' ' + w + (h ? ' · ' + h + ' ч / нед' : ''); },
+    est:function (m) { var h = Math.floor(m / 60), r = m % 60; return '≈ ' + (m < 60 ? m + ' мин' : h + ' ч' + (r ? ' ' + r + ' мин' : '')) + ' (оценка)'; } }
+};
+// key, emoji, name, block, tier, budget(h/week) | floor, rhythm, progress, last, next, est minutes
+var LN = [
+  ['core','🧘','Core practice','Foundation','foundation',{floor:3},[12,13,11,9,12,13,14,8],[0,0,0,0,0,0,0,0],'today','2',1260],
+  ['cal','💪','Calisthenics','Foundation','foundation',{floor:1},[4,4,3,2,3,4,4,4],[0,1,0,0,0,1,0,0],'today','3',420],
+  ['ai','🤖','AI/ML','Profession','active',{h:6},[0,0,0,0,0,0,0,0],[3,4,2,3,3,4,2,3],'yesterday','7',375],
+  ['research','🔬','Research','Profession','active',{h:3},[0,0,0,0,0,0,0,0],[1,2,1,0,1,2,1,1],'yesterday','5',145],
+  ['violin','🎻','Violin','Creative','active',{h:6},[6,5,2,1,3,6,6,4],[1,2,0,0,1,2,1,1],'today','9',400],
+  ['italian','🇮🇹','Italian','Languages','active',{h:2},[3,2,1,0,0,0,0,0],[1,1,0,0,0,0,0,0],'quiet','4',0],
+  ['japanese','🇯🇵','Japanese','Languages','active',{h:1},[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],'none','1',10],
+  ['math','📐','Math','Science','active',{h:4},[2,3,2,1,2,2,3,1],[2,1,2,1,2,2,1,1],'yesterday','5',230],
+  ['family','👨‍👩‍👧','Family','Life','active',{},[5,6,4,6,5,5,4,3],[1,0,1,1,0,2,1,1],'today','4',120],
+  ['piano','🎹','Piano','Creative','maintenance',{h:1},[2,1,1,0,0,0,0,0],[0,0,0,0,0,0,0,0],'d29','2',0],
+  ['calligraphy','✒️','Calligraphy','Creative','paused',{},[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],'paused','0',0]
+];
+function build(c, lang) {
+  var t = TL[lang] || TL.en, rtl = lang === 'he';
+  var tiers = ['foundation','active','maintenance','paused'].map(function (k) {
+    var rows = LN.filter(function (x) { return x[4] === k; }), hours = 0, floor = 0;
+    rows.forEach(function (x) { hours += x[5].h || 0; floor += x[5].floor || 0; });
+    return { n: t.tiers[k], collapsed: k === 'paused', sum: k === 'foundation' ? t.sumF(rows.length, floor) : t.sum(rows.length, hours),
+      rows: k === 'paused' ? [] : rows.map(function (x) {
+        var paused = k === 'paused', quiet = x[9] === 'quiet';
+        var mx = Math.max(1, Math.max.apply(null, x[6].concat(x[7])));
+        var weeks = x[6].map(function (rv, i) { var cur = i === 7;
+          return { rh: Math.max(rv ? 3 : 0, Math.round(rv / mx * 24)), ph: Math.max(x[7][i] ? 3 : 0, Math.round(x[7][i] / mx * 24)),
+            bg: cur ? c.track : 'transparent', ol: cur ? '1px dashed ' + c.badgeBorder : 'none', op: cur ? 0.6 : 1 }; });
+        return { e:x[1], n:x[2], block:t.blocks[x[3]], state:t.st[k], budget: x[5].floor ? t.floor(x[5].floor) : (x[5].h ? t.wk(x[5].h) : '—'),
+          weeks:weeks, last:t.last[x[9]], next:x[10], est: x[11] ? t.est(x[11]) : '—', paused:paused, quiet:quiet, selected:x[0] === 'violin',
+          bg: x[0] === 'violin' ? c.selBg : 'transparent', fg: paused ? c.paused : c.text, op: paused ? 0.5 : 1,
+          sc: k === 'maintenance' ? c.sec : c.text, lc: (quiet || x[9] === 'none' || x[9] === 'd29') ? c.sec : c.text };
+      }) };
+  });
+  return { s: t, tiers: tiers, title: t.title, sub: t.sub, chevC: rtl ? 'M10 3.5L5.5 8 10 12.5' : 'M6 3.5L10.5 8 6 12.5' };
+}
+
+class Component extends DCLogic {
+  renderVals() {
+    var c = theme(!!this.props.dark);
+    var v = build.call(this, c, this.props.lang || 'en') || {};
+    var lang = this.props.lang || 'en'; v.c = c; v.ss = SS[lang] || SS.en; v.side = side(c, lang);
+    return v;
+  }
+}
+</script>
+</body>
+</html>

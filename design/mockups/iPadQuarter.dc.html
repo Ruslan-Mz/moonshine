@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>iPad — Quarterly review, full scroll height (note opens as a sheet)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0A64D8}a:hover{color:#084FA8}
+button{font:inherit;color:inherit;cursor:default}
+</style>
+</helmet>
+<div dir="{{ss.dir}}" lang="{{ss.lang}}" style="width:1210px;height:1240px;box-sizing:border-box;position:relative;overflow:hidden;border-radius:18px;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;font-size:17px;line-height:1.3;color:{{c.text}};background:{{i.bg}};-webkit-font-smoothing:antialiased;display:flex;flex-direction:column"><div style="display:flex;align-items:flex-end;gap:12px;padding:16px 22px 12px;flex-shrink:0"><button aria-label="Show sidebar" style="width:44px;height:44px;border:0;border-radius:22px;background:{{i.bar}};border:1px solid {{i.barBorder}};display:flex;align-items:center;justify-content:center;color:{{c.accent}}"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><rect x="1.5" y="2.5" width="13" height="11" rx="2"></rect><path d="M6 2.5v11"></path></svg></button><div style="display:flex;flex-direction:column;gap:2px;min-width:0;flex:1"><h1 style="margin:0;font-size:30px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Q3 2026 review</h1><span style="font-size:15px;color:{{c.sec}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">July – September · 13 weeks · read-only</span></div><button style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 18px;border-radius:22px;font-size:16px;font-weight:600;background:{{i.fill}};color:{{c.accent}};border:0"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M4 1.8h5.5L12.5 5v9.2H4z"></path><path d="M9.5 1.8V5h3M6 8h4.5M6 10.5h4.5"></path></svg>Quarter note</button><button style="display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 18px;border-radius:22px;font-size:16px;font-weight:600;background:{{i.fill}};color:{{c.accent}};border:0"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M6.5 3.5H12.5V9.5M12.5 3.5L4.5 11.5"></path></svg>Open Квартал_2026-Q4</button></div><div style="flex:1;min-height:0;display:flex;gap:0"><main style="flex:1;min-width:0;overflow:hidden;display:flex;flex-direction:column;gap:16px;padding:0 22px 24px;box-sizing:border-box"><section style="display:flex;flex-direction:column;gap:10px;padding:18px 20px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}}"><div style="display:flex;align-items:baseline;gap:10px"><h2 style="margin:0;font-size:15px;font-weight:700">Q3 focus — what happened</h2><span style="font-size:12px;color:{{c.ter}}">6 artifacts from Квартал_2026-Q3 · outcomes are facts, not grades</span></div><div style="border-top:1px solid {{c.sep}}"><sc-for list="{{focus}}" as="f" hint-placeholder-count="6"><div style="display:grid;grid-template-columns:24px 24px minmax(0, 1fr) 150px 260px 120px;align-items:center;min-height:40px;border-bottom:1px solid {{c.rowSep}};font-size:13px"><span style="display:flex;color:{{c.sec}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="{{f.dash}}" style="display:block"><circle cx="8" cy="8" r="6.2"></circle><path d="{{f.mark}}" stroke-dasharray="0"></path></svg></span><span>{{f.e}}</span><span style="font-weight:500">{{f.t}}</span><span style="font-size:12px;font-weight:600;color:{{f.oc}}">{{f.outcome}}</span><span style="font-size:12px;color:{{c.sec}}">{{f.ev}}</span><span style="text-align:end"><a href="#" style="font-size:12px;text-decoration:none;color:{{c.accent}};white-space:nowrap">{{f.open}}</a></span></div></sc-for></div></section><section style="display:flex;flex-direction:column;gap:10px;padding:18px 20px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}}"><div style="display:flex;align-items:baseline;gap:10px"><h2 style="margin:0;font-size:15px;font-weight:700">Lines over the quarter</h2><span style="font-size:12px;color:{{c.ter}}">W27–W39 · 13 weeks</span></div><div style="display:flex;align-items:center;gap:16px;font-size:11.5px;color:{{c.ter}}"><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:{{c.rhythm}}"></span>Rhythm — sessions per week</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:{{c.progress}}"></span>Progress — tasks done per week</span><span style="margin-inline-start:auto">Hours per line arrive with the hours-tracker import (phase 2)</span></div><div style="display:grid;grid-template-columns:200px 150px 190px 150px 100px minmax(0, 1fr);align-items:center;height:24px;font-size:11px;color:{{c.ter}};border-bottom:1px solid {{c.sep}}"><span>Line</span><span>Tier</span><span>13 weeks</span><span>Sessions · avg / week</span><span>Tasks done</span><span>Facts</span></div><sc-for list="{{lines}}" as="r" hint-placeholder-count="11"><div style="display:grid;grid-template-columns:200px 150px 190px 150px 100px minmax(0, 1fr);align-items:center;height:36px;border-bottom:1px solid {{c.rowSep}};font-size:12.5px;color:{{r.fg}}"><span style="display:flex;align-items:center;gap:8px;font-weight:600"><span style="opacity:{{r.op}}">{{r.e}}</span>{{r.n}}</span><span style="font-size:12px;color:{{c.sec}}">{{r.tier}}</span><span style="display:flex;align-items:flex-end;gap:3px;height:24px;width:176px;border-bottom:1px solid {{c.sep}}"><sc-for list="{{r.weeks}}" as="w" hint-placeholder-count="13"><span style="display:flex;align-items:flex-end;gap:1px"><span style="width:4px;height:{{w.rh}}px;border-radius:2px 2px 0 0;background:{{c.rhythm}}"></span><span style="width:4px;height:{{w.ph}}px;border-radius:2px 2px 0 0;background:{{c.progress}}"></span></span></sc-for></span><span style="font-variant-numeric:tabular-nums">{{r.sess}}</span><span style="font-variant-numeric:tabular-nums">{{r.tasks}}</span><span style="display:flex;align-items:center;gap:5px;font-size:12px;color:{{c.sec}}"><sc-if value="{{r.quiet}}" hint-placeholder-val="{{false}}"><span style="display:flex"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M13 9.5A5.5 5.5 0 1 1 6.5 3a4.5 4.5 0 0 0 6.5 6.5z"></path></svg></span></sc-if>{{r.fact}}</span></div></sc-for></section><section style="display:flex;flex-direction:column;gap:10px;padding:18px 20px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}}"><div style="display:flex;align-items:baseline;gap:10px"><h2 style="margin:0;font-size:15px;font-weight:700">Q4 setup</h2><span style="font-size:12px;color:{{c.ter}}">what the next quarter is about · decided in Квартал_2026-Q4</span></div><div style="display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:28px"><div style="display:flex;flex-direction:column;gap:10px"><span style="font-size:11px;font-weight:600;color:{{c.ter}}">Foundation · floor 4 h/day</span><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{fnd}}" as="l" hint-placeholder-count="3"><span style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:13px;background:{{c.chip}};font-size:12.5px;color:{{l.fg}}"><span style="opacity:{{l.op}}">{{l.e}}</span>{{l.n}}</span></sc-for></div><span style="font-size:11px;font-weight:600;color:{{c.ter}}">Active this season</span><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{act}}" as="l" hint-placeholder-count="3"><span style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:13px;background:{{c.chip}};font-size:12.5px;color:{{l.fg}}"><span style="opacity:{{l.op}}">{{l.e}}</span>{{l.n}}</span></sc-for></div><div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:{{c.band}};font-size:12.5px"><span style="display:flex;color:{{c.sec}}"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M3 8h10M9.5 4.5L13 8l-3.5 3.5"></path></svg></span><span>7 active lines — the plan says 3–5. Move one or two to maintenance or not in focus?</span></div><span style="font-size:11px;font-weight:600;color:{{c.ter}}">Maintenance</span><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{mnt}}" as="l" hint-placeholder-count="3"><span style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:13px;background:{{c.chip}};font-size:12.5px;color:{{l.fg}}"><span style="opacity:{{l.op}}">{{l.e}}</span>{{l.n}}</span></sc-for></div><span style="font-size:11px;font-weight:600;color:{{c.ter}}">Not in focus — on purpose</span><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{nif}}" as="l" hint-placeholder-count="3"><span style="display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:13px;background:{{c.chip}};font-size:12.5px;color:{{l.fg}}"><span style="opacity:{{l.op}}">{{l.e}}</span>{{l.n}}</span></sc-for></div></div><div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:11px;font-weight:600;color:{{c.ter}}">Q4 focus · 5 artifacts</span><sc-for list="{{q4}}" as="q" hint-placeholder-count="5"><div style="display:flex;align-items:center;gap:8px;min-height:28px;border-bottom:1px solid {{c.rowSep}};font-size:12.5px"><span>{{q.e}}</span><span style="flex:1">{{q.t}}</span><span style="font-size:11.5px;color:{{c.ter}}">{{q.note}}</span></div></sc-for><span style="font-size:11px;font-weight:600;color:{{c.ter}};margin-top:10px">Questions for this review</span><sc-for list="{{prompts}}" as="p" hint-placeholder-count="5"><div style="display:flex;align-items:center;gap:8px;min-height:28px;border-bottom:1px solid {{c.rowSep}};font-size:12.5px"><span style="flex:1">{{p.t}}</span><a href="#" style="font-size:12px;text-decoration:none;color:{{c.accent}};white-space:nowrap">{{p.open}}</a></div></sc-for></div></div></section></main></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark": {"editor": "boolean", "default": false}, "lang": {"editor": "enum", "options": ["en", "ru", "he"], "default": "en"}, "$preview": {"width": 1210, "height": 1240}}'>
+
+function theme(d) {
+  return d ? {
+    dark:true, window:'#1E1E21', sidebar:'#28272C', rail:'#232326', band:'#252528', text:'#EDEDF0', sec:'#A6A6AD', ter:'#8D8D95',
+    sep:'rgba(255,255,255,0.08)', rowSep:'rgba(255,255,255,0.045)', chip:'rgba(255,255,255,0.075)', chipText:'#BDBDC4',
+    accent:'#5A9DFF', accentFill:'#2F6BD0', selBg:'rgba(90,157,255,0.16)', navSel:'rgba(255,255,255,0.09)', check:'#64646C', checkDone:'#4C8DF0',
+    dueText:'#FFC266', dueBg:'rgba(255,176,64,0.15)', card:'#2A2A2E', cardBorder:'rgba(255,255,255,0.07)',
+    field:'rgba(255,255,255,0.07)', fieldBorder:'rgba(255,255,255,0.12)', badgeBorder:'rgba(255,255,255,0.2)', paused:'#7E7E86',
+    windowBorder:'rgba(255,255,255,0.14)', rhythm:'#5E92EE', progress:'#3FA690', done:'#7E7E86', track:'rgba(255,255,255,0.07)',
+    heat:'94,146,238', scrim:'rgba(0,0,0,0.42)', sheet:'#2A2A2E', shadow:'0 24px 70px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.1)',
+    band1:'rgba(94,146,238,0.22)', bandLine:'#5E92EE', grid:'rgba(255,255,255,0.07)', seg:'#4A5468', segAlt:'#596378', segText:'#EDEDF0',
+    hatch:'rgba(255,255,255,0.22)', ctrl:'#3A3A3F', ctrlSel:'#5C5C63', knob:'#E6E6EA', future:'#B9A6F0'
+  } : {
+    dark:false, window:'#FFFFFF', sidebar:'#EFEEF2', rail:'#F8F8FA', band:'#F6F6F8', text:'#1D1D1F', sec:'#5F5F67', ter:'#74747C',
+    sep:'rgba(0,0,0,0.08)', rowSep:'rgba(0,0,0,0.045)', chip:'rgba(0,0,0,0.045)', chipText:'#4F4F57',
+    accent:'#0A64D8', accentFill:'#0A64D8', selBg:'rgba(10,100,216,0.08)', navSel:'rgba(0,0,0,0.07)', check:'#B4B4BB', checkDone:'#0A64D8',
+    dueText:'#8A4B00', dueBg:'#FFEFD6', card:'#FFFFFF', cardBorder:'rgba(0,0,0,0.08)',
+    field:'rgba(0,0,0,0.045)', fieldBorder:'rgba(0,0,0,0.12)', badgeBorder:'rgba(0,0,0,0.18)', paused:'#8E8E95',
+    windowBorder:'rgba(0,0,0,0.16)', rhythm:'#2F68C8', progress:'#14917A', done:'#9A9AA2', track:'rgba(0,0,0,0.05)',
+    heat:'47,104,200', scrim:'rgba(0,0,0,0.18)', sheet:'#FFFFFF', shadow:'0 24px 70px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.08)',
+    band1:'rgba(47,104,200,0.16)', bandLine:'#2F68C8', grid:'rgba(0,0,0,0.06)', seg:'#C9D3E6', segAlt:'#B4C1DA', segText:'#1D2A44',
+    hatch:'rgba(0,0,0,0.22)', ctrl:'#E4E4E8', ctrlSel:'#FFFFFF', knob:'#FFFFFF', future:'#5B3FA8'
+  };
+}
+var SS = {
+  en:{ lang:'en', dir:'ltr', today:'Today', week:'Week', month:'Month', lines:'Lines', search:'Search', demo:'Demo data', updated:'Updated 3 min ago',
+       keys:'⌘1–⌘4 Views · ⌘K Search · ⌘R Refresh', tiers:{ foundation:'Foundation', active:'Active this season', maintenance:'Maintenance', paused:'Not in focus — on purpose' } },
+  ru:{ lang:'ru', dir:'ltr', today:'Сегодня', week:'Неделя', month:'Месяц', lines:'Линии', search:'Поиск', demo:'Демо-данные', updated:'Обновлено 3 мин назад',
+       keys:'⌘1–⌘4 Виды · ⌘K Поиск · ⌘R Обновить', tiers:{ foundation:'Фундамент', active:'Активные в сезоне', maintenance:'На поддержании', paused:'Не в фокусе — намеренно' } },
+  he:{ lang:'he', dir:'rtl', today:'היום', week:'שבוע', month:'חודש', lines:'תחומים', search:'חיפוש', demo:'נתוני הדגמה', updated:'עודכן לפני 3 דק׳',
+       keys:'⌘1–⌘4 תצוגות · ⌘K חיפוש · ⌘R רענון', tiers:{ foundation:'יסוד', active:'פעילים העונה', maintenance:'תחזוקה', paused:'לא בפוקוס — בכוונה' } }
+};
+var SIDE_T = [
+  ['foundation', [['🧘','Core practice'],['💪','Calisthenics']], true],
+  ['active', [['🎻','Violin'],['🇮🇹','Italian'],['🇯🇵','Japanese'],['📐','Math'],['🤖','AI/ML'],['🔬','Research'],['👨‍👩‍👧','Family']], true],
+  ['maintenance', [['🎹','Piano']], true],
+  ['paused', [['✒️','Calligraphy']], false]
+];
+function side(c, lang) {
+  var ss = SS[lang] || SS.en;
+  return SIDE_T.map(function (t) { var paused = t[0] === 'paused';
+    return { n: ss.tiers[t[0]], open: t[2], count: t[2] ? '' : String(t[1].length), chev: t[2] ? 'M3.5 6L8 10.5 12.5 6' : (ss.dir === 'rtl' ? 'M10 3.5L5.5 8 10 12.5' : 'M6 3.5L10.5 8 6 12.5'),
+      rows: t[1].map(function (r) { return { e:r[0], n:r[1], fg: paused ? c.paused : c.text, op: paused ? 0.5 : 1 }; }) }; });
+}
+function fmt(m) { if (m < 60) return '≈ ' + m + ' min est.'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : '') + ' est.'; }
+function short(m) { if (m < 60) return '≈ ' + m + ' min'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : ''); }
+var L = {
+  violin:{e:'🎻',n:'Violin',a:'Spring recital 2027'},
+  piano:{e:'🎹',n:'Piano',a:'Keep repertoire alive'},
+  italian:{e:'🇮🇹',n:'Italian',a:'B1 by summer 2027'},
+  japanese:{e:'🇯🇵',n:'Japanese',a:'Kana and first 300 words'},
+  math:{e:'📐',n:'Math',a:'Linear algebra foundation'},
+  ai:{e:'🤖',n:'AI/ML',a:'Eval toolkit v1'},
+  research:{e:'🔬',n:'Research',a:'Practice-drift paper'},
+  cal:{e:'💪',n:'Calisthenics',a:'20 strict pull-ups'},
+  core:{e:'🧘',n:'Core practice',a:'Daily practice 2026'},
+  family:{e:'👨‍👩‍👧',n:'Family',a:'Family year 2026'},
+  life:{e:'🧺',n:'Life ops',a:'Household'}
+};
+
+
+function ios(c) {
+  return c.dark ? {
+    bg:'#000000', cell:'#1C1C1E', cell2:'#2C2C2E', sep:'rgba(84,84,88,0.45)', fill:'rgba(120,120,128,0.24)', fill2:'rgba(120,120,128,0.36)',
+    bar:'rgba(30,30,32,0.86)', barBorder:'rgba(255,255,255,0.12)', panel:'#1C1C1E', sheet:'#1C1C1E', grabber:'rgba(235,235,245,0.3)',
+    scrim:'rgba(0,0,0,0.5)', lift:'0 18px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.12)', hover:'rgba(255,255,255,0.07)',
+    ghost:'rgba(120,120,128,0.18)', menu:'rgba(44,44,46,0.96)', wall:'#1D2330', ofbg:'#2C2C2E', island:'#000000'
+  } : {
+    bg:'#F2F2F7', cell:'#FFFFFF', cell2:'#F2F2F7', sep:'rgba(60,60,67,0.18)', fill:'rgba(120,120,128,0.12)', fill2:'rgba(120,120,128,0.2)',
+    bar:'rgba(249,249,251,0.9)', barBorder:'rgba(0,0,0,0.08)', panel:'#FFFFFF', sheet:'#F2F2F7', grabber:'rgba(60,60,67,0.3)',
+    scrim:'rgba(0,0,0,0.22)', lift:'0 18px 40px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.06)', hover:'rgba(0,0,0,0.045)',
+    ghost:'rgba(120,120,128,0.1)', menu:'rgba(250,250,252,0.97)', wall:'#C9D2DE', ofbg:'#E5E5EA', island:'#000000'
+  };
+}
+
+var TB = { en:{ today:'Today', week:'Week', lines:'Lines', log:'Log' }, ru:{ today:'Сегодня', week:'Неделя', lines:'Линии', log:'Журнал' }, he:{ today:'היום', week:'שבוע', lines:'תחומים', log:'יומן' } };
+var PL = { en:{ plan:'Plan' }, ru:{ plan:'План' }, he:{ plan:'תכנון' } };
+
+function build(c) {
+  var F = [
+    [1,'🎻','Allemande — notes learned','done','learned by 18 Sep · 12 h est. step closed','Open in Obsidian'],
+    [1,'📐','Linear algebra, chapters 1–2','done','chapter 2 exercises finished 28 Aug','Open in Obsidian'],
+    [2,'🤖','Eval harness prototype','carried to Q4','continues as “Eval toolkit v1 published”','Open in Obsidian'],
+    [0,'🇮🇹','Italian A2 exam','to decide','line quiet since 2 Sep · exam date not booked','Open in Obsidian'],
+    [1,'💪','8 strict pull-ups','done','8 reps on 21 Sep','Open in Obsidian'],
+    [1,'🔬','Drift paper — related work','done','34 papers skimmed, notes merged 30 Sep','Open in Obsidian']
+  ];
+  var focus = F.map(function (f) { return { e:f[1], t:f[2], outcome:f[3], ev:f[4], open:f[5],
+    mark: f[0] === 1 ? 'M5.2 8.2l2 2L11 6.2' : (f[0] === 2 ? 'M5 8h6M9 6l2 2-2 2' : ''), dash: f[0] === 0 ? '2 2' : '0',
+    oc: f[0] === 0 ? c.text : c.sec }; });
+  var LQ = [
+    ['🧘','Core practice','Foundation',[12,13,12,11,10,12,13,12,11,12,13,14,13],[0,0,0,0,0,0,0,0,0,0,0,0,0],'2 sessions on most days; floor check needs hours (phase 2)'],
+    ['💪','Calisthenics','Foundation',[3,3,4,3,2,3,4,3,2,3,4,4,4],[0,1,0,0,0,0,1,0,0,0,1,0,0],'pull-up step 6 → 8 reached'],
+    ['🎻','Violin','Active',[4,5,5,4,3,4,5,6,2,1,3,6,6],[1,1,2,1,1,1,1,2,0,0,1,2,1],'dip in W35–W36, back to usual since W37'],
+    ['🇮🇹','Italian','Active',[2,2,3,2,2,1,2,3,2,1,0,0,0],[1,0,1,1,0,0,1,1,0,0,0,0,0],'quiet since 2 Sep (29 days)',1],
+    ['🇯🇵','Japanese','Active',[0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0],'added 28 Sep · no activity yet'],
+    ['📐','Math','Active',[1,2,2,2,3,2,2,3,2,1,2,2,3],[2,1,2,2,1,2,1,2,2,1,2,2,1],''],
+    ['🤖','AI/ML','Active',[0,0,0,0,0,0,0,0,0,0,0,0,0],[2,3,3,4,2,3,3,4,2,3,3,4,2],'no repeating sessions — progress only'],
+    ['🔬','Research','Active',[0,0,0,0,0,0,0,0,0,0,0,0,0],[1,1,2,1,0,1,2,1,1,0,1,2,1],''],
+    ['👨‍👩‍👧','Family','Active',[5,6,5,4,6,5,6,5,4,6,5,5,4],[1,0,1,0,1,1,0,1,1,1,0,2,1],''],
+    ['🎹','Piano','Maintenance',[1,1,1,1,0,1,1,1,1,1,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0],'kept alive; last play-through 2 Sep'],
+    ['✒️','Calligraphy','Not in focus',[1,1,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0],'paused on purpose since 14 Jul']
+  ];
+  var lines = LQ.map(function (x) {
+    var mx = Math.max(1, Math.max.apply(null, x[3].concat(x[4]))), rs = 0, ps = 0;
+    x[3].forEach(function (v) { rs += v; }); x[4].forEach(function (v) { ps += v; });
+    var paused = x[2] === 'Not in focus';
+    return { e:x[0], n:x[1], tier:x[2], fact:x[5], quiet:!!x[6], fg: paused ? c.paused : c.text, op: paused ? 0.5 : 1,
+      sess: rs ? rs + ' · ' + (rs / 13).toFixed(1) : '—', tasks: ps ? String(ps) : '—',
+      weeks: x[3].map(function (v, i) { return { rh: Math.max(v ? 2 : 0, Math.round(v / mx * 20)), ph: Math.max(x[4][i] ? 2 : 0, Math.round(x[4][i] / mx * 20)) }; }) };
+  });
+  function ch(arr, dim) { return arr.map(function (a) { return { e:a[0], n:a[1], fg: dim ? c.paused : c.text, op: dim ? 0.5 : 1 }; }); }
+  return {
+    focus: focus, lines: lines,
+    fnd: ch([['🧘','Core practice'],['💪','Calisthenics']]),
+    act: ch([['🎻','Violin'],['🤖','AI/ML'],['🔬','Research'],['📐','Math'],['🇮🇹','Italian'],['🇯🇵','Japanese'],['👨‍👩‍👧','Family']]),
+    mnt: ch([['🎹','Piano']]), nif: ch([['✒️','Calligraphy']], true),
+    q4: [['🎻','Spring recital programme chosen','done 29 Sep'],['🤖','Eval toolkit v1 published','carried from Q3'],['🔬','Practice-drift paper draft',''],['📐','Linear algebra ch. 1–4','ch. 1–2 done in Q3'],['💪','10 strict pull-ups','8 now']]
+      .map(function (q) { return { e:q[0], t:q[1], note:q[2] }; }),
+    prompts: [['Italian A2 exam — carry, reshape or drop?','Open in Obsidian'],['Q4 active lines — choose 3–5','Open budget note'],['Japanese — pick a first step','Open in OmniFocus'],
+      ['Weekly budgets for Q4 — still right?','Open budget note'],['Spring recital 2027 — what must happen by December?','Open year note']]
+      .map(function (p) { return { t:p[0], open:p[1] }; })
+  };
+}
+
+
+var __b = build;
+build = function (c, lang) { var v = __b.call(this, c, lang) || {}; v.i = ios(c); v.tb = TB[lang] || TB.en; v.pl = PL[lang] || PL.en;
+  if (typeof extra === 'function') { var x = extra.call(this, c, lang, v) || {}; for (var k in x) v[k] = x[k]; } return v; };
+
+class Component extends DCLogic {
+  renderVals() {
+    var c = theme(!!this.props.dark);
+    var v = build.call(this, c, this.props.lang || 'en') || {};
+    var lang = this.props.lang || 'en'; v.c = c; v.ss = SS[lang] || SS.en; v.side = side(c, lang);
+    return v;
+  }
+}
+</script>
+</body>
+</html>

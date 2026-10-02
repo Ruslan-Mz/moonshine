@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>iPad — Pencil & pointer states</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0A64D8}a:hover{color:#084FA8}
+button{font:inherit;color:inherit;cursor:default}
+</style>
+</helmet>
+<div dir="{{ss.dir}}" lang="{{ss.lang}}" style="width:1210px;height:834px;box-sizing:border-box;position:relative;overflow:hidden;border-radius:18px;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;font-size:17px;line-height:1.3;color:{{c.text}};background:{{i.bg}};-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;gap:12px;padding:20px;box-sizing:border-box"><div style="display:flex;align-items:baseline;gap:12px"><h1 style="margin:0;font-size:30px;font-weight:700">Pencil &amp; pointer</h1><span style="font-size:15px;color:{{c.sec}}">interaction states · direct manipulation only, no handwriting as data in v1</span></div><div style="flex:1;min-height:0;display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));grid-template-rows:repeat(2, minmax(0, 1fr));gap:16px"><section style="display:flex;flex-direction:column;gap:12px;padding:14px 18px;border-radius:20px;background:{{i.cell}};min-width:0;min-height:0;overflow:hidden"><h2 style="margin:0;font-size:20px;font-weight:700">Pointer hover</h2><div style="flex:1;min-height:0;position:relative"><div style="display:flex;align-items:center;gap:14px;min-height:56px;padding:6px 14px;border-radius:12px;background:transparent"><span style="width:24px;height:24px;border-radius:12px;border:1.5px solid {{c.check}};box-sizing:border-box;flex-shrink:0"></span><span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:17px">Kreutzer No. 2 — détaché, slow bow</span><span style="font-size:13px;color:{{c.ter}}">🎻 Violin · ≈ 25 min</span></span></div><div style="position:relative"><div style="display:flex;align-items:center;gap:14px;min-height:56px;padding:6px 14px;border-radius:12px;background:{{i.hover}}"><span style="width:24px;height:24px;border-radius:12px;border:1.5px solid {{c.check}};box-sizing:border-box;flex-shrink:0"></span><span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:17px">Record bars 1–8, listen back with the score</span><span style="font-size:13px;color:{{c.ter}}">🎻 Violin · ≈ 15 min</span></span></div><span style="position:absolute;left:300px;top:20px;width:18px;height:18px;border-radius:9px;background:rgba(120,120,128,0.45)"></span><span style="position:absolute;left:250px;top:-36px;padding:6px 10px;border-radius:8px;background:{{i.menu}};box-shadow:{{i.lift}};font-size:13px;white-space:nowrap">Bach Partita No. 2 → 🎻 Violin → Spring recital 2027</span></div><div style="display:flex;align-items:center;gap:14px;min-height:56px;padding:6px 14px;border-radius:12px;background:transparent"><span style="width:24px;height:24px;border-radius:12px;border:1.5px solid {{c.check}};box-sizing:border-box;flex-shrink:0"></span><span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:17px">Send recital repertoire list to teacher</span><span style="font-size:13px;color:{{c.ter}}">🎻 Violin · ≈ 10 min</span></span></div></div><p style="margin:0;font-size:13px;line-height:1.35;color:{{c.sec}}">Trackpad or mouse: the row highlights and the pointer morphs into it. Hovering a truncated trace chip shows the full path as a tooltip. Same shortcuts as the Mac with a keyboard attached.</p></section><section style="display:flex;flex-direction:column;gap:12px;padding:14px 18px;border-radius:20px;background:{{i.cell}};min-width:0;min-height:0;overflow:hidden"><h2 style="margin:0;font-size:20px;font-weight:700">Drag a card</h2><div style="flex:1;min-height:0;position:relative"><div style="display:flex;gap:12px;height:100%"><div style="flex:1;display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:16px;border:2px solid {{c.accent}};background:{{c.selBg}}"><span style="font-size:15px;font-weight:600">Fri 2</span><div style="display:flex;align-items:center;justify-content:center;height:52px;border-radius:12px;border:1.5px dashed {{c.accent}};font-size:13px;font-weight:600;color:{{c.accent}}">Drop to plan for Fri 2 Oct</div><div style="padding:10px;border-radius:12px;background:{{i.cell2}};font-size:15px">Allemande, bars 17–32</div></div><div style="flex:1;display:flex;flex-direction:column;gap:8px;padding:10px;border-radius:16px;border:1px solid {{i.sep}}"><span style="font-size:15px;font-weight:600">No plan</span><div style="height:52px;border-radius:12px;border:1.5px dashed {{i.sep}};opacity:0.6"></div><div style="padding:12px;border-radius:12px;background:{{i.cell2}};font-size:15px">🔬 Pick a venue</div></div><div style="position:absolute;left:40px;top:96px;width:210px;padding:12px 14px;border-radius:14px;background:{{i.cell}};box-shadow:{{i.lift}};transform:rotate(-2deg) scale(1.04);display:flex;flex-direction:column;gap:4px"><span style="font-size:15px;font-weight:500">🎻 Choose an encore piece</span><span style="font-size:12px;color:{{c.ter}}">≈ 30 min · lifted</span></div></div></div><p style="margin:0;font-size:13px;line-height:1.35;color:{{c.sec}}">Long-press or Pencil-drag lifts the card (scale 1.04, shadow). The target day highlights with an accent outline and a drop label; the source slot leaves a dashed ghost. Writes to OmniFocus come in phase 6.</p></section><section style="display:flex;flex-direction:column;gap:12px;padding:14px 18px;border-radius:20px;background:{{i.cell}};min-width:0;min-height:0;overflow:hidden"><h2 style="margin:0;font-size:20px;font-weight:700">Slider scrub with Pencil</h2><div style="flex:1;min-height:0;position:relative"><div style="display:flex;flex-direction:column;gap:20px;padding-top:30px"><div style="position:relative;height:56px"><span style="position:absolute;left:0;right:0;top:24px;height:8px;border-radius:4px;background:{{i.fill2}}"></span><span style="position:absolute;left:0;width:47%;top:24px;height:8px;border-radius:4px;background:{{c.accent}}"></span><span style="position:absolute;left:47%;top:8px;width:40px;height:40px;margin-left:-20px;border-radius:20px;background:{{c.knob}};box-shadow:0 2px 8px rgba(0,0,0,0.3)"></span><span style="position:absolute;left:52%;top:4px;width:48px;height:48px;margin-left:-24px;border-radius:24px;border:2px dashed {{c.accent}};box-sizing:border-box"></span><span style="position:absolute;left:52%;top:-40px;transform:translateX(-50%);padding:6px 10px;border-radius:8px;background:{{i.menu}};box-shadow:{{i.lift}};font-size:13px;font-weight:600;white-space:nowrap">2.6 h/week · finish 26 Nov</span><svg width="190" height="60" viewBox="0 0 190 60" style="position:absolute;left:230px;top:-10px" aria-hidden="true"><g transform="rotate(-28 95 30)"><rect x="20" y="22" width="150" height="16" rx="8" fill="{{i.cell}}" stroke="{{c.ter}}" stroke-width="1.2"></rect><path d="M20 22 L4 30 L20 38 Z" fill="{{c.ter}}"></path><rect x="150" y="22" width="20" height="16" rx="8" fill="{{i.fill2}}"></rect></g></svg></div><div style="position:relative;height:40px;border-top:1px solid {{i.sep}}"><span style="position:absolute;left:18%;width:52%;top:12px;height:16px;border-radius:8px;background:{{c.band1}}"></span><span style="position:absolute;left:14%;width:44%;top:10px;height:20px;border-radius:10px;border:1.5px dashed {{c.bandLine}};box-sizing:border-box"></span><span style="position:absolute;left:0;top:30px;font-size:12px;color:{{c.ter}}">filled = current · dashed = Pencil preview</span></div></div></div><p style="margin:0;font-size:13px;line-height:1.35;color:{{c.sec}}">Pencil hover (before touching) shows the value and a dashed preview band; touching commits and the forecast updates live. Double-tap the Pencil to return to the normal level.</p></section><section style="display:flex;flex-direction:column;gap:12px;padding:14px 18px;border-radius:20px;background:{{i.cell}};min-width:0;min-height:0;overflow:hidden"><h2 style="margin:0;font-size:20px;font-weight:700">Long-press context menu</h2><div style="flex:1;min-height:0;position:relative"><div style="display:flex;gap:16px;align-items:flex-start;padding-top:6px"><div style="flex:0 0 230px;padding:14px;border-radius:16px;background:{{i.cell}};box-shadow:{{i.lift}};display:flex;flex-direction:column;gap:6px;transform:scale(1.03)"><span style="font-size:17px;font-weight:600">Allemande, bars 1–16 at ♩ = 60</span><span style="font-size:13px;color:{{c.ter}}">Bach Partita No. 2 → 🎻 Violin → Spring recital 2027</span><span style="font-size:13px;color:{{c.sec}}">≈ 45 min est. · flagged</span></div><div role="menu" style="flex:0 0 240px;border-radius:14px;overflow:hidden;background:{{i.menu}};box-shadow:{{i.lift}}"><button role="menuitem" style="display:flex;align-items:center;gap:12px;width:100%;height:44px;padding:0 16px;border:0;border-bottom:1px solid {{i.sep}};background:{{i.hover}};font-size:16px;text-align:start"><span style="flex:1">Open in OmniFocus</span><span style="display:flex;color:{{c.sec}}"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M6.5 3.5H12.5V9.5M12.5 3.5L4.5 11.5"></path></svg></span></button><button role="menuitem" style="display:flex;align-items:center;gap:12px;width:100%;height:44px;padding:0 16px;border:0;border-bottom:1px solid {{i.sep}};background:transparent;font-size:16px;text-align:start"><span style="flex:1">Open in Obsidian</span><span style="display:flex;color:{{c.sec}}"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M4 1.8h5.5L12.5 5v9.2H4z"></path><path d="M9.5 1.8V5h3M6 8h4.5M6 10.5h4.5"></path></svg></span></button><button role="menuitem" style="display:flex;align-items:center;gap:12px;width:100%;height:44px;padding:0 16px;border:0;border-bottom:1px solid {{i.sep}};background:transparent;font-size:16px;text-align:start"><span style="flex:1">Show line · 🎻 Violin</span><span style="display:flex;color:{{c.sec}}"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M2.5 4h11M2.5 8h11M2.5 12h7"></path></svg></span></button><button role="menuitem" style="display:flex;align-items:center;gap:12px;width:100%;height:44px;padding:0 16px;border:0;border-bottom:1px solid {{i.sep}};background:transparent;font-size:16px;text-align:start"><span style="flex:1">Copy link</span><span style="display:flex;color:{{c.sec}}"><svg width="17" height="17" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M6.5 9.5l3-3M7 4.5l1-1a2.5 2.5 0 0 1 3.5 3.5l-1 1M9 11.5l-1 1A2.5 2.5 0 0 1 4.5 9l1-1"></path></svg></span></button></div></div></div><p style="margin:0;font-size:13px;line-height:1.35;color:{{c.sec}}">Long-press a task (or secondary click). Read-only phase: open in OmniFocus, open the project note in Obsidian, show its line, copy link. No complete or delete here.</p></section></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark": {"editor": "boolean", "default": false}, "lang": {"editor": "enum", "options": ["en", "ru", "he"], "default": "en"}, "$preview": {"width": 1210, "height": 834}}'>
+
+function theme(d) {
+  return d ? {
+    dark:true, window:'#1E1E21', sidebar:'#28272C', rail:'#232326', band:'#252528', text:'#EDEDF0', sec:'#A6A6AD', ter:'#8D8D95',
+    sep:'rgba(255,255,255,0.08)', rowSep:'rgba(255,255,255,0.045)', chip:'rgba(255,255,255,0.075)', chipText:'#BDBDC4',
+    accent:'#5A9DFF', accentFill:'#2F6BD0', selBg:'rgba(90,157,255,0.16)', navSel:'rgba(255,255,255,0.09)', check:'#64646C', checkDone:'#4C8DF0',
+    dueText:'#FFC266', dueBg:'rgba(255,176,64,0.15)', card:'#2A2A2E', cardBorder:'rgba(255,255,255,0.07)',
+    field:'rgba(255,255,255,0.07)', fieldBorder:'rgba(255,255,255,0.12)', badgeBorder:'rgba(255,255,255,0.2)', paused:'#7E7E86',
+    windowBorder:'rgba(255,255,255,0.14)', rhythm:'#5E92EE', progress:'#3FA690', done:'#7E7E86', track:'rgba(255,255,255,0.07)',
+    heat:'94,146,238', scrim:'rgba(0,0,0,0.42)', sheet:'#2A2A2E', shadow:'0 24px 70px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.1)',
+    band1:'rgba(94,146,238,0.22)', bandLine:'#5E92EE', grid:'rgba(255,255,255,0.07)', seg:'#4A5468', segAlt:'#596378', segText:'#EDEDF0',
+    hatch:'rgba(255,255,255,0.22)', ctrl:'#3A3A3F', ctrlSel:'#5C5C63', knob:'#E6E6EA', future:'#B9A6F0'
+  } : {
+    dark:false, window:'#FFFFFF', sidebar:'#EFEEF2', rail:'#F8F8FA', band:'#F6F6F8', text:'#1D1D1F', sec:'#5F5F67', ter:'#74747C',
+    sep:'rgba(0,0,0,0.08)', rowSep:'rgba(0,0,0,0.045)', chip:'rgba(0,0,0,0.045)', chipText:'#4F4F57',
+    accent:'#0A64D8', accentFill:'#0A64D8', selBg:'rgba(10,100,216,0.08)', navSel:'rgba(0,0,0,0.07)', check:'#B4B4BB', checkDone:'#0A64D8',
+    dueText:'#8A4B00', dueBg:'#FFEFD6', card:'#FFFFFF', cardBorder:'rgba(0,0,0,0.08)',
+    field:'rgba(0,0,0,0.045)', fieldBorder:'rgba(0,0,0,0.12)', badgeBorder:'rgba(0,0,0,0.18)', paused:'#8E8E95',
+    windowBorder:'rgba(0,0,0,0.16)', rhythm:'#2F68C8', progress:'#14917A', done:'#9A9AA2', track:'rgba(0,0,0,0.05)',
+    heat:'47,104,200', scrim:'rgba(0,0,0,0.18)', sheet:'#FFFFFF', shadow:'0 24px 70px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.08)',
+    band1:'rgba(47,104,200,0.16)', bandLine:'#2F68C8', grid:'rgba(0,0,0,0.06)', seg:'#C9D3E6', segAlt:'#B4C1DA', segText:'#1D2A44',
+    hatch:'rgba(0,0,0,0.22)', ctrl:'#E4E4E8', ctrlSel:'#FFFFFF', knob:'#FFFFFF', future:'#5B3FA8'
+  };
+}
+var SS = {
+  en:{ lang:'en', dir:'ltr', today:'Today', week:'Week', month:'Month', lines:'Lines', search:'Search', demo:'Demo data', updated:'Updated 3 min ago',
+       keys:'⌘1–⌘4 Views · ⌘K Search · ⌘R Refresh', tiers:{ foundation:'Foundation', active:'Active this season', maintenance:'Maintenance', paused:'Not in focus — on purpose' } },
+  ru:{ lang:'ru', dir:'ltr', today:'Сегодня', week:'Неделя', month:'Месяц', lines:'Линии', search:'Поиск', demo:'Демо-данные', updated:'Обновлено 3 мин назад',
+       keys:'⌘1–⌘4 Виды · ⌘K Поиск · ⌘R Обновить', tiers:{ foundation:'Фундамент', active:'Активные в сезоне', maintenance:'На поддержании', paused:'Не в фокусе — намеренно' } },
+  he:{ lang:'he', dir:'rtl', today:'היום', week:'שבוע', month:'חודש', lines:'תחומים', search:'חיפוש', demo:'נתוני הדגמה', updated:'עודכן לפני 3 דק׳',
+       keys:'⌘1–⌘4 תצוגות · ⌘K חיפוש · ⌘R רענון', tiers:{ foundation:'יסוד', active:'פעילים העונה', maintenance:'תחזוקה', paused:'לא בפוקוס — בכוונה' } }
+};
+var SIDE_T = [
+  ['foundation', [['🧘','Core practice'],['💪','Calisthenics']], true],
+  ['active', [['🎻','Violin'],['🇮🇹','Italian'],['🇯🇵','Japanese'],['📐','Math'],['🤖','AI/ML'],['🔬','Research'],['👨‍👩‍👧','Family']], true],
+  ['maintenance', [['🎹','Piano']], true],
+  ['paused', [['✒️','Calligraphy']], false]
+];
+function side(c, lang) {
+  var ss = SS[lang] || SS.en;
+  return SIDE_T.map(function (t) { var paused = t[0] === 'paused';
+    return { n: ss.tiers[t[0]], open: t[2], count: t[2] ? '' : String(t[1].length), chev: t[2] ? 'M3.5 6L8 10.5 12.5 6' : (ss.dir === 'rtl' ? 'M10 3.5L5.5 8 10 12.5' : 'M6 3.5L10.5 8 6 12.5'),
+      rows: t[1].map(function (r) { return { e:r[0], n:r[1], fg: paused ? c.paused : c.text, op: paused ? 0.5 : 1 }; }) }; });
+}
+function fmt(m) { if (m < 60) return '≈ ' + m + ' min est.'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : '') + ' est.'; }
+function short(m) { if (m < 60) return '≈ ' + m + ' min'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : ''); }
+var L = {
+  violin:{e:'🎻',n:'Violin',a:'Spring recital 2027'},
+  piano:{e:'🎹',n:'Piano',a:'Keep repertoire alive'},
+  italian:{e:'🇮🇹',n:'Italian',a:'B1 by summer 2027'},
+  japanese:{e:'🇯🇵',n:'Japanese',a:'Kana and first 300 words'},
+  math:{e:'📐',n:'Math',a:'Linear algebra foundation'},
+  ai:{e:'🤖',n:'AI/ML',a:'Eval toolkit v1'},
+  research:{e:'🔬',n:'Research',a:'Practice-drift paper'},
+  cal:{e:'💪',n:'Calisthenics',a:'20 strict pull-ups'},
+  core:{e:'🧘',n:'Core practice',a:'Daily practice 2026'},
+  family:{e:'👨‍👩‍👧',n:'Family',a:'Family year 2026'},
+  life:{e:'🧺',n:'Life ops',a:'Household'}
+};
+
+
+function ios(c) {
+  return c.dark ? {
+    bg:'#000000', cell:'#1C1C1E', cell2:'#2C2C2E', sep:'rgba(84,84,88,0.45)', fill:'rgba(120,120,128,0.24)', fill2:'rgba(120,120,128,0.36)',
+    bar:'rgba(30,30,32,0.86)', barBorder:'rgba(255,255,255,0.12)', panel:'#1C1C1E', sheet:'#1C1C1E', grabber:'rgba(235,235,245,0.3)',
+    scrim:'rgba(0,0,0,0.5)', lift:'0 18px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.12)', hover:'rgba(255,255,255,0.07)',
+    ghost:'rgba(120,120,128,0.18)', menu:'rgba(44,44,46,0.96)', wall:'#1D2330', ofbg:'#2C2C2E', island:'#000000'
+  } : {
+    bg:'#F2F2F7', cell:'#FFFFFF', cell2:'#F2F2F7', sep:'rgba(60,60,67,0.18)', fill:'rgba(120,120,128,0.12)', fill2:'rgba(120,120,128,0.2)',
+    bar:'rgba(249,249,251,0.9)', barBorder:'rgba(0,0,0,0.08)', panel:'#FFFFFF', sheet:'#F2F2F7', grabber:'rgba(60,60,67,0.3)',
+    scrim:'rgba(0,0,0,0.22)', lift:'0 18px 40px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.06)', hover:'rgba(0,0,0,0.045)',
+    ghost:'rgba(120,120,128,0.1)', menu:'rgba(250,250,252,0.97)', wall:'#C9D2DE', ofbg:'#E5E5EA', island:'#000000'
+  };
+}
+
+var TB = { en:{ today:'Today', week:'Week', lines:'Lines', log:'Log' }, ru:{ today:'Сегодня', week:'Неделя', lines:'Линии', log:'Журнал' }, he:{ today:'היום', week:'שבוע', lines:'תחומים', log:'יומן' } };
+var PL = { en:{ plan:'Plan' }, ru:{ plan:'План' }, he:{ plan:'תכנון' } };
+function build(c) { return {}; }
+
+var __b = build;
+build = function (c, lang) { var v = __b.call(this, c, lang) || {}; v.i = ios(c); v.tb = TB[lang] || TB.en; v.pl = PL[lang] || PL.en;
+  if (typeof extra === 'function') { var x = extra.call(this, c, lang, v) || {}; for (var k in x) v[k] = x[k]; } return v; };
+
+class Component extends DCLogic {
+  renderVals() {
+    var c = theme(!!this.props.dark);
+    var v = build.call(this, c, this.props.lang || 'en') || {};
+    var lang = this.props.lang || 'en'; v.c = c; v.ss = SS[lang] || SS.en; v.side = side(c, lang);
+    return v;
+  }
+}
+</script>
+</body>
+</html>

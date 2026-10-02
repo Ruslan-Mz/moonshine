@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings sheet over Today</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0A64D8}a:hover{color:#084FA8}
+button{font:inherit;color:inherit;cursor:default}
+</style>
+</helmet>
+<div dir="{{ss.dir}}" lang="{{ss.lang}}" style="width:1440px;height:900px;box-sizing:border-box;overflow:hidden;border-radius:12px;border:1px solid {{c.windowBorder}};font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;font-size:13px;line-height:1.35;color:{{c.text}};background:{{c.window}};-webkit-font-smoothing:antialiased;position:relative"><div style="position:absolute;left:-1px;top:-1px"><dc-import name="Today" dark="{{dark}}" hint-size="1440px,900px"></dc-import></div><div style="position:absolute;inset:0;background:{{c.scrim}}"></div><div role="dialog" aria-label="Settings" style="position:absolute;left:430px;top:56px;width:580px;display:flex;flex-direction:column;gap:14px;padding:20px 22px 18px;box-sizing:border-box;border-radius:0 0 14px 14px;background:{{c.rail}};box-shadow:{{c.shadow}}"><h2 style="margin:0;font-size:15px;font-weight:700">Settings</h2><div style="font-size:11px;font-weight:600;color:{{c.ter}};padding:0 4px">General</div><div style="display:flex;flex-direction:column;border-radius:10px;background:{{c.card}};border:1px solid {{c.cardBorder}}"><div style="display:flex;align-items:center;gap:12px;min-height:40px;padding:6px 14px;border-bottom:1px solid {{c.sep}};"><span style="flex:1;font-size:13px">Language</span><button style="display:inline-flex;align-items:center;gap:8px;height:24px;padding:0 6px 0 10px;border-radius:6px;border:1px solid {{c.fieldBorder}};background:{{c.ctrlSel}};font-size:12px">System — English<span style="display:flex;color:{{c.sec}}"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M5 6l3-3 3 3M5 10l3 3 3-3"></path></svg></span></button></div><div style="display:flex;align-items:center;gap:12px;min-height:40px;padding:6px 14px;"><span style="flex:1;font-size:13px">Content languages</span><span style="font-size:12px;color:{{c.sec}}">Русский, English, Italiano, Deutsch, Latviešu</span><button style="height:24px;padding:0 10px;border-radius:6px;border:1px solid {{c.fieldBorder}};background:{{c.ctrlSel}};font-size:12px">Edit…</button></div></div><div style="font-size:11.5px;color:{{c.ter}};padding:0 4px;line-height:1.45">Language: System · English · Русский — applies to MoonShine only, after relaunch. Content languages are hints for detecting the language of task and note titles; nothing is translated.</div><div style="font-size:11px;font-weight:600;color:{{c.ter}};padding:4px 4px 0">Data</div><div style="display:flex;flex-direction:column;border-radius:10px;background:{{c.card}};border:1px solid {{c.cardBorder}}"><div style="display:flex;align-items:center;gap:12px;min-height:40px;padding:6px 14px;border-bottom:1px solid {{c.sep}};"><span style="flex:1;font-size:13px">Source</span><span role="group" style="display:inline-flex;padding:2px;border-radius:7px;background:{{c.ctrl}}"><button aria-pressed="true" style="height:22px;padding:0 14px;border:0;border-radius:5px;font-size:12px;background:{{c.ctrlSel}};box-shadow:0 1px 2px rgba(0,0,0,0.18);font-weight:600">Demo</button><button aria-pressed="false" style="height:22px;padding:0 14px;border:0;border-radius:5px;font-size:12px;background:transparent">Live</button></span></div><div style="display:flex;align-items:center;gap:12px;min-height:40px;padding:6px 14px;border-bottom:1px solid {{c.sep}};"><span style="flex:1;font-size:13px">Obsidian vault</span><span style="display:inline-flex;align-items:center;gap:6px;max-width:250px;height:24px;padding:0 9px;border-radius:6px;background:{{c.field}};font-size:12px;color:{{c.sec}}"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M1.8 4.5a1.5 1.5 0 0 1 1.5-1.5h3l1.5 1.7h5a1.5 1.5 0 0 1 1.5 1.5v5.6a1.5 1.5 0 0 1-1.5 1.5H3.3a1.5 1.5 0 0 1-1.5-1.5z"></path></svg>~/Documents/Life vault</span><button style="height:24px;padding:0 10px;border-radius:6px;border:1px solid {{c.fieldBorder}};background:{{c.ctrlSel}};font-size:12px">Choose…</button></div><div style="display:flex;align-items:center;gap:12px;min-height:40px;padding:6px 14px;"><span style="flex:1;font-size:13px">OmniFocus</span><span style="font-size:12px;color:{{c.sec}}">not read in Demo mode</span></div></div><div style="font-size:11.5px;color:{{c.ter}};padding:0 4px;line-height:1.45">Demo shows bundled sample data — nothing is read from OmniFocus or your vault. The vault is opened read-only through a security-scoped bookmark.</div><div style="font-size:11px;font-weight:600;color:{{c.ter}};padding:4px 4px 0">Refresh</div><div style="display:flex;flex-direction:column;border-radius:10px;background:{{c.card}};border:1px solid {{c.cardBorder}}"><div style="display:flex;align-items:center;gap:12px;min-height:40px;padding:6px 14px;border-bottom:1px solid {{c.sep}};"><span style="flex:1;font-size:13px">Refresh every</span><button style="display:inline-flex;align-items:center;gap:8px;height:24px;padding:0 6px 0 10px;border-radius:6px;border:1px solid {{c.fieldBorder}};background:{{c.ctrlSel}};font-size:12px">5 minutes<span style="display:flex;color:{{c.sec}}"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M5 6l3-3 3 3M5 10l3 3 3-3"></path></svg></span></button></div><div style="display:flex;align-items:center;gap:12px;min-height:40px;padding:6px 14px;"><span style="flex:1;font-size:13px">Last import</span><span style="font-size:12px;color:{{c.sec}};font-variant-numeric:tabular-nums">3 min ago · incremental, 0.8 s</span><button style="height:24px;padding:0 10px;border-radius:6px;border:1px solid {{c.fieldBorder}};background:{{c.ctrlSel}};font-size:12px">Refresh now ⌘R</button></div></div><div style="font-size:11.5px;color:{{c.ter}};padding:0 4px;line-height:1.45">Imports run in the background; the window always renders from the local store.</div><div style="display:flex;justify-content:flex-end;gap:8px;padding-top:4px"><button style="height:28px;padding:0 16px;border-radius:7px;border:1px solid {{c.fieldBorder}};background:{{c.ctrlSel}};font-size:13px">Cancel</button><button style="height:28px;padding:0 18px;border-radius:7px;border:0;background:{{c.accentFill}};color:#FFFFFF;font-size:13px;font-weight:600">Done</button></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark": {"editor": "boolean", "default": false}, "lang": {"editor": "enum", "options": ["en", "ru", "he"], "default": "en"}, "$preview": {"width": 1440, "height": 900}}'>
+
+function theme(d) {
+  return d ? {
+    dark:true, window:'#1E1E21', sidebar:'#28272C', rail:'#232326', band:'#252528', text:'#EDEDF0', sec:'#A6A6AD', ter:'#8D8D95',
+    sep:'rgba(255,255,255,0.08)', rowSep:'rgba(255,255,255,0.045)', chip:'rgba(255,255,255,0.075)', chipText:'#BDBDC4',
+    accent:'#5A9DFF', accentFill:'#2F6BD0', selBg:'rgba(90,157,255,0.16)', navSel:'rgba(255,255,255,0.09)', check:'#64646C', checkDone:'#4C8DF0',
+    dueText:'#FFC266', dueBg:'rgba(255,176,64,0.15)', card:'#2A2A2E', cardBorder:'rgba(255,255,255,0.07)',
+    field:'rgba(255,255,255,0.07)', fieldBorder:'rgba(255,255,255,0.12)', badgeBorder:'rgba(255,255,255,0.2)', paused:'#7E7E86',
+    windowBorder:'rgba(255,255,255,0.14)', rhythm:'#5E92EE', progress:'#3FA690', done:'#7E7E86', track:'rgba(255,255,255,0.07)',
+    heat:'94,146,238', scrim:'rgba(0,0,0,0.42)', sheet:'#2A2A2E', shadow:'0 24px 70px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.1)',
+    band1:'rgba(94,146,238,0.22)', bandLine:'#5E92EE', grid:'rgba(255,255,255,0.07)', seg:'#4A5468', segAlt:'#596378', segText:'#EDEDF0',
+    hatch:'rgba(255,255,255,0.22)', ctrl:'#3A3A3F', ctrlSel:'#5C5C63', knob:'#E6E6EA', future:'#B9A6F0'
+  } : {
+    dark:false, window:'#FFFFFF', sidebar:'#EFEEF2', rail:'#F8F8FA', band:'#F6F6F8', text:'#1D1D1F', sec:'#5F5F67', ter:'#74747C',
+    sep:'rgba(0,0,0,0.08)', rowSep:'rgba(0,0,0,0.045)', chip:'rgba(0,0,0,0.045)', chipText:'#4F4F57',
+    accent:'#0A64D8', accentFill:'#0A64D8', selBg:'rgba(10,100,216,0.08)', navSel:'rgba(0,0,0,0.07)', check:'#B4B4BB', checkDone:'#0A64D8',
+    dueText:'#8A4B00', dueBg:'#FFEFD6', card:'#FFFFFF', cardBorder:'rgba(0,0,0,0.08)',
+    field:'rgba(0,0,0,0.045)', fieldBorder:'rgba(0,0,0,0.12)', badgeBorder:'rgba(0,0,0,0.18)', paused:'#8E8E95',
+    windowBorder:'rgba(0,0,0,0.16)', rhythm:'#2F68C8', progress:'#14917A', done:'#9A9AA2', track:'rgba(0,0,0,0.05)',
+    heat:'47,104,200', scrim:'rgba(0,0,0,0.18)', sheet:'#FFFFFF', shadow:'0 24px 70px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.08)',
+    band1:'rgba(47,104,200,0.16)', bandLine:'#2F68C8', grid:'rgba(0,0,0,0.06)', seg:'#C9D3E6', segAlt:'#B4C1DA', segText:'#1D2A44',
+    hatch:'rgba(0,0,0,0.22)', ctrl:'#E4E4E8', ctrlSel:'#FFFFFF', knob:'#FFFFFF', future:'#5B3FA8'
+  };
+}
+var SS = {
+  en:{ lang:'en', dir:'ltr', today:'Today', week:'Week', month:'Month', lines:'Lines', search:'Search', demo:'Demo data', updated:'Updated 3 min ago',
+       keys:'⌘1–⌘4 Views · ⌘K Search · ⌘R Refresh', tiers:{ foundation:'Foundation', active:'Active this season', maintenance:'Maintenance', paused:'Not in focus — on purpose' } },
+  ru:{ lang:'ru', dir:'ltr', today:'Сегодня', week:'Неделя', month:'Месяц', lines:'Линии', search:'Поиск', demo:'Демо-данные', updated:'Обновлено 3 мин назад',
+       keys:'⌘1–⌘4 Виды · ⌘K Поиск · ⌘R Обновить', tiers:{ foundation:'Фундамент', active:'Активные в сезоне', maintenance:'На поддержании', paused:'Не в фокусе — намеренно' } },
+  he:{ lang:'he', dir:'rtl', today:'היום', week:'שבוע', month:'חודש', lines:'תחומים', search:'חיפוש', demo:'נתוני הדגמה', updated:'עודכן לפני 3 דק׳',
+       keys:'⌘1–⌘4 תצוגות · ⌘K חיפוש · ⌘R רענון', tiers:{ foundation:'יסוד', active:'פעילים העונה', maintenance:'תחזוקה', paused:'לא בפוקוס — בכוונה' } }
+};
+var SIDE_T = [
+  ['foundation', [['🧘','Core practice'],['💪','Calisthenics']], true],
+  ['active', [['🎻','Violin'],['🇮🇹','Italian'],['🇯🇵','Japanese'],['📐','Math'],['🤖','AI/ML'],['🔬','Research'],['👨‍👩‍👧','Family']], true],
+  ['maintenance', [['🎹','Piano']], true],
+  ['paused', [['✒️','Calligraphy']], false]
+];
+function side(c, lang) {
+  var ss = SS[lang] || SS.en;
+  return SIDE_T.map(function (t) { var paused = t[0] === 'paused';
+    return { n: ss.tiers[t[0]], open: t[2], count: t[2] ? '' : String(t[1].length), chev: t[2] ? 'M3.5 6L8 10.5 12.5 6' : (ss.dir === 'rtl' ? 'M10 3.5L5.5 8 10 12.5' : 'M6 3.5L10.5 8 6 12.5'),
+      rows: t[1].map(function (r) { return { e:r[0], n:r[1], fg: paused ? c.paused : c.text, op: paused ? 0.5 : 1 }; }) }; });
+}
+function fmt(m) { if (m < 60) return '≈ ' + m + ' min est.'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : '') + ' est.'; }
+function short(m) { if (m < 60) return '≈ ' + m + ' min'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : ''); }
+var L = {
+  violin:{e:'🎻',n:'Violin',a:'Spring recital 2027'},
+  piano:{e:'🎹',n:'Piano',a:'Keep repertoire alive'},
+  italian:{e:'🇮🇹',n:'Italian',a:'B1 by summer 2027'},
+  japanese:{e:'🇯🇵',n:'Japanese',a:'Kana and first 300 words'},
+  math:{e:'📐',n:'Math',a:'Linear algebra foundation'},
+  ai:{e:'🤖',n:'AI/ML',a:'Eval toolkit v1'},
+  research:{e:'🔬',n:'Research',a:'Practice-drift paper'},
+  cal:{e:'💪',n:'Calisthenics',a:'20 strict pull-ups'},
+  core:{e:'🧘',n:'Core practice',a:'Daily practice 2026'},
+  family:{e:'👨‍👩‍👧',n:'Family',a:'Family year 2026'},
+  life:{e:'🧺',n:'Life ops',a:'Household'}
+};
+
+function build(c) { return { dark: !!this.props.dark }; }
+class Component extends DCLogic {
+  renderVals() {
+    var c = theme(!!this.props.dark);
+    var v = build.call(this, c, this.props.lang || 'en') || {};
+    var lang = this.props.lang || 'en'; v.c = c; v.ss = SS[lang] || SS.en; v.side = side(c, lang);
+    return v;
+  }
+}
+</script>
+</body>
+</html>
