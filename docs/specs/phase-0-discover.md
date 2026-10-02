@@ -25,7 +25,7 @@ Obsidian (`~/ObsidianV`, read-only file access):
 
 - [x] Frontmatter keys in use across `00_Стратегия/`, `journal/`, `projects/` (counts per key, value types).
 - [x] Notes that represent horizons/artifacts: year artifacts, quarter focus, month plans, long horizons — how they are identified (`type`, filename pattern).
-- [ ] Structure of the hours tracker Excel if found in the vault or pointed to by the owner (sheet names, columns — no values). — **open:** not in the vault; owner to point to the file (carried into phase 3, Excel import).
+- [ ] Structure of the hours tracker Excel if found in the vault or pointed to by the owner (sheet names, columns — no values). — **open:** not in the vault; owner to point to the file (carried into phase 2, Excel import).
 
 ## Deliverables
 
