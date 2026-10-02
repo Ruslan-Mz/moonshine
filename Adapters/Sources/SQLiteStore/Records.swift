@@ -266,7 +266,6 @@ struct TaskRecord: EntityRecord {
   var status: String
   var flagged: Bool
   var plannedAt, deferAt, dueAt: Millis?
-  /// Written as NULL until `TaskItem` carries effective dates (S3).
   var effectivePlannedAt, effectiveDeferAt, effectiveDueAt: Millis?
   var estimateMinutes: Int?
   var completedAt, modifiedAt: Millis?
@@ -286,6 +285,9 @@ struct TaskRecord: EntityRecord {
     plannedAt = task.plannedAt?.millis
     deferAt = task.deferUntil?.millis
     dueAt = task.dueAt?.millis
+    effectivePlannedAt = task.effectivePlannedAt?.millis
+    effectiveDeferAt = task.effectiveDeferUntil?.millis
+    effectiveDueAt = task.effectiveDueAt?.millis
     estimateMinutes = task.estimateMinutes
     completedAt = task.completedAt?.millis
     modifiedAt = task.modifiedAt?.millis
@@ -301,6 +303,9 @@ struct TaskRecord: EntityRecord {
       tagIDs: attrs.tagIds.map(TagID.init), status: try decode(status, "task.status"),
       flagged: flagged, plannedAt: plannedAt.map(Date.init(millis:)),
       deferUntil: deferAt.map(Date.init(millis:)), dueAt: dueAt.map(Date.init(millis:)),
+      effectivePlannedAt: effectivePlannedAt.map(Date.init(millis:)),
+      effectiveDeferUntil: effectiveDeferAt.map(Date.init(millis:)),
+      effectiveDueAt: effectiveDueAt.map(Date.init(millis:)),
       estimateMinutes: estimateMinutes, completedAt: completedAt.map(Date.init(millis:)),
       modifiedAt: modifiedAt.map(Date.init(millis:)),
       occurrenceOf: occurrenceOf.map(TaskItemID.init),

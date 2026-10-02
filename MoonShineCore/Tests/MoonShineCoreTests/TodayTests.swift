@@ -47,6 +47,24 @@ import Testing
     #expect(due.isUrgent)
   }
 
+  @Test func inheritedDatesPlaceTasksAndAnInheritedDueDateIsUrgent() throws {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.task("Project due today", line: violin, inheritedDue: W.date(2026, 9, 30, 18))
+    world.task("Group planned today", line: violin, inheritedPlanned: W.date(2026, 9, 30, 9))
+    world.task("Project deferred to today", line: violin, inheritedDefer: W.date(2026, 9, 30, 6))
+    world.task("Group planned Monday", line: violin, inheritedPlanned: W.date(2026, 9, 28, 9))
+    let today = Overview(workspace: world.workspace, now: now).today()
+    #expect(
+      titles(today) == ["Project due today", "Group planned today", "Project deferred to today"])
+    let due = try #require(
+      today.groups.flatMap(\.items).first { $0.task.title == "Project due today" })
+    #expect(due.reasons == [.due])
+    #expect(due.isUrgent)
+    #expect(today.fromEarlier.map(\.task.title) == ["Group planned Monday"])
+    #expect(today.fromEarlier.first?.plannedDaysAgo == 2)
+  }
+
   @Test func groupsFollowVaultLineOrderWithLifeOpsLast() {
     var world = W()
     let violin = LineAssignment.line(world.line("violin").id)

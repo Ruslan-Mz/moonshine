@@ -145,12 +145,14 @@ public struct Overview: Sendable {
     var earlier: [TodayItem] = []
     for task in available {
       var reasons: Set<TodayReason> = []
-      if let due = task.dueAt, due < day.end { reasons.insert(.due) }
+      if let due = task.effectiveDueAt, due < day.end { reasons.insert(.due) }
       if task.flagged { reasons.insert(.flagged) }
-      if let deferUntil = task.deferUntil, day.contains(deferUntil) { reasons.insert(.deferred) }
-      if let planned = task.plannedAt, planned < day.end { reasons.insert(.planned) }
+      if let deferUntil = task.effectiveDeferUntil, day.contains(deferUntil) {
+        reasons.insert(.deferred)
+      }
+      if let planned = task.effectivePlannedAt, planned < day.end { reasons.insert(.planned) }
       guard !reasons.isEmpty else { continue }
-      let plannedEarlier = task.plannedAt.flatMap { $0 < day.start ? $0 : nil }
+      let plannedEarlier = task.effectivePlannedAt.flatMap { $0 < day.start ? $0 : nil }
       let item = TodayItem(
         task: task, trace: tracer.trace(task), reasons: reasons,
         isUrgent: reasons.contains(.due),
@@ -177,7 +179,9 @@ public struct Overview: Sendable {
     }
     return TodayOverview(
       day: day, groups: groups,
-      fromEarlier: earlier.sorted { ($0.task.plannedAt ?? now) < ($1.task.plannedAt ?? now) },
+      fromEarlier: earlier.sorted {
+        ($0.task.effectivePlannedAt ?? now) < ($1.task.effectivePlannedAt ?? now)
+      },
       touchedToday: lineOrder.filter(touched.contains), quietLines: quiet)
   }
 
@@ -193,7 +197,9 @@ public struct Overview: Sendable {
     var items: [[WeekItem]] = Array(repeating: [], count: days.count)
     var noPlan: [WeekItem] = []
     for task in available {
-      guard let anchor = task.plannedAt ?? task.deferUntil ?? task.dueAt else {
+      guard
+        let anchor = task.effectivePlannedAt ?? task.effectiveDeferUntil ?? task.effectiveDueAt
+      else {
         if case .line(let id) = task.line, activeLines.contains(id) {
           noPlan.append(WeekItem(task: task, trace: tracer.trace(task), hasDueBadge: false))
         }
@@ -203,7 +209,7 @@ public struct Overview: Sendable {
       items[index].append(
         WeekItem(
           task: task, trace: tracer.trace(task),
-          hasDueBadge: task.dueAt.map(range.contains) ?? false))
+          hasDueBadge: task.effectiveDueAt.map(range.contains) ?? false))
     }
     return WeekOverview(
       week: week,

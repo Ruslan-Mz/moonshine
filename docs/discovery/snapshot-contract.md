@@ -1,6 +1,8 @@
-# OmniFocus snapshot contract, v0.1
+# OmniFocus snapshot contract, v0.2
 
 Status: **draft**. Shared by the phase-1 JXA bridge (`bridge/snapshot.js`), the future Omni Automation plug-in export (ADR-0003) and `fixtures/omnifocus.snapshot.json`. One JSON document, produced read-only.
+
+v0.2 (phase 1 S3a-1, 2026-10-02) adds the export modes (`full`, `incremental`, change probe), dropped tasks in incremental snapshots, OmniFocus' default times and the bridge's runtime rules. A document without `mode` is a v0.1 full snapshot.
 
 Written from the Omni Automation object model and the field set of `kip-d/omnifocus-mcp` v4.1.0, then checked against the live database through that server's read tool (`data-report.md`). Items V1, V3 and V4 are settled; V2 (bridge latency) is open and flagged as a risk.
 
@@ -10,8 +12,11 @@ Written from the Omni Automation object model and the field set of `kip-d/omnifo
 {
   "schemaVersion": 1,
   "source": "omnifocus",
+  "mode": "full",                                // "full" | "incremental" (v0.2; absent = full)
+  "modifiedSince": null,                         // set iff mode == "incremental"
   "generatedAt": "2026-09-30T21:04:11+03:00",   // ISO 8601 with local offset
   "timeZone": "Europe/Moscow",                   // IANA zone of the Mac at export time
+  "defaultTimes": { "due": "17:00", "defer": "00:00", "planned": "09:00" }, // see §Default times
   "window": { "completedSince": "2026-07-06" },   // Monday of ISO week (now − 12 weeks); dropped items are excluded
   "folders":  [ Folder ],
   "tags":     [ Tag ],
@@ -90,16 +95,55 @@ Tasks reference tags **by id**. Leaf names are not unique (e.g. `Низкая` c
 - **All** remaining (not completed, not dropped) tasks whose project is `active` or `onHold` and whose folder chain is not dropped. Observed: ~13 % of "not completed" tasks live inside done/dropped projects (children of cloned repeating groups), and ~60 projects with status `active` sit inside a dropped archive folder with 0 remaining tasks — both are excluded.
 - All projects with status `active`/`onHold` outside dropped folders.
 - Completed tasks and projects with `completionDate ≥ window.completedSince`.
-- Dropped items are not exported (phase 1 has no use for them).
+- Dropped tasks are not exported in a full snapshot; an incremental snapshot reports those changed since its cutoff (§Modes). A dropped project appears only as the container of exported tasks.
+
+## Modes (v0.2)
+
+- **Full** (`mode: "full"`): the selection above. Only a full snapshot may make the store soft-delete what it no longer contains.
+- **Incremental** (`mode: "incremental"`, `modifiedSince` = the cutoff): all folders, tags and projects (as in a full snapshot: cheap, and line mapping needs them), and only the tasks that a full snapshot would contain **or that are dropped**, and that changed since the cutoff: the task's own `modified`, or that of a parent task or its project's root task, is ≥ the cutoff. The parent/project rule exists because effective dates are inherited: changing a project's due date does not touch its tasks' `modified`.
+  - **Dropped tasks** changed since the cutoff are emitted with `status: "dropped"`, so a consumer can retire them without waiting for a full snapshot. A task counts as dropped when OmniFocus says so, when it has an effective drop date, or when its project or a folder above it is dropped. Projects reached through such a task may carry `status: "dropped"`.
+  - **True deletions** are invisible here (a deleted task has no record to report); only the next full snapshot reveals them.
+  - `parentTaskId` and `repeatOf` may point to tasks that are not in the document (they came with an earlier import).
+- **Change probe** (`mode: "probe"`): a separate, title-free document for cheap change detection:
+
+  ```jsonc
+  {
+    "schemaVersion": 1,
+    "source": "omnifocus",
+    "mode": "probe",
+    "generatedAt": "2026-10-02T12:00:00+03:00",
+    "taskCount": 12345, // flattened tasks, incl. completed and project root tasks
+    "latestModified": "2026-10-02T11:58:41+03:00",
+  } // latest task `modified`; null if none
+  ```
+
+  A changed `latestModified` means something was edited; a lower `taskCount` with the same `latestModified` means something was deleted.
+
+## Default times (v0.2)
+
+OmniFocus stores a time on every date; a date picked without a time gets the user's default time. `defaultTimes` exports those settings as `HH:mm` (24 h, local): `due` and `defer` always; `planned` only when the OmniFocus version has that setting (absent key otherwise). If the settings cannot be read, `defaultTimes` is absent. Consumers may treat a date at the default time as "a day, no particular time" — not used before a spec asks for it.
+
+## Bridge (v0.2)
+
+`bridge/snapshot.js`, run as `osascript -l JavaScript bridge/snapshot.js full | incremental <ISO 8601 cutoff> | probe`. The JXA wrapper hands one Omni Automation script to OmniFocus (`evaluateJavascript`), which builds the whole document inside OmniFocus and returns it as one string.
+
+- **Never launches OmniFocus.** If it is not running, stdout is `{"error":"notRunning"}` and the adapter throws a typed `notRunning`.
+- **Timeout.** The adapter kills `osascript` after 30 s and throws a typed `timedOut`. (OmniFocus may still finish the script on its side.)
+- **stdout** carries the document, which contains task titles: never log or paste it. **stderr** carries `moonshine-bridge omnifocus_ms=<n>`, the time the script spent inside OmniFocus. Omni's documentation does not say on which thread Omni Automation runs; forum reports of long scripts freezing OmniFocus suggest its main thread, so this time is treated as how long OmniFocus is unresponsive (checked by hand during the live measurement).
+- **Requirements:** OmniFocus **Pro** (scripting is a Pro feature); OmniFocus ≥ 3.8 for `evaluateJavascript`, 4.7 for `plannedDate`, 4.7.1 for `effectivePlannedDate`. OmniFocus 4 is addressed by bundle id `com.omnigroup.OmniFocus4`. macOS **Automation** permission for the calling app to control OmniFocus (Terminal for `moonshine-import`; the app in S4 needs `NSAppleEventsUsageDescription` and, under hardened runtime, the `com.apple.security.automation.apple-events` entitlement); denied → osascript error -1743. OmniFocus' own "external scripts" approval is documented for script URLs, not for Apple Events; whether it applies here is checked on the first live run.
+- Read-only: the script calls no setter and no write API.
+- **Errors carry no values.** Decoding, validation and mapping errors name a JSON path (array indices, not ids) and a rule; bridge failures report the exit status and the OSA error number. The document holds titles and ids, and errors may reach logs.
 
 ## Invariants (tested on fixtures in phase 1 S1/S3)
 
-1. Every `projectId`, `parentTaskId`, `folderId`, `parentId`, `tagIds[*]`, `repeatOf` resolves inside the same document.
+1. Every `projectId`, `parentTaskId`, `folderId`, `parentId`, `tagIds[*]`, `repeatOf` resolves inside the same document — except, in an incremental snapshot, `parentTaskId` and `repeatOf`.
 2. `status == "completed"` ⇔ `completionDate != null`; completed dates are within the window.
 3. Ids are stable across exports (they are OmniFocus primary keys) → `ExternalRef(provider: "omnifocus", externalId: id)`.
 4. All dates carry an offset; consumers compute ISO weeks in `timeZone`.
 5. `effectiveX` is exported as OmniFocus computes it, never recomputed by MoonShine. When the own date is null it equals the nearest parent task's or the project's value. How OmniFocus combines an own date with a container's (e.g. task due later than project due) is **not verified yet** — check on live data in S3. The fixture uses own ?? nearest container.
 6. No field carries note text or attachments.
+7. `status == "dropped"` on a task appears only in an incremental snapshot.
+8. `defaultTimes` values match `HH:mm`.
 
 ## Mapping to MoonShine lines
 
@@ -131,5 +175,5 @@ Completions are never weighted or mixed. Per line, per ISO week:
 
 ## Open items
 
-- **V2** Measure full (≤ 20 s) and incremental import on the real database (phase 1 S3).
+- **V2** Measure full (≤ 20 s) and incremental import on the real database (phase 1 S3a-1, `moonshine-import`).
 - ~~O1~~ Decided 2026-09-30: no weighting. Each line gets two separate metrics — see §Line metrics.

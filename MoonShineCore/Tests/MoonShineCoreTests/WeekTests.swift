@@ -52,6 +52,28 @@ import Testing
     #expect(badges == ["Due Friday": true, "Due next Monday": false, "Due Sunday": true])
   }
 
+  @Test func inheritedDatesPlaceTasksAndGiveTheDueBadge() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.task("Group planned Thursday", line: violin, inheritedPlanned: W.date(2026, 10, 1, 9))
+    world.task(
+      "Own planned beats inherited", line: violin, planned: W.date(2026, 9, 29, 9),
+      inheritedPlanned: W.date(2026, 10, 1, 9))
+    world.task(
+      "Project due Saturday", line: violin, planned: W.date(2026, 9, 28, 9),
+      inheritedDue: W.date(2026, 10, 3, 18))
+    world.task("Project due Friday only", line: violin, inheritedDue: W.date(2026, 10, 2, 18))
+    let week = Overview(workspace: world.workspace, now: now).week()
+    #expect(
+      placement(week) == [
+        "Group planned Thursday": [3], "Own planned beats inherited": [1],
+        "Project due Saturday": [0], "Project due Friday only": [4],
+      ])
+    let badges = week.days.flatMap(\.items).filter(\.hasDueBadge).map(\.task.title)
+    #expect(Set(badges) == ["Project due Saturday", "Project due Friday only"])
+    #expect(week.noPlan.isEmpty)
+  }
+
   @Test func tasksAnchoredOutsideTheWeekOrNotAvailableAreNotShown() {
     var world = W()
     let violin = LineAssignment.line(world.line("violin").id)

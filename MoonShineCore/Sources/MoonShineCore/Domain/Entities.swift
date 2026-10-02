@@ -133,10 +133,16 @@ public struct TaskItem: Hashable, Sendable, Identifiable {
   public let tagIDs: [TagID]
   public let status: TaskItemStatus
   public let flagged: Bool
+  /// The task's own dates, as set on the task itself.
   public let plannedAt: Date?
   public let deferUntil: Date?
-  /// A real due date; the only reason a task may use the urgent colour.
   public let dueAt: Date?
+  /// The dates the task manager computes from the task, its parents and its project.
+  /// Placement and urgency use these: an inherited project due date is a real due date,
+  /// the only reason a task may use the urgent colour.
+  public let effectivePlannedAt: Date?
+  public let effectiveDeferUntil: Date?
+  public let effectiveDueAt: Date?
   public let estimateMinutes: Int?
   public let completedAt: Date?
   public let modifiedAt: Date?
@@ -147,7 +153,8 @@ public struct TaskItem: Hashable, Sendable, Identifiable {
   public init(
     id: TaskItemID, refs: [ExternalRef], title: String, projectID: ProjectID?,
     parentTaskID: TaskItemID?, tagIDs: [TagID], status: TaskItemStatus, flagged: Bool,
-    plannedAt: Date?, deferUntil: Date?, dueAt: Date?, estimateMinutes: Int?,
+    plannedAt: Date?, deferUntil: Date?, dueAt: Date?, effectivePlannedAt: Date?,
+    effectiveDeferUntil: Date?, effectiveDueAt: Date?, estimateMinutes: Int?,
     completedAt: Date?, modifiedAt: Date?, occurrenceOf: TaskItemID?, line: LineAssignment
   ) {
     self.id = id
@@ -161,6 +168,9 @@ public struct TaskItem: Hashable, Sendable, Identifiable {
     self.plannedAt = plannedAt
     self.deferUntil = deferUntil
     self.dueAt = dueAt
+    self.effectivePlannedAt = effectivePlannedAt
+    self.effectiveDeferUntil = effectiveDeferUntil
+    self.effectiveDueAt = effectiveDueAt
     self.estimateMinutes = estimateMinutes
     self.completedAt = completedAt
     self.modifiedAt = modifiedAt

@@ -39,12 +39,16 @@ struct TestWorld {
     _ title: String, line: LineAssignment, project: ProjectID? = nil,
     parent: TaskItemID? = nil, status: TaskItemStatus = .available, flagged: Bool = false,
     planned: Date? = nil, defer deferUntil: Date? = nil, due: Date? = nil,
+    inheritedPlanned: Date? = nil, inheritedDefer: Date? = nil, inheritedDue: Date? = nil,
     estimate: Int? = nil, completed: Date? = nil, occurrenceOf: TaskItemID? = nil
   ) -> TaskItem {
     let task = TaskItem(
       id: .generate(), refs: [], title: title, projectID: project, parentTaskID: parent,
       tagIDs: [], status: completed == nil ? status : .completed, flagged: flagged,
-      plannedAt: planned, deferUntil: deferUntil, dueAt: due, estimateMinutes: estimate,
+      plannedAt: planned, deferUntil: deferUntil, dueAt: due,
+      effectivePlannedAt: planned ?? inheritedPlanned,
+      effectiveDeferUntil: deferUntil ?? inheritedDefer, effectiveDueAt: due ?? inheritedDue,
+      estimateMinutes: estimate,
       completedAt: completed, modifiedAt: nil, occurrenceOf: occurrenceOf, line: line)
     workspace.tasks.append(task)
     return task
