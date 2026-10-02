@@ -1,77 +1,99 @@
 import Foundation
 import MoonShineCore
 
+/// Snapshot errors name a JSON path and a rule, never a value: the document carries the
+/// owner's titles and ids, and these errors may end up in logs.
 public enum SnapshotError: Error, Equatable {
   case unsupportedSchema(Int)
-  case invalid([String])
-  case badValue(field: String, value: String)
+  case invalid([SnapshotViolation])
+  /// The value at `path` (e.g. `tasks[3].status`) is not one the contract allows.
+  case badValue(path: String)
 }
 
-/// Checks the contract invariants (snapshot-contract §Invariants). Returns readable violations.
+/// A broken contract invariant: where (array indices, not ids) and which rule.
+public struct SnapshotViolation: Equatable, Sendable, CustomStringConvertible {
+  public let path: String
+  public let rule: String
+
+  public init(_ path: String, _ rule: String) {
+    self.path = path
+    self.rule = rule
+  }
+
+  public var description: String { "\(path): \(rule)" }
+}
+
+/// Checks the contract invariants (snapshot-contract §Invariants).
 public enum SnapshotValidator {
-  public static func violations(in document: SnapshotDocument) -> [String] {
+  public static func violations(in document: SnapshotDocument) -> [SnapshotViolation] {
     let folders = Set(document.folders.map(\.id))
     let tags = Set(document.tags.map(\.id))
     let projects = Set(document.projects.map(\.id))
     let tasks = Set(document.tasks.map(\.id))
-    var found: [String] = []
+    var found: [SnapshotViolation] = []
 
-    func check(_ owner: String, _ field: String, _ id: String?, in known: Set<String>) {
-      if let id, !known.contains(id) { found.append("\(owner): \(field) \(id) does not resolve") }
+    func check(_ path: String, _ id: String?, in known: Set<String>) {
+      if let id, !known.contains(id) { found.append(.init(path, "does not resolve")) }
     }
-    func checkOffset(_ owner: String, _ date: String) {
+    func checkOffset(_ path: String, _ date: String) {
       if date.range(of: #"(Z|[+-]\d{2}:?\d{2})$"#, options: .regularExpression) == nil {
-        found.append("\(owner): date without offset \(date)")
+        found.append(.init(path, "date without offset"))
       }
     }
 
     let isIncremental = document.mode == "incremental"
-    checkOffset("document", document.generatedAt)
+    checkOffset("generatedAt", document.generatedAt)
     if let mode = document.mode, mode != "full", !isIncremental {
-      found.append("document: unknown mode \(mode)")
+      found.append(.init("mode", "is neither full nor incremental"))
     }
     switch (isIncremental, document.modifiedSince) {
-    case (true, nil): found.append("document: incremental without modifiedSince")
-    case (false, .some): found.append("document: modifiedSince in a full snapshot")
-    case (true, .some(let since)): checkOffset("document", since)
+    case (true, nil): found.append(.init("modifiedSince", "missing in an incremental snapshot"))
+    case (false, .some): found.append(.init("modifiedSince", "set in a full snapshot"))
+    case (true, .some(let since)): checkOffset("modifiedSince", since)
     case (false, nil): break
     }
     if let times = document.defaultTimes {
       for (name, time) in [("due", times.due), ("defer", times.defer), ("planned", times.planned)]
       where time.map({ $0.wholeMatch(of: /\d{2}:\d{2}/) == nil }) == true {
-        found.append("document: defaultTimes.\(name) \(time ?? "") is not HH:mm")
+        found.append(.init("defaultTimes.\(name)", "is not HH:mm"))
       }
     }
-    for folder in document.folders {
-      check("folder \(folder.id)", "parentId", folder.parentId, in: folders)
+    for (i, folder) in document.folders.enumerated() {
+      check("folders[\(i)].parentId", folder.parentId, in: folders)
     }
-    for tag in document.tags { check("tag \(tag.id)", "parentId", tag.parentId, in: tags) }
-    for project in document.projects {
-      check("project \(project.id)", "folderId", project.folderId, in: folders)
-      for tag in project.tagIds { check("project \(project.id)", "tagId", tag, in: tags) }
+    for (i, tag) in document.tags.enumerated() {
+      check("tags[\(i)].parentId", tag.parentId, in: tags)
     }
-    for task in document.tasks {
-      let owner = "task \(task.id)"
-      check(owner, "projectId", task.projectId, in: projects)
+    for (i, project) in document.projects.enumerated() {
+      check("projects[\(i)].folderId", project.folderId, in: folders)
+      for (j, tag) in project.tagIds.enumerated() {
+        check("projects[\(i)].tagIds[\(j)]", tag, in: tags)
+      }
+    }
+    for (i, task) in document.tasks.enumerated() {
+      let path = "tasks[\(i)]"
+      check("\(path).projectId", task.projectId, in: projects)
       // An incremental snapshot reports dropped tasks (a full one may still hold a dropped
       // project, as the container of in-window completions); its task references may point
       // to tasks from earlier imports.
       if !isIncremental {
-        check(owner, "parentTaskId", task.parentTaskId, in: tasks)
-        check(owner, "repeatOf", task.repeatOf, in: tasks)
-        if task.status == "dropped" { found.append("\(owner): dropped in a full snapshot") }
+        check("\(path).parentTaskId", task.parentTaskId, in: tasks)
+        check("\(path).repeatOf", task.repeatOf, in: tasks)
+        if task.status == "dropped" {
+          found.append(.init("\(path).status", "dropped in a full snapshot"))
+        }
       }
-      for tag in task.tagIds { check(owner, "tagId", tag, in: tags) }
-      for date in task.dates { checkOffset(owner, date) }
+      for (j, tag) in task.tagIds.enumerated() { check("\(path).tagIds[\(j)]", tag, in: tags) }
+      for (field, date) in task.dates { checkOffset("\(path).\(field)", date) }
       if (task.status == "completed") != (task.completionDate != nil) {
         found.append(
-          task.status == "completed"
-            ? "\(owner): completed without completionDate"
-            : "\(owner): completionDate but not completed")
+          .init(
+            "\(path).completionDate",
+            task.status == "completed" ? "missing on a completed task" : "set but not completed"))
       }
       if let completed = task.completionDate, completed.prefix(10) < document.window.completedSince
       {
-        found.append("\(owner): completed before the window")
+        found.append(.init("\(path).completionDate", "before the window"))
       }
     }
     return found
@@ -87,7 +109,7 @@ public enum SnapshotMapper {
     let violations = SnapshotValidator.violations(in: document)
     guard violations.isEmpty else { throw SnapshotError.invalid(violations) }
     guard let timeZone = TimeZone(identifier: document.timeZone) else {
-      throw SnapshotError.badValue(field: "timeZone", value: document.timeZone)
+      throw SnapshotError.badValue(path: "timeZone")
     }
 
     let folders = Dictionary(uniqueKeysWithValues: document.folders.map { ($0.id, $0) })
@@ -102,46 +124,53 @@ public enum SnapshotMapper {
     }
 
     return TaskSourceSnapshot(
-      provider: .omnifocus, generatedAt: try date(document.generatedAt), timeZone: timeZone,
-      modifiedSince: try document.modifiedSince.map(date),
+      provider: .omnifocus, generatedAt: try date(document.generatedAt, at: "generatedAt"),
+      timeZone: timeZone,
+      modifiedSince: try document.modifiedSince.map { try date($0, at: "modifiedSince") },
       tags: document.tags.map {
         SourceTag(externalId: $0.id, name: $0.name, parentExternalId: $0.parentId)
       },
-      projects: try document.projects.map {
+      projects: try document.projects.enumerated().map { i, project in
         SourceProject(
-          externalId: $0.id, name: $0.name,
-          status: try value(ProjectStatus.self, "project.status", $0.status),
-          tagExternalIds: $0.tagIds, folderPath: folderPath($0.folderId))
+          externalId: project.id, name: project.name,
+          status: try value(ProjectStatus.self, project.status, at: "projects[\(i)].status"),
+          tagExternalIds: project.tagIds, folderPath: folderPath(project.folderId))
       },
-      tasks: try document.tasks.map {
-        SourceTask(
-          externalId: $0.id, name: $0.name, projectExternalId: $0.projectId,
-          parentExternalId: $0.parentTaskId, tagExternalIds: $0.tagIds,
-          status: try value(TaskItemStatus.self, "task.status", $0.status),
-          flagged: $0.effectiveFlagged, plannedAt: try $0.plannedDate.map(date),
-          deferUntil: try $0.deferDate.map(date), dueAt: try $0.dueDate.map(date),
-          effectivePlannedAt: try $0.effectivePlannedDate.map(date),
-          effectiveDeferUntil: try $0.effectiveDeferDate.map(date),
-          effectiveDueAt: try $0.effectiveDueDate.map(date),
-          estimateMinutes: $0.estimatedMinutes, completedAt: try $0.completionDate.map(date),
-          modifiedAt: try date($0.modified), repeatOfExternalId: $0.repeatOf)
+      tasks: try document.tasks.enumerated().map { i, task in
+        func at(_ field: String) -> String { "tasks[\(i)].\(field)" }
+        func optional(_ string: String?, _ field: String) throws -> Date? {
+          try string.map { try date($0, at: at(field)) }
+        }
+        return SourceTask(
+          externalId: task.id, name: task.name, projectExternalId: task.projectId,
+          parentExternalId: task.parentTaskId, tagExternalIds: task.tagIds,
+          status: try value(TaskItemStatus.self, task.status, at: at("status")),
+          flagged: task.effectiveFlagged,
+          plannedAt: try optional(task.plannedDate, "plannedDate"),
+          deferUntil: try optional(task.deferDate, "deferDate"),
+          dueAt: try optional(task.dueDate, "dueDate"),
+          effectivePlannedAt: try optional(task.effectivePlannedDate, "effectivePlannedDate"),
+          effectiveDeferUntil: try optional(task.effectiveDeferDate, "effectiveDeferDate"),
+          effectiveDueAt: try optional(task.effectiveDueDate, "effectiveDueDate"),
+          estimateMinutes: task.estimatedMinutes,
+          completedAt: try optional(task.completionDate, "completionDate"),
+          modifiedAt: try date(task.modified, at: at("modified")),
+          repeatOfExternalId: task.repeatOf)
       })
   }
 
-  static func date(_ string: String) throws -> Date {
+  static func date(_ string: String, at path: String) throws -> Date {
     do {
       return try Date.ISO8601FormatStyle().parse(string)
     } catch {
-      throw SnapshotError.badValue(field: "date", value: string)
+      throw SnapshotError.badValue(path: path)
     }
   }
 
-  private static func value<T: RawRepresentable>(_: T.Type, _ field: String, _ raw: String) throws
+  private static func value<T: RawRepresentable>(_: T.Type, _ raw: String, at path: String) throws
     -> T where T.RawValue == String
   {
-    guard let value = T(rawValue: raw) else {
-      throw SnapshotError.badValue(field: field, value: raw)
-    }
+    guard let value = T(rawValue: raw) else { throw SnapshotError.badValue(path: path) }
     return value
   }
 }

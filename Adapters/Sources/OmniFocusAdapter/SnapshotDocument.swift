@@ -79,12 +79,14 @@ public struct SnapshotDocument: Decodable, Sendable {
 }
 
 extension SnapshotDocument.Task {
-  /// Every date field that is set, in contract order.
-  var dates: [String] {
+  /// Every date field that is set, by contract name, in contract order.
+  var dates: [(field: String, value: String)] {
     [
-      deferDate, plannedDate, dueDate, effectiveDeferDate, effectiveDueDate, effectivePlannedDate,
-      completionDate, added, modified,
-    ].compactMap { $0 }
+      ("deferDate", deferDate), ("plannedDate", plannedDate), ("dueDate", dueDate),
+      ("effectiveDeferDate", effectiveDeferDate), ("effectiveDueDate", effectiveDueDate),
+      ("effectivePlannedDate", effectivePlannedDate), ("completionDate", completionDate),
+      ("added", added), ("modified", modified),
+    ].compactMap { field, value in value.map { (field, $0) } }
   }
 }
 

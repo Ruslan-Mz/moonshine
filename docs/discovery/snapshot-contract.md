@@ -132,6 +132,7 @@ OmniFocus stores a time on every date; a date picked without a time gets the use
 - **stdout** carries the document, which contains task titles: never log or paste it. **stderr** carries `moonshine-bridge omnifocus_ms=<n>`, the time the script spent inside OmniFocus. Omni's documentation does not say on which thread Omni Automation runs; forum reports of long scripts freezing OmniFocus suggest its main thread, so this time is treated as how long OmniFocus is unresponsive (checked by hand during the live measurement).
 - **Requirements:** OmniFocus **Pro** (scripting is a Pro feature); OmniFocus ≥ 3.8 for `evaluateJavascript`, 4.7 for `plannedDate`, 4.7.1 for `effectivePlannedDate`. OmniFocus 4 is addressed by bundle id `com.omnigroup.OmniFocus4`. macOS **Automation** permission for the calling app to control OmniFocus (Terminal for `moonshine-import`; the app in S4 needs `NSAppleEventsUsageDescription` and, under hardened runtime, the `com.apple.security.automation.apple-events` entitlement); denied → osascript error -1743. OmniFocus' own "external scripts" approval is documented for script URLs, not for Apple Events; whether it applies here is checked on the first live run.
 - Read-only: the script calls no setter and no write API.
+- **Errors carry no values.** Decoding, validation and mapping errors name a JSON path (array indices, not ids) and a rule; bridge failures report the exit status and the OSA error number. The document holds titles and ids, and errors may reach logs.
 
 ## Invariants (tested on fixtures in phase 1 S1/S3)
 

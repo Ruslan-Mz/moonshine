@@ -54,19 +54,44 @@ func fixtureDocument() throws -> SnapshotDocument {
     document.tasks[index].projectId = "prj-missing"
     document.tasks[index].modified = "2026-09-17T11:00:00"
     let violations = SnapshotValidator.violations(in: document)
-    let id = document.tasks[index].id
-    #expect(violations.contains("task \(id): projectId prj-missing does not resolve"))
-    #expect(violations.contains("task \(id): completed without completionDate"))
-    #expect(violations.contains("task \(id): date without offset 2026-09-17T11:00:00"))
+    let path = "tasks[\(index)]"
+    #expect(violations.contains(.init("\(path).projectId", "does not resolve")))
+    #expect(violations.contains(.init("\(path).completionDate", "missing on a completed task")))
+    #expect(violations.contains(.init("\(path).modified", "date without offset")))
+  }
+
+  @Test func errorsNameAPathAndARuleButNeverAValue() throws {
+    var document = try fixtureDocument()
+    let index = try #require(document.tasks.firstIndex { $0.status == "available" })
+    let secrets = [
+      document.tasks[index].id, document.tasks[index].name, "prj-secret", "Not a date",
+    ]
+    document.tasks[index].projectId = "prj-secret"
+    document.tasks[index].dueDate = "Not a date"
+    let invalid = String(describing: SnapshotValidator.violations(in: document))
+    #expect(invalid.contains("tasks[\(index)].projectId: does not resolve"))
+    document.tasks[index].projectId = nil
+    document.tasks[index].dueDate = nil
+    document.tasks[index].status = "Not a status"
+    #expect(throws: SnapshotError.badValue(path: "tasks[\(index)].status")) {
+      try SnapshotMapper.map(document)
+    }
+    document.tasks[index].status = "available"
+    document.tasks[index].modified = "2026-13-45T99:00:00+03:00"
+    #expect(throws: SnapshotError.badValue(path: "tasks[\(index)].modified")) {
+      try SnapshotMapper.map(document)
+    }
+    for secret in secrets + ["2026-13-45", "Not a status"] { #expect(!invalid.contains(secret)) }
   }
 
   @Test func droppedTasksAreOnlyAllowedInAnIncrementalSnapshot() throws {
     var document = try fixtureDocument()
     let index = try #require(document.tasks.firstIndex { $0.status == "available" })
     document.tasks[index].status = "dropped"
-    let id = document.tasks[index].id
-    let full = SnapshotValidator.violations(in: document)
-    #expect(full.contains("task \(id): dropped in a full snapshot"))
+    #expect(
+      SnapshotValidator.violations(in: document) == [
+        .init("tasks[\(index)].status", "dropped in a full snapshot")
+      ])
     document.mode = "incremental"
     document.modifiedSince = "2026-09-30T20:00:00+03:00"
     #expect(SnapshotValidator.violations(in: document) == [])
@@ -79,26 +104,26 @@ func fixtureDocument() throws -> SnapshotDocument {
       document.tasks.firstIndex { $0.id == document.tasks[index].parentTaskId })
     let id = document.tasks[index].id
     document.tasks.remove(at: parentIndex)
+    let child = try #require(document.tasks.firstIndex { $0.id == id })
     document.mode = "incremental"
     #expect(
-      SnapshotValidator.violations(in: document) == ["document: incremental without modifiedSince"])
+      SnapshotValidator.violations(in: document) == [
+        .init("modifiedSince", "missing in an incremental snapshot")
+      ])
     document.modifiedSince = "2026-09-30T20:00:00+03:00"
     #expect(SnapshotValidator.violations(in: document) == [])
     document.mode = nil
     document.modifiedSince = nil
     #expect(
-      SnapshotValidator.violations(in: document).contains {
-        $0.hasPrefix("task \(id): parentTaskId")
-      })
+      SnapshotValidator.violations(in: document).contains(
+        .init("tasks[\(child)].parentTaskId", "does not resolve")))
   }
 
   @Test func defaultTimesAreHoursAndMinutes() throws {
     var document = try fixtureDocument()
     document.defaultTimes = .init(due: "17:00", defer: "0:00", planned: nil)
     #expect(
-      SnapshotValidator.violations(in: document) == [
-        "document: defaultTimes.defer 0:00 is not HH:mm"
-      ])
+      SnapshotValidator.violations(in: document) == [.init("defaultTimes.defer", "is not HH:mm")])
     document.defaultTimes?.defer = "00:00"
     document.defaultTimes?.planned = "09:00"
     #expect(SnapshotValidator.violations(in: document) == [])
@@ -117,8 +142,9 @@ func fixtureDocument() throws -> SnapshotDocument {
     let index = try #require(document.tasks.firstIndex { $0.status == "completed" })
     document.tasks[index].completionDate = "2026-07-05T23:59:00+03:00"
     #expect(
-      SnapshotValidator.violations(in: document).contains(
-        "task \(document.tasks[index].id): completed before the window"))
+      SnapshotValidator.violations(in: document) == [
+        .init("tasks[\(index)].completionDate", "before the window")
+      ])
   }
 }
 
@@ -145,12 +171,14 @@ func fixtureDocument() throws -> SnapshotDocument {
   }
 
   @Test func ownAndEffectiveDatesStaySeparate() throws {
+    // Inherits its project's due date, 2026-10-16T18:00+03:00.
     let inheritsDue = try #require(source.tasks.first { $0.externalId == "tsk-0097" })
     #expect(inheritsDue.dueAt == nil)
-    #expect(inheritsDue.effectiveDueAt == Date(timeIntervalSince1970: 1_792_162_800))  // 10-16 18:00
+    #expect(inheritsDue.effectiveDueAt == Date(timeIntervalSince1970: 1_792_162_800))
+    // Inherits its group's planned date, 2026-10-01T09:00+03:00.
     let inheritsPlanned = try #require(source.tasks.first { $0.externalId == "tsk-0172" })
     #expect(inheritsPlanned.plannedAt == nil)
-    #expect(inheritsPlanned.effectivePlannedAt == Date(timeIntervalSince1970: 1_790_834_400))  // 10-01 09:00
+    #expect(inheritsPlanned.effectivePlannedAt == Date(timeIntervalSince1970: 1_790_834_400))
   }
 
   @Test func anIncrementalDocumentMapsToAPartialSnapshotWithDroppedTasks() throws {
