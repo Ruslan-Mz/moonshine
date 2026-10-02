@@ -8,6 +8,43 @@ public enum SnapshotError: Error, Equatable {
   case invalid([SnapshotViolation])
   /// The value at `path` (e.g. `tasks[3].status`) is not one the contract allows.
   case badValue(path: String)
+  /// The JSON does not decode at `path` (`document` for malformed JSON). Replaces
+  /// Foundation's `DecodingError`, whose descriptions can quote the payload.
+  case undecodable(path: String)
+}
+
+extension SnapshotDocument {
+  /// The only way to decode a snapshot: errors carry a path, never payload text.
+  public static func decode(_ data: Data) throws -> SnapshotDocument {
+    try decodeWithoutValues(SnapshotDocument.self, data)
+  }
+}
+
+extension ChangeProbe {
+  /// The only way to decode a change probe: errors carry a path, never payload text.
+  public static func decode(_ data: Data) throws -> ChangeProbe {
+    try decodeWithoutValues(ChangeProbe.self, data)
+  }
+}
+
+func decodeWithoutValues<T: Decodable>(_: T.Type, _ data: Data) throws -> T {
+  do {
+    return try JSONDecoder().decode(T.self, from: data)
+  } catch let error as DecodingError {
+    let context: DecodingError.Context? =
+      switch error {
+      case .typeMismatch(_, let context), .valueNotFound(_, let context),
+        .dataCorrupted(let context):
+        context
+      case .keyNotFound(let key, let context):
+        DecodingError.Context(codingPath: context.codingPath + [key], debugDescription: "")
+      @unknown default: nil
+      }
+    let path = (context?.codingPath ?? []).enumerated().map { index, key in
+      key.intValue.map { "[\($0)]" } ?? (index == 0 ? key.stringValue : ".\(key.stringValue)")
+    }.joined()
+    throw SnapshotError.undecodable(path: path.isEmpty ? "document" : path)
+  }
 }
 
 /// A broken contract invariant: where (array indices, not ids) and which rule.
@@ -210,6 +247,6 @@ public struct SnapshotFileTaskProvider: TaskProvider {
   /// A file is whatever snapshot it holds; `modifiedSince` is honoured by the live bridge.
   public func snapshot(modifiedSince: Date?) async throws -> TaskSourceSnapshot {
     let data = try Data(contentsOf: url)
-    return try SnapshotMapper.map(try JSONDecoder().decode(SnapshotDocument.self, from: data))
+    return try SnapshotMapper.map(try SnapshotDocument.decode(data))
   }
 }

@@ -72,16 +72,59 @@ func fixtureDocument() throws -> SnapshotDocument {
     #expect(invalid.contains("tasks[\(index)].projectId: does not resolve"))
     document.tasks[index].projectId = nil
     document.tasks[index].dueDate = nil
+    var described = [invalid]
     document.tasks[index].status = "Not a status"
-    #expect(throws: SnapshotError.badValue(path: "tasks[\(index)].status")) {
-      try SnapshotMapper.map(document)
-    }
+    described.append(
+      String(
+        describing: #expect(throws: SnapshotError.badValue(path: "tasks[\(index)].status")) {
+          try SnapshotMapper.map(document)
+        } as Any))
     document.tasks[index].status = "available"
-    document.tasks[index].modified = "2026-13-45T99:00:00+03:00"
-    #expect(throws: SnapshotError.badValue(path: "tasks[\(index)].modified")) {
-      try SnapshotMapper.map(document)
+    // Shape-invalid, and shape-valid with an offset but out of range (the strict check).
+    for date in ["2026-13-45T99:00:00+03:00", "2026-09-30T25:61:00+03:00"] {
+      document.tasks[index].modified = date
+      described.append(
+        String(
+          describing: #expect(throws: SnapshotError.badValue(path: "tasks[\(index)].modified")) {
+            try SnapshotMapper.map(document)
+          } as Any))
     }
-    for secret in secrets + ["2026-13-45", "Not a status"] { #expect(!invalid.contains(secret)) }
+    for secret in secrets + ["2026-13-45", "25:61", "Not a status"] {
+      #expect(described.allSatisfy { !$0.contains(secret) })
+    }
+  }
+
+  /// Foundation's `DecodingError` can quote the payload (an oversized number verbatim, the
+  /// offending character of malformed JSON); the snapshot error must not.
+  @Test func decodingErrorsNameAPathButNeverQuoteThePayload() throws {
+    let fixture = try String(contentsOf: fixtureURL, encoding: .utf8)
+    let secretNumber = "98765432109876543210987"
+    let oversized = try #require(fixture.firstRange(of: #""noteLength": 0"#))
+    let cases: [(json: String, path: String, secret: String)] = [
+      // Foundation rejects an oversized number while parsing, before any field is known.
+      (
+        fixture.replacingCharacters(in: oversized, with: #""noteLength": \#(secretNumber)"#),
+        "document", secretNumber
+      ),
+      (
+        fixture.replacingCharacters(in: oversized, with: #""noteLength": "SECRETTOKEN""#),
+        "tasks[0].noteLength", "SECRETTOKEN"
+      ),
+      (#"{"schemaVersion": 1, "source": SECRETTOKEN"#, "document", "SECRETTOKEN"),
+    ]
+    for (json, path, secret) in cases {
+      let error = #expect(throws: SnapshotError.undecodable(path: path)) {
+        try SnapshotDocument.decode(Data(json.utf8))
+      }
+      #expect(!String(describing: error as Any).contains(secret))
+    }
+    let probe = #expect(throws: SnapshotError.undecodable(path: "taskCount")) {
+      try ChangeProbe.decode(
+        Data(
+          #"{"schemaVersion":1,"source":"omnifocus","mode":"probe","generatedAt":"x","taskCount":"SECRETTOKEN"}"#
+            .utf8))
+    }
+    #expect(!String(describing: probe as Any).contains("SECRETTOKEN"))
   }
 
   @Test func droppedTasksAreOnlyAllowedInAnIncrementalSnapshot() throws {
