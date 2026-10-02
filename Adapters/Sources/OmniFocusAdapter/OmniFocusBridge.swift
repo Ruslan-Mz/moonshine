@@ -6,7 +6,9 @@ public enum BridgeError: Error, Equatable, Sendable {
   /// OmniFocus is not running; the bridge never launches it.
   case notRunning
   case timedOut(after: Duration)
-  case failed(status: Int32, message: String)
+  /// osascript failed. Only the exit status and the OSA error number (e.g. -1743, Automation
+  /// permission denied) are kept: its stderr can quote values from OmniFocus.
+  case failed(status: Int32, osaError: Int?)
   case malformedOutput
 }
 
@@ -68,9 +70,9 @@ public struct OmniFocusBridge: Sendable {
     }
     let result = try await runner.run(Self.osascript, arguments: arguments, timeout: timeout)
     guard result.status == 0 else {
-      throw BridgeError.failed(
-        status: result.status,
-        message: String(result.stderr.trimmingCharacters(in: .whitespacesAndNewlines).prefix(500)))
+      // osascript ends an error line with the OSA number, e.g. "… (-1743)".
+      let osaError = result.stderr.firstMatch(of: /\((-?\d+)\)\s*$/).flatMap { Int($0.1) }
+      throw BridgeError.failed(status: result.status, osaError: osaError)
     }
     if result.stdout.starts(with: Data(#"{"error":"notRunning"}"#.utf8)) {
       throw BridgeError.notRunning

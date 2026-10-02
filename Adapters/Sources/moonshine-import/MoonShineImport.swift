@@ -27,10 +27,13 @@ struct MoonShineImport {
     do {
       switch (arguments.first, arguments.dropFirst().first) {
       case ("full", let second):
-        guard let count = second == nil ? 1 : second.flatMap({ Int($0) }) else { usage() }
+        guard let count = second == nil ? 1 : second.flatMap({ Int($0) }), count > 0 else {
+          usage()
+        }
         try await full(runs: count)
-      case ("incremental", let minutes?) where Int(minutes) != nil:
-        try await incremental(minutes: Int(minutes)!)
+      case ("incremental", let minutes?):
+        guard let minutes = Int(minutes), minutes > 0 else { usage() }
+        try await incremental(minutes: minutes)
       case ("probe", nil): try await probe()
       default: usage()
       }
@@ -186,9 +189,8 @@ struct MoonShineImport {
     case BridgeError.notRunning: return "OmniFocus is not running"
     case BridgeError.timedOut(let after): return "bridge timed out after \(after)"
     case BridgeError.malformedOutput: return "bridge output is not JSON"
-    case BridgeError.failed(let status, let message):
-      let code = message.firstMatch(of: /\((-?\d+)\)\s*$/).map { ", OSA error \($0.1)" } ?? ""
-      return "bridge failed: exit \(status)\(code)"
+    case BridgeError.failed(let status, let osaError):
+      return "bridge failed: exit \(status)" + (osaError.map { ", OSA error \($0)" } ?? "")
     case SnapshotError.unsupportedSchema(let version): return "unsupported schema \(version)"
     case SnapshotError.invalid(let violations):
       return "\(violations.count) contract violations: "
@@ -209,7 +211,8 @@ struct MoonShineImport {
   }
 
   static func median(_ runs: [[Duration]]) -> [Duration] {
-    runs[0].indices.map { index in runs.map { $0[index] }.sorted()[runs.count / 2] }
+    precondition(!runs.isEmpty, "median of no runs")
+    return runs[0].indices.map { index in runs.map { $0[index] }.sorted()[runs.count / 2] }
   }
 
   static func line(_ durations: [Duration], _ names: [String]) -> String {

@@ -49,10 +49,21 @@ final class FakeRunner: ScriptRunner, @unchecked Sendable {
     await #expect(throws: BridgeError.notRunning) { try await bridge(runner).run(.probe) }
   }
 
-  @Test func scriptFailureCarriesStatusAndMessage() async {
-    let runner = FakeRunner(status: 1, stdout: Data(), stderr: "execution error: -1743\n")
-    await #expect(throws: BridgeError.failed(status: 1, message: "execution error: -1743")) {
-      try await bridge(runner).run(.full)
+  @Test func scriptFailureKeepsStatusAndOSAErrorButNeverStderr() async {
+    let cases: [(stderr: String, osaError: Int?)] = [
+      (
+        "snapshot.js: execution error: Not authorized to send Apple events to OmniFocus. (-1743)\n",
+        -1743
+      ),
+      ("snapshot.js: execution error: Error: SECRET-TASK-TITLE is not a function (-2700)\n", -2700),
+      ("SECRET-TASK-TITLE\n", nil),
+    ]
+    for (stderr, osaError) in cases {
+      let runner = FakeRunner(status: 1, stdout: Data(), stderr: stderr)
+      let error = await #expect(throws: BridgeError.failed(status: 1, osaError: osaError)) {
+        try await bridge(runner).run(.full)
+      }
+      #expect(!String(describing: error as Any).contains("SECRET"))
     }
   }
 
