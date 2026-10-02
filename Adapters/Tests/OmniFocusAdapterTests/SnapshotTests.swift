@@ -129,12 +129,42 @@ func fixtureDocument() throws -> SnapshotDocument {
     #expect(SnapshotValidator.violations(in: document) == [])
   }
 
-  @Test func decodesAChangeProbe() throws {
+  func probe() throws -> ChangeProbe {
     let json =
       #"{"schemaVersion":1,"source":"omnifocus","mode":"probe","generatedAt":"2026-09-30T21:00:00+03:00","taskCount":163,"latestModified":"2026-09-30T20:58:00+03:00"}"#
-    let probe = try JSONDecoder().decode(ChangeProbe.self, from: Data(json.utf8))
+    return try JSONDecoder().decode(ChangeProbe.self, from: Data(json.utf8))
+  }
+
+  @Test func decodesAndValidatesAChangeProbe() throws {
+    let probe = try probe()
     #expect(probe.taskCount == 163)
     #expect(probe.latestModified == "2026-09-30T20:58:00+03:00")
+    #expect(SnapshotValidator.violations(in: probe) == [])
+  }
+
+  @Test func rejectsAMalformedChangeProbe() throws {
+    var probe = try probe()
+    probe.schemaVersion = 2
+    probe.source = "things"
+    probe.mode = "full"
+    probe.generatedAt = "2026-09-30T21:00:00"
+    probe.taskCount = -1
+    probe.latestModified = "2026-09-30 20:58"
+    #expect(
+      SnapshotValidator.violations(in: probe) == [
+        .init("schemaVersion", "unsupported"), .init("source", "is not omnifocus"),
+        .init("mode", "is not probe"), .init("generatedAt", "date without offset"),
+        .init("taskCount", "is negative"), .init("latestModified", "date without offset"),
+      ])
+  }
+
+  @Test func defaultTimesAreValidTwentyFourHourTimes() throws {
+    var document = try fixtureDocument()
+    document.defaultTimes = .init(due: "24:00", defer: "29:99", planned: "23:59")
+    #expect(
+      SnapshotValidator.violations(in: document) == [
+        .init("defaultTimes.due", "is not HH:mm"), .init("defaultTimes.defer", "is not HH:mm"),
+      ])
   }
 
   @Test func completionBeforeTheWindowIsAViolation() throws {

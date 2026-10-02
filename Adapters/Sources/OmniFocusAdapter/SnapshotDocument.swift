@@ -98,6 +98,6 @@ public struct ChangeProbe: Decodable, Sendable {
   public var mode: String
   public var generatedAt: String
   public var taskCount: Int
-  /// The latest `modified` of any task or project; nil for an empty database.
+  /// The latest `modified` of any task (project root tasks included); nil for an empty database.
   public var latestModified: String?
 }

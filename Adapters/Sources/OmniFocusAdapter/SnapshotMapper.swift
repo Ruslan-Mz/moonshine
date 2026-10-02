@@ -36,9 +36,7 @@ public enum SnapshotValidator {
       if let id, !known.contains(id) { found.append(.init(path, "does not resolve")) }
     }
     func checkOffset(_ path: String, _ date: String) {
-      if date.range(of: #"(Z|[+-]\d{2}:?\d{2})$"#, options: .regularExpression) == nil {
-        found.append(.init(path, "date without offset"))
-      }
+      if !hasOffset(date) { found.append(.init(path, "date without offset")) }
     }
 
     let isIncremental = document.mode == "incremental"
@@ -54,7 +52,7 @@ public enum SnapshotValidator {
     }
     if let times = document.defaultTimes {
       for (name, time) in [("due", times.due), ("defer", times.defer), ("planned", times.planned)]
-      where time.map({ $0.wholeMatch(of: /\d{2}:\d{2}/) == nil }) == true {
+      where time.map({ $0.wholeMatch(of: /([01]\d|2[0-3]):[0-5]\d/) == nil }) == true {
         found.append(.init("defaultTimes.\(name)", "is not HH:mm"))
       }
     }
@@ -97,6 +95,24 @@ public enum SnapshotValidator {
       }
     }
     return found
+  }
+
+  /// Checks a change probe (snapshot-contract §Modes).
+  public static func violations(in probe: ChangeProbe) -> [SnapshotViolation] {
+    var found: [SnapshotViolation] = []
+    if probe.schemaVersion != 1 { found.append(.init("schemaVersion", "unsupported")) }
+    if probe.source != "omnifocus" { found.append(.init("source", "is not omnifocus")) }
+    if probe.mode != "probe" { found.append(.init("mode", "is not probe")) }
+    if !hasOffset(probe.generatedAt) { found.append(.init("generatedAt", "date without offset")) }
+    if probe.taskCount < 0 { found.append(.init("taskCount", "is negative")) }
+    if let latest = probe.latestModified, !hasOffset(latest) {
+      found.append(.init("latestModified", "date without offset"))
+    }
+    return found
+  }
+
+  static func hasOffset(_ date: String) -> Bool {
+    date.range(of: #"(Z|[+-]\d{2}:?\d{2})$"#, options: .regularExpression) != nil
   }
 }
 
