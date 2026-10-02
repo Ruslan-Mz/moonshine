@@ -18,6 +18,8 @@ func fixtureDocument() throws -> SnapshotDocument {
   @Test func decodesTheFixture() throws {
     let document = try fixtureDocument()
     #expect(document.schemaVersion == 1)
+    #expect(document.mode == "full")
+    #expect(document.defaultTimes?.planned == "09:00")
     #expect(document.folders.count == 12)
     #expect(document.tags.count == 23)
     #expect(document.projects.count == 13)
@@ -58,6 +60,58 @@ func fixtureDocument() throws -> SnapshotDocument {
     #expect(violations.contains("task \(id): date without offset 2026-09-17T11:00:00"))
   }
 
+  @Test func droppedTasksAreOnlyAllowedInAnIncrementalSnapshot() throws {
+    var document = try fixtureDocument()
+    let index = try #require(document.tasks.firstIndex { $0.status == "available" })
+    document.tasks[index].status = "dropped"
+    let id = document.tasks[index].id
+    let full = SnapshotValidator.violations(in: document)
+    #expect(full.contains("task \(id): dropped in a full snapshot"))
+    document.mode = "incremental"
+    document.modifiedSince = "2026-09-30T20:00:00+03:00"
+    #expect(SnapshotValidator.violations(in: document) == [])
+  }
+
+  @Test func anIncrementalSnapshotNeedsItsCutoffAndMayPointOutsideItself() throws {
+    var document = try fixtureDocument()
+    let index = try #require(document.tasks.firstIndex { $0.parentTaskId != nil })
+    let parentIndex = try #require(
+      document.tasks.firstIndex { $0.id == document.tasks[index].parentTaskId })
+    let id = document.tasks[index].id
+    document.tasks.remove(at: parentIndex)
+    document.mode = "incremental"
+    #expect(
+      SnapshotValidator.violations(in: document) == ["document: incremental without modifiedSince"])
+    document.modifiedSince = "2026-09-30T20:00:00+03:00"
+    #expect(SnapshotValidator.violations(in: document) == [])
+    document.mode = nil
+    document.modifiedSince = nil
+    #expect(
+      SnapshotValidator.violations(in: document).contains {
+        $0.hasPrefix("task \(id): parentTaskId")
+      })
+  }
+
+  @Test func defaultTimesAreHoursAndMinutes() throws {
+    var document = try fixtureDocument()
+    document.defaultTimes = .init(due: "17:00", defer: "0:00", planned: nil)
+    #expect(
+      SnapshotValidator.violations(in: document) == [
+        "document: defaultTimes.defer 0:00 is not HH:mm"
+      ])
+    document.defaultTimes?.defer = "00:00"
+    document.defaultTimes?.planned = "09:00"
+    #expect(SnapshotValidator.violations(in: document) == [])
+  }
+
+  @Test func decodesAChangeProbe() throws {
+    let json =
+      #"{"schemaVersion":1,"source":"omnifocus","mode":"probe","generatedAt":"2026-09-30T21:00:00+03:00","taskCount":163,"latestModified":"2026-09-30T20:58:00+03:00"}"#
+    let probe = try JSONDecoder().decode(ChangeProbe.self, from: Data(json.utf8))
+    #expect(probe.taskCount == 163)
+    #expect(probe.latestModified == "2026-09-30T20:58:00+03:00")
+  }
+
   @Test func completionBeforeTheWindowIsAViolation() throws {
     var document = try fixtureDocument()
     let index = try #require(document.tasks.firstIndex { $0.status == "completed" })
@@ -81,11 +135,33 @@ func fixtureDocument() throws -> SnapshotDocument {
     #expect(project.status == .active)
   }
 
-  @Test func datesKeepTheirInstantAndEffectiveValuesAreUsed() throws {
+  @Test func datesKeepTheirInstant() throws {
     let task = try #require(source.tasks.first { $0.externalId == "tsk-0167" })
     #expect(task.dueAt == Date(timeIntervalSince1970: 1_790_780_400))  // 2026-09-30T18:00+03:00
+    #expect(task.effectiveDueAt == task.dueAt)
     #expect(task.flagged)
     #expect(source.timeZone.identifier == "Europe/Moscow")
+    #expect(source.modifiedSince == nil)
+  }
+
+  @Test func ownAndEffectiveDatesStaySeparate() throws {
+    let inheritsDue = try #require(source.tasks.first { $0.externalId == "tsk-0097" })
+    #expect(inheritsDue.dueAt == nil)
+    #expect(inheritsDue.effectiveDueAt == Date(timeIntervalSince1970: 1_792_162_800))  // 10-16 18:00
+    let inheritsPlanned = try #require(source.tasks.first { $0.externalId == "tsk-0172" })
+    #expect(inheritsPlanned.plannedAt == nil)
+    #expect(inheritsPlanned.effectivePlannedAt == Date(timeIntervalSince1970: 1_790_834_400))  // 10-01 09:00
+  }
+
+  @Test func anIncrementalDocumentMapsToAPartialSnapshotWithDroppedTasks() throws {
+    var document = try fixtureDocument()
+    document.mode = "incremental"
+    document.modifiedSince = "2026-09-30T20:00:00+03:00"
+    document.tasks = [try #require(document.tasks.first { $0.status == "available" })]
+    document.tasks[0].status = "dropped"
+    let partial = try SnapshotMapper.map(document)
+    #expect(partial.modifiedSince == Date(timeIntervalSince1970: 1_790_787_600))
+    #expect(partial.tasks.map(\.status) == [.dropped])
   }
 
   @Test func repeatOfIsCarriedThrough() throws {

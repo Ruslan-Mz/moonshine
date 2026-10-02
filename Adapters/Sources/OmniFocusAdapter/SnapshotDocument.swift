@@ -1,11 +1,18 @@
 import Foundation
 
-/// OmniFocus snapshot contract v0.1 (`docs/discovery/snapshot-contract.md`), as decoded.
+/// OmniFocus snapshot contract v0.2 (`docs/discovery/snapshot-contract.md`), as decoded.
 /// Produced by the JXA bridge (S3), the future plug-in export and the Demo fixture.
 /// Dates stay strings here so the validator can check their offsets.
 public struct SnapshotDocument: Decodable, Sendable {
   public struct Window: Decodable, Sendable {
     public var completedSince: String
+  }
+
+  /// OmniFocus' default times of day, `HH:mm`; `planned` is nil when the setting does not exist.
+  public struct DefaultTimes: Decodable, Sendable {
+    public var due: String
+    public var `defer`: String
+    public var planned: String?
   }
 
   public struct Folder: Decodable, Sendable {
@@ -45,6 +52,8 @@ public struct SnapshotDocument: Decodable, Sendable {
     public var dueDate: String?
     public var effectiveDeferDate: String?
     public var effectiveDueDate: String?
+    /// Absent before OmniFocus 4.7.1; consumers then use `plannedDate`.
+    public var effectivePlannedDate: String?
     public var estimatedMinutes: Int?
     public var completionDate: String?
     public var added: String
@@ -55,8 +64,13 @@ public struct SnapshotDocument: Decodable, Sendable {
 
   public var schemaVersion: Int
   public var source: String
+  /// `full` (nil in v0.1 documents) or `incremental`.
+  public var mode: String?
+  /// Set iff `mode == "incremental"`: tasks changed since this instant.
+  public var modifiedSince: String?
   public var generatedAt: String
   public var timeZone: String
+  public var defaultTimes: DefaultTimes?
   public var window: Window
   public var folders: [Folder]
   public var tags: [Tag]
@@ -68,8 +82,20 @@ extension SnapshotDocument.Task {
   /// Every date field that is set, in contract order.
   var dates: [String] {
     [
-      deferDate, plannedDate, dueDate, effectiveDeferDate, effectiveDueDate, completionDate,
-      added, modified,
+      deferDate, plannedDate, dueDate, effectiveDeferDate, effectiveDueDate, effectivePlannedDate,
+      completionDate, added, modified,
     ].compactMap { $0 }
   }
+}
+
+/// The change probe (contract §Change probe): no titles, only enough to tell whether
+/// anything changed since the last import.
+public struct ChangeProbe: Decodable, Sendable {
+  public var schemaVersion: Int
+  public var source: String
+  public var mode: String
+  public var generatedAt: String
+  public var taskCount: Int
+  /// The latest `modified` of any task or project; nil for an empty database.
+  public var latestModified: String?
 }

@@ -25,7 +25,23 @@ public enum SnapshotValidator {
       }
     }
 
+    let isIncremental = document.mode == "incremental"
     checkOffset("document", document.generatedAt)
+    if let mode = document.mode, mode != "full", !isIncremental {
+      found.append("document: unknown mode \(mode)")
+    }
+    switch (isIncremental, document.modifiedSince) {
+    case (true, nil): found.append("document: incremental without modifiedSince")
+    case (false, .some): found.append("document: modifiedSince in a full snapshot")
+    case (true, .some(let since)): checkOffset("document", since)
+    case (false, nil): break
+    }
+    if let times = document.defaultTimes {
+      for (name, time) in [("due", times.due), ("defer", times.defer), ("planned", times.planned)]
+      where time.map({ $0.wholeMatch(of: /\d{2}:\d{2}/) == nil }) == true {
+        found.append("document: defaultTimes.\(name) \(time ?? "") is not HH:mm")
+      }
+    }
     for folder in document.folders {
       check("folder \(folder.id)", "parentId", folder.parentId, in: folders)
     }
@@ -37,8 +53,14 @@ public enum SnapshotValidator {
     for task in document.tasks {
       let owner = "task \(task.id)"
       check(owner, "projectId", task.projectId, in: projects)
-      check(owner, "parentTaskId", task.parentTaskId, in: tasks)
-      check(owner, "repeatOf", task.repeatOf, in: tasks)
+      // An incremental snapshot reports dropped tasks (a full one may still hold a dropped
+      // project, as the container of in-window completions); its task references may point
+      // to tasks from earlier imports.
+      if !isIncremental {
+        check(owner, "parentTaskId", task.parentTaskId, in: tasks)
+        check(owner, "repeatOf", task.repeatOf, in: tasks)
+        if task.status == "dropped" { found.append("\(owner): dropped in a full snapshot") }
+      }
       for tag in task.tagIds { check(owner, "tagId", tag, in: tags) }
       for date in task.dates { checkOffset(owner, date) }
       if (task.status == "completed") != (task.completionDate != nil) {
@@ -81,6 +103,7 @@ public enum SnapshotMapper {
 
     return TaskSourceSnapshot(
       provider: .omnifocus, generatedAt: try date(document.generatedAt), timeZone: timeZone,
+      modifiedSince: try document.modifiedSince.map(date),
       tags: document.tags.map {
         SourceTag(externalId: $0.id, name: $0.name, parentExternalId: $0.parentId)
       },
@@ -96,8 +119,10 @@ public enum SnapshotMapper {
           parentExternalId: $0.parentTaskId, tagExternalIds: $0.tagIds,
           status: try value(TaskItemStatus.self, "task.status", $0.status),
           flagged: $0.effectiveFlagged, plannedAt: try $0.plannedDate.map(date),
-          deferUntil: try ($0.effectiveDeferDate ?? $0.deferDate).map(date),
-          dueAt: try ($0.effectiveDueDate ?? $0.dueDate).map(date),
+          deferUntil: try $0.deferDate.map(date), dueAt: try $0.dueDate.map(date),
+          effectivePlannedAt: try $0.effectivePlannedDate.map(date),
+          effectiveDeferUntil: try $0.effectiveDeferDate.map(date),
+          effectiveDueAt: try $0.effectiveDueDate.map(date),
           estimateMinutes: $0.estimatedMinutes, completedAt: try $0.completionDate.map(date),
           modifiedAt: try date($0.modified), repeatOfExternalId: $0.repeatOf)
       })
@@ -121,7 +146,7 @@ public enum SnapshotMapper {
   }
 }
 
-/// Reads a snapshot JSON file: the Demo fixture now, the bridge's output from S3 on.
+/// Reads a snapshot JSON file: the Demo fixture, or a saved bridge output.
 public struct SnapshotFileTaskProvider: TaskProvider {
   public let url: URL
 
@@ -129,7 +154,7 @@ public struct SnapshotFileTaskProvider: TaskProvider {
     self.url = url
   }
 
-  /// A file is always a full snapshot; `modifiedSince` is honoured by the live bridge (S3).
+  /// A file is whatever snapshot it holds; `modifiedSince` is honoured by the live bridge.
   public func snapshot(modifiedSince: Date?) async throws -> TaskSourceSnapshot {
     let data = try Data(contentsOf: url)
     return try SnapshotMapper.map(try JSONDecoder().decode(SnapshotDocument.self, from: data))

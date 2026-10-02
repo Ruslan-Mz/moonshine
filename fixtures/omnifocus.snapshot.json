@@ -1,8 +1,14 @@
 {
  "schemaVersion": 1,
  "source": "omnifocus",
+ "mode": "full",
  "generatedAt": "2026-09-30T21:00:00+03:00",
  "timeZone": "Europe/Moscow",
+ "defaultTimes": {
+  "due": "18:00",
+  "defer": "06:00",
+  "planned": "09:00"
+ },
  "window": {
   "completedSince": "2026-07-06"
  },
