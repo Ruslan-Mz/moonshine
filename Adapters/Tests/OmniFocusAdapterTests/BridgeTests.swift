@@ -1,0 +1,96 @@
+import Foundation
+import MoonShineCore
+import Testing
+
+@testable import OmniFocusAdapter
+
+let repositoryRoot = fixtureURL.deletingLastPathComponent().deletingLastPathComponent()
+let bridgeScript = repositoryRoot.appending(path: "bridge/snapshot.js")
+
+/// Answers every run with one canned result and records the arguments.
+final class FakeRunner: ScriptRunner, @unchecked Sendable {
+  let result: ScriptResult
+  private(set) var arguments: [[String]] = []
+
+  init(status: Int32 = 0, stdout: Data, stderr: String = "") {
+    result = ScriptResult(status: status, stdout: stdout, stderr: stderr)
+  }
+
+  func run(_ executable: URL, arguments: [String], timeout: Duration) async throws -> ScriptResult {
+    self.arguments.append(arguments)
+    return result
+  }
+}
+
+@Suite struct OmniFocusBridgeTests {
+  func bridge(_ runner: FakeRunner) -> OmniFocusBridge {
+    OmniFocusBridge(script: URL(filePath: "/repo/bridge/snapshot.js"), runner: runner)
+  }
+
+  @Test func fullSnapshotMapsAndReportsTheTimeInsideOmniFocus() async throws {
+    let runner = FakeRunner(
+      stdout: try Data(contentsOf: fixtureURL), stderr: "moonshine-bridge omnifocus_ms=1234\n")
+    let output = try await bridge(runner).run(.full)
+    #expect(output.omniFocusTime == .milliseconds(1234))
+    #expect(runner.arguments == [["-l", "JavaScript", "/repo/bridge/snapshot.js", "full"]])
+    let source = try await bridge(runner).snapshot(modifiedSince: nil)
+    #expect(source.tasks.count == 163)
+  }
+
+  @Test func incrementalRequestPassesTheCutoff() async throws {
+    let runner = FakeRunner(stdout: try Data(contentsOf: fixtureURL))
+    _ = try await bridge(runner).run(
+      .incremental(since: Date(timeIntervalSince1970: 1_790_787_600)))
+    #expect(runner.arguments.first?.suffix(2) == ["incremental", "2026-09-30T17:00:00Z"])
+  }
+
+  @Test func notRunningIsTyped() async {
+    let runner = FakeRunner(stdout: Data(#"{"error":"notRunning"}"#.utf8 + [10]))
+    await #expect(throws: BridgeError.notRunning) { try await bridge(runner).run(.probe) }
+  }
+
+  @Test func scriptFailureCarriesStatusAndMessage() async {
+    let runner = FakeRunner(status: 1, stdout: Data(), stderr: "execution error: -1743\n")
+    await #expect(throws: BridgeError.failed(status: 1, message: "execution error: -1743")) {
+      try await bridge(runner).run(.full)
+    }
+  }
+
+  @Test func outputThatIsNotJSONIsMalformed() async {
+    let runner = FakeRunner(stdout: Data("oops".utf8))
+    await #expect(throws: BridgeError.malformedOutput) { try await bridge(runner).run(.full) }
+  }
+}
+
+@Suite struct ProcessScriptRunnerTests {
+  let sh = URL(filePath: "/bin/sh")
+
+  @Test func readsLargeOutputAndStderrToTheEnd() async throws {
+    let result = try await ProcessScriptRunner().run(
+      sh, arguments: ["-c", "head -c 300000 /dev/zero; echo note >&2; exit 3"],
+      timeout: .seconds(10))
+    #expect(result.stdout.count == 300_000)
+    #expect(result.stderr == "note\n")
+    #expect(result.status == 3)
+  }
+
+  @Test func terminatesAProcessThatOutlivesItsTimeout() async {
+    let clock = ContinuousClock()
+    let started = clock.now
+    await #expect(throws: BridgeError.timedOut(after: .milliseconds(200))) {
+      try await ProcessScriptRunner().run(
+        sh, arguments: ["-c", "sleep 5"], timeout: .milliseconds(200))
+    }
+    #expect(clock.now - started < .seconds(3))
+  }
+
+  @Test func bridgeScriptCompiles() async throws {
+    let output = FileManager.default.temporaryDirectory.appending(path: "snapshot-\(UUID()).scpt")
+    defer { try? FileManager.default.removeItem(at: output) }
+    let result = try await ProcessScriptRunner().run(
+      URL(filePath: "/usr/bin/osacompile"),
+      arguments: ["-l", "JavaScript", "-o", output.path(), bridgeScript.path()],
+      timeout: .seconds(20))
+    #expect(result.status == 0, "\(result.stderr)")
+  }
+}
