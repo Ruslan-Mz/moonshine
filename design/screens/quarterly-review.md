@@ -4,7 +4,7 @@ status: draft-2
 date: 2026-10-01
 slice: R1 — own slice, scheduled to land before the Q4 review (by 2026-12-28); read-only
 artboards: [mockups/QuarterReview.dc.html, mockups/QuarterReview-Dark.dc.html]
-related: ["[[weekly review — screens/week.md]]"]
+related: ["[[week]]"]
 ---
 
 # Quarterly review (draft-2)

@@ -50,3 +50,6 @@ jobs:
         run: |
           npm ci
           npx prettier --check '**/*.md'
+
+      - name: Markdown references (links, wikilinks, ADR numbers, repo paths)
+        run: node scripts/check-refs.mjs
