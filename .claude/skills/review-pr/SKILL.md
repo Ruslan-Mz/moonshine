@@ -1,6 +1,9 @@
 ---
 name: review-pr
 description: Independent multi-lens review of a MoonShine pull request by Opus reviewers in fresh contexts, followed by an adversarial verification pass and inline PR comments. Use when the owner asks to review a pull request, for example "/review-pr 7" or "review PR 7". Never run it in the session that wrote the PR's code.
+disable-model-invocation: true
+argument-hint: "<pr-number> [standard|deep] [local] [since <sha>]"
+model: opus
 ---
 
 # Review a pull request
@@ -10,8 +13,8 @@ The author of a change cannot review it well: it reads what it meant, not what i
 ## 0. Preconditions
 
 - **Fresh session.** If this session wrote or edited code in the PR, stop and tell the owner to run the skill in a new session.
-- The PR number comes from the owner's request. If none is given, use the PR of the current branch (`gh pr view --json number`).
-- The owner may add: `local` (do not post to GitHub, report here only) or `since <sha>` (review only what changed after that commit).
+- Arguments: `$ARGUMENTS`. The PR number comes first. If none is given, use the PR of the current branch (`gh pr view --json number`).
+- The owner may add: `standard` or `deep` (the mode, see §2; default `standard`), `local` (do not post to GitHub, report here only) or `since <sha>` (review only what changed after that commit).
 - You orchestrate. You do not review the code yourself and you do not fix anything.
 
 ## 1. Prepare
@@ -23,7 +26,7 @@ The author of a change cannot review it well: it reads what it meant, not what i
 
 ## 2. Choose the lenses
 
-Lens files are in `lenses/` next to this file.
+Lens files are `${CLAUDE_SKILL_DIR}/lenses/<name>.md`.
 
 | Lens         | Run when the PR changes                                                                                                           |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------- |
@@ -36,9 +39,20 @@ Lens files are in `lenses/` next to this file.
 | `platform`   | any `*.swift`, `bridge/`, `Package.swift`, `project.yml`, `.github/workflows/`, or an ADR                                         |
 | `tests`      | any `*.swift`                                                                                                                     |
 
+### Modes
+
+- **`standard`** (default): three `pr-reviewer` subagents, each with a group of lenses:
+  - **code**: `contract` + `robustness` + `tests`;
+  - **boundaries**: `privacy` + `security` + `platform`;
+  - **consistency**: `spec` + `docs`.
+
+  A group runs only if at least one of its lenses is selected by the table above; within a group, lenses the table does not select are left out.
+
+- **`deep`**: one `pr-reviewer` per selected lens. Use it when the owner asks for it. Propose it (and wait for the owner's answer) when the PR exceeds the size guide in `CLAUDE.md` or touches process execution, concurrency, sync or the assistant.
+
 ## 3. Review
 
-Start one `pr-reviewer` subagent per chosen lens, **all in parallel**. Give each: the worktree path, the base ref (`origin/<baseRefName>`), the absolute path of its lens file, the changed file list, and the PR title and description. Give nothing else: no summary of what you expect, no findings from other lenses.
+Start the `pr-reviewer` subagents of the chosen mode, **all in parallel**. Give each: the worktree path, the base ref (`origin/<baseRefName>`), the absolute paths of its lens files, the changed file list, and the PR title and description. Give nothing else: no summary of what you expect, no findings from other reviewers.
 
 In round 2 and later, also pass the earlier findings and the commit they were made on, and ask the reviewer to (a) check that each earlier `High` and `Medium` is really fixed and (b) review only `git diff <previous head>..HEAD`.
 
@@ -62,7 +76,7 @@ Unless the owner said `local`, post **one** GitHub review with event `COMMENT`:
 
 - one inline comment per kept finding on `path` + `line` (side `RIGHT`); a finding whose line is not part of the diff goes into the review body instead;
 - comment text: `**<Severity> · <class>** — <summary>`, then the failure scenario, then the suggested fix, then `Verified: <verdict> — <verification>`;
-- review body: the verdict, the counts, the lenses that ran, the model, and the marker `<!-- moonshine-review round=<r> head=<headRefOid> -->`.
+- review body: the verdict, the counts, the mode, the lenses that ran, the model, and the marker `<!-- moonshine-review round=<r> head=<headRefOid> -->`.
 
 Build the request as a JSON file under `$TMPDIR` and send it with `gh api --method POST repos/{owner}/{repo}/pulls/<n>/reviews --input <file>` (`commit_id`, `event`, `body`, `comments[]` with `path`, `line`, `side`, `body`).
 
@@ -78,7 +92,7 @@ Build the request as a JSON file under `$TMPDIR` and send it with `gh api --meth
 
 ## For the method log
 
-End with a block the author can paste into the PR's row in `docs/method/log.md`: round number, findings per severity, confirmed / refuted counts, the classes found, and which lens found each `High`.
+End with a block the author can paste into the PR's row in `docs/method/log.md`: round number, mode, number of reviewers and verifiers, findings per severity, confirmed / refuted counts, the classes found, which lens found each `High`, and the token cost (the subagents' reported token totals plus this session's, from `npx ccusage@latest session --json` when available; `n/a` otherwise).
 
 ## Keeping the lenses sharp
 
