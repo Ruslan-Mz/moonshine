@@ -35,6 +35,9 @@ A finding needs all of these:
   - `High`: data loss or corruption; a privacy leak; a hang or crash in normal use; a broken hard rule from `CLAUDE.md`; a wrong number shown to the owner.
   - `Medium`: wrong behaviour on a plausible input; a contract that is stated but not enforced; requirements that contradict each other and block the next slice.
   - `Low`: an inconsistency with no effect on behaviour.
+- **Decision** — who acts on it:
+  - `author`: mechanical — a wrong number, a test that does not test, a broken link, a document that contradicts the code. The author fixes it without asking.
+  - `owner`: the fix changes a requirement, an ADR, the scope or a privacy stance, or needs a product choice. Only the owner decides.
 
 Do not report: formatting, naming or style (CI checks formatting); "could be cleaner"; anything you cannot tie to a failure scenario; problems in code the PR does not touch, unless the PR makes an existing statement false.
 
@@ -55,6 +58,7 @@ End with exactly one fenced `json` block: an array of findings. Use `[]` when yo
   {
     "lens": "contract",
     "severity": "High",
+    "decision": "author",
     "class": "validation-gap",
     "path": "Adapters/Sources/OmniFocusAdapter/SnapshotMapper.swift",
     "line": 42,

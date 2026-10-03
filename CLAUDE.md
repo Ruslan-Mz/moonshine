@@ -35,6 +35,7 @@ Start every slice with `git fetch && git switch main && git pull --ff-only`, the
   - every link and ADR reference resolves;
   - a size overrun is stated in the PR and in the method-log row.
 - **Review**: the owner runs `/review-pr <n>` in a **new** session (`.claude/skills/review-pr/`). The session that wrote the PR never reviews it.
+- **After a review is posted**, the author session reads it from the PR itself (`gh pr view <n> --comments` and the review threads), fixes the `author` findings, replies to each thread, and asks the owner only about the `owner` findings. The owner does not copy review text between sessions.
 - **Rounds**: a new round only if the previous round had a confirmed High. From round 2 on, only High findings are fixed; the rest are listed in the PR as deferred.
 
 ## Definition of done

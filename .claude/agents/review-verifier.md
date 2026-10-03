@@ -30,4 +30,4 @@ You receive findings that another reviewer produced for a pull request, and the 
 
 ## Output
 
-End with exactly one fenced `json` block: the same array you received, each item extended with `verdict`, `verified_severity` and `verification` (one or two sentences: what you read or ran). Keep refuted items in the array so the orchestrator can count them.
+End with exactly one fenced `json` block: the same array you received, each item extended with `verdict`, `verified_severity`, `verified_decision` (`author` or `owner`, corrected if the reviewer's choice does not fit the definitions in `pr-reviewer.md`) and `verification` (one or two sentences: what you read or ran). Keep refuted items in the array so the orchestrator can count them.

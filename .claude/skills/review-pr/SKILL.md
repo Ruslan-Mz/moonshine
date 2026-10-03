@@ -68,7 +68,7 @@ In round 2 and later, also pass the earlier findings and the commit they were ma
 
 ## 5. Report
 
-Show the owner a table sorted by severity: severity, class, `path:line`, summary, verdict. Then the failure scenario and the suggested fix for each. Then one line of counts: found, confirmed, plausible, refuted, per lens.
+Show the owner the `owner` findings first, under **Needs your decision**, then the `author` findings. Each part is a table sorted by severity: severity, class, `path:line`, summary, verdict. Then the failure scenario and the suggested fix for each. Then one line of counts: found, confirmed, plausible, refuted, per lens.
 
 Verdict line:
 
@@ -79,7 +79,7 @@ Verdict line:
 Unless the owner said `local` or `at <sha>`, post **one** GitHub review with event `COMMENT`:
 
 - one inline comment per kept `High` and `Medium` finding, and for at most five `Low` ones, on `path` + `line` (side `RIGHT`); a finding whose line is not part of the diff goes into the review body instead;
-- comment text: `**<Severity> · <class>** — <summary>`, then the failure scenario, then the suggested fix, then `Verified: <verdict> — <verification>`;
+- comment text: `**<Severity> · <class> · decision: <author|owner>** — <summary>`, then the failure scenario, then the suggested fix, then `Verified: <verdict> — <verification>`;
 - review body: the verdict, the counts, the mode, the lenses that ran, the model, a **Notes** list of **all** `Low` findings (unverified; `path:line` and summary), and the marker `<!-- moonshine-review round=<r> head=<headRefOid> -->`.
 
 Build the request as a JSON file under `$TMPDIR` and send it with `gh api --method POST repos/{owner}/{repo}/pulls/<n>/reviews --input <file>` (`commit_id`, `event`, `body`, `comments[]` with `path`, `line`, `side`, `body`).
@@ -96,7 +96,7 @@ Build the request as a JSON file under `$TMPDIR` and send it with `gh api --meth
 
 ## For the method log
 
-End with a block the author can paste into the PR's row in `docs/method/log.md`: round number, mode, number of reviewers and verifiers, findings per severity, confirmed / refuted counts, the classes found, which lens found each `High`, and the token cost (the subagents' reported token totals plus this session's, from `npx ccusage@latest session --json` when available; `n/a` otherwise).
+End with a block the author can paste into the PR's row in `docs/method/log.md`: round number, mode, number of reviewers and verifiers, findings per severity and per decision (`author` / `owner`), confirmed / refuted counts, the classes found, which lens found each `High`, and the token cost (the subagents' reported token totals plus this session's, from `npx ccusage@latest session --json` when available; `n/a` otherwise).
 
 ## Keeping the lenses sharp
 
