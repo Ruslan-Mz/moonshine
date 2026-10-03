@@ -28,7 +28,7 @@ MoonShine is meant to become the owner's main app for time, so its picture of Om
 | Probe: `modified` on every task, background          | 6.9 s (list 6.7 s + loop 0.14 s) | 7.0 s  |
 | Probe: `modified` on every task, OmniFocus frontmost | 2.0 s                            | 3.2 s  |
 | Full import, background                              | 10.8 s                           | 11.1 s |
-| Full import right after OmniFocus was frontmost      | 2.7 s                            | 4.0 s  |
+| Full import with OmniFocus frontmost                 | 2.7 s                            | 4.0 s  |
 | Decode + merge + commit (MoonShine's share)          | —                                | 0.1 s  |
 
 Three facts follow. Building the task list is the whole cost; reading properties is almost free. OmniFocus is unresponsive while a script runs. macOS throttles OmniFocus in the background, making the same script about 3.4× slower. **When and how does MoonShine import, so that data is fresh and the owner never feels OmniFocus freeze?**
@@ -52,7 +52,7 @@ Three facts follow. Building the task list is the whole cost; reading properties
 
 ## Decision Outcome
 
-**Chosen option: "1"**, because the moment the owner leaves OmniFocus is both when changes have just been made and when OmniFocus is still unthrottled: the import holds it for 2.7 s while nobody is looking at it. It uses only the documented bridge and keeps a single import path. It replaces ADR-0003's confirmation criterion on incremental refresh.
+**Chosen option: "1"**, because the moment the owner leaves OmniFocus is both when changes have just been made and when OmniFocus is still unthrottled: the time the import holds it then is expected to be close to the frontmost figure because throttling takes time to set in; not measured yet — the real value lies between 2.7 s and 10.8 s. It uses only the documented bridge and keeps a single import path. It replaces ADR-0003's confirmation criterion on incremental refresh.
 
 Rules that follow:
 
@@ -62,7 +62,7 @@ Rules that follow:
 - **Coalescing**: `ImportService` stays single-flight. A signal during an import schedules exactly one more import after it.
 - **Always full snapshots.** The incremental mode of contract v0.2 stays defined and unused. Only a full snapshot may soft-delete (ADR-0002 retention rule unchanged).
 - **The UI never waits.** View models observe the store; stored data is shown at once and updates when the import commits. The status bar shows "updated N min ago" and "updating…".
-- **Target**: the refresh lands ≤ 5 s after OmniFocus resigns active (measured: 4.0 s).
+- **Target**: the refresh lands ≤ 5 s after OmniFocus resigns active — provisional until measured with the real trigger in S4 (with OmniFocus frontmost: 4.0 s).
 - **`imports` table** (S4): trigger, start, duration, time OmniFocus was held, row counts. It feeds the status bar and lets the timings be watched as the database grows.
 - **Archiving is the owner's lever.** Moving old completed items to OmniFocus' archive shrinks the task list and the import time roughly in proportion. MoonShine keeps completed tasks in its own store, so no history is lost — provided a full import ran before archiving. MoonShine never archives by itself.
 - **OmniFocus not running**: no import; MoonShine shows the last import and says so.
@@ -82,6 +82,7 @@ Rules that follow:
 
 - Core tests with a fake signal source: signals during an import produce exactly one follow-up import; a signal while "OmniFocus frontmost" is held and released on resign-active; the timer is skipped after a recent import.
 - The `imports` table shows, on live data, the held time per trigger; the method log records the median after one week of use.
+- S4 records the held time per trigger in the `imports` table; if the median for the resign-active trigger exceeds 5 s, this ADR is revisited.
 - Revisit this ADR if the import after resign-active exceeds 5 s, or if OmniFocus gains change notifications or a query that avoids listing every task.
 
 ## Pros and Cons of the Options
