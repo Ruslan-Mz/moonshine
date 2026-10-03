@@ -52,4 +52,6 @@ jobs:
           npx prettier --check '**/*.md'
 
       - name: Markdown references (links, wikilinks, ADR numbers, repo paths)
-        run: node scripts/check-refs.mjs
+        run: |
+          node --test scripts/check-refs.test.mjs
+          node scripts/check-refs.mjs
