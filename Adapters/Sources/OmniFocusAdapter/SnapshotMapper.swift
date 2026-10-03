@@ -217,12 +217,16 @@ public enum SnapshotMapper {
       })
   }
 
+  /// The ISO 8601 shape with every field in range. Built once: a snapshot holds ~10 000
+  /// dates (building it per call cost 0.7 s per import). `Regex` is not Sendable; this one
+  /// is immutable and only matched against.
+  nonisolated(unsafe) static let dateShape =
+    /\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:[0-5]\d(\.\d+)?(Z|[+-]([01]\d|2[0-3]):?[0-5]\d)/
+
   /// `Date.ISO8601FormatStyle` rolls over out-of-range fields (`25:61` parses), so the
   /// shape and ranges are checked first.
   static func date(_ string: String, at path: String) throws -> Date {
-    let shape =
-      /\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:[0-5]\d(\.\d+)?(Z|[+-]([01]\d|2[0-3]):?[0-5]\d)/
-    guard string.wholeMatch(of: shape) != nil,
+    guard string.wholeMatch(of: dateShape) != nil,
       let date = try? Date.ISO8601FormatStyle().parse(string)
     else { throw SnapshotError.badValue(path: path) }
     return date

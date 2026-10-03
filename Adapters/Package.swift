@@ -22,6 +22,13 @@ let package = Package(
         .product(name: "MoonShineCore", package: "MoonShineCore"),
         .product(name: "GRDB", package: "GRDB.swift"),
       ]),
+    // Measures the live import; prints counts and timings only (phase 1, S3a-1).
+    .executableTarget(
+      name: "moonshine-import",
+      dependencies: [
+        "OmniFocusAdapter", "SQLiteStore",
+        .product(name: "MoonShineCore", package: "MoonShineCore"),
+      ]),
     .testTarget(
       name: "OmniFocusAdapterTests",
       dependencies: [

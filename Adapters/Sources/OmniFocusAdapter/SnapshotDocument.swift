@@ -38,6 +38,10 @@ public struct SnapshotDocument: Decodable, Sendable {
     public var completionDate: String?
   }
 
+  public struct Repetition: Decodable, Sendable {
+    public var ruleString: String
+  }
+
   public struct Task: Decodable, Sendable {
     public var id: String
     public var name: String
@@ -58,6 +62,8 @@ public struct SnapshotDocument: Decodable, Sendable {
     public var completionDate: String?
     public var added: String
     public var modified: String
+    /// Set on a live repeating task and copied onto its completed occurrences.
+    public var repetition: Repetition?
     public var repeatOf: String?
     public var noteLength: Int
   }
@@ -100,4 +106,14 @@ public struct ChangeProbe: Decodable, Sendable {
   public var taskCount: Int
   /// The latest `modified` of any task (project root tasks included); nil for an empty database.
   public var latestModified: String?
+}
+
+/// Time-of-day helpers for the default-time rule (snapshot-contract §Default times).
+public enum SnapshotTime {
+  /// `HH:mm` as written in an ISO 8601 date, in the date's own offset: never converted
+  /// through a time zone, so winter and summer dates compare alike. Nil if not a contract date.
+  public static func localTimeOfDay(_ iso: String) -> String? {
+    guard (try? SnapshotMapper.date(iso, at: "")) != nil else { return nil }
+    return String(iso.dropFirst(11).prefix(5))
+  }
 }

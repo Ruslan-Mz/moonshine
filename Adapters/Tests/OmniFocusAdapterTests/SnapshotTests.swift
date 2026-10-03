@@ -334,3 +334,18 @@ func fixtureDocument() throws -> SnapshotDocument {
     #expect(completed.filter(\.isOccurrence).count == 32)
   }
 }
+
+@Suite struct SnapshotTimeTests {
+  @Test func timeOfDayIsReadInTheDatesOwnOffset() {
+    // Winter and summer dates in a zone with daylight saving time: both are 09:00 locally.
+    #expect(SnapshotTime.localTimeOfDay("2026-01-15T09:00:00+01:00") == "09:00")
+    #expect(SnapshotTime.localTimeOfDay("2026-07-15T09:00:00+02:00") == "09:00")
+    #expect(SnapshotTime.localTimeOfDay("2026-07-15T17:30:00.000-04:00") == "17:30")
+    #expect(SnapshotTime.localTimeOfDay("2026-07-15T23:59:59Z") == "23:59")
+  }
+
+  @Test func notAContractDateHasNoTimeOfDay() {
+    #expect(SnapshotTime.localTimeOfDay("2026-07-15 09:00") == nil)
+    #expect(SnapshotTime.localTimeOfDay("2026-07-15T25:61:00+02:00") == nil)
+  }
+}
