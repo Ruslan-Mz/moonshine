@@ -25,6 +25,18 @@ See `docs/ROADMAP.md`. **Only build what the current phase's spec asks for.** La
 
 Start every slice with `git fetch && git switch main && git pull --ff-only`, then branch.
 
+## Pull requests
+
+- **Before opening a PR**, check that:
+  - errors carry no raw values (no titles, ids, dates, payload text or stderr from a provider);
+  - every decoded field is validated, on every path that decodes it;
+  - numeric arguments are bounds-checked (zero, negative, very large);
+  - every number in a document is derivable from its canonical source;
+  - every link and ADR reference resolves;
+  - a size overrun is stated in the PR and in the method-log row.
+- **Review**: the owner runs `/review-pr <n>` in a **new** session (`.claude/skills/review-pr/`). The session that wrote the PR never reviews it.
+- **Rounds**: a new round only if the previous round had a confirmed High. From round 2 on, only High findings are fixed; the rest are listed in the PR as deferred.
+
 ## Definition of done
 
 Tests green · `swift format lint` clean · `prettier --check '**/*.md'` clean · app builds · spec checkboxes ticked · method-log row · ADR if a costly-to-reverse choice was made · screenshots only in Demo mode.
