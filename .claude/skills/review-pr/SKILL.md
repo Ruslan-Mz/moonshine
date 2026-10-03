@@ -19,10 +19,12 @@ The author of a change cannot review it well: it reads what it meant, not what i
 
 ## 1. Prepare
 
+`gh` and the fetch need the network, which the Claude sandbox blocks: run them as unsandboxed commands (the owner approves them) or allow `github.com` and `api.github.com` in the sandbox. SwiftPM cannot build or test inside the sandbox at all (its build service cannot write `.build`, with or without `--disable-sandbox`): reviewers and verifiers that want to run `swift test` must ask for an unsandboxed command, which the owner approves.
+
 1. `gh pr view <n> --json number,title,body,url,baseRefName,headRefName,headRefOid,additions,deletions,files,reviews`. Take `<owner>/<repo>` from `url` (`https://github.com/<owner>/<repo>/pull/<n>`).
-2. Fetch over HTTPS, never through `origin` (SSH fails in Claude sessions):
-   `git fetch https://github.com/<owner>/<repo>.git +refs/heads/<baseRefName>:refs/remotes/review/<baseRefName> +refs/pull/<n>/head:refs/remotes/review/pr-<n>`
-   The repository is private: this needs git to use `gh` as its credential helper for github.com (`gh auth setup-git`, done once by the owner). If the fetch asks for a username, stop and say so. Check that `review/pr-<n>` points at `headRefOid`; if not, the PR moved during the run — stop.
+2. Fetch over HTTPS, never through `origin` (SSH fails in Claude sessions), with `gh` as a one-off credential helper (the repository is private; a bare HTTPS fetch asks for a username):
+   `git -c credential.helper= -c credential.helper='!gh auth git-credential' fetch https://github.com/<owner>/<repo>.git +refs/heads/<baseRefName>:refs/remotes/review/<baseRefName> +refs/pull/<n>/head:refs/remotes/review/pr-<n>`
+   If it still asks for a username, stop and say so. Check that `review/pr-<n>` points at `headRefOid`; if not, the PR moved during the run — stop.
 3. Check the PR out into a separate worktree so the owner's working tree is never touched: `git worktree add .build/review/pr-<n> review/pr-<n>`, or with `at <sha>`: `git worktree add .build/review/pr-<n> <sha>` (`.build/` is git-ignored). If the worktree exists from an earlier run, remove it first (`git worktree list` shows it). With `at <sha>`, first check that the commit belongs to the PR (`git merge-base --is-ancestor <sha> review/pr-<n>`).
 4. Work out the round: look in the PR's reviews for the marker `<!-- moonshine-review round=… head=… -->`. No marker means round 1.
 
@@ -62,7 +64,7 @@ In round 2 and later, also pass the earlier findings and the commit they were ma
 
 1. Parse the `json` block from each reviewer. Merge duplicates: same file, lines within five of each other, same defect. Keep the clearer wording and note both lenses.
 2. Send every `High` and `Medium` finding to `review-verifier` subagents, grouped by lens, in parallel.
-3. Keep `CONFIRMED` findings. Keep `PLAUSIBLE` ones only when their verified severity is `High`, and label them as not reproduced. Drop `REFUTED` ones. Keep at most five `Low` findings, unverified, as notes.
+3. Keep `CONFIRMED` findings. Keep `PLAUSIBLE` ones only when their verified severity is `High`, and label them as not reproduced. Drop `REFUTED` ones. Keep every `Low` finding, unverified.
 
 ## 5. Report
 
@@ -76,15 +78,15 @@ Verdict line:
 
 Unless the owner said `local` or `at <sha>`, post **one** GitHub review with event `COMMENT`:
 
-- one inline comment per kept finding on `path` + `line` (side `RIGHT`); a finding whose line is not part of the diff goes into the review body instead;
+- one inline comment per kept `High` and `Medium` finding, and for at most five `Low` ones, on `path` + `line` (side `RIGHT`); a finding whose line is not part of the diff goes into the review body instead;
 - comment text: `**<Severity> · <class>** — <summary>`, then the failure scenario, then the suggested fix, then `Verified: <verdict> — <verification>`;
-- review body: the verdict, the counts, the mode, the lenses that ran, the model, and the marker `<!-- moonshine-review round=<r> head=<headRefOid> -->`.
+- review body: the verdict, the counts, the mode, the lenses that ran, the model, a **Notes** list of **all** `Low` findings (unverified; `path:line` and summary), and the marker `<!-- moonshine-review round=<r> head=<headRefOid> -->`.
 
 Build the request as a JSON file under `$TMPDIR` and send it with `gh api --method POST repos/{owner}/{repo}/pulls/<n>/reviews --input <file>` (`commit_id`, `event`, `body`, `comments[]` with `path`, `line`, `side`, `body`).
 
 ## 6. Clean up
 
-`git worktree remove .build/review/pr-<n>`. Leave nothing else behind; the `review/` refs may stay (the next run overwrites them).
+`git worktree remove .build/review/pr-<n>`, then delete the refs: `git update-ref -d refs/remotes/review/pr-<n>` and `git update-ref -d refs/remotes/review/<baseRefName>`. Leave nothing else behind.
 
 ## Rounds
 

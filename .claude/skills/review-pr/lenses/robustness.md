@@ -18,7 +18,7 @@ Look for what happens when something is slow, absent, concurrent, cancelled or w
 ## Seen in this repository
 
 - Identity-map read → workspace build → commit was not atomic; overlapping imports created duplicates and wrong soft-deletes. Fixed with a single-flight actor and a versioned commit.
-- The timeout sent only SIGTERM and then waited without bound.
+- The timeout sent only SIGTERM and then waited without bound. Verified later: it did not hang (osascript exits on SIGTERM); grace-then-SIGKILL was kept as hardening. Verify such a finding before rating it High.
 - `try? removeItem` ignored every error, so a measurement could start from a stale store.
 - The date regex was rebuilt for each of about 10,000 dates: decode went from 0.04 s to 0.71 s.
 - A due badge used "≤ end of the shown period" and also matched dates before the period.

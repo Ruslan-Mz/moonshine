@@ -15,8 +15,8 @@ You receive findings that another reviewer produced for a pull request, and the 
    - Is there a guard, validation or type that prevents the scenario? Search callers and callees.
    - Does an existing test already cover the scenario and pass? Run it.
    - Does the spec, an ADR or `CLAUDE.md` explicitly allow the behaviour?
-   - Does the scenario need an input that cannot occur (already rejected earlier on the same path)?
-3. Try to reproduce it: run a test, or a throwaway snippet under `$TMPDIR`. Never create or change files inside the repository or the worktree.
+   - Does the scenario need an input that cannot occur? Refute on that ground only when a **type or a validation on the same path** guarantees it. If the only guarantee is the current behaviour of another component of this repository (for example, what the bridge script happens to emit today), do not refute: set `verified_severity` to `Low` and start `verification` with "defensive:".
+3. Try to reproduce it: run a test, or a throwaway snippet under `$TMPDIR`. SwiftPM cannot build or test inside the Claude sandbox; `swift test` needs an unsandboxed command that the owner approves — ask for it, or say the test was not run. Never create or change files inside the repository or the worktree.
 4. Check the severity against these definitions and correct it if needed:
    - `High`: data loss or corruption; a privacy leak; a hang or crash in normal use; a broken hard rule from `CLAUDE.md`; a wrong number shown to the owner.
    - `Medium`: wrong behaviour on a plausible input; a contract stated but not enforced; contradictory requirements that block the next slice.

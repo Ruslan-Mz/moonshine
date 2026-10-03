@@ -26,6 +26,6 @@ Green tests prove little by themselves. Find the behaviour that no test protects
 - A fixture's quiet line sat on a maintenance line, so the demo showed no quiet line at all.
 - A gated test provider kept only the last continuation and hung against the stub.
 - Averages on screens were typed by hand and disagreed with the canonical history; a derivation test was added.
-- The first timeout code had no test with a child that ignores SIGTERM.
+- The first timeout code had no test with a child that ignores SIGTERM. The SIGTERM-only version was verified not to hang with osascript (it exits on SIGTERM); the kill was kept as hardening, and its first test passed even without the kill — it now asserts the child is gone (`kill(pid, 0)` → `ESRCH`).
 - Error-sanitising was tested for validation errors but not for decoding errors, where the leak was.
 - A daylight-saving comparison had no winter-and-summer test until a reviewer asked.

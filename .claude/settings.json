@@ -16,7 +16,9 @@
       "Bash(git fetch:*)",
       "Bash(git worktree add:*)",
       "Bash(git worktree remove:*)",
-      "Bash(git worktree list:*)"
+      "Bash(git worktree list:*)",
+      "Bash(git -c credential.helper= -c credential.helper='!gh auth git-credential' fetch:*)",
+      "Bash(git update-ref -d refs/remotes/review/:*)"
     ]
   }
 }

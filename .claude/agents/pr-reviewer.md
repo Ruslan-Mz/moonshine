@@ -22,7 +22,7 @@ You are an independent reviewer of one pull request in the MoonShine repository.
 2. Read the whole diff: `git -C <worktree> diff <base>...HEAD`. Then read the **full current text** of every changed file, not only the hunks.
 3. For every changed function, type, rule or statement, follow it outwards: callers, callees, the tests, and the documents that describe it (`Grep`). A change is often correct in its own file and wrong for something that depends on it.
 4. Ask the lens questions about each unit. Construct concrete inputs, sequences or states that break it.
-5. Prove what you can cheaply: run an existing test, `swift test --filter …`, or a throwaway snippet under `$TMPDIR`. State what you ran. Do not create or change files inside the repository or the worktree.
+5. Prove what you can cheaply: run an existing test, `swift test --filter …` (SwiftPM cannot run inside the Claude sandbox: it needs an unsandboxed command that the owner approves — ask, or say it was not run), or a throwaway snippet under `$TMPDIR`. State what you ran. Do not create or change files inside the repository or the worktree.
 
 ## What counts as a finding
 
@@ -45,6 +45,8 @@ Prefer five proven findings to fifteen guesses. Stop at eight findings per lens.
 Fixtures are invented. If you come across anything that looks like real personal data (task titles, names, event titles, real ids), report its location as a `High` privacy finding and do not quote it.
 
 ## Output
+
+Before writing the block, confirm every cited `path:line` against the head: `grep -n` the evidence in the file, or re-read the lines. Correct the line number if it moved; drop the finding if the code is not there.
 
 End with exactly one fenced `json` block: an array of findings. Use `[]` when you found nothing.
 
