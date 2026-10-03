@@ -2,7 +2,7 @@
 name: review-pr
 description: Independent multi-lens review of a MoonShine pull request by Opus reviewers in fresh contexts, followed by an adversarial verification pass and inline PR comments. Use when the owner asks to review a pull request, for example "/review-pr 7" or "review PR 7". Never run it in the session that wrote the PR's code.
 disable-model-invocation: true
-argument-hint: "<pr-number> [standard|deep] [local] [since <sha>]"
+argument-hint: "<pr-number> [standard|deep] [local] [since <sha>] [at <sha>]"
 model: opus
 ---
 
@@ -14,14 +14,16 @@ The author of a change cannot review it well: it reads what it meant, not what i
 
 - **Fresh session.** If this session wrote or edited code in the PR, stop and tell the owner to run the skill in a new session.
 - Arguments: `$ARGUMENTS`. The PR number comes first. If none is given, use the PR of the current branch (`gh pr view --json number`).
-- The owner may add: `standard` or `deep` (the mode, see §2; default `standard`), `local` (do not post to GitHub, report here only) or `since <sha>` (review only what changed after that commit).
+- The owner may add: `standard` or `deep` (the mode, see §2; default `standard`), `local` (do not post to GitHub, report here only), `since <sha>` (review only what changed after that commit) or `at <sha>` (review the PR as it was at that commit: the worktree is created from that commit and diffed against the base; always `local`).
 - You orchestrate. You do not review the code yourself and you do not fix anything.
 
 ## 1. Prepare
 
-1. `gh pr view <n> --json number,title,body,baseRefName,headRefName,headRefOid,additions,deletions,files,reviews`
-2. `git fetch origin <baseRefName> <headRefName>`
-3. Check the PR out into a separate worktree so the owner's working tree is never touched: `git worktree add .build/review/pr-<n> <headRefOid>` (`.build/` is git-ignored). If it exists from an earlier run, remove it first.
+1. `gh pr view <n> --json number,title,body,url,baseRefName,headRefName,headRefOid,additions,deletions,files,reviews`. Take `<owner>/<repo>` from `url` (`https://github.com/<owner>/<repo>/pull/<n>`).
+2. Fetch over HTTPS, never through `origin` (SSH fails in Claude sessions):
+   `git fetch https://github.com/<owner>/<repo>.git +refs/heads/<baseRefName>:refs/remotes/review/<baseRefName> +refs/pull/<n>/head:refs/remotes/review/pr-<n>`
+   The repository is private: this needs git to use `gh` as its credential helper for github.com (`gh auth setup-git`, done once by the owner). If the fetch asks for a username, stop and say so. Check that `review/pr-<n>` points at `headRefOid`; if not, the PR moved during the run — stop.
+3. Check the PR out into a separate worktree so the owner's working tree is never touched: `git worktree add .build/review/pr-<n> review/pr-<n>`, or with `at <sha>`: `git worktree add .build/review/pr-<n> <sha>` (`.build/` is git-ignored). If the worktree exists from an earlier run, remove it first (`git worktree list` shows it). With `at <sha>`, first check that the commit belongs to the PR (`git merge-base --is-ancestor <sha> review/pr-<n>`).
 4. Work out the round: look in the PR's reviews for the marker `<!-- moonshine-review round=… head=… -->`. No marker means round 1.
 
 ## 2. Choose the lenses
@@ -52,7 +54,7 @@ Lens files are `${CLAUDE_SKILL_DIR}/lenses/<name>.md`.
 
 ## 3. Review
 
-Start the `pr-reviewer` subagents of the chosen mode, **all in parallel**. Give each: the worktree path, the base ref (`origin/<baseRefName>`), the absolute paths of its lens files, the changed file list, and the PR title and description. Give nothing else: no summary of what you expect, no findings from other reviewers.
+Start the `pr-reviewer` subagents of the chosen mode, **all in parallel**. Give each: the worktree path, the base ref (`review/<baseRefName>`; reviewers diff with `git -C <worktree> diff review/<baseRefName>...HEAD`), the absolute paths of its lens files, the changed file list, and the PR title and description. Give nothing else: no summary of what you expect, no findings from other reviewers.
 
 In round 2 and later, also pass the earlier findings and the commit they were made on, and ask the reviewer to (a) check that each earlier `High` and `Medium` is really fixed and (b) review only `git diff <previous head>..HEAD`.
 
@@ -72,7 +74,7 @@ Verdict line:
 - only `Medium` or `Low` → **Changes recommended**;
 - nothing → **No findings**.
 
-Unless the owner said `local`, post **one** GitHub review with event `COMMENT`:
+Unless the owner said `local` or `at <sha>`, post **one** GitHub review with event `COMMENT`:
 
 - one inline comment per kept finding on `path` + `line` (side `RIGHT`); a finding whose line is not part of the diff goes into the review body instead;
 - comment text: `**<Severity> · <class>** — <summary>`, then the failure scenario, then the suggested fix, then `Verified: <verdict> — <verification>`;
@@ -82,7 +84,7 @@ Build the request as a JSON file under `$TMPDIR` and send it with `gh api --meth
 
 ## 6. Clean up
 
-`git worktree remove .build/review/pr-<n>`. Leave nothing else behind.
+`git worktree remove .build/review/pr-<n>`. Leave nothing else behind; the `review/` refs may stay (the next run overwrites them).
 
 ## Rounds
 
