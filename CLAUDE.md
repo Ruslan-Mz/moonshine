@@ -23,11 +23,24 @@ See `docs/ROADMAP.md`. **Only build what the current phase's spec asks for.** La
 
 ## Git
 
-Start every slice with `git fetch && git switch main && git pull --ff-only`, then branch.
+Start every slice with `git fetch && git switch main && git pull --ff-only`, then branch. Plain `git fetch` is not auto-approved: it asks each time (only the HTTPS fetch with `gh` as credential helper that `/review-pr` uses is allowed).
+
+## Pull requests
+
+- **Before opening a PR**, check that:
+  - errors carry no raw values (no titles, ids, dates, payload text or stderr from a provider);
+  - every decoded field is validated, on every path that decodes it;
+  - numeric arguments are bounds-checked (zero, negative, very large);
+  - every number in a document is derivable from its canonical source;
+  - every link and ADR reference resolves;
+  - a size overrun is stated in the PR and in the method-log row.
+- **Review**: the owner runs `/review-pr <n>` in a **new** session (`.claude/skills/review-pr/`). The session that wrote the PR never reviews it.
+- **After a review is posted**, the author session reads it from the PR itself (`gh pr view <n> --comments` and the review threads), fixes the `author` findings, replies to each thread, and asks the owner only about the `owner` findings. The owner does not copy review text between sessions.
+- **Rounds** — one rule for every PR, docs-only included: reviewed with `/review-pr`; a further round only after a confirmed High; from round 2 on only High findings must be fixed, the rest are listed in the PR as deferred; at most three rounds, then the owner decides.
 
 ## Definition of done
 
-Tests green · `swift format lint` clean · `prettier --check '**/*.md'` clean · app builds · spec checkboxes ticked · method-log row · ADR if a costly-to-reverse choice was made · screenshots only in Demo mode.
+Tests green · `swift format lint` clean · `prettier --check '**/*.md'` clean · `node scripts/check-refs.mjs` clean · app builds · spec checkboxes ticked · method-log row · ADR if a costly-to-reverse choice was made · screenshots only in Demo mode.
 
 ## Commands
 
@@ -37,6 +50,7 @@ Tests green · `swift format lint` clean · `prettier --check '**/*.md'` clean �
 - Build app: `xcodebuild -scheme MoonShineMac -destination 'platform=macOS' build`
 - Lint: `swift format lint --recursive MoonShineCore Adapters Apps`
 - Markdown: `npm install` once, then `npx prettier --write '**/*.md'` · check: `npx prettier --check '**/*.md'`
+- References: `node scripts/check-refs.mjs` · its tests: `node --test scripts/check-refs.test.mjs`
 
 ## Owner
 
