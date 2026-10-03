@@ -19,7 +19,7 @@ The author of a change cannot review it well: it reads what it meant, not what i
 
 ## 1. Prepare
 
-`gh` and the fetch need the network, which the Claude sandbox blocks: run them as unsandboxed commands (the owner approves them) or allow `github.com` and `api.github.com` in the sandbox. SwiftPM cannot build or test inside the sandbox at all (its build service cannot write `.build`, with or without `--disable-sandbox`): reviewers and verifiers that want to run `swift test` must ask for an unsandboxed command, which the owner approves.
+`gh` and the fetch need the network, which the Claude sandbox blocks: run them as unsandboxed commands (the owner approves them) or allow `github.com` and `api.github.com` in the sandbox. SwiftPM cannot build or test inside the sandbox at all (its build service cannot write `.build`, with or without `--disable-sandbox`), so `swift build` / `swift test` run unsandboxed under the existing allow rules `Bash(swift build:*)` and `Bash(swift test:*)`, without a prompt. Reviewers and verifiers therefore never build or run the PR's code when it changes `Package.swift` dependencies, build plugins or build scripts.
 
 1. `gh pr view <n> --json number,title,body,url,baseRefName,headRefName,headRefOid,additions,deletions,files,reviews`. Take `<owner>/<repo>` from `url` (`https://github.com/<owner>/<repo>/pull/<n>`).
 2. Fetch over HTTPS, never through `origin` (SSH fails in Claude sessions), with `gh` as a one-off credential helper (the repository is private; a bare HTTPS fetch asks for a username):
@@ -32,16 +32,16 @@ The author of a change cannot review it well: it reads what it meant, not what i
 
 Lens files are `${CLAUDE_SKILL_DIR}/lenses/<name>.md`.
 
-| Lens         | Run when the PR changes                                                                                                           |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| `spec`       | always                                                                                                                            |
-| `privacy`    | always                                                                                                                            |
-| `docs`       | any `*.md`, `design/`, `docs/`                                                                                                    |
-| `contract`   | any `*.swift`, `bridge/`, `fixtures/`                                                                                             |
-| `robustness` | any `*.swift`, `bridge/`                                                                                                          |
-| `security`   | any `*.swift`, `bridge/`, `.github/workflows/`, `Package.swift`, `Package.resolved`, `package*.json`, `project.yml`, entitlements |
-| `platform`   | any `*.swift`, `bridge/`, `Package.swift`, `project.yml`, `.github/workflows/`, or an ADR                                         |
-| `tests`      | any `*.swift`                                                                                                                     |
+| Lens         | Run when the PR changes                                                                                                                                   |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `spec`       | always                                                                                                                                                    |
+| `privacy`    | always                                                                                                                                                    |
+| `docs`       | any `*.md`, `design/`, `docs/`                                                                                                                            |
+| `contract`   | any `*.swift`, `bridge/`, `fixtures/`, `scripts/`, `*.mjs`, `*.js`                                                                                        |
+| `robustness` | any `*.swift`, `bridge/`, `scripts/`, `*.mjs`, `*.js`                                                                                                     |
+| `security`   | any `*.swift`, `bridge/`, `.github/workflows/`, `.claude/`, `scripts/`, `Package.swift`, `Package.resolved`, `package*.json`, `project.yml`, entitlements |
+| `platform`   | any `*.swift`, `bridge/`, `Package.swift`, `project.yml`, `.github/workflows/`, or an ADR                                                                 |
+| `tests`      | any `*.swift`, `scripts/`, `*.mjs`, `*.js`                                                                                                                |
 
 ### Modes
 
@@ -90,9 +90,7 @@ Build the request as a JSON file under `$TMPDIR` and send it with `gh api --meth
 
 ## Rounds
 
-- Round 1 reviews the whole PR.
-- A further round is run only when the previous round had a confirmed `High`.
-- From round 2 on, only `High` findings must be fixed in this PR. List the rest in the report under "Deferred" so the author can copy them into the PR description.
+The round rule is stated once, in `CLAUDE.md` → "Pull requests". Round 1 reviews the whole PR. From round 2 on, list every finding that is not `High` under "Deferred" so the author can copy it into the PR description.
 
 ## For the method log
 

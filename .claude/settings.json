@@ -13,12 +13,11 @@
       "mcp__context7__query-docs",
       "Bash(gh pr view:*)",
       "Bash(gh pr diff:*)",
-      "Bash(git fetch:*)",
-      "Bash(git worktree add:*)",
-      "Bash(git worktree remove:*)",
       "Bash(git worktree list:*)",
-      "Bash(git -c credential.helper= -c credential.helper='!gh auth git-credential' fetch:*)",
-      "Bash(git update-ref -d refs/remotes/review/:*)"
+      "Bash(git -c credential.helper= -c credential.helper='!gh auth git-credential' fetch https://github.com/*)",
+      "Bash(git worktree add .build/review/*)",
+      "Bash(git worktree remove .build/review/*)",
+      "Bash(git update-ref -d refs/remotes/review/*)"
     ]
   }
 }
