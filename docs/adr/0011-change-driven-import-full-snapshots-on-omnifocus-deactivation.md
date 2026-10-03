@@ -20,7 +20,7 @@ related:
 
 ## Context and Problem Statement
 
-MoonShine is meant to become the owner's main app for time, so its picture of OmniFocus must stay current without pressing a refresh button. OmniFocus offers no change notifications to other apps. The S3a-1 measurements (OmniFocus 4, 6,420 tasks in the database, 1,961 in the snapshot at the time of the B runs (1,962 in later runs), release build) show what the bridge costs:
+MoonShine is meant to become the owner's main app for time, so its picture of OmniFocus must stay current without pressing a refresh button. OmniFocus offers no change notifications to other apps. The S3a-1 measurements (OmniFocus 4, 6,420 tasks in the database, 1,961 in the snapshot at the time of the two single full-import runs of 2026-10-02 (background, and with OmniFocus frontmost) (1,962 in later runs), release build) show what the bridge costs:
 
 | Measurement                                          | OmniFocus held                   | Total  |
 | ---------------------------------------------------- | -------------------------------- | ------ |
@@ -62,7 +62,7 @@ Rules that follow:
 - **Coalescing**: `ImportService` stays single-flight. A signal during an import schedules exactly one more import after it.
 - **Always full snapshots.** The incremental mode of contract v0.2 stays defined and unused. Only a full snapshot may soft-delete (ADR-0002 retention rule unchanged).
 - **The UI never waits.** View models observe the store; stored data is shown at once and updates when the import commits. The status bar shows "updated N min ago" and "updating…".
-- **Target**: the refresh lands ≤ 5 s after OmniFocus resigns active — provisional until measured with the real trigger in S4 (with OmniFocus frontmost: 4.0 s).
+- **Target**: the refresh lands ≤ 5 s after OmniFocus resigns active, measured from the signal to the refresh landing in the store (the import total, not the time OmniFocus is held) — provisional until measured with the real trigger in S4 (with OmniFocus frontmost: 4.0 s).
 - **`imports` table** (S4): trigger, start, duration, time OmniFocus was held, row counts. It feeds the status bar and lets the timings be watched as the database grows.
 - **Archiving is the owner's lever.** Moving old completed items to OmniFocus' archive shrinks the task list and the import time roughly in proportion. MoonShine keeps completed tasks in its own store, so no history is lost — provided a full import ran before archiving. MoonShine never archives by itself.
 - **OmniFocus not running**: no import; MoonShine shows the last import and says so.
@@ -82,8 +82,8 @@ Rules that follow:
 
 - Core tests with a fake signal source: signals during an import produce exactly one follow-up import; a signal while "OmniFocus frontmost" is held and released on resign-active; the timer is skipped after a recent import.
 - The `imports` table shows, on live data, the held time per trigger; the method log records the median after one week of use.
-- S4 records the held time per trigger in the `imports` table; if the median for the resign-active trigger exceeds 5 s, this ADR is revisited.
-- Revisit this ADR if the import after resign-active exceeds 5 s, or if OmniFocus gains change notifications or a query that avoids listing every task.
+- S4 records per trigger in the `imports` table the time from the signal to the refresh landing (import total) and the time OmniFocus was held; if the median import total for the resign-active trigger exceeds 5 s, this ADR is revisited.
+- Revisit this ADR if the refresh after resign-active exceeds the 5 s target (same metric: import total), or if OmniFocus gains change notifications or a query that avoids listing every task.
 
 ## Pros and Cons of the Options
 

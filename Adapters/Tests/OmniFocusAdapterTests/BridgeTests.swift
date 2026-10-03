@@ -123,14 +123,24 @@ import Testing
 
     /// A child that ignores SIGTERM, with a grandchild holding the pipes open: the call still
     /// returns the typed timeout within timeout + grace (TERM) + grace (KILL) + a margin.
-    @Test func aChildThatIgnoresTermIsKilledAndTheCallReturns() async {
+    @Test func aChildThatIgnoresTermIsKilledAndTheCallReturns() async throws {
+      // The child writes its pid to a file: a timed-out call returns no output.
+      let pidFile = FileManager.default.temporaryDirectory.appending(path: "child-\(UUID()).pid")
+      defer { try? FileManager.default.removeItem(at: pidFile) }
       let clock = ContinuousClock()
       let started = clock.now
       await #expect(throws: BridgeError.timedOut(after: .milliseconds(200))) {
         try await ProcessScriptRunner(grace: .milliseconds(500)).run(
-          sh, arguments: ["-c", "trap '' TERM; sleep 10"], timeout: .milliseconds(200))
+          sh, arguments: ["-c", "trap '' TERM; echo $$ > '\(pidFile.path())'; sleep 10"],
+          timeout: .milliseconds(200))
       }
       #expect(clock.now - started < .milliseconds(200 + 500 + 500 + 1000))
+      // The child ignored SIGTERM, so only SIGKILL can have ended it (and Process reaped it).
+      let pid = try #require(
+        Int32(
+          try String(contentsOf: pidFile, encoding: .utf8).trimmingCharacters(
+            in: .whitespacesAndNewlines)))
+      #expect(kill(pid, 0) == -1 && errno == ESRCH, "child \(pid) is still alive")
     }
 
     @Test func bridgeScriptCompiles() async throws {

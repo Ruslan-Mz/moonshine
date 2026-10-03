@@ -55,7 +55,8 @@ public protocol ScriptRunner: Sendable {
       public let omniFocusTime: Duration
     }
 
-    /// A decoded, validated result and how long it held OmniFocus.
+    /// A decoded result and how long it held OmniFocus. Whether it is also validated depends
+    /// on the method that returns it: `probe()` validates, `document(_:)` only decodes.
     public struct Measured<Value: Sendable>: Sendable {
       public let value: Value
       public let omniFocusTime: Duration
