@@ -121,7 +121,7 @@ Tasks reference tags **by id**. Leaf names are not unique (e.g. `Низкая` c
 
 ## Default times (v0.2)
 
-OmniFocus stores a time on every date; a date picked without a time gets the user's default time. `defaultTimes` exports those settings as `HH:mm` (24 h, local): `due` and `defer` always; `planned` only when the OmniFocus version has that setting (absent key otherwise). If the settings cannot be read, `defaultTimes` is absent. Consumers may treat a date at the default time as "a day, no particular time" — not used before a spec asks for it.
+OmniFocus stores a time on every date; a date picked without a time gets the user's default time. `defaultTimes` exports those settings as `HH:mm` (24 h, local): `due` and `defer` always; `planned` only when the OmniFocus version has that setting (absent key otherwise). If the settings cannot be read, `defaultTimes` is absent. **Fallback (owner decision 2026-10-05):** when `defaultTimes` or the key for a date kind is absent, only 00:00 counts as "date only" for that kind. Consumers may treat a date at the default time as "a day, no particular time" — not used before a spec asks for it.
 
 **Known limit of that rule:** a task deliberately planned or due exactly at the default time is indistinguishable from a date-only one and is treated as date-only. On the live data (2026-10-02) one-off tasks are mostly at the default time (planned 35 of 39, due 34 of 49), repeating ones mostly at other times (planned 142 of 973 at the default, due 78 of 251).
 

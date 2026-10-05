@@ -10,21 +10,21 @@
 
 ## Jobs to be done
 
-| #   | Job                                          | Example                                                                                                               |
-| --- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| J1  | **See** everything in one place at any scale | "What's on today / this week / this month; where am I on the year's artifacts; how does this decade look?"            |
-| J2  | **Know if I'm really progressing**           | "At my actual pace, when will I master this partita / reach 20 pull-ups / finish this course? Is that date drifting?" |
-| J2b | **Plan across lines**                        | "If violin goes to max and Italian to min, what fits by June, and how many hours a week does that take?"              |
-| J3  | **Ask** an assistant about my system         | "Summarise last month", "Which lines were quiet?", "Where is my note on X?", "Check my Q4 plan against my budget"     |
-| J4  | **Act** without switching apps               | "Create these three tasks", "Complete X", "Move the violin milestone", "Draft next month's plan note"                 |
-| J5  | **Bring in data**                            | Import my hours tracker (Excel), map columns with AI help                                                             |
+| #   | Job                                          | Example                                                                                                                                                                                                                                                                                    |
+| --- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| J1  | **See** everything in one place at any scale | "What's on today / this week / this month; where am I on the year's artifacts; how does this decade look?"                                                                                                                                                                                 |
+| J2  | **Know if I'm really progressing**           | "At my actual pace, when will I master this partita / reach 20 pull-ups / finish this course? Is that date drifting?" Hours and task counts do not show real progress, so I also record **my own take** on a line's week; it is kept next to the measured facts and never merged with them |
+| J2b | **Plan across lines**                        | "If violin goes to max and Italian to min, what fits by June, and how many hours a week does that take?"                                                                                                                                                                                   |
+| J3  | **Ask** an assistant about my system         | "Summarise last month", "Which lines were quiet?", "Where is my note on X?", "Check my Q4 plan against my budget"; tell it by voice what happened ("scales done, 25 min instead of 30", "I'm away next Thursday")                                                                          |
+| J4  | **Act** without switching apps               | "Create these three tasks", "Complete X", "Move the violin milestone", "Draft next month's plan note"; simple facts from a voice capture are recorded at once, plan changes become a draft I confirm later, possibly on another device (ADR-0013)                                          |
+| J5  | **Bring in data**                            | Import my hours tracker (Excel), map columns with AI help                                                                                                                                                                                                                                  |
 
 ## Product principles
 
 1. **Own the model, adapt the tools.** MoonShine has its own domain model and UI. OmniFocus, Obsidian, Claude, Excel are _adapters_ that can be swapped or replaced by native modules later.
 2. **One timeline, semantic zoom.** Day → week → month → quarter → year → 5/10/25 years → lifetime (any configured length) is one continuous zoom, not seven screens. What is shown adapts to the zoom level (tasks → projects → artifacts → horizons).
 3. **Honest, never punishing.** Drift and quiet lines are shown as facts with a suggested next step. No red, no "failed/overdue" language for intentions. Real deadlines (external consequences) are the only urgent colour.
-4. **The assistant proposes, I confirm.** Every AI write is a visible, reversible command.
+4. **Every AI change is visible and reversible.** Simple, unambiguous changes of the `auto` class are applied at once; everything else waits for my confirmation (ADR-0013).
 5. **Local-first and private by default.** Works offline; no server needed for a single user; data never leaves my devices and my private iCloud unless I turn on sync or choose a cloud AI provider. Sync is opt-in and off by default (ADR-0010).
 6. **Fast and keyboard-first on Mac,** touch-first on iOS later.
 

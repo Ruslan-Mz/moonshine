@@ -9,7 +9,7 @@ Design the iPad and iPhone versions of MoonShine (iPadOS 26 / iOS 26, SwiftUI-im
 ## iPad (13" landscape 1376×1032 pt unless stated)
 
 1. **Shell**: sidebar (Today, Week, Month, Lines, Plan; lines grouped by tier) + content; collapsible sidebar; toolbar with search (⌘K works with a keyboard).
-2. **Week — planning**: 7 day columns + No plan tray, touch-sized cards; drag a card from the tray onto a day (show the drag state; caption "writes to OmniFocus in phase 6"). Weekly review mode as on Mac, adapted to touch (the three-column panel becomes swipeable cards in portrait).
+2. **Week — planning**: 7 day columns + No plan tray, touch-sized cards; drag a card from the tray onto a day (show the drag state; caption "writes to OmniFocus in the Act phase"). Weekly review mode as on Mac, adapted to touch (the three-column panel becomes swipeable cards in portrait).
 3. **Project forecast** (Bach Partita — Allemande): steps, p10–p90 band with p50, drift chart; effort level segmented control min/normal/max and a large slider — drag with finger or Pencil, the band updates live.
 4. **Planning board**: rows of projects with level controls and finish bands on a shared 12-month timeline; stacked weekly load vs capacity on top; pinch to zoom the timeline; "Doesn't fit by 4 h/week — Italian and Math would move." as a neutral fact.
 5. **Quarterly review** (Q3 → Q4): adapted from the Mac screen to a scrolling iPad layout; the quarter note in a side panel that becomes a sheet in portrait.

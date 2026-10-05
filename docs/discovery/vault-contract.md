@@ -4,7 +4,7 @@ Status: **draft from phase-0 discovery** (see `data-report.md`). Implements ADR-
 
 v0.2 (2026-10-01, design draft-2): optional line keys `foundation`, `floor_h_day`, `language`; quarter notes with `scale: quarter` and `artifacts:` (§2.2); R1 keys `done`, `carried_to`, `active_lines` (read from R1 on).
 
-Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault writes before phase 6).
+Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault writes before the Act phase).
 
 ## Design choices driven by the data
 
@@ -86,7 +86,7 @@ artifacts:
     priority: true # optional; "priority" vs "the rest" group
 ```
 
-The quarter note may reference them (optional, phase 5 uses it; phase 1 only shows the trace):
+The quarter note may reference them (optional, the Zoom out phase uses it; phase 1 only shows the trace):
 
 ```yaml
 type: quarter_focus
@@ -132,5 +132,5 @@ artifacts:
 ## Open questions
 
 - ~~Q1~~ Decided 2026-09-30: new key `scale`; existing free-text `horizon` is left untouched.
-- **Q2** Should the year note's markdown table be generated from `artifacts:` later (phase 6) so the two cannot drift?
+- **Q2** Should the year note's markdown table be generated from `artifacts:` later (the Act phase) so the two cannot drift?
 - **Q3** Lines with `budget_h_week: null` (e.g. family time) — show in Lines view at all, or only in the Week header?

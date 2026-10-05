@@ -27,9 +27,18 @@ Recommended implementation: a native `Settings` scene (⌘,) with `Form { }.form
 
 **Refresh** group
 
-- Refresh every: `Picker(.menu)` 1 / 5 / 15 / 30 minutes.
-- Last import: `3 min ago · incremental, 0.8 s` + "Refresh now ⌘R".
+Refresh follows ADR-0011: imports are always full and start when OmniFocus resigns active, on launch, on ⌘R and on a timer.
+
+- Timer: `Picker(.menu)` 15 / 30 minutes, default **15 min**. It runs only while OmniFocus is running and not frontmost.
+- Last import: `3 min ago · 4.0 s` + "Refresh now ⌘R".
 - Caption: "Imports run in the background; the window always renders from the local store."
+
+**Deadlines** group (owner decision 2026-10-02)
+
+- Which due dates are deadlines: `Picker(.radioGroup)` **All due dates** (default) | **Due date + tag**.
+- Tag (only with "Due date + tag"): text field, default `deadline`, matched by leaf name like `anchor`. The value is trimmed; an empty value reverts to `deadline`; the leaf name is compared case-insensitively (`Deadline` matches `deadline`). The tag counts when it is on the task or on **any of its ancestors** (action group or project), so an inherited due date follows the same rule.
+- Caption: "Only deadlines get the amber due badge. Other due dates are shown as plain text."
+- The rule is a Core value (`DeadlineRule`) that the Overview service uses for urgency on Today and Week; the view only displays the result.
 
 Buttons (sheet variant only): Cancel, Done (default, accent). The Settings scene applies changes immediately.
 
@@ -42,4 +51,10 @@ Buttons (sheet variant only): Cancel, Done (default, accent). The Settings scene
 - [ ] Fresh clone runs in Demo mode with no vault and no OmniFocus.
 - [ ] Switching to Live without a vault prompts "Choose…", not an error.
 - [ ] No write APIs anywhere (phase 1).
+- [ ] The timer offers no interval under 15 min; there is no "incremental" label.
+- [ ] Switching the deadline rule changes which due dates are amber on Today and Week, and nothing else.
 - [ ] Language picker switches the whole UI; user data stays untranslated; dates and plurals follow the chosen language.
+
+## Calendar (draft-3)
+
+A new tab **Calendars**: access state, calendars with Show / Counts as busy / Line, day window. Spec: `settings-calendars.md`.

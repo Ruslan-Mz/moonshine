@@ -22,7 +22,7 @@ OmniFocus has no cloud API. On macOS it is scriptable via AppleScript/JXA and Om
 ## Decision Drivers
 
 - Phase 1: fast bulk read on macOS, no extra runtime.
-- Phase 5: writes (create/complete/defer/plan).
+- The Act phase: writes (create/complete/defer/plan).
 - Future sandboxed / App Store / iOS builds.
 
 ## Considered Options
@@ -40,7 +40,7 @@ OmniFocus has no cloud API. On macOS it is scriptable via AppleScript/JXA and Om
 - Good — one JSON snapshot contract shared by the JXA bridge, the plug-in and fixtures.
 - Bad — direct-distribution build must be non-sandboxed with the Automation permission.
 - Bad — we maintain a JS script against Omni Automation.
-- Neutral — writes in phase 6: Omni Automation via JXA (direct), `omnifocus:///add` URL or plug-in (sandboxed).
+- Neutral — writes in the Act phase: Omni Automation via JXA (direct), `omnifocus:///add` URL or plug-in (sandboxed).
 
 ### Confirmation
 

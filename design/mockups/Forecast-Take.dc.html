@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Project forecast with my take — future</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0A64D8}a:hover{color:#084FA8}
+button{font:inherit;color:inherit;cursor:default}
+</style>
+</helmet>
+<div dir="{{ss.dir}}" lang="{{ss.lang}}" style="width:1440px;height:1040px;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;border-radius:12px;border:1px solid {{c.windowBorder}};font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;font-size:13px;line-height:1.35;color:{{c.text}};background:{{c.window}};-webkit-font-smoothing:antialiased;position:relative"><div style="flex:1;display:flex;min-height:0"><nav aria-label="Sidebar" style="width:236px;flex-shrink:0;display:flex;flex-direction:column;gap:14px;padding:16px 12px;box-sizing:border-box;overflow:hidden;background:{{c.sidebar}};border-inline-end:1px solid {{c.sep}}"><div style="display:flex;align-items:center;gap:8px;height:20px;padding-inline-start:4px"><span style="width:12px;height:12px;border-radius:6px;background:#FF5F57"></span><span style="width:12px;height:12px;border-radius:6px;background:#FEBC2E"></span><span style="width:12px;height:12px;border-radius:6px;background:#28C840"></span></div><div style="display:flex;flex-direction:column;gap:2px"><button style="display:flex;align-items:center;gap:10px;height:28px;padding:0 8px;border:0;border-radius:7px;background:transparent;text-align:start"><span style="display:flex;color:{{c.sec}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><circle cx="8" cy="8" r="3"></circle><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"></path></svg></span><span style="flex:1">{{ss.today}}</span><span style="font-size:11px;font-weight:400;color:{{c.ter}}">⌘1</span></button><button style="display:flex;align-items:center;gap:10px;height:28px;padding:0 8px;border:0;border-radius:7px;background:transparent;text-align:start"><span style="display:flex;color:{{c.sec}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><rect x="2" y="3" width="12" height="11" rx="2"></rect><path d="M2 6.5h12M5 1.8v2.4M11 1.8v2.4M6 6.5v7.5M10 6.5v7.5"></path></svg></span><span style="flex:1">{{ss.week}}</span><span style="font-size:11px;font-weight:400;color:{{c.ter}}">⌘2</span></button><button style="display:flex;align-items:center;gap:10px;height:28px;padding:0 8px;border:0;border-radius:7px;background:transparent;text-align:start"><span style="display:flex;color:{{c.sec}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><rect x="2" y="3" width="12" height="11" rx="2"></rect><path d="M2 6.5h12M5 1.8v2.4M11 1.8v2.4"></path><path d="M5 9.2h.01M8 9.2h.01M11 9.2h.01M5 11.6h.01M8 11.6h.01" stroke-width="2.2"></path></svg></span><span style="flex:1">{{ss.month}}</span><span style="font-size:11px;font-weight:400;color:{{c.ter}}">⌘3</span></button><button style="display:flex;align-items:center;gap:10px;height:28px;padding:0 8px;border:0;border-radius:7px;background:{{c.navSel}};font-weight:600;text-align:start"><span style="display:flex;color:{{c.accent}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M2.5 4h11M2.5 8h11M2.5 12h7"></path></svg></span><span style="flex:1">{{ss.lines}}</span><span style="font-size:11px;font-weight:400;color:{{c.ter}}">⌘4</span></button></div><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{side}}" as="tier" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:0"><button aria-expanded="{{tier.open}}" style="display:flex;align-items:center;gap:6px;height:22px;padding:0 8px;border:0;background:transparent;text-align:start;font-size:11px;font-weight:600;color:{{c.ter}}"><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{tier.n}}</span><span style="font-weight:400">{{tier.count}}</span><svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="{{tier.chev}}"></path></svg></button><sc-if value="{{tier.open}}" hint-placeholder-val="{{true}}"><sc-for list="{{tier.rows}}" as="l" hint-placeholder-count="3"><button style="display:flex;align-items:center;gap:9px;height:24px;padding:0 8px;border:0;border-radius:6px;background:transparent;text-align:start;color:{{l.fg}}"><span style="width:18px;text-align:center;opacity:{{l.op}}">{{l.e}}</span><span style="flex:1">{{l.n}}</span></button></sc-for></sc-if></div></sc-for></div></nav><div style="flex:1;min-width:0;display:flex;flex-direction:column"><div style="height:56px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 14px 0 22px;box-sizing:border-box;border-bottom:1px solid {{c.sep}}"><div style="display:flex;flex-direction:column;gap:1px;min-width:0"><h1 style="margin:0;font-size:19px;font-weight:700;letter-spacing:-0.2px;white-space:nowrap">Bach Partita No. 2 — Allemande</h1><span style="font-size:12px;color:{{c.sec}};white-space:nowrap">🎻 Violin → Spring recital 2027 · plan of 4 steps</span></div><div style="flex:1"></div><a href="#" style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 12px;margin-right:6px;border-radius:7px;border:1px solid {{c.fieldBorder}};font-size:12.5px;text-decoration:none;color:{{c.text}}">Add my take</a><span style="display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;margin-right:6px;border-radius:12px;border:1px dashed {{c.future}};font-size:11.5px;font-weight:600;color:{{c.future}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M8 2v3M8 11v3M2 8h3M11 8h3M4 4l2 2M10 10l2 2M4 12l2-2M10 6l2-2"></path></svg>Future · phase 2–3</span><button style="width:220px;height:28px;display:flex;align-items:center;gap:7px;padding:0 9px;border:0;border-radius:7px;background:{{c.field}};color:{{c.ter}};text-align:start"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg><span style="flex:1;font-size:12.5px">{{ss.search}}</span><span style="font-size:11px">⌘K</span></button><button aria-label="Refresh (⌘R)" style="width:30px;height:28px;border:0;border-radius:7px;background:transparent;display:flex;align-items:center;justify-content:center;color:{{c.sec}}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M13 8a5 5 0 1 1-1.5-3.55M13 2.5v3h-3"></path></svg></button></div><div style="flex:1;min-height:0;display:flex"><main style="flex:1;min-width:0;overflow-y:auto;display:flex;flex-direction:column;gap:16px;padding:18px 22px 24px;box-sizing:border-box"><div style="display:flex;flex-direction:column;gap:12px;padding:18px 20px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}};flex-direction:row;align-items:center;gap:28px"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:11.5px;color:{{c.ter}};font-weight:600">Likely finish · p50</span><span style="font-size:32px;font-weight:700;letter-spacing:-0.6px">3 December</span><span style="font-size:12.5px;color:{{c.sec}}">range 9 November – 15 January (p10–p90)</span></div><div style="flex:1;display:flex;flex-direction:column;gap:6px;padding-left:24px;border-inline-start:1px solid {{c.sep}}"><span style="font-size:15px">At 2.1 h/week the remaining 18 h take ~9 weeks.</span><span style="font-size:12px;color:{{c.ter}}">1 000 simulated runs · your estimates run ×1.15 long on this line · 14 weeks of history</span></div><div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end"><span role="group" style="display:inline-flex;padding:2px;border-radius:7px;background:{{c.ctrl}};opacity:1"><button aria-pressed="true" style="height:22px;padding:0 11px;border:0;border-radius:5px;font-size:12px;white-space:nowrap;background:{{c.ctrlSel}};box-shadow:0 1px 2px rgba(0,0,0,0.18);font-weight:600">Actual pace</button><button aria-pressed="false" style="height:22px;padding:0 11px;border:0;border-radius:5px;font-size:12px;white-space:nowrap;background:transparent">Scenario</button><button aria-pressed="false" style="height:22px;padding:0 11px;border:0;border-radius:5px;font-size:12px;white-space:nowrap;background:transparent">Target date</button></span><span style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:{{c.ter}}">Level <span role="group" style="display:inline-flex;padding:2px;border-radius:7px;background:{{c.ctrl}};opacity:0.55"><button aria-pressed="false" style="height:22px;padding:0 11px;border:0;border-radius:5px;font-size:12px;white-space:nowrap;background:transparent">min</button><button aria-pressed="true" style="height:22px;padding:0 11px;border:0;border-radius:5px;font-size:12px;white-space:nowrap;background:{{c.ctrlSel}};box-shadow:0 1px 2px rgba(0,0,0,0.18);font-weight:600">normal</button><button aria-pressed="false" style="height:22px;padding:0 11px;border:0;border-radius:5px;font-size:12px;white-space:nowrap;background:transparent">max</button></span></span></div></div><div style="display:flex;align-items:center;gap:10px;min-height:36px;padding:6px 14px;border-radius:10px;background:{{c.band}};font-size:12.5px"><svg viewBox="0 0 16 16" aria-hidden="true" style="display:block;flex-shrink:0;overflow:visible;width:14px;height:14px"><path d="M8 .6C8.5 4.7 11.3 7.5 15.4 8 11.3 8.5 8.5 11.3 8 15.4 7.5 11.3 4.7 8.5 .6 8 4.7 7.5 7.5 4.7 8 .6Z" fill="{{c.text}}" stroke="{{c.text}}" stroke-width="1.1" stroke-dasharray="0" stroke-linejoin="round" stroke-linecap="round"></path></svg><span style="color:{{c.sec}}">W36 · my take: <b style="color:{{c.text}}">Leap</b> — “Vibrato finally works”</span><span style="width:1px;height:14px;background:{{c.sep}}"></span><span>Re-estimate what is left?</span><a href="#" style="text-decoration:none;color:{{c.accent}}">Open estimates</a><span style="margin-inline-start:auto;font-size:11.5px;color:{{c.ter}}">Nothing changes by itself</span><a href="#" style="text-decoration:none;color:{{c.ter}}">Not now</a></div><div style="display:flex;flex-direction:column;gap:12px;padding:18px 20px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}}"><div style="display:flex;align-items:baseline;gap:10px"><h2 style="margin:0;font-size:14px;font-weight:600">Plan</h2><span style="font-size:12px;color:{{c.ter}}">4 steps · bars are p10–p90, the tick is p50</span></div><div style="display:grid;grid-template-columns:300px minmax(0, 1fr);height:22px"><span></span><div style="position:relative;width:640px;height:22px"></div></div><div style="position:relative"><div style="position:absolute;left:300px;top:0;bottom:0;width:640px"><span style="position:absolute;left:0px;top:0;bottom:0;border-left:1px solid {{c.grid}}"></span><span style="position:absolute;left:4px;top:-18px;font-size:10.5px;color:{{c.ter}}">Sep</span><span style="position:absolute;left:107px;top:0;bottom:0;border-left:1px solid {{c.grid}}"></span><span style="position:absolute;left:111px;top:-18px;font-size:10.5px;color:{{c.ter}}">Oct</span><span style="position:absolute;left:217px;top:0;bottom:0;border-left:1px solid {{c.grid}}"></span><span style="position:absolute;left:221px;top:-18px;font-size:10.5px;color:{{c.ter}}">Nov</span><span style="position:absolute;left:324px;top:0;bottom:0;border-left:1px solid {{c.grid}}"></span><span style="position:absolute;left:328px;top:-18px;font-size:10.5px;color:{{c.ter}}">Dec</span><span style="position:absolute;left:434px;top:0;bottom:0;border-left:1px solid {{c.grid}}"></span><span style="position:absolute;left:438px;top:-18px;font-size:10.5px;color:{{c.ter}}">Jan</span><span style="position:absolute;left:544px;top:0;bottom:0;border-left:1px solid {{c.grid}}"></span><span style="position:absolute;left:548px;top:-18px;font-size:10.5px;color:{{c.ter}}">Feb</span><span style="position:absolute;left:107px;top:-4px;bottom:0;border-left:1.5px solid {{c.accent}}"></span><span style="position:absolute;left:111px;top:-20px;font-size:10.5px;font-weight:600;color:{{c.accent}}">today</span></div><div style="display:grid;grid-template-columns:300px minmax(0, 1fr);align-items:center;height:46px;border-top:1px solid {{c.rowSep}}"><div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:22px;height:22px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;background:{{c.checkDone}};color:#FFFFFF">✓</span><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:13px;font-weight:600;color:{{c.done}}">Learn the notes</span><span style="font-size:11.5px;color:{{c.ter}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">effort · 12 h est. · done</span></span></div><div style="position:relative;height:28px;width:640px"><span style="position:absolute;left:0px;width:60px;top:9px;height:10px;border-radius:5px;background:{{c.done}};opacity:0.55"></span><span style="position:absolute;left:68px;top:5px;font-size:11px;color:{{c.ter}}">done 18 Sep</span></div></div><div style="display:grid;grid-template-columns:300px minmax(0, 1fr);align-items:center;height:46px;border-top:1px solid {{c.rowSep}}"><div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:22px;height:22px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;border:1.5px solid {{c.check}};box-sizing:border-box;color:{{c.sec}}">2</span><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:13px;font-weight:600;">Slow tempo, ♩ = 60</span><span style="font-size:11.5px;color:{{c.ter}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">sessions · 6 of 10 · ≤ 5 per week</span></span></div><div style="position:relative;height:28px;width:640px"><span style="position:absolute;left:132px;width:71px;top:7px;height:14px;border-radius:7px;background:{{c.band1}}"></span><span style="position:absolute;left:159px;top:4px;width:2px;height:20px;border-radius:1px;background:{{c.bandLine}}"></span><span style="position:absolute;left:211px;top:5px;font-size:11px;color:{{c.sec}};white-space:nowrap">16 Oct</span></div></div><div style="display:grid;grid-template-columns:300px minmax(0, 1fr);align-items:center;height:46px;border-top:1px solid {{c.rowSep}}"><div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:22px;height:22px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;border:1.5px solid {{c.check}};box-sizing:border-box;color:{{c.sec}}">3</span><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:13px;font-weight:600;">Tempo ♩ = 80</span><span style="font-size:11.5px;color:{{c.ter}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">metric · 60 → 80 bpm · ≥ 2 weeks adaptation</span></span></div><div style="position:relative;height:28px;width:640px"><span style="position:absolute;left:196px;width:196px;top:7px;height:14px;border-radius:7px;background:{{c.band1}}"></span><span style="position:absolute;left:283px;top:4px;width:2px;height:20px;border-radius:1px;background:{{c.bandLine}}"></span><span style="position:absolute;left:399px;top:5px;font-size:11px;color:{{c.sec}};white-space:nowrap">20 Nov</span></div></div><div style="display:grid;grid-template-columns:300px minmax(0, 1fr);align-items:center;height:46px;border-top:1px solid {{c.rowSep}}"><div style="display:flex;align-items:center;gap:10px;min-width:0"><span style="width:22px;height:22px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;border:1.5px solid {{c.check}};box-sizing:border-box;color:{{c.sec}}">4</span><span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:13px;font-weight:600;">Performance-ready</span><span style="font-size:11.5px;color:{{c.ter}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">checkpoint · teacher sign-off</span></span></div><div style="position:relative;height:28px;width:640px"><span style="position:absolute;left:245px;width:238px;top:7px;height:14px;border-radius:7px;background:{{c.band1}}"></span><span style="position:absolute;left:330px;top:4px;width:2px;height:20px;border-radius:1px;background:{{c.bandLine}}"></span><span style="position:absolute;left:492px;top:5px;font-size:11px;color:{{c.sec}};white-space:nowrap">3 Dec</span></div></div><div style="display:grid;grid-template-columns:300px minmax(0, 1fr);align-items:center;height:52px;border-top:1px solid {{c.sep}}"><span style="font-size:13px;font-weight:700">Goal: Allemande performance-ready</span><div style="position:relative;height:28px;width:640px"><span style="position:absolute;left:245px;width:238px;top:5px;height:18px;border-radius:9px;background:{{c.band1}};border:1px solid {{c.bandLine}};box-sizing:border-box"></span><span style="position:absolute;left:329px;top:1px;width:3px;height:26px;border-radius:2px;background:{{c.bandLine}}"></span><span style="position:absolute;left:245px;top:-14px;font-size:10.5px;color:{{c.sec}};white-space:nowrap">p10 · 9 Nov</span><span style="position:absolute;left:307px;top:-14px;font-size:10.5px;font-weight:700;white-space:nowrap">p50 · 3 Dec</span><span style="position:absolute;left:418px;top:-14px;font-size:10.5px;color:{{c.sec}};white-space:nowrap">p90 · 15 Jan</span></div></div></div></div><div style="display:flex;flex-direction:column;gap:12px;padding:18px 20px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}}"><div style="display:flex;align-items:baseline;gap:10px"><h2 style="margin:0;font-size:14px;font-weight:600">Drift</h2><span style="font-size:12px;color:{{c.ter}}">projected finish, recorded every week · last 12 weeks · my take marks on the same weeks</span></div><svg width="1100" height="190" viewBox="0 0 1100 190" role="img" aria-label="Projected finish date per week, W29 to W40: steady near 26 November, later to 8 January in W37, back to 3 December now" style="display:block"><line x1="64" x2="980" y1="14.0" y2="14.0" stroke="{{c.grid}}" stroke-width="1"></line><text x="54" y="18.0" font-size="11" fill="{{c.ter}}" text-anchor="end">1 Nov</text><line x1="64" x2="980" y1="52.3" y2="52.3" stroke="{{c.grid}}" stroke-width="1"></line><text x="54" y="56.3" font-size="11" fill="{{c.ter}}" text-anchor="end">1 Dec</text><line x1="64" x2="980" y1="91.9" y2="91.9" stroke="{{c.grid}}" stroke-width="1"></line><text x="54" y="95.9" font-size="11" fill="{{c.ter}}" text-anchor="end">1 Jan</text><line x1="64" x2="980" y1="131.5" y2="131.5" stroke="{{c.grid}}" stroke-width="1"></line><text x="54" y="135.5" font-size="11" fill="{{c.ter}}" text-anchor="end">1 Feb</text><path d="M64.0 21.7 L147.3 22.9 L230.5 21.7 L313.8 22.9 L397.1 24.2 L480.4 25.5 L563.6 40.8 L646.9 62.5 L730.2 70.2 L813.5 51.0 L896.7 37.0 L980.0 29.3 L980.0 102.1 L896.7 114.9 L813.5 132.8 L730.2 157.1 L646.9 149.4 L563.6 121.3 L480.4 99.6 L397.1 95.7 L313.8 93.2 L230.5 89.4 L147.3 93.2 L64.0 91.9 Z" fill="{{c.band1}}"></path><path d="M64.0 45.9 L147.3 47.2 L230.5 44.7 L313.8 47.2 L397.1 48.5 L480.4 51.0 L563.6 68.9 L646.9 93.2 L730.2 100.9 L813.5 79.1 L896.7 63.8 L980.0 54.9" fill="none" stroke="{{c.bandLine}}" stroke-width="2" stroke-linejoin="round"></path><circle cx="64.0" cy="45.9" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="147.3" cy="47.2" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="230.5" cy="44.7" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="313.8" cy="47.2" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="397.1" cy="48.5" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="480.4" cy="51.0" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="563.6" cy="68.9" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="646.9" cy="93.2" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="730.2" cy="100.9" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="813.5" cy="79.1" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="896.7" cy="63.8" r="3" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><circle cx="980.0" cy="54.9" r="5" fill="{{c.bandLine}}" stroke="{{c.card}}" stroke-width="2"></circle><text x="730.2" y="120.9" font-size="11.5" font-weight="600" fill="{{c.text}}" text-anchor="middle">8 Jan</text><text x="990.0" y="58.9" font-size="11.5" font-weight="600" fill="{{c.text}}">3 Dec · now</text><text x="990.0" y="106.1" font-size="11" fill="{{c.ter}}">p10–p90</text><text x="64.0" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W29</text><text x="147.3" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W30</text><text x="230.5" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W31</text><text x="313.8" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W32</text><text x="397.1" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W33</text><text x="480.4" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W34</text><text x="563.6" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W35</text><text x="646.9" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W36</text><text x="730.2" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W37</text><text x="813.5" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W38</text><text x="896.7" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W39</text><text x="980.0" y="184" font-size="10.5" fill="{{c.ter}}" text-anchor="middle">W40</text></svg><svg width="1100" height="50" viewBox="0 0 1100 50" role="img" aria-label="My take per week, W29 to W40. Project: W36 Leap. Violin line: W35 Forward, W36 Leap, W38 Forward, W39 Steady, W40 Forward (draft)." style="display:block"><line x1="52" x2="992" y1="25" y2="25" stroke="{{c.rowSep}}"></line><text x="46" y="29" font-size="11" fill="{{c.ter}}" text-anchor="end">my take</text><text x="998" y="18" font-size="11" fill="{{c.sec}}">this project</text><text x="998" y="40" font-size="11" fill="{{c.sec}}">🎻 Violin line</text><path transform="translate(638.5 5.5) scale(1.056)" d="M8 .6C8.5 4.7 11.3 7.5 15.4 8 11.3 8.5 8.5 11.3 8 15.4 7.5 11.3 4.7 8.5 .6 8 4.7 7.5 7.5 4.7 8 .6Z" fill="{{c.text}}" stroke="{{c.text}}" stroke-width="1.10" stroke-dasharray="0" stroke-linejoin="round" stroke-linecap="round"></path><path transform="translate(557.1 29.5) scale(0.812)" d="M4.2 2.9L13.2 8 4.2 13.1Z" fill="{{c.sec}}" stroke="{{c.sec}}" stroke-width="1.10" stroke-dasharray="0" stroke-linejoin="round" stroke-linecap="round"></path><path transform="translate(638.5 27.5) scale(1.056)" d="M8 .6C8.5 4.7 11.3 7.5 15.4 8 11.3 8.5 8.5 11.3 8 15.4 7.5 11.3 4.7 8.5 .6 8 4.7 7.5 7.5 4.7 8 .6Z" fill="{{c.text}}" stroke="{{c.text}}" stroke-width="1.10" stroke-dasharray="0" stroke-linejoin="round" stroke-linecap="round"></path><path transform="translate(807.0 29.5) scale(0.812)" d="M4.2 2.9L13.2 8 4.2 13.1Z" fill="{{c.sec}}" stroke="{{c.sec}}" stroke-width="1.10" stroke-dasharray="0" stroke-linejoin="round" stroke-linecap="round"></path><path transform="translate(890.2 29.5) scale(0.812)" d="M4.3 8a3.7 3.7 0 1 0 7.4 0a3.7 3.7 0 1 0-7.4 0Z" fill="{{c.sec}}" stroke="{{c.sec}}" stroke-width="1.10" stroke-dasharray="0" stroke-linejoin="round" stroke-linecap="round"></path><path transform="translate(973.5 29.5) scale(0.812)" d="M4.2 2.9L13.2 8 4.2 13.1Z" fill="none" stroke="{{c.sec}}" stroke-width="1.50" stroke-dasharray="2.3 1.7" stroke-linejoin="round" stroke-linecap="round"></path></svg><div style="font-size:12px;color:{{c.ter}};padding-left:64px">Practice on this project</div><svg width="1100" height="64" viewBox="0 0 1100 64" role="img" aria-label="Practice on this project, hours per week, W29 to W40" style="display:block"><line x1="64" x2="980" y1="60" y2="60" stroke="{{c.sep}}"></line><line x1="52" x2="992" y1="21.6" y2="21.6" stroke="{{c.ter}}" stroke-dasharray="4 3" opacity="0.7"></line><text x="998" y="25.6" font-size="11" fill="{{c.sec}}">normal · 2.4 h/week</text><text x="54" y="58" font-size="11" fill="{{c.ter}}" text-anchor="end">h/week</text><rect x="55.0" y="21.6" width="18" height="38.4" rx="3" fill="{{c.rhythm}}" opacity="1"></rect><rect x="138.3" y="24.8" width="18" height="35.2" rx="3" fill="{{c.rhythm}}" opacity="1"></rect><rect x="221.5" y="18.4" width="18" height="41.6" rx="3" fill="{{c.rhythm}}" opacity="1"></rect><rect x="304.8" y="23.2" width="18" height="36.8" rx="3" fill="{{c.rhythm}}" opacity="1"></rect><rect x="388.1" y="21.6" width="18" height="38.4" rx="3" fill="{{c.rhythm}}" opacity="1"></rect><rect x="471.4" y="26.4" width="18" height="33.6" rx="3" fill="{{c.rhythm}}" opacity="1"></rect><rect x="554.6" y="45.6" width="18" height="14.4" rx="3" fill="{{c.rhythm}}" opacity="1"></rect><rect x="637.9" y="50.4" width="18" height="9.6" rx="3" fill="{{c.rhythm}}" opacity="1"></rect><rect x="721.2" y="39.2" width="18" height="20.8" rx="3" fill="{{c.rhythm}}" opacity="1"></rect><rect x="804.5" y="20.0" width="18" height="40.0" rx="3" fill="{{c.rhythm}}" opacity="1"></rect><rect x="887.7" y="18.4" width="18" height="41.6" rx="3" fill="{{c.rhythm}}" opacity="1"></rect><rect x="971.0" y="37.6" width="18" height="22.4" rx="3" fill="{{c.rhythm}}" opacity="0.5" stroke="{{c.badgeBorder}}" stroke-dasharray="3 2"></rect></svg><div style="display:flex;gap:28px;padding-left:64px;font-size:12.5px;color:{{c.sec}}"><span>W35–W37: practice at about 35 % of normal — the date moved 6 weeks later.</span><span>Back to normal since W38 — the date returned to 3 December.</span></div><div style="padding-left:64px;font-size:12.5px;color:{{c.sec}}">W36: 0.6 h on this project · my take: Leap — “Vibrato finally works”.</div></div></main></div></div></div><footer style="height:28px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 14px;box-sizing:border-box;font-size:11.5px;color:{{c.ter}};border-top:1px solid {{c.sep}};background:{{c.sidebar}}"><span style="display:inline-flex;align-items:center;gap:5px;padding:1px 8px;border-radius:10px;border:1px solid {{c.badgeBorder}};color:{{c.sec}}"><span style="width:6px;height:6px;border-radius:3px;background:{{c.sec}}"></span>{{ss.demo}}</span><span>{{ss.updated}}</span><span style="margin-inline-start:auto">{{ss.keys}}</span></footer></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark": {"editor": "boolean", "default": false}, "lang": {"editor": "enum", "options": ["en", "ru", "he"], "default": "en"}, "$preview": {"width": 1440, "height": 1040}}'>
+
+function theme(d) {
+  return d ? {
+    dark:true, window:'#1E1E21', sidebar:'#28272C', rail:'#232326', band:'#252528', text:'#EDEDF0', sec:'#A6A6AD', ter:'#8D8D95',
+    sep:'rgba(255,255,255,0.08)', rowSep:'rgba(255,255,255,0.045)', chip:'rgba(255,255,255,0.075)', chipText:'#BDBDC4',
+    accent:'#5A9DFF', accentFill:'#2F6BD0', selBg:'rgba(90,157,255,0.16)', navSel:'rgba(255,255,255,0.09)', check:'#64646C', checkDone:'#4C8DF0',
+    dueText:'#FFC266', dueBg:'rgba(255,176,64,0.15)', card:'#2A2A2E', cardBorder:'rgba(255,255,255,0.07)',
+    field:'rgba(255,255,255,0.07)', fieldBorder:'rgba(255,255,255,0.12)', badgeBorder:'rgba(255,255,255,0.2)', paused:'#7E7E86',
+    windowBorder:'rgba(255,255,255,0.14)', rhythm:'#5E92EE', progress:'#3FA690', done:'#7E7E86', track:'rgba(255,255,255,0.07)',
+    heat:'94,146,238', scrim:'rgba(0,0,0,0.42)', sheet:'#2A2A2E', shadow:'0 24px 70px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.1)',
+    band1:'rgba(94,146,238,0.22)', bandLine:'#5E92EE', grid:'rgba(255,255,255,0.07)', seg:'#4A5468', segAlt:'#596378', segText:'#EDEDF0',
+    hatch:'rgba(255,255,255,0.22)', ctrl:'#3A3A3F', ctrlSel:'#5C5C63', knob:'#E6E6EA', future:'#B9A6F0'
+  } : {
+    dark:false, window:'#FFFFFF', sidebar:'#EFEEF2', rail:'#F8F8FA', band:'#F6F6F8', text:'#1D1D1F', sec:'#5F5F67', ter:'#74747C',
+    sep:'rgba(0,0,0,0.08)', rowSep:'rgba(0,0,0,0.045)', chip:'rgba(0,0,0,0.045)', chipText:'#4F4F57',
+    accent:'#0A64D8', accentFill:'#0A64D8', selBg:'rgba(10,100,216,0.08)', navSel:'rgba(0,0,0,0.07)', check:'#B4B4BB', checkDone:'#0A64D8',
+    dueText:'#8A4B00', dueBg:'#FFEFD6', card:'#FFFFFF', cardBorder:'rgba(0,0,0,0.08)',
+    field:'rgba(0,0,0,0.045)', fieldBorder:'rgba(0,0,0,0.12)', badgeBorder:'rgba(0,0,0,0.18)', paused:'#8E8E95',
+    windowBorder:'rgba(0,0,0,0.16)', rhythm:'#2F68C8', progress:'#14917A', done:'#9A9AA2', track:'rgba(0,0,0,0.05)',
+    heat:'47,104,200', scrim:'rgba(0,0,0,0.18)', sheet:'#FFFFFF', shadow:'0 24px 70px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.08)',
+    band1:'rgba(47,104,200,0.16)', bandLine:'#2F68C8', grid:'rgba(0,0,0,0.06)', seg:'#C9D3E6', segAlt:'#B4C1DA', segText:'#1D2A44',
+    hatch:'rgba(0,0,0,0.22)', ctrl:'#E4E4E8', ctrlSel:'#FFFFFF', knob:'#FFFFFF', future:'#5B3FA8'
+  };
+}
+var SS = {
+  en:{ lang:'en', dir:'ltr', today:'Today', week:'Week', month:'Month', lines:'Lines', search:'Search', demo:'Demo data', updated:'Updated 3 min ago',
+       keys:'⌘1–⌘4 Views · ⌘K Search · ⌘R Refresh', tiers:{ foundation:'Foundation', active:'Active this season', maintenance:'Maintenance', paused:'Not in focus — on purpose' } },
+  ru:{ lang:'ru', dir:'ltr', today:'Сегодня', week:'Неделя', month:'Месяц', lines:'Линии', search:'Поиск', demo:'Демо-данные', updated:'Обновлено 3 мин назад',
+       keys:'⌘1–⌘4 Виды · ⌘K Поиск · ⌘R Обновить', tiers:{ foundation:'Фундамент', active:'Активные в сезоне', maintenance:'На поддержании', paused:'Не в фокусе — намеренно' } },
+  he:{ lang:'he', dir:'rtl', today:'היום', week:'שבוע', month:'חודש', lines:'תחומים', search:'חיפוש', demo:'נתוני הדגמה', updated:'עודכן לפני 3 דק׳',
+       keys:'⌘1–⌘4 תצוגות · ⌘K חיפוש · ⌘R רענון', tiers:{ foundation:'יסוד', active:'פעילים העונה', maintenance:'תחזוקה', paused:'לא בפוקוס — בכוונה' } }
+};
+var SIDE_T = [
+  ['foundation', [['🧘','Core practice'],['💪','Calisthenics']], true],
+  ['active', [['🎻','Violin'],['🇮🇹','Italian'],['🇯🇵','Japanese'],['📐','Math'],['🤖','AI/ML'],['🔬','Research'],['👨‍👩‍👧','Family']], true],
+  ['maintenance', [['🎹','Piano']], true],
+  ['paused', [['✒️','Calligraphy']], false]
+];
+function side(c, lang) {
+  var ss = SS[lang] || SS.en;
+  return SIDE_T.map(function (t) { var paused = t[0] === 'paused';
+    return { n: ss.tiers[t[0]], open: t[2], count: t[2] ? '' : String(t[1].length), chev: t[2] ? 'M3.5 6L8 10.5 12.5 6' : (ss.dir === 'rtl' ? 'M10 3.5L5.5 8 10 12.5' : 'M6 3.5L10.5 8 6 12.5'),
+      rows: t[1].map(function (r) { return { e:r[0], n:r[1], fg: paused ? c.paused : c.text, op: paused ? 0.5 : 1 }; }) }; });
+}
+function fmt(m) { if (m < 60) return '≈ ' + m + ' min est.'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : '') + ' est.'; }
+function short(m) { if (m < 60) return '≈ ' + m + ' min'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : ''); }
+var L = {
+  violin:{e:'🎻',n:'Violin',a:'Spring recital 2027'},
+  piano:{e:'🎹',n:'Piano',a:'Keep repertoire alive'},
+  italian:{e:'🇮🇹',n:'Italian',a:'B1 by summer 2027'},
+  japanese:{e:'🇯🇵',n:'Japanese',a:'Kana and first 300 words'},
+  math:{e:'📐',n:'Math',a:'Linear algebra foundation'},
+  ai:{e:'🤖',n:'AI/ML',a:'Eval toolkit v1'},
+  research:{e:'🔬',n:'Research',a:'Practice-drift paper'},
+  cal:{e:'💪',n:'Calisthenics',a:'20 strict pull-ups'},
+  core:{e:'🧘',n:'Core practice',a:'Daily practice 2026'},
+  family:{e:'👨‍👩‍👧',n:'Family',a:'Family year 2026'},
+  life:{e:'🧺',n:'Life ops',a:'Household'}
+};
+// ---------- calendar (draft-3) ----------
+var CALS = {
+  work:{ n:'Work', l:'#6C84AE', d:'#8FA6CE', acct:'Work · Exchange' },
+  family:{ n:'Family', l:'#6E9A80', d:'#8FBDA0', acct:'iCloud' },
+  music:{ n:'Music lessons', l:'#9282B4', d:'#B3A3D4', acct:'iCloud', line:'violin' },
+  personal:{ n:'Personal', l:'#B0946A', d:'#D0B78C', acct:'iCloud' }
+};
+// W40, index 0 = Mon 28 Sep … 6 = Sun 4 Oct. [start, end, title, calendar, flags]
+var EVD = [
+  [['09:30','10:00','Team stand-up','work'],['14:00','15:30','Design review','work']],
+  [['09:30','10:00','Team stand-up','work'],['15:00','16:30','Quarterly planning','work'],['16:00','17:00','Dentist — kids','family']],
+  [['09:30','10:00','Team stand-up','work'],['12:30','13:30','Physio','personal']],
+  [['09:30','10:00','Team stand-up','work'],['13:00','14:00','Lunch with Marta','personal'],['17:00','18:00','Violin lesson','music'],['18:30','20:00','Parents’ evening at school','family']],
+  [['09:30','10:00','Team stand-up','work'],['15:00','16:00','Sprint demo','work',{tent:1}],['19:00','21:00','Concert — string quartet','personal']],
+  [['11:00','12:30','Castle walk','family']],
+  [['18:00','19:00','Call with parents','family']]
+];
+var ALLDAY = [{ from:5, to:6, title:'Weekend in Sigulda', cal:'family' }];
+var NEXTWEEK = [['Mon 5','06:40','08:55','Flight to Munich','work'],['Tue 6','10:00','17:00','Workshop, day 1','work'],['Wed 7','21:10','23:25','Flight home','work'],['Thu 8','17:00','18:00','Violin lesson','music'],['Sat 10','12:00','15:00','Grandmother’s birthday','family']];
+var EVMIX = { 'Team stand-up':['Планёрка команды','ru'], 'Lunch with Marta':['Pranzo con Marta','it'], 'Violin lesson':['バイオリンのレッスン','ja'], 'Parents’ evening at school':['אסיפת הורים בבית הספר','he'] };
+var CAL_NOW = 16 * 60 + 20, CAL_TODAY = 3, DAY_FROM = 480, DAY_TO = 1320;
+var CT = {
+  en:{ fixed:'Fixed today', inCal:'in calendar', planned:'planned', free:'free', ev:['event','events'], inn:'in', tent:'tentative', allDay:'all day', busy:'Busy',
+    notConn:'Calendar is not connected.', connect:'Connect calendars…', notNow:'Not now', stay:'Events stay on this device.', fixedNext:'Fixed next week', overlap:'overlap',
+    day:'Day', now:'now', win:'day window 08–22', upcoming:'Upcoming', next:'Next', more:function (n) { return '+ ' + n + ' more today'; }, tasks:'Tasks', cal:'Calendar', noEvents:'No events today', h:'h', min:'min' },
+  ru:{ fixed:'По календарю сегодня', inCal:'в календаре', planned:'по плану', free:'свободно', ev:['событие','события','событий'], inn:'через', tent:'под вопросом', allDay:'весь день', busy:'Занято',
+    notConn:'Календарь не подключён.', connect:'Подключить календари…', notNow:'Не сейчас', stay:'События остаются на этом устройстве.', fixedNext:'По календарю на следующей неделе', overlap:'пересечение',
+    day:'День', now:'сейчас', win:'окно дня 08–22', upcoming:'Ближайшие', next:'Далее', more:function (n) { return 'ещё ' + n + ' сегодня'; }, tasks:'Задачи', cal:'Календарь', noEvents:'Сегодня без событий', h:'ч', min:'мин' }
+};
+CT.he = CT.en;
+function hm(t) { var p = t.split(':'); return +p[0] * 60 + +p[1]; }
+function cpl(lang, n, f) { if (lang === 'ru') { var a = n % 10, b = n % 100; return f[(a === 1 && b !== 11) ? 0 : (a >= 2 && a <= 4 && (b < 10 || b >= 20)) ? 1 : 2]; } return f[n === 1 ? 0 : 1]; }
+function durL(m, lang) { var k = CT[lang] || CT.en, h = Math.floor(m / 60), r = m % 60; return ((h ? h + ' ' + k.h : '') + (h && r ? ' ' : '') + (r ? r + ' ' + k.min : '')) || ('0 ' + k.min); }
+function busyMin(day) {   // union of non-tentative timed events, clipped to the day window; overlaps counted once
+  var iv = EVD[day].filter(function (e) { return !(e[4] && e[4].tent); }).map(function (e) { return [Math.max(DAY_FROM, hm(e[0])), Math.min(DAY_TO, hm(e[1]))]; })
+    .filter(function (x) { return x[1] > x[0]; }).sort(function (a, b) { return a[0] - b[0]; });
+  var tot = 0, end = -1;
+  iv.forEach(function (x) { if (x[0] >= end) { tot += x[1] - x[0]; end = x[1]; } else if (x[1] > end) { tot += x[1] - end; end = x[1]; } });
+  return tot;
+}
+// tasks with a planned time and an estimate, per day: [planned time, estimate in minutes]. Same tasks as in the Today list.
+var PLAN = { 3: [['07:30', 15], ['12:00', 10], ['15:00', 20], ['20:30', 45]] };
+function unionMin(iv) { var tot = 0, end = -1;
+  iv.filter(function (x) { return x[1] > x[0]; }).sort(function (a, b) { return a[0] - b[0]; })
+    .forEach(function (x) { if (x[0] >= end) { tot += x[1] - x[0]; end = x[1]; } else if (x[1] > end) { tot += x[1] - end; end = x[1]; } });
+  return tot; }
+function plannedMin(day) {   // minutes that planned tasks add on top of calendar time, inside the day window; overlaps with events count once
+  var ev = EVD[day].filter(function (e) { return !(e[4] && e[4].tent); }).map(function (e) { return [Math.max(DAY_FROM, hm(e[0])), Math.min(DAY_TO, hm(e[1]))]; });
+  var pl = (PLAN[day] || []).map(function (p) { var s = hm(p[0]); return [Math.max(DAY_FROM, s), Math.min(DAY_TO, s + p[1])]; });
+  return unionMin(ev.concat(pl)) - unionMin(ev); }
+function freeMin(day) { return DAY_TO - DAY_FROM - busyMin(day) - plannedMin(day); }
+function calFact(day, lang, withFree) { var k = CT[lang] || CT.en, n = EVD[day].length;
+  return n + ' ' + cpl(lang, n, k.ev) + ' · ' + durL(busyMin(day), lang) + ' ' + k.inCal + (withFree ? (plannedMin(day) ? ' · ' + durL(plannedMin(day), lang) + ' ' + k.planned : '') + ' · ≈ ' + durL(freeMin(day), lang) + ' ' + k.free : ''); }
+function evList(c, day, lang, mixed, now) {   // now: minutes for today, -1 = whole day in the future, 1e9 = past day
+  var k = CT[lang] || CT.en, E = EVD[day], nextSet = false;
+  return E.map(function (e, i) {
+    var cal = CALS[e[3]], s = hm(e[0]), en = hm(e[1]), o = e[4] || {}, mx = mixed && EVMIX[e[2]];
+    var past = en <= now, ov = E.some(function (x, j) { return j !== i && hm(x[0]) < en && hm(x[1]) > s; });
+    var next = !past && !nextSet && now >= 0 && now < 1e8 && s > now; if (next) nextSet = true;
+    var col = c.dark ? cal.d : cal.l, wait = s - now;
+    return { time: e[0] + '–' + e[1], start: e[0], title: mx ? mx[0] : e[2], tl: mx ? mx[1] : 'en', col: col, calN: cal.n, lineE: cal.line ? L[cal.line].e : '',
+      past: past, next: next, tent: !!o.tent, ov: ov, s: s, e: en, op: past ? 0.5 : 1,
+      when: next ? k.inn + ' ' + durL(wait, lang) : (o.tent ? k.tent : (ov ? k.overlap : '')), ww: next ? 600 : 400, wc: next ? c.text : c.ter,
+      dotbg: o.tent ? 'transparent' : col, dotbd: o.tent ? '1.5px dashed ' + col : '0',
+      tbd: o.tent ? '1px dashed ' + c.badgeBorder : '1px solid transparent',
+      tbg: o.tent ? 'repeating-linear-gradient(135deg, ' + c.track + ' 0 3px, transparent 3px 7px)' : 'transparent' };
+  });
+}
+function calNow(day) { return day === CAL_TODAY ? CAL_NOW : (day < CAL_TODAY ? 1e9 : -1); }
+
+// ---------- my take (draft-4) ----------
+// Mark paths on a 16 × 16 box. Shapes only, no colour coding: Leap = four-point spark (drawn 1.3× larger), Forward / Back = triangles along the reading direction, Steady = dot.
+var TKP = {
+  leap:'M8 .6C8.5 4.7 11.3 7.5 15.4 8 11.3 8.5 8.5 11.3 8 15.4 7.5 11.3 4.7 8.5 .6 8 4.7 7.5 7.5 4.7 8 .6Z',
+  fwd:'M4.2 2.9L13.2 8 4.2 13.1Z', back:'M11.8 2.9L2.8 8 11.8 13.1Z',
+  steady:'M4.3 8a3.7 3.7 0 1 0 7.4 0a3.7 3.7 0 1 0-7.4 0Z',
+  note:'M2.3 8a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0ZM6.8 8a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0ZM11.3 8a1.2 1.2 0 1 0 2.4 0a1.2 1.2 0 1 0-2.4 0Z'
+};
+var TK = {
+  en:{ name:'My take', lower:'my take', dirs:{ leap:'Leap', fwd:'Forward', steady:'Steady', back:'Back' }, draft:'draft', noDir:'no direction yet', confirm:'Confirm',
+    q:'How did each line go?', qSub:'My take · set only by you · optional', ph:'What happened? One line, optional', facts:'Facts', review:'Weekly review', scored:'Nothing here is scored.',
+    keys:'↑↓ line · 1–4 direction · ↩ note · ⌘↩ confirm', more:'Maintenance · 1 line', legend:'dashed = draft', sess:['session','sessions'], task:['task','tasks'], avg:'avg',
+    quiet:'quiet for 29 days', none:'no activity yet', floor:function (h) { return 'floor ' + h + ' h/day'; }, set:function (d) { return 'set ' + d; },
+    cLine:'Line', cFacts:'This week, measured', cTake:'My take', cNote:'Note', fromDrafts:function (n) { return n === 1 ? 'prefilled from 1 draft' : 'prefilled from ' + n + ' drafts'; },
+    today:'Thu 1 Oct', add:'Note for my take', days:{ Mon:'Mon', Tue:'Tue', Wed:'Wed', Thu:'Thu', Fri:'Fri', Sat:'Sat', Sun:'Sun' }, mon:{ Aug:'Aug', Sep:'Sep', Oct:'Oct' }, dec:'.' },
+  ru:{ name:'Мой взгляд', lower:'мой взгляд', dirs:{ leap:'Рывок', fwd:'Вперёд', steady:'Ровно', back:'Назад' }, draft:'черновик', noDir:'без направления', confirm:'Подтвердить',
+    q:'Как прошла неделя по линиям?', qSub:'Мой взгляд · ставите только вы · необязательно', ph:'Что произошло? Одной строкой, необязательно', facts:'Факты', review:'Недельный обзор', scored:'Здесь ничего не оценивается.',
+    keys:'↑↓ линия · 1–4 направление · ↩ заметка · ⌘↩ подтвердить', more:'На поддержании · 1 линия', legend:'пунктир = черновик', sess:['занятие','занятия','занятий'], task:['задача','задачи','задач'], avg:'ср.',
+    quiet:'тихо 29 дней', none:'пока без активности', floor:function (h) { return 'пол ' + h + ' ч/день'; }, set:function (d) { return 'поставлено ' + d; },
+    cLine:'Линия', cFacts:'Эта неделя, измерено', cTake:'Мой взгляд', cNote:'Заметка', fromDrafts:function (n) { return n === 1 ? 'из 1 черновика' : 'из ' + n + ' черновиков'; },
+    today:'чт 1 окт', add:'Заметка для моего взгляда', days:{ Mon:'пн', Tue:'вт', Wed:'ср', Thu:'чт', Fri:'пт', Sat:'сб', Sun:'вс' }, mon:{ Aug:'авг', Sep:'сен', Oct:'окт' }, dec:',' }
+};
+TK.he = TK.en;
+// Weekly rhythm / progress, W33–W40 (W40 partial). null = the series does not apply to the line.
+var WSTAT = {
+  core:{ r:[12,13,11,9,12,13,14,8], p:null, floor:3 }, cal:{ r:[4,4,3,2,3,4,4,4], p:[0,1,0,0,0,1,0,0], floor:1 },
+  ai:{ r:null, p:[3,4,2,3,3,4,2,3] }, research:{ r:null, p:[1,2,1,0,1,2,1,1] }, violin:{ r:[6,5,2,1,3,6,6,4], p:[1,2,0,0,1,2,1,1] },
+  italian:{ r:[3,2,1,0,0,0,0,0], p:[1,1,0,0,0,0,0,0], quiet:1 }, japanese:{ r:null, p:null, none:1 },
+  math:{ r:[2,3,2,1,2,2,3,1], p:[2,1,2,1,2,2,1,1] }, family:{ r:[5,6,4,6,5,5,4,3], p:[1,0,1,1,0,2,1,1] }, piano:{ r:[2,1,1,0,0,0,0,0], p:null }
+};
+var TAKE_TIERS = [['foundation', ['core','cal']], ['active', ['ai','research','violin','italian','japanese','math','family']]];
+// Takes per line and ISO week. Confirmed: { d, n?, set? }. Draft: { draft:1, notes:[[weekday, date, note, direction or '']] }. No entry = blank week.
+var TAKES = {
+  violin:{ 35:{ d:'fwd', n:'Allemande bars 1–8 from memory' }, 36:{ d:'leap', n:'Vibrato finally works' }, 38:{ d:'fwd' }, 39:{ d:'steady', set:'Tue 29 Sep', changed:1 },
+    40:{ draft:1, notes:[['Mon','28 Sep','Bars 9–16 clean at ♩ = 60','fwd'], ['Wed','30 Sep','Teacher asked for the Sarabande next','']] } },
+  ai:{ 37:{ d:'leap', n:'Found a way to grade answers without a reference set' }, 39:{ d:'fwd' }, 40:{ draft:1, notes:[['Tue','29 Sep','Harness runs end to end','fwd']] } },
+  research:{ 38:{ d:'back', n:'Section 3 outline does not hold; starting again' }, 39:{ d:'steady' } },
+  math:{ 38:{ draft:1, notes:[['Thu','17 Sep','Finally understood change of basis','leap']] } },
+  core:{ 34:{ d:'fwd' }, 36:{ d:'steady' }, 37:{ d:'leap', n:'Held the whole morning session without a break' }, 39:{ d:'steady' } },
+  cal:{ 37:{ d:'fwd', n:'First clean set of 8' } },
+  family:{ 39:{ d:'fwd', n:'Evening reading every day' } }
+};
+var PTAKES = { allemande:{ 36:{ d:'leap', n:'Vibrato finally works' } } };   // project-level take
+var WK_SUN = { 33:'16 Aug', 34:'23 Aug', 35:'30 Aug', 36:'6 Sep', 37:'13 Sep', 38:'20 Sep', 39:'27 Sep', 40:'4 Oct' };
+function tkDate(s, lang) { var k = TK[lang] || TK.en; return s.replace(/\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/, function (m) { return k.days[m]; }).replace(/\b(Aug|Sep|Oct)\b/, function (m) { return k.mon[m]; }); }
+function takeEntry(line, wk) { return (TAKES[line] || {})[wk] || null; }
+function takeDir(e) { if (!e) return null; if (!e.draft) return e.d; var d = ''; e.notes.forEach(function (n) { if (n[3]) d = n[3]; }); return d; }   // '' = note only, no direction
+function takeNote(e) { if (!e) return ''; return e.draft ? e.notes.map(function (n) { return n[2]; }).join(' · ') : (e.n || ''); }
+function takeSet(e, wk) { return e.set || ('Sun ' + WK_SUN[wk]); }
+function tmark(c, d, draft, s) {   // d: 'leap' | 'fwd' | 'steady' | 'back' | '' (note only) | null (blank)
+  if (d == null) return { p:'', fill:'none', stroke:'none', sw:0, dash:'0', s:s, blank:true };
+  var k = d || 'note', ink = k === 'leap' ? c.text : c.sec, hollow = !!draft && k !== 'note';
+  return { p: TKP[k], fill: hollow ? 'none' : ink, stroke: k === 'note' ? 'none' : ink, sw: hollow ? 1.5 : 1.1, dash: hollow ? '2.3 1.7' : '0', s: Math.round(s * (k === 'leap' ? 1.3 : 1)), blank:false };
+}
+function takeMarkOf(c, line, wk, s) { var e = takeEntry(line, wk); return tmark(c, e ? takeDir(e) : null, !!(e && e.draft), s); }
+function takeWeeks(c, line, w0, w1, s) { var out = []; for (var w = w0; w <= w1; w++) out.push(takeMarkOf(c, line, w, s)); return out; }
+function takeAria(lang, line, w0, w1) { var k = TK[lang] || TK.en, out = [];
+  for (var w = w0; w <= w1; w++) { var e = takeEntry(line, w); if (e) { var d = takeDir(e); out.push('W' + w + ' ' + (d ? k.dirs[d] : k.noDir) + (e.draft ? ' (' + k.draft + ')' : '')); } }
+  return k.name + ': ' + (out.join(', ') || '—'); }
+function takeWord(lang, e) { var k = TK[lang] || TK.en, d = takeDir(e); return d ? k.dirs[d] : k.noDir; }
+function avg4(arr, i) { var s = 0; for (var j = i - 4; j < i; j++) s += arr[j]; return s / 4; }
+function tkNum(x, lang) { return x.toFixed(1).replace('.', (TK[lang] || TK.en).dec); }
+function takeFacts(c, lang, line, wi) {   // measured facts of one week (index wi into W33–W40): rhythm, progress, floor — each its own item, never combined
+  var k = TK[lang] || TK.en, w = WSTAT[line], out = [];
+  if (w.none) return [{ sq:'transparent', t:k.none }];
+  if (w.quiet && wi === 7) return [{ sq:'transparent', t:k.quiet, moon:true }];
+  if (w.r) out.push({ sq:c.rhythm, t: w.r[wi] + ' ' + cpl(lang, w.r[wi], k.sess) + ' · ' + k.avg + ' ' + tkNum(avg4(w.r, wi), lang) });
+  if (w.p) out.push({ sq:c.progress, t: w.p[wi] + ' ' + cpl(lang, w.p[wi], k.task) + ' · ' + k.avg + ' ' + tkNum(avg4(w.p, wi), lang) });
+  return out;
+}
+// The weekly-review model shared by Mac and iPad. state: { pick:{line:dir}, conf:{line:true} }
+function takeReview(c, lang, self, ms, focus) {
+  var k = TK[lang] || TK.en, ss = SS[lang] || SS.en, st = self.state || {}, pick = st.pick || {}, conf = st.conf || {};
+  return TAKE_TIERS.map(function (t) { return { n: ss.tiers[t[0]], rows: t[1].map(function (line) {
+    var e = takeEntry(line, 40), base = e ? takeDir(e) : null, sel = pick[line] != null ? pick[line] : (base || null), done = !!conf[line], l = L[line];
+    var drafts = (e && e.draft ? e.notes : []).map(function (n) { return { m: tmark(c, n[3], true, ms), day: tkDate(n[0] + ' ' + n[1], lang), note: n[2], dirL: n[3] ? k.dirs[n[3]] : k.noDir }; });
+    var note = takeNote(e), foc = line === focus;
+    var facts = takeFacts(c, lang, line, 7);
+    return { key: line, e: l.e, n: l.n, sub: WSTAT[line].floor ? k.floor(WSTAT[line].floor) : '', facts: facts, quiet: !!(facts[0] && facts[0].moon), drafts: drafts, hasDrafts: drafts.length > 0, noDrafts: drafts.length === 0,
+      fromL: drafts.length ? k.fromDrafts(drafts.length) : '', ctlAria: k.name + ' — ' + l.n,
+      segs: ['leap','fwd','steady','back'].map(function (d) { var on = sel === d, solid = on && done;
+        return { label: k.dirs[d], m: tmark(c, d, false, ms), on: on, bg: solid ? c.ctrlSel : 'transparent', bd: on && !done ? '1px dashed ' + c.sec : '1px solid transparent',
+          sh: solid ? '0 1px 2px rgba(0,0,0,0.18)' : 'none', fw: on ? 600 : 400, fg: on ? c.text : c.sec,
+          pick: function () { var p2 = Object.assign({}, pick), c2 = Object.assign({}, conf); p2[line] = d; c2[line] = !(e && e.draft); self.setState({ pick: p2, conf: c2 }); } }; }),   // no drafts: one tap sets the take; with drafts: Confirm
+      noteV: note || k.ph, noteC: note ? c.text : c.ter, noteWs: foc ? 'normal' : 'nowrap', ring: foc ? '0 0 0 2px ' + c.accent : 'none', bg: foc ? c.selBg : 'transparent',
+      canConfirm: sel != null && !done, setL: done ? k.set(k.today) : '', isSet: done,
+      confirm: function () { var c2 = Object.assign({}, conf); c2[line] = true; self.setState({ conf: c2 }); } };
+  }) }; });
+}
+
+function build(c) { return {}; }
+class Component extends DCLogic {
+  renderVals() {
+    var c = theme(!!this.props.dark);
+    var v = build.call(this, c, this.props.lang || 'en') || {};
+    var lang = this.props.lang || 'en'; v.c = c; v.ss = SS[lang] || SS.en; v.side = side(c, lang);
+    return v;
+  }
+}
+</script>
+</body>
+</html>

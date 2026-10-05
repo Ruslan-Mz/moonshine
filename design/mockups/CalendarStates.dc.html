@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Calendar — states and components</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0A64D8}a:hover{color:#084FA8}
+button{font:inherit;color:inherit;cursor:default}
+</style>
+</helmet>
+<div style="width:1440px;box-sizing:border-box;display:flex;flex-direction:column;gap:16px;padding:24px;border-radius:12px;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;font-size:13px;line-height:1.35;color:{{c.text}};background:{{c.rail}};-webkit-font-smoothing:antialiased"><div style="display:flex;align-items:baseline;gap:10px"><h1 style="margin:0;font-size:19px;font-weight:700">Calendar — states and components</h1><span style="font-size:12.5px;color:{{c.sec}}">draft-3 · events are read-only, never amber, never red</span></div><div style="display:grid;grid-template-columns:repeat(4, minmax(0, 1fr));gap:14px"><section style="display:flex;flex-direction:column;gap:10px;padding:16px 18px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}};min-width:0"><h2 style="margin:0;font-size:13px;font-weight:600">No access yet</h2><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:10px;height:32px;padding:0 4px;border-bottom:1px solid {{c.sep}};font-size:12px;color:{{c.ter}}"><span style="display:flex"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><rect x="2" y="3" width="12" height="11" rx="2"></rect><path d="M2 6.5h12M5 1.8v2.4M11 1.8v2.4"></path><path d="M5 9.2h.01M8 9.2h.01M11 9.2h.01M5 11.6h.01M8 11.6h.01" stroke-width="2.2"></path></svg></span><span>Calendar is not connected.</span><a href="#" style="text-decoration:none;color:{{c.accent}}">Connect calendars…</a><a href="#" style="margin-inline-start:auto;text-decoration:none;color:{{c.ter}}">Not now</a></div><div style="font-size:12px;color:{{c.sec}}">Tasks: 23 open · ≈ 11 h 15 min est.</div></div><p style="margin:auto 0 0;font-size:11.5px;line-height:1.4;color:{{c.ter}}">Today, Week and Month are complete without events. One quiet row, shown once per view; “Not now” hides it for 30 days. No badge, no banner.</p></section><section style="display:flex;flex-direction:column;gap:10px;padding:16px 18px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}};min-width:0"><h2 style="margin:0;font-size:13px;font-weight:600">Access denied</h2><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:10px;height:32px;padding:0 4px;border-bottom:1px solid {{c.sep}};font-size:12px;color:{{c.ter}}"><span style="display:flex"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><rect x="2" y="3" width="12" height="11" rx="2"></rect><path d="M2 6.5h12M5 1.8v2.4M11 1.8v2.4"></path><path d="M5 9.2h.01M8 9.2h.01M11 9.2h.01M5 11.6h.01M8 11.6h.01" stroke-width="2.2"></path></svg></span><span>Calendar access is off for MoonShine.</span><a href="#" style="text-decoration:none;color:{{c.accent}}">Open System Settings</a><a href="#" style="margin-inline-start:auto;text-decoration:none;color:{{c.ter}}">Not now</a></div></div><p style="margin:auto 0 0;font-size:11.5px;line-height:1.4;color:{{c.ter}}">Same quiet row with a different link. Settings → Calendars shows “Access denied”. Nothing else changes.</p></section><section style="display:flex;flex-direction:column;gap:10px;padding:16px 18px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}};min-width:0"><h2 style="margin:0;font-size:13px;font-weight:600">A day with no events</h2><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:8px;height:28px;border-bottom:1px solid {{c.rowSep}};font-size:13px;color:{{c.sec}}">No events today</div><div style="font-size:12px;color:{{c.sec}}">0 events · ≈ 14 h free</div></div><p style="margin:auto 0 0;font-size:11.5px;line-height:1.4;color:{{c.ter}}">The “Fixed today” header stays with one plain row. The free-time fact still shows the whole day window (08–22).</p></section><section style="display:flex;flex-direction:column;gap:10px;padding:16px 18px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}};min-width:0"><h2 style="margin:0;font-size:13px;font-weight:600">Two overlapping events</h2><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:10px;height:28px;border-bottom:1px solid {{c.rowSep}};opacity:1"><span style="width:8px;height:8px;border-radius:4px;box-sizing:border-box;flex-shrink:0;background:{{cc.work}}"></span><span style="font-size:12.5px;color:{{c.sec}};font-variant-numeric:tabular-nums;white-space:nowrap">15:00–16:30</span><span dir="auto" style="flex:1;min-width:0;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Quarterly planning</span><span style="font-size:11.5px;color:{{c.ter}};white-space:nowrap">Work</span><span style="font-size:11.5px;white-space:nowrap;font-weight:400;color:{{c.ter}}">overlap</span></div><div style="display:flex;align-items:center;gap:10px;height:28px;border-bottom:1px solid {{c.rowSep}};opacity:1"><span style="width:8px;height:8px;border-radius:4px;box-sizing:border-box;flex-shrink:0;background:{{cc.family}}"></span><span style="font-size:12.5px;color:{{c.sec}};font-variant-numeric:tabular-nums;white-space:nowrap">16:00–17:00</span><span dir="auto" style="flex:1;min-width:0;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Dentist — kids</span><span style="font-size:11.5px;color:{{c.ter}};white-space:nowrap">Family</span><span style="font-size:11.5px;white-space:nowrap;font-weight:400;color:{{c.ter}}">overlap</span></div><div style="font-size:12px;color:{{c.sec}}">Tue 29 Sep · 3 events · 2 h 30 min in calendar</div></div><p style="margin:auto 0 0;font-size:11.5px;line-height:1.4;color:{{c.ter}}">Both rows stay in time order with the tag “overlap”. Busy time counts the overlap once: 15:00–17:00 = 2 h, plus the 30 min stand-up.</p></section><section style="display:flex;flex-direction:column;gap:10px;padding:16px 18px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}};min-width:0"><h2 style="margin:0;font-size:13px;font-weight:600">Tentative event</h2><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:10px;height:28px;border-bottom:1px solid {{c.rowSep}};opacity:1"><span style="width:8px;height:8px;border-radius:4px;box-sizing:border-box;flex-shrink:0;border:1.5px dashed {{cc.work}};background:transparent"></span><span style="font-size:12.5px;color:{{c.sec}};font-variant-numeric:tabular-nums;white-space:nowrap">15:00–16:00</span><span dir="auto" style="flex:1;min-width:0;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Sprint demo</span><span style="font-size:11.5px;color:{{c.ter}};white-space:nowrap">Work</span><span style="font-size:11.5px;white-space:nowrap;font-weight:400;color:{{c.ter}}">tentative</span></div><div style="display:flex;gap:6px;align-items:stretch;padding:3px 6px 3px 0;border-radius:5px;border:1px dashed {{c.badgeBorder}};background:repeating-linear-gradient(135deg, {{c.track}} 0 3px, transparent 3px 7px);width:190px"><span style="width:3px;border-radius:2px;background:{{cc.work}}"></span><span style="display:flex;flex-direction:column"><span style="font-size:11px;color:{{c.ter}}">15:00–16:00 tentative</span><span style="font-size:12px">Sprint demo</span></span></div></div><p style="margin:auto 0 0;font-size:11.5px;line-height:1.4;color:{{c.ter}}">Dashed dot in lists, hatched outline in Week and the day rail. Not counted as busy. Declined events are hidden everywhere.</p></section><section style="display:flex;flex-direction:column;gap:10px;padding:16px 18px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}};min-width:0"><h2 style="margin:0;font-size:13px;font-weight:600">Private or empty title</h2><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:10px;height:28px;border-bottom:1px solid {{c.rowSep}};opacity:1"><span style="width:8px;height:8px;border-radius:4px;box-sizing:border-box;flex-shrink:0;background:{{cc.work}}"></span><span style="font-size:12.5px;color:{{c.sec}};font-variant-numeric:tabular-nums;white-space:nowrap">11:00–12:00</span><span dir="auto" style="flex:1;min-width:0;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Busy</span><span style="font-size:11.5px;color:{{c.ter}};white-space:nowrap">Work</span><span style="font-size:11.5px;white-space:nowrap;font-weight:400;color:{{c.ter}}"></span></div></div><p style="margin:auto 0 0;font-size:11.5px;line-height:1.4;color:{{c.ter}}">A private event, or one with an empty title, shows as “Busy” (RU: «Занято»). Time and calendar are still shown; it counts as busy.</p></section><section style="display:flex;flex-direction:column;gap:10px;padding:16px 18px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}};min-width:0"><h2 style="margin:0;font-size:13px;font-weight:600">Another time zone</h2><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:10px;height:28px;border-bottom:1px solid {{c.rowSep}};opacity:1"><span style="width:8px;height:8px;border-radius:4px;box-sizing:border-box;flex-shrink:0;background:{{cc.work}}"></span><span style="font-size:12.5px;color:{{c.sec}};font-variant-numeric:tabular-nums;white-space:nowrap">18:00–19:00</span><span dir="auto" style="flex:1;min-width:0;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Webinar: evaluation methods</span><span style="font-size:11.5px;color:{{c.ter}};white-space:nowrap">Work</span><span style="font-size:11.5px;white-space:nowrap;font-weight:400;color:{{c.ter}}"></span></div><div style="align-self:flex-start;display:flex;flex-direction:column;gap:2px;padding:8px 10px;border-radius:8px;background:{{c.sheet}};box-shadow:{{c.shadow}};font-size:12px"><span style="font-weight:600">Webinar: evaluation methods</span><span>Wed 7 Oct · 18:00–19:00 · Riga (local)</span><span style="color:{{c.sec}}">Created as 11:00–12:00 EDT · New York</span></div></div><p style="margin:auto 0 0;font-size:11.5px;line-height:1.4;color:{{c.ter}}">Lists always use local time. The original zone appears only in the event detail (popover on Mac, sheet on iPhone).</p></section><section style="display:flex;flex-direction:column;gap:10px;padding:16px 18px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}};min-width:0"><h2 style="margin:0;font-size:13px;font-weight:600">Past and next</h2><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:10px;height:28px;border-bottom:1px solid {{c.rowSep}};opacity:0.5"><span style="width:8px;height:8px;border-radius:4px;box-sizing:border-box;flex-shrink:0;background:{{cc.personal}}"></span><span style="font-size:12.5px;color:{{c.sec}};font-variant-numeric:tabular-nums;white-space:nowrap">13:00–14:00</span><span dir="auto" style="flex:1;min-width:0;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Lunch with Marta</span><span style="font-size:11.5px;color:{{c.ter}};white-space:nowrap">Personal</span><span style="font-size:11.5px;white-space:nowrap;font-weight:400;color:{{c.ter}}"></span></div><div style="display:flex;align-items:center;gap:10px;height:28px;border-bottom:1px solid {{c.rowSep}};opacity:1"><span style="width:8px;height:8px;border-radius:4px;box-sizing:border-box;flex-shrink:0;background:{{cc.music}}"></span><span style="font-size:12.5px;color:{{c.sec}};font-variant-numeric:tabular-nums;white-space:nowrap">17:00–18:00</span><span dir="auto" style="flex:1;min-width:0;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Violin lesson</span><span style="font-size:11.5px;color:{{c.ter}};white-space:nowrap">🎻 Music lessons</span><span style="font-size:11.5px;white-space:nowrap;font-weight:600;color:{{c.text}}">in 40 min</span></div></div><p style="margin:auto 0 0;font-size:11.5px;line-height:1.4;color:{{c.ter}}">A past event is dimmed to 50 %, nothing more. The next event carries “in 40 min” in semibold primary text — no colour.</p></section></div><h2 style="margin:6px 0 0;font-size:14px;font-weight:600">Components</h2><div style="display:grid;grid-template-columns:repeat(6, minmax(0, 1fr));gap:14px"><section style="display:flex;flex-direction:column;gap:10px;padding:16px 18px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}};min-width:0"><h2 style="margin:0;font-size:13px;font-weight:600">CalendarDot</h2><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;gap:14px;align-items:center;font-size:12px"><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:{{cc.work}}"></span>Work</span><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:{{cc.family}}"></span>Family</span></div><div style="display:flex;gap:14px;align-items:center;font-size:12px"><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:{{cc.music}}"></span>Music</span><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:{{cc.personal}}"></span>Personal</span></div></div><p style="margin:auto 0 0;font-size:11.5px;line-height:1.4;color:{{c.ter}}">8 pt dot or 3 pt leading bar; the system colour desaturated toward the tokens. Never a filled block.</p></section><section style="display:flex;flex-direction:column;gap:10px;padding:16px 18px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}};min-width:0"><h2 style="margin:0;font-size:13px;font-weight:600">EventRow</h2><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:10px;height:28px;border-bottom:1px solid {{c.rowSep}};opacity:1"><span style="width:8px;height:8px;border-radius:4px;box-sizing:border-box;flex-shrink:0;background:{{cc.work}}"></span><span style="font-size:12.5px;color:{{c.sec}};font-variant-numeric:tabular-nums;white-space:nowrap">09:30–10:00</span><span dir="auto" style="flex:1;min-width:0;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Team stand-up</span><span style="font-size:11.5px;color:{{c.ter}};white-space:nowrap">Work</span><span style="font-size:11.5px;white-space:nowrap;font-weight:400;color:{{c.ter}}"></span></div></div><p style="margin:auto 0 0;font-size:11.5px;line-height:1.4;color:{{c.ter}}">Same grid as TaskRow; the dot replaces the checkbox. No estimate, no trace chip.</p></section><section style="display:flex;flex-direction:column;gap:10px;padding:16px 18px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}};min-width:0"><h2 style="margin:0;font-size:13px;font-weight:600">Day rail marks</h2><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;gap:6px;height:25px;border-radius:4px;background:{{c.chip}};"><span style="width:3px;border-radius:2px;background:{{cc.music}}"></span><span style="font-size:10.5px;line-height:16px">17:00 Violin lesson 🎻</span></div><div style="display:flex;align-items:center;gap:5px;height:19px;box-sizing:border-box;padding:0 4px;border-radius:4px;border:1px solid {{c.badgeBorder}};font-size:10.5px"><span style="width:10px;height:10px;box-sizing:border-box;border-radius:5px;border:1.25px solid {{c.check}}"></span><span style="flex:1">20:30 Allemande, bars 1–16 at ♩ = 60</span><span>🎻</span></div><div style="display:flex;align-items:center;gap:5px;height:13px;font-size:10.5px"><span style="width:3px;align-self:stretch;border-radius:2px;background:{{c.dueText}}"></span><span style="width:10px;height:10px;box-sizing:border-box;border-radius:5px;border:1.25px solid {{c.check}}"></span><span style="flex:1"><span style="font-weight:600;color:{{c.dueText}}">Due 18:00</span> Send recital repertoire list</span><span>🎻</span></div></div><p style="margin:auto 0 0;font-size:11.5px;line-height:1.4;color:{{c.ter}}">EventBlock: neutral fill + 3 pt calendar bar. TimedTaskBlock: outline + checkbox, height = estimate. DueMark: one line at the due time, amber. 26 pt per hour.</p></section><section style="display:flex;flex-direction:column;gap:10px;padding:16px 18px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}};min-width:0"><h2 style="margin:0;font-size:13px;font-weight:600">AllDayBar</h2><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:6px;height:20px;border-radius:5px;background:{{c.chip}};overflow:hidden;font-size:11.5px"><span style="width:3px;align-self:stretch;background:{{cc.family}}"></span>Weekend in Sigulda<span style="color:{{c.ter}}">all day</span></div></div><p style="margin:auto 0 0;font-size:11.5px;line-height:1.4;color:{{c.ter}}">Spans its days across the top of Week columns and Month cells.</p></section><section style="display:flex;flex-direction:column;gap:10px;padding:16px 18px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}};min-width:0"><h2 style="margin:0;font-size:13px;font-weight:600">FreeTimeFact</h2><div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:12px;color:{{c.sec}}">4 events · 4 h in calendar · 1 h 15 min planned · ≈ 8 h 45 min free</div></div><p style="margin:auto 0 0;font-size:11.5px;line-height:1.4;color:{{c.ter}}">Plain secondary text after a hairline. Free = day window − calendar − tasks with a planned time and an estimate. No comparison, no colour.</p></section><section style="display:flex;flex-direction:column;gap:10px;padding:16px 18px;border-radius:12px;background:{{c.card}};border:1px solid {{c.cardBorder}};min-width:0"><h2 style="margin:0;font-size:13px;font-weight:600">NextEventRow</h2><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:{{c.chip}}"><span style="width:3px;align-self:stretch;border-radius:2px;background:{{cc.music}}"></span><span style="font-size:15px;font-weight:600;font-variant-numeric:tabular-nums">17:00</span><span style="flex:1;font-size:13px">Violin lesson 🎻</span><span style="font-size:12px;font-weight:600">in 40 min</span></div></div><p style="margin:auto 0 0;font-size:11.5px;line-height:1.4;color:{{c.ter}}">iPhone Today and widgets. Then “+ 1 more today”.</p></section></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark": {"editor": "boolean", "default": false}, "lang": {"editor": "enum", "options": ["en", "ru", "he"], "default": "en"}, "$preview": {"width": 1440, "height": 860}}'>
+
+function theme(d) {
+  return d ? {
+    dark:true, window:'#1E1E21', sidebar:'#28272C', rail:'#232326', band:'#252528', text:'#EDEDF0', sec:'#A6A6AD', ter:'#8D8D95',
+    sep:'rgba(255,255,255,0.08)', rowSep:'rgba(255,255,255,0.045)', chip:'rgba(255,255,255,0.075)', chipText:'#BDBDC4',
+    accent:'#5A9DFF', accentFill:'#2F6BD0', selBg:'rgba(90,157,255,0.16)', navSel:'rgba(255,255,255,0.09)', check:'#64646C', checkDone:'#4C8DF0',
+    dueText:'#FFC266', dueBg:'rgba(255,176,64,0.15)', card:'#2A2A2E', cardBorder:'rgba(255,255,255,0.07)',
+    field:'rgba(255,255,255,0.07)', fieldBorder:'rgba(255,255,255,0.12)', badgeBorder:'rgba(255,255,255,0.2)', paused:'#7E7E86',
+    windowBorder:'rgba(255,255,255,0.14)', rhythm:'#5E92EE', progress:'#3FA690', done:'#7E7E86', track:'rgba(255,255,255,0.07)',
+    heat:'94,146,238', scrim:'rgba(0,0,0,0.42)', sheet:'#2A2A2E', shadow:'0 24px 70px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.1)',
+    band1:'rgba(94,146,238,0.22)', bandLine:'#5E92EE', grid:'rgba(255,255,255,0.07)', seg:'#4A5468', segAlt:'#596378', segText:'#EDEDF0',
+    hatch:'rgba(255,255,255,0.22)', ctrl:'#3A3A3F', ctrlSel:'#5C5C63', knob:'#E6E6EA', future:'#B9A6F0'
+  } : {
+    dark:false, window:'#FFFFFF', sidebar:'#EFEEF2', rail:'#F8F8FA', band:'#F6F6F8', text:'#1D1D1F', sec:'#5F5F67', ter:'#74747C',
+    sep:'rgba(0,0,0,0.08)', rowSep:'rgba(0,0,0,0.045)', chip:'rgba(0,0,0,0.045)', chipText:'#4F4F57',
+    accent:'#0A64D8', accentFill:'#0A64D8', selBg:'rgba(10,100,216,0.08)', navSel:'rgba(0,0,0,0.07)', check:'#B4B4BB', checkDone:'#0A64D8',
+    dueText:'#8A4B00', dueBg:'#FFEFD6', card:'#FFFFFF', cardBorder:'rgba(0,0,0,0.08)',
+    field:'rgba(0,0,0,0.045)', fieldBorder:'rgba(0,0,0,0.12)', badgeBorder:'rgba(0,0,0,0.18)', paused:'#8E8E95',
+    windowBorder:'rgba(0,0,0,0.16)', rhythm:'#2F68C8', progress:'#14917A', done:'#9A9AA2', track:'rgba(0,0,0,0.05)',
+    heat:'47,104,200', scrim:'rgba(0,0,0,0.18)', sheet:'#FFFFFF', shadow:'0 24px 70px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.08)',
+    band1:'rgba(47,104,200,0.16)', bandLine:'#2F68C8', grid:'rgba(0,0,0,0.06)', seg:'#C9D3E6', segAlt:'#B4C1DA', segText:'#1D2A44',
+    hatch:'rgba(0,0,0,0.22)', ctrl:'#E4E4E8', ctrlSel:'#FFFFFF', knob:'#FFFFFF', future:'#5B3FA8'
+  };
+}
+var SS = {
+  en:{ lang:'en', dir:'ltr', today:'Today', week:'Week', month:'Month', lines:'Lines', search:'Search', demo:'Demo data', updated:'Updated 3 min ago',
+       keys:'⌘1–⌘4 Views · ⌘K Search · ⌘R Refresh', tiers:{ foundation:'Foundation', active:'Active this season', maintenance:'Maintenance', paused:'Not in focus — on purpose' } },
+  ru:{ lang:'ru', dir:'ltr', today:'Сегодня', week:'Неделя', month:'Месяц', lines:'Линии', search:'Поиск', demo:'Демо-данные', updated:'Обновлено 3 мин назад',
+       keys:'⌘1–⌘4 Виды · ⌘K Поиск · ⌘R Обновить', tiers:{ foundation:'Фундамент', active:'Активные в сезоне', maintenance:'На поддержании', paused:'Не в фокусе — намеренно' } },
+  he:{ lang:'he', dir:'rtl', today:'היום', week:'שבוע', month:'חודש', lines:'תחומים', search:'חיפוש', demo:'נתוני הדגמה', updated:'עודכן לפני 3 דק׳',
+       keys:'⌘1–⌘4 תצוגות · ⌘K חיפוש · ⌘R רענון', tiers:{ foundation:'יסוד', active:'פעילים העונה', maintenance:'תחזוקה', paused:'לא בפוקוס — בכוונה' } }
+};
+var SIDE_T = [
+  ['foundation', [['🧘','Core practice'],['💪','Calisthenics']], true],
+  ['active', [['🎻','Violin'],['🇮🇹','Italian'],['🇯🇵','Japanese'],['📐','Math'],['🤖','AI/ML'],['🔬','Research'],['👨‍👩‍👧','Family']], true],
+  ['maintenance', [['🎹','Piano']], true],
+  ['paused', [['✒️','Calligraphy']], false]
+];
+function side(c, lang) {
+  var ss = SS[lang] || SS.en;
+  return SIDE_T.map(function (t) { var paused = t[0] === 'paused';
+    return { n: ss.tiers[t[0]], open: t[2], count: t[2] ? '' : String(t[1].length), chev: t[2] ? 'M3.5 6L8 10.5 12.5 6' : (ss.dir === 'rtl' ? 'M10 3.5L5.5 8 10 12.5' : 'M6 3.5L10.5 8 6 12.5'),
+      rows: t[1].map(function (r) { return { e:r[0], n:r[1], fg: paused ? c.paused : c.text, op: paused ? 0.5 : 1 }; }) }; });
+}
+function fmt(m) { if (m < 60) return '≈ ' + m + ' min est.'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : '') + ' est.'; }
+function short(m) { if (m < 60) return '≈ ' + m + ' min'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : ''); }
+var L = {
+  violin:{e:'🎻',n:'Violin',a:'Spring recital 2027'},
+  piano:{e:'🎹',n:'Piano',a:'Keep repertoire alive'},
+  italian:{e:'🇮🇹',n:'Italian',a:'B1 by summer 2027'},
+  japanese:{e:'🇯🇵',n:'Japanese',a:'Kana and first 300 words'},
+  math:{e:'📐',n:'Math',a:'Linear algebra foundation'},
+  ai:{e:'🤖',n:'AI/ML',a:'Eval toolkit v1'},
+  research:{e:'🔬',n:'Research',a:'Practice-drift paper'},
+  cal:{e:'💪',n:'Calisthenics',a:'20 strict pull-ups'},
+  core:{e:'🧘',n:'Core practice',a:'Daily practice 2026'},
+  family:{e:'👨‍👩‍👧',n:'Family',a:'Family year 2026'},
+  life:{e:'🧺',n:'Life ops',a:'Household'}
+};
+// ---------- calendar (draft-3) ----------
+var CALS = {
+  work:{ n:'Work', l:'#6C84AE', d:'#8FA6CE', acct:'Work · Exchange' },
+  family:{ n:'Family', l:'#6E9A80', d:'#8FBDA0', acct:'iCloud' },
+  music:{ n:'Music lessons', l:'#9282B4', d:'#B3A3D4', acct:'iCloud', line:'violin' },
+  personal:{ n:'Personal', l:'#B0946A', d:'#D0B78C', acct:'iCloud' }
+};
+// W40, index 0 = Mon 28 Sep … 6 = Sun 4 Oct. [start, end, title, calendar, flags]
+var EVD = [
+  [['09:30','10:00','Team stand-up','work'],['14:00','15:30','Design review','work']],
+  [['09:30','10:00','Team stand-up','work'],['15:00','16:30','Quarterly planning','work'],['16:00','17:00','Dentist — kids','family']],
+  [['09:30','10:00','Team stand-up','work'],['12:30','13:30','Physio','personal']],
+  [['09:30','10:00','Team stand-up','work'],['13:00','14:00','Lunch with Marta','personal'],['17:00','18:00','Violin lesson','music'],['18:30','20:00','Parents’ evening at school','family']],
+  [['09:30','10:00','Team stand-up','work'],['15:00','16:00','Sprint demo','work',{tent:1}],['19:00','21:00','Concert — string quartet','personal']],
+  [['11:00','12:30','Castle walk','family']],
+  [['18:00','19:00','Call with parents','family']]
+];
+var ALLDAY = [{ from:5, to:6, title:'Weekend in Sigulda', cal:'family' }];
+var NEXTWEEK = [['Mon 5','06:40','08:55','Flight to Munich','work'],['Tue 6','10:00','17:00','Workshop, day 1','work'],['Wed 7','21:10','23:25','Flight home','work'],['Thu 8','17:00','18:00','Violin lesson','music'],['Sat 10','12:00','15:00','Grandmother’s birthday','family']];
+var EVMIX = { 'Team stand-up':['Планёрка команды','ru'], 'Lunch with Marta':['Pranzo con Marta','it'], 'Violin lesson':['バイオリンのレッスン','ja'], 'Parents’ evening at school':['אסיפת הורים בבית הספר','he'] };
+var CAL_NOW = 16 * 60 + 20, CAL_TODAY = 3, DAY_FROM = 480, DAY_TO = 1320;
+var CT = {
+  en:{ fixed:'Fixed today', inCal:'in calendar', planned:'planned', free:'free', ev:['event','events'], inn:'in', tent:'tentative', allDay:'all day', busy:'Busy',
+    notConn:'Calendar is not connected.', connect:'Connect calendars…', notNow:'Not now', stay:'Events stay on this device.', fixedNext:'Fixed next week', overlap:'overlap',
+    day:'Day', now:'now', win:'day window 08–22', upcoming:'Upcoming', next:'Next', more:function (n) { return '+ ' + n + ' more today'; }, tasks:'Tasks', cal:'Calendar', noEvents:'No events today', h:'h', min:'min' },
+  ru:{ fixed:'По календарю сегодня', inCal:'в календаре', planned:'по плану', free:'свободно', ev:['событие','события','событий'], inn:'через', tent:'под вопросом', allDay:'весь день', busy:'Занято',
+    notConn:'Календарь не подключён.', connect:'Подключить календари…', notNow:'Не сейчас', stay:'События остаются на этом устройстве.', fixedNext:'По календарю на следующей неделе', overlap:'пересечение',
+    day:'День', now:'сейчас', win:'окно дня 08–22', upcoming:'Ближайшие', next:'Далее', more:function (n) { return 'ещё ' + n + ' сегодня'; }, tasks:'Задачи', cal:'Календарь', noEvents:'Сегодня без событий', h:'ч', min:'мин' }
+};
+CT.he = CT.en;
+function hm(t) { var p = t.split(':'); return +p[0] * 60 + +p[1]; }
+function cpl(lang, n, f) { if (lang === 'ru') { var a = n % 10, b = n % 100; return f[(a === 1 && b !== 11) ? 0 : (a >= 2 && a <= 4 && (b < 10 || b >= 20)) ? 1 : 2]; } return f[n === 1 ? 0 : 1]; }
+function durL(m, lang) { var k = CT[lang] || CT.en, h = Math.floor(m / 60), r = m % 60; return ((h ? h + ' ' + k.h : '') + (h && r ? ' ' : '') + (r ? r + ' ' + k.min : '')) || ('0 ' + k.min); }
+function busyMin(day) {   // union of non-tentative timed events, clipped to the day window; overlaps counted once
+  var iv = EVD[day].filter(function (e) { return !(e[4] && e[4].tent); }).map(function (e) { return [Math.max(DAY_FROM, hm(e[0])), Math.min(DAY_TO, hm(e[1]))]; })
+    .filter(function (x) { return x[1] > x[0]; }).sort(function (a, b) { return a[0] - b[0]; });
+  var tot = 0, end = -1;
+  iv.forEach(function (x) { if (x[0] >= end) { tot += x[1] - x[0]; end = x[1]; } else if (x[1] > end) { tot += x[1] - end; end = x[1]; } });
+  return tot;
+}
+// tasks with a planned time and an estimate, per day: [planned time, estimate in minutes]. Same tasks as in the Today list.
+var PLAN = { 3: [['07:30', 15], ['12:00', 10], ['15:00', 20], ['20:30', 45]] };
+function unionMin(iv) { var tot = 0, end = -1;
+  iv.filter(function (x) { return x[1] > x[0]; }).sort(function (a, b) { return a[0] - b[0]; })
+    .forEach(function (x) { if (x[0] >= end) { tot += x[1] - x[0]; end = x[1]; } else if (x[1] > end) { tot += x[1] - end; end = x[1]; } });
+  return tot; }
+function plannedMin(day) {   // minutes that planned tasks add on top of calendar time, inside the day window; overlaps with events count once
+  var ev = EVD[day].filter(function (e) { return !(e[4] && e[4].tent); }).map(function (e) { return [Math.max(DAY_FROM, hm(e[0])), Math.min(DAY_TO, hm(e[1]))]; });
+  var pl = (PLAN[day] || []).map(function (p) { var s = hm(p[0]); return [Math.max(DAY_FROM, s), Math.min(DAY_TO, s + p[1])]; });
+  return unionMin(ev.concat(pl)) - unionMin(ev); }
+function freeMin(day) { return DAY_TO - DAY_FROM - busyMin(day) - plannedMin(day); }
+function calFact(day, lang, withFree) { var k = CT[lang] || CT.en, n = EVD[day].length;
+  return n + ' ' + cpl(lang, n, k.ev) + ' · ' + durL(busyMin(day), lang) + ' ' + k.inCal + (withFree ? (plannedMin(day) ? ' · ' + durL(plannedMin(day), lang) + ' ' + k.planned : '') + ' · ≈ ' + durL(freeMin(day), lang) + ' ' + k.free : ''); }
+function evList(c, day, lang, mixed, now) {   // now: minutes for today, -1 = whole day in the future, 1e9 = past day
+  var k = CT[lang] || CT.en, E = EVD[day], nextSet = false;
+  return E.map(function (e, i) {
+    var cal = CALS[e[3]], s = hm(e[0]), en = hm(e[1]), o = e[4] || {}, mx = mixed && EVMIX[e[2]];
+    var past = en <= now, ov = E.some(function (x, j) { return j !== i && hm(x[0]) < en && hm(x[1]) > s; });
+    var next = !past && !nextSet && now >= 0 && now < 1e8 && s > now; if (next) nextSet = true;
+    var col = c.dark ? cal.d : cal.l, wait = s - now;
+    return { time: e[0] + '–' + e[1], start: e[0], title: mx ? mx[0] : e[2], tl: mx ? mx[1] : 'en', col: col, calN: cal.n, lineE: cal.line ? L[cal.line].e : '',
+      past: past, next: next, tent: !!o.tent, ov: ov, s: s, e: en, op: past ? 0.5 : 1,
+      when: next ? k.inn + ' ' + durL(wait, lang) : (o.tent ? k.tent : (ov ? k.overlap : '')), ww: next ? 600 : 400, wc: next ? c.text : c.ter,
+      dotbg: o.tent ? 'transparent' : col, dotbd: o.tent ? '1.5px dashed ' + col : '0',
+      tbd: o.tent ? '1px dashed ' + c.badgeBorder : '1px solid transparent',
+      tbg: o.tent ? 'repeating-linear-gradient(135deg, ' + c.track + ' 0 3px, transparent 3px 7px)' : 'transparent' };
+  });
+}
+function calNow(day) { return day === CAL_TODAY ? CAL_NOW : (day < CAL_TODAY ? 1e9 : -1); }
+
+function build(c) { var cc = {}; for (var k in CALS) cc[k] = c.dark ? CALS[k].d : CALS[k].l; return { cc: cc }; }
+class Component extends DCLogic {
+  renderVals() {
+    var c = theme(!!this.props.dark);
+    var v = build.call(this, c, this.props.lang || 'en') || {};
+    var lang = this.props.lang || 'en'; v.c = c; v.ss = SS[lang] || SS.en; v.side = side(c, lang);
+    return v;
+  }
+}
+</script>
+</body>
+</html>

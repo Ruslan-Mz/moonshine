@@ -33,3 +33,11 @@ Total 26 vs capacity 22.
 ## SwiftUI
 
 `Grid` rows; one `Chart` for all timelines (y = project) so the x-scale is shared; `Slider(step: 0.5)` debounced 150 ms; simulation on a background actor with a fixed seed per scenario.
+
+## Calendar (draft-3, future — direction only)
+
+Artboards: `Board-Cal`, `Board-Cal-Dark`.
+
+- The weekly load card names calendar time as a **separate neutral segment** on the same scale, never stacked into planned effort: `capacity 22 h/week · 15 h in calendar this week`.
+- A multi-day trip is a neutral hatched band across the timeline, labelled with its title (`Conference trip · 3–9 Nov`). A forecast that moves because of it says so in plain words: `moves +1 week (trip 3–9 Nov)`, with the usual dashed ghost.
+- Open: whether calendar time reduces capacity automatically (see README, draft-3 open questions).

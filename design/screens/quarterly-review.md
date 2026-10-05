@@ -9,7 +9,7 @@ related: ["[[week]]"]
 
 # Quarterly review (draft-2)
 
-The owner's end-of-quarter ritual: look back at the quarter's artifacts and lines, then set up the next quarter. **Read-only.** The app shows facts and questions. Decisions are written in the quarter note in Obsidian (writes come in phase 6).
+The owner's end-of-quarter ritual: look back at the quarter's artifacts and lines, then set up the next quarter. **Read-only.** The app shows facts and questions. Decisions are written in the quarter note in Obsidian (writes come in the Act phase).
 
 Opened from: ⌘K ("Quarterly review"), a second footer link `Open quarter review` that R1 adds to the Quarter focus card (next to phase 1's `Open quarter note`, `components.md`) and, during the first 14 days of a quarter, a link in the Today rail. No sidebar item for now.
 
@@ -67,3 +67,31 @@ No scores, percentages, grades or streaks. "to decide", never "failed" or "misse
 - [ ] Works with no previous quarter note: section 1 shows "No quarter note for Q3", the rest still renders.
 - [ ] Checked in Russian.
 - [ ] With `active_lines` absent, no "too many active lines" row appears.
+
+## My take (draft-4)
+
+Artboards: `QuarterReview-Take`, `QuarterReview-Take-Dark` (1440 × 1560).
+
+### Layout
+
+- **Lines over the quarter**: each line's sparkline gets a strip of `TakeMark`s (8 pt, Leap 10 pt) under its weeks, one slot per ISO week of the quarter. Row height 46 (was 36). The legend gains `My take — set by you` and `dashed = draft`. A line with takes has a disclosure chevron at the end of the row; opened, its takes are listed below in week order: `W35 · Rise — Allemande bars 1–8 from memory`, `W36 · Leap — Vibrato finally works`, `W38 · Rise`, `W39 · Steady`. Drawn opened: 🎻 Violin.
+- **Focus outcomes** ("Q3 focus — what happened"): under an artifact's title, the Leaps of its line in the quarter as supporting notes — `✦ W36 · my take: Leap — “Vibrato finally works”`. A draft Leap is shown with the dashed mark and `(draft)`. Other directions are not listed here.
+- No column counts takes; no line is ranked by them.
+
+### Data
+
+Takes and drafts of every line for the quarter's ISO weeks. Artifact → line from the quarter note (`artifacts[].line`).
+
+### Behaviour
+
+Read-only, like the rest of the review: marks and notes are shown, not edited (the journal in Line detail is the place to change them). The chevron state is view state.
+
+### SwiftUI
+
+Same sparkline + mark strip as Lines, with 13 or 14 slots. Opened notes: a `DisclosureGroup` row content.
+
+### Acceptance
+
+- [ ] 🤖 AI/ML shows one spark (W37), one ▶ (W39) and a dashed ▷ (W40 draft) in an otherwise blank strip; the spark is found at a glance.
+- [ ] 📐 Math shows a dashed spark in W38, and the artifact "Linear algebra, chapters 1–2" lists it as `(draft)`.
+- [ ] No counts, sums or averages of takes; no amber.

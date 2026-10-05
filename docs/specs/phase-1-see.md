@@ -1,22 +1,26 @@
-# Phase 1 — See (2 weekends, read-only)
+# Phase 1 — See (3 weekends, read-only)
 
-**Goal:** one macOS window where the owner sees everything he has to do and how his lines are moving, for today, this week and this month — fast, keyboard-first, calm. Timebox: 2 weekends; cut scope if exceeded (cut order: S6 → S5 polish → Month view).
+**Goal:** one macOS window where the owner sees everything he has to do and how his lines are moving, for today, this week and this month — fast, keyboard-first, calm. Timebox: 3 weekends (was 2; calendar and day rail, decision 2026-10-02); cut scope if exceeded (cut order: S6 → S5 polish → Month view). Calendar scope, if the timebox runs out: cut Month events first, then line mapping + Upcoming.
 
 ## Views
 
 ### Today
 
-- Available tasks with planned/defer = today, flagged, and real `due` ≤ today (only these may use the urgent colour).
+- Available tasks with planned/defer = today, flagged, and real `due` ≤ today (only **deadlines** among these may use the urgent colour — see Deadline rule below).
 - **Anchors strip** (decision 2026-10-01, design draft-2) at the top: today's tasks with the tag `anchor` (leaf name), up to 5 compact chips (first 5 in source order); the count covers **all** of today's anchors (`3 of 6 done`); done anchors stay visible, checked and dimmed. Absent when there are none. Only anchors shown in the strip are left out of their line sections; further anchor tasks stay there.
 - **Top 3 today**: flagged tasks (`effectiveFlagged`), at most 3 rows — real due today first, then source order; when more are flagged, a `5 flagged — 3 shown` caption and "Show all". These tasks are not repeated in their line sections. The snapshot contract already carries `flagged` / `effectiveFlagged` and `tagIds` (no S3a change).
 - Grouped by line (emoji + name), **foundation lines first**, then vault order; each task shows project and trace chip (`project → line → artifact`).
 - **From earlier:** available tasks planned on an earlier day, in their own section with the planned age ("planned 3 days ago"); urgent only with a real `due` (decision 2026-09-30).
 - Right rail: **Quarter focus card** on top (the current quarter note's `artifacts:` with a neutral done/not-done glyph and line emoji, `2 of 5 done`, link "Open quarter note"; absent without a quarter note), then lines touched today, "quiet lines" (active, no completion ≥ 14 days), neutral wording. An active line with no completions at all is "no activity yet", not quiet.
 
+- **Day rail** (design draft-3, `design/screens/today.md` § Calendar): today's events and the tasks with a planned or due time on the day window; free time = what remains of the day window from now. Checkboxes on the rail are read-only, as in the list.
+
 ### Week
 
-- 7 columns (Mon–Sun, ISO week); each task appears once, on its planned date, else defer date, else due date; a due date inside the same week adds a due badge on the item; "No plan" tray for available tasks in active lines without any date (mirrors the owner's "Без плана" perspective).
+- 7 columns (Mon–Sun, ISO week); each task appears once, on its planned date, else defer date, else due date; a deadline (deadline rule below) due inside the same week adds a due badge on the item; "No plan" tray for available tasks in active lines without any date (mirrors the owner's "Без плана" perspective).
 - Header: per line completions this week vs. last 4-week average (numbers, not red/green).
+- Calendar events in each day column, all-day bars, per-day time in calendar; the weekly review gains "Fixed next week" (`design/screens/week.md` § Calendar).
+- The weekly review layout leaves room for the third track (`My take`, `design/screens/week.md` § My take); no code for takes in phase 1.
 
 ### Month
 
@@ -25,6 +29,7 @@
 
 ### Lines
 
+- The Lines layout leaves room for a third track under the sparkline (`My take`, `design/screens/lines.md` § My take); no code for takes in phase 1.
 - One row per line from the vault, grouped by **tier** (decision 2026-10-01, design draft-2 — replaces grouping by `block`): Foundation → Active this season → Maintenance → Paused on purpose (titled "Not in focus — on purpose", collapsed by default); vault order inside a tier. The `block` is a small label under the line name. Foundation lines are never "quiet". Columns: budget h/week (from vault; foundation lines show `floor N h/day` instead), 8-week completions sparkline (current week marked partial), last activity, available next actions, planned effort (estimate, labelled as estimate).
 - Line detail: parent artifact (open in Obsidian via `obsidian://open`), projects, next actions, last 10 completions.
 
@@ -33,7 +38,8 @@
 - Sidebar: Today, Week, Month, Lines. ⌘1–⌘4. ⌘K command palette (navigate, search tasks/projects/lines/notes). ⌘R refresh.
 - Every task/project opens in OmniFocus via `omnifocus:///task/<id>`; every note in Obsidian.
 - Status bar: source (Demo / Live), "updated N min ago".
-- Settings: vault folder (security-scoped bookmark), source Demo | Live, refresh interval.
+- Settings: vault folder (security-scoped bookmark), source Demo | Live, refresh timer (ADR-0011), Calendars (ADR-0012), deadline rule.
+- **Deadline rule** (owner decision 2026-10-02): a setting with two modes, "all due dates" (default) and "due date + tag" (tag name configurable, default `deadline`, matched by leaf name like `anchor`, trimmed, case-insensitive, empty reverts to `deadline`; the tag counts on the task or on any of its ancestors — action group or project — so an inherited due date follows the same rule). Amber (due badge, due mark, urgency on Today and Week) applies only to deadlines under the active rule; any other due date is plain secondary text. The rule is a Core value used by Overview. Reason, counts only: 61 live repeating tasks carry a due date used as a reminder.
 - Demo mode runs with a frozen clock at 2026-10-01 (Thursday, ISO week 40, local time zone), so it renders like `design/demo-data.md` and the mockups. Live mode uses the system clock.
 
 ## Slices (one PR each)
@@ -46,8 +52,9 @@
 - ~~**S3a-2 — Incremental merge**~~ **cancelled** (owner, 2026-10-02): listing dominates, so an incremental snapshot saves nothing; imports are always full. The `imports` table (kind, times, counts) moves to S4.
 - [ ] **S3b — Obsidian vault reader:** golden test: its output on `fixtures/vault/` equals `DemoVault`. Vault contract additions (draft-2 design, all optional, absent = today's behaviour): in the budget note's `lines:` block, `foundation: true` and `floor_h_day: <number ≥ 0>` (a foundation line has a floor instead of `budget_h_week`), and `language: <BCP-47>` on a line (**parse only**: stored on the line, a content-language detection hint later, `design/i18n.md`); a quarter note with `scale: quarter` and an `artifacts:` list (same shape as the year note) feeds the Quarter focus card. Contract: `docs/discovery/vault-contract.md` v0.2. The R1 keys (`done`, `carried_to` on artifacts, `active_lines` in the budget note) may appear in fixtures; the reader ignores them until R1.
 - [ ] **Demo data (before S4):** align `fixtures/` and `DemoVault` with `design/demo-data.md`, including its "Draft-2 additions": foundation lines with a floor (🧘 Core practice, 💪 Calisthenics), `anchor`-tagged tasks, flagged tasks, and the Q4 quarter note with its artifacts. Invented data only. A test derives the Today totals (tasks, open, done, estimate) and the 4-week averages (e.g. Violin W40: rhythm avg 4.0, progress avg 1.0) from the fixtures and compares them with the numbers in `design/demo-data.md`.
-- [ ] **S4 — App shell + Today + Lines** on the store (Demo mode first), including the Line detail model (moved from S1b). Follows `design/screens/` (today, lines, line-detail, settings); where a screen spec and its mockup differ, the screen spec wins. **Change-driven refresh** (MoonShine becomes the owner's main time app; ADR-0011): a `ChangeSignal` port in Core with Mac sources — OmniFocus resigned active, a 15-min timer while OmniFocus runs in the background, app launch, ⌘R — and never an import while OmniFocus is frontmost (a signal then is held until it resigns active; ⌘R is always allowed); `ImportService` coalesces signals (single-flight, at most one follow-up import); view models observe the store. Stored data is shown at once; the refresh lands ≤ 5 s after OmniFocus resigns active (from the signal to the refresh landing, ADR-0011) — provisional until measured with the real trigger in S4 (with OmniFocus frontmost: 4.0 s; in the background: 11.1 s). S4 also adds the `imports` table (trigger, start, duration, time OmniFocus was held, row counts) for the status bar's "updated N min ago" (moved from the cancelled S3a-2).
-- [ ] **S5 — Week + Month + ⌘K palette.** Follows `design/screens/` (week, month, command-palette); where a screen spec and its mockup differ, the screen spec wins.
+- [ ] **S3c — Calendar in Core** (ADR-0012), before S4: `CalendarProvider` port in Core (access state, calendars, `events(in:)`, change stream; `CalendarEvent` and `CalendarInfo` value types), `EventKitCalendarProvider` adapter (read-only, `requestFullAccessToEvents`), a fixture provider for Demo mode and tests, and a day-load service in Core (busy / planned / free for a day window and a "now"). Core tests derive the demo facts from the fixtures: `4 events · 4 h in calendar · 1 h 15 min planned`, `≈ 2 h 25 min free until 22:00` at 16:20, `≈ 8 h 45 min` for the whole window; overlap counted once; tentative and all-day events not counted. The demo day cannot tell a naive sum from the rules, so S3c also has an invented fixture case for each rule of `design/screens/today.md` § Calendar: an event in progress at "now" (only its remaining part counts), a planned task overlapping an event (`planned` counts only the uncovered part; free uses the union), a planned task without an estimate (occupies nothing), a completed planned task (unchanged), and "now" before the window opens (whole window) and after it closes (no free term). "Date only" = a time equal to OmniFocus' default time (`docs/discovery/snapshot-contract.md` § Default times); when `defaultTimes` or its key is absent, only 00:00 counts as date only (a Core test covers it).
+- [ ] **S4 — App shell + Today + Lines** on the store (Demo mode first), including the Line detail model (moved from S1b). Follows `design/screens/` (today, lines, line-detail, settings); where a screen spec and its mockup differ, the screen spec wins. **Change-driven refresh** (MoonShine becomes the owner's main time app; ADR-0011): a `ChangeSignal` port in Core with Mac sources — OmniFocus resigned active, a 15-min timer while OmniFocus runs in the background, app launch, ⌘R — and never an import while OmniFocus is frontmost (a signal then is held until it resigns active; ⌘R is always allowed); `ImportService` coalesces signals (single-flight, at most one follow-up import); view models observe the store. Stored data is shown at once; the refresh lands ≤ 5 s after OmniFocus resigns active (from the signal to the refresh landing, ADR-0011) — provisional until measured with the real trigger in S4 (with OmniFocus frontmost: 4.0 s; in the background: 11.1 s). S4 also adds the `imports` table (trigger, start, duration, time OmniFocus was held, row counts) for the status bar's "updated N min ago" (moved from the cancelled S3a-2). S4 carries `defaultTimes` from the snapshot into Core and the store, so the day-load service can tell timed tasks from date-only ones. S4 also gets **Settings → Calendars** (access, Show, Counts as busy, day window; `design/screens/settings-calendars.md`), the **Day rail** on Today and the **deadline-rule** setting (`design/screens/settings.md` § Deadlines).
+- [ ] **S5 — Week + Month + ⌘K palette.** Follows `design/screens/` (week, month, command-palette); where a screen spec and its mockup differ, the screen spec wins. S5 gets calendar events in Week (and Month, first to cut).
 - [ ] **S6 — README (English):** vision in 3 lines, Demo-mode GIF, architecture diagram, "How this was built" → `docs/method/`, ADR index, licence.
 
 ## Acceptance
@@ -56,6 +63,6 @@
 - The UI always renders from the local store: any view in < 1 s, with or without a running import.
 - Full background import of the live data ≤ 20 s; it never blocks the UI.
 - Every import is a full import (S3a-1 measurement), started by the change signals of ADR-0011 and never while OmniFocus is frontmost.
-- No write APIs to OmniFocus or the vault in the code.
+- No write APIs to OmniFocus, the vault or EventKit in the code.
 - Tone rules in CLAUDE.md §8 pass a copy review.
 - S4 and S5 pass the **Acceptance** checklist of each matching `design/screens/*.md`, in English and in Russian.
