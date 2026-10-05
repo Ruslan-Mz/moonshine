@@ -275,8 +275,11 @@ public struct VaultProblem: Hashable, Sendable, CustomStringConvertible {
     case frontmatterTooLarge
     /// The frontmatter is not valid YAML, or never closes.
     case malformedYAML
-    /// A YAML anchor (aliases need one), too many nodes or too deep a nesting.
+    /// Too many YAML nodes or too deep a nesting.
     case yamlTooComplex
+    /// A YAML anchor (`&name`). Aliases need one, and Yams expands aliases while parsing, so
+    /// the reader rejects anchors before parsing; counted on its own to spot false positives.
+    case yamlAnchor
     /// A symbolic link; the reader never follows one.
     case symlinkSkipped
     /// The resolved file lies outside the vault folder.

@@ -240,7 +240,7 @@ func problems(_ issues: [ImportIssue]) -> [String] {
   }
 
   @Test func anAliasBombInValuesIsRejectedBeforeParsing() {
-    #expect(throws: FrontmatterFailure(kind: .yamlTooComplex, line: nil)) {
+    #expect(throws: FrontmatterFailure(kind: .yamlAnchor, line: nil)) {
       try parse(aliasBomb(levels: 8).joined(separator: "\n"))
     }
   }
@@ -248,7 +248,7 @@ func problems(_ issues: [ImportIssue]) -> [String] {
   /// Yams hashes mapping keys while composing, so an alias in key position would expand there.
   @Test(.timeLimit(.minutes(1))) func anAliasBombInKeyPositionIsRejectedBeforeParsing() {
     for key in ["*a8 : v", "? *a8\n: v", "b: {*a8 : v}", "b: [*a8 : v]"] {
-      #expect(throws: FrontmatterFailure(kind: .yamlTooComplex, line: nil)) {
+      #expect(throws: FrontmatterFailure(kind: .yamlAnchor, line: nil)) {
         try parse((aliasBomb(levels: 8) + [key]).joined(separator: "\n"))
       }
     }
@@ -259,19 +259,31 @@ func problems(_ issues: [ImportIssue]) -> [String] {
       "a: &x 1", "a: [&x 1]", "a: {b: &x 1}", "- &x a", "a:\n  - &x 1", "a: !!str &x 1",
       "a: \"q\" \n&x b: 1",
     ] {
-      #expect(throws: FrontmatterFailure(kind: .yamlTooComplex, line: nil), "\(yaml)") {
+      #expect(throws: FrontmatterFailure(kind: .yamlAnchor, line: nil), "\(yaml)") {
         try parse(yaml)
       }
     }
   }
 
-  @Test func anAmpersandInsideAWordIsPlainText() throws {
-    let root = try parse("title: R&D, Q&A and AT&T\nb: x & y")
-    guard case .mapping(let entries) = root.value else {
-      Issue.record("not a mapping")
-      return
-    }
-    #expect(entries.map(\.node.value) == [.scalar("R&D, Q&A and AT&T"), .scalar("x & y")])
+  @Test(arguments: [
+    "R&D, Q&A and AT&T",
+    "Музыка&танец",
+    "音楽&舞踊",
+    "מוזיקה&ריקוד",
+    "Ж&Д and 2&3",
+    "कि&ख",
+    "x & y",
+  ])
+  func anAmpersandAfterALetterDigitOrMarkInAnyScriptIsPlainText(title: String) throws {
+    let root = try parse("title: \(title)")
+    #expect(
+      root.value == .mapping([.init(key: "title", node: FrontNode(value: .scalar(title), line: 2))])
+    )
+  }
+
+  @Test(arguments: ["a: Музыка &танец", "a: 音楽 &x 1", "a: [&מ 1]", "a: (&x)"])
+  func anAmpersandAfterSpaceOrPunctuationIsStillAnAnchor(yaml: String) {
+    #expect(throws: FrontmatterFailure(kind: .yamlAnchor, line: nil)) { try parse(yaml) }
   }
 
   @Test func theNodeCapBoundsALongDocument() {

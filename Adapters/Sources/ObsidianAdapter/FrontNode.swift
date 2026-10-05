@@ -26,9 +26,10 @@ struct FrontNode: Equatable {
     // libyaml parses flow collections recursively: reject deep `[[[…` before it sees them.
     // Yams expands aliases while composing (it hashes mapping keys), before any cap of ours
     // runs, so anchors are rejected outright: no anchor, no alias, no alias bomb.
-    guard flowDepth(of: text) <= limits.maxDepth, !hasAnchor(text) else {
+    guard flowDepth(of: text) <= limits.maxDepth else {
       throw FrontmatterFailure(kind: .yamlTooComplex, line: nil)
     }
+    guard !hasAnchor(text) else { throw FrontmatterFailure(kind: .yamlAnchor, line: nil) }
     let composed: Node?
     do {
       composed = try Yams.compose(yaml: text)
@@ -98,22 +99,34 @@ struct FrontNode: Equatable {
   }
 
   /// Whether `text` may hold an anchor (`&name`). Lexical and deliberately coarse: quotes are
-  /// not tracked, so an `&` in a quoted string counts too. An `&` right after a Latin letter or
-  /// digit cannot start a YAML token, so `R&D` stays plain text.
+  /// not tracked, so an `&` in a quoted string counts too. A YAML token starts only after
+  /// whitespace or an indicator, so an `&` right after a letter, mark or digit of any script
+  /// (`R&D`, `Музыка&танец`, `音楽&舞踊`) is plain text.
   private static func hasAnchor(_ text: String) -> Bool {
-    let bytes = Array(text.utf8)
-    for index in bytes.indices where bytes[index] == UInt8(ascii: "&") {
-      let next = index + 1 < bytes.count ? bytes[index + 1] : UInt8(ascii: " ")
-      let startsName = !" \t\r\n,[]{}".utf8.contains(next)
-      let afterWord = index > 0 && isWordByte(bytes[index - 1])
-      if startsName && !afterWord { return true }
+    var previous: Unicode.Scalar?
+    var iterator = text.unicodeScalars.makeIterator()
+    var current = iterator.next()
+    while let scalar = current {
+      let next = iterator.next()
+      if scalar == "&", let next, !" \t\r\n,[]{}".unicodeScalars.contains(next),
+        !(previous.map(isWordScalar) ?? false)
+      {
+        return true
+      }
+      previous = scalar
+      current = next
     }
     return false
   }
 
-  private static func isWordByte(_ byte: UInt8) -> Bool {
-    (UInt8(ascii: "a")...UInt8(ascii: "z")).contains(byte | 0x20)
-      || (UInt8(ascii: "0")...UInt8(ascii: "9")).contains(byte)
+  /// Letters, combining marks and digits of any script.
+  private static func isWordScalar(_ scalar: Unicode.Scalar) -> Bool {
+    switch scalar.properties.generalCategory {
+    case .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .modifierLetter, .otherLetter,
+      .nonspacingMark, .spacingMark, .enclosingMark, .decimalNumber, .letterNumber, .otherNumber:
+      true
+    default: false
+    }
   }
 
   private static func noteLine(of error: any Error) -> Int? {
