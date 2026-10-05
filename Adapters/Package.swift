@@ -6,16 +6,24 @@ let package = Package(
   platforms: [.macOS(.v15), .iOS(.v18)],
   products: [
     .library(name: "OmniFocusAdapter", targets: ["OmniFocusAdapter"]),
+    .library(name: "ObsidianAdapter", targets: ["ObsidianAdapter"]),
     .library(name: "SQLiteStore", targets: ["SQLiteStore"]),
   ],
   dependencies: [
     .package(path: "../MoonShineCore"),
     .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.0.0"),
+    .package(url: "https://github.com/jpsim/Yams.git", from: "6.0.0"),
   ],
   targets: [
     .target(
       name: "OmniFocusAdapter",
       dependencies: [.product(name: "MoonShineCore", package: "MoonShineCore")]),
+    .target(
+      name: "ObsidianAdapter",
+      dependencies: [
+        .product(name: "MoonShineCore", package: "MoonShineCore"),
+        .product(name: "Yams", package: "Yams"),
+      ]),
     .target(
       name: "SQLiteStore",
       dependencies: [
@@ -35,6 +43,12 @@ let package = Package(
         "OmniFocusAdapter",
         .product(name: "MoonShineCore", package: "MoonShineCore"),
         .product(name: "MoonShineFixtures", package: "MoonShineCore"),
+      ]),
+    .testTarget(
+      name: "ObsidianAdapterTests",
+      dependencies: [
+        "ObsidianAdapter",
+        .product(name: "MoonShineCore", package: "MoonShineCore"),
       ]),
     .testTarget(
       name: "SQLiteStoreTests",

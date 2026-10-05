@@ -37,6 +37,18 @@ import Testing
     ).run(now: now)
   }
 
+  @Test func vaultIssuesRoundTripWithTheirKindKeyAndLine() async throws {
+    let issues: [ImportIssue] = [
+      .vault(path: "Notes/a.md", line: 3, problem: VaultProblem(.malformedYAML)),
+      .vault(path: "Notes/b.md", line: nil, problem: VaultProblem(.unreadable, key: "lines[2]")),
+    ]
+    let store = try SQLiteStore(path: temporaryDatabasePath())
+    try await store.commit(
+      Workspace(timeZone: .gmt, issues: issues), identities: IdentityMap(), expectedVersion: 0,
+      at: first)
+    #expect(try await store.workspace().issues == issues)
+  }
+
   @Test func migratesAnEmptyDatabaseOnceWithEveryTableAndEffectiveDateColumns() async throws {
     let path = temporaryDatabasePath()
     let store = try SQLiteStore(path: path)

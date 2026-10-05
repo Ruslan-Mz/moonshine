@@ -259,5 +259,37 @@ public struct Workspace: Sendable {
 public enum ImportIssue: Hashable, Sendable {
   case ruleClaimedTwice(rule: String, kept: LineKey, ignored: LineKey)
   case unknownLineKey(LineKey, in: String)
-  case vault(path: String, line: Int?, message: String)
+  /// `path` is vault-relative; `line` is the note's line number, when known.
+  case vault(path: String, line: Int?, problem: VaultProblem)
+}
+
+/// What went wrong with one vault note. Never carries note content: `key` is a contract key
+/// name set by the reader (`lines[3].budget_h_week`), never a value from the note.
+public struct VaultProblem: Hashable, Sendable, CustomStringConvertible {
+  public enum Kind: String, Hashable, Sendable, Codable {
+    /// The note could not be opened or read.
+    case unreadable
+    /// The frontmatter is not UTF-8 text.
+    case notUTF8
+    /// The frontmatter does not close within the reader's size limit.
+    case frontmatterTooLarge
+    /// The frontmatter is not valid YAML, or never closes.
+    case malformedYAML
+    /// Too many YAML nodes (aliases included) or too deep a nesting.
+    case yamlTooComplex
+    /// A symbolic link; the reader never follows one.
+    case symlinkSkipped
+    /// The resolved file lies outside the vault folder.
+    case outsideVault
+  }
+
+  public let kind: Kind
+  public let key: String?
+
+  public init(_ kind: Kind, key: String? = nil) {
+    self.kind = kind
+    self.key = key
+  }
+
+  public var description: String { key.map { "\(kind.rawValue) (\($0))" } ?? kind.rawValue }
 }
