@@ -21,7 +21,7 @@ Anchors and Top 3 from the replicated store; refreshed by timeline at the top of
 
 ## Behaviour
 
-Tap opens Today (deep link to the anchor or task). Interactive check-off arrives with writes (phase 6; App Intents).
+Tap opens Today (deep link to the anchor or task). Interactive check-off arrives with writes (the Act phase; App Intents).
 
 ## SwiftUI
 
@@ -31,3 +31,12 @@ WidgetKit `StaticConfiguration`, families `.systemSmall`, `.systemMedium`, `.acc
 
 - [ ] Every widget reads correctly in tinted/vibrant modes (no colour-only meaning).
 - [ ] VoiceOver: "Anchors, 3 of 5 done".
+
+## Calendar (draft-3)
+
+Artboards: `iPhoneWidgets-Cal`, `iPhoneWidgets-Cal-Dark`.
+
+- **Small**: `Next` · `17:00` · `● Violin lesson 🎻` · `in 40 min`, then a hairline and `Anchor: 👨‍👩‍👧 Evening reading`.
+- **Medium**: left half = next event and the one after (`● 18:30 Parents' evening`); right half = `Anchors 3 of 5`, dots, `Next: Evening reading`.
+- **Lock Screen rectangular**: `17:00 Violin lesson` / `Anchor: Evening reading`.
+- `in 40 min` uses `Text(date, style: .relative)` so it stays current without a timeline reload. Without calendar access the widgets fall back to the draft-2 layouts.

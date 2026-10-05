@@ -42,3 +42,33 @@ The selected row has the `selection` fill and a chevron: ↵ opens Line detail.
 - [ ] Current week visibly partial in every sparkline.
 - [ ] Rhythm and progress never summed; both visible even when one is zero (baseline only).
 - [ ] The word "hours" or "h" appears only in the Budget column, tier summaries and estimates labelled `est.`.
+
+## My take (draft-4)
+
+Artboards: `Lines-Take`, `Lines-Take-RU` (+ `-Dark`).
+
+### Layout
+
+- **Third track in the sparkline.** Under the baseline of each row's eight-week bars, a 12 pt track of `TakeMark`s (9 pt, Leap 12 pt), one slot per week, centred under that week's pair of bars. Blank weeks stay blank, including the week in progress. Row height 54 (was 48).
+- **This week's chip.** In the Last activity cell, under the text: `TakeChip` — `▶ Rise`, or with a dashed border `▷ Rise · draft`. Absent when the week has no take.
+- **Only sign of life.** When a line has a take this week and no completion that would make it "active" (it would otherwise read `quiet for N days`), the cell reads `my take:` + the chip instead of the moon and the quiet text.
+- Legend row gains `✦ ▶ ● ◀ My take — set by you` and `▷ dashed = draft`.
+
+### Data
+
+Takes and draft notes per line for the visible weeks (`week.md` § My take · Data). A week with drafts shows a draft mark with the latest direction given; a draft with a note and no direction shows the note-only mark (`⋯`).
+
+### Behaviour
+
+Hovering a mark shows a tooltip `W36 · Leap — Vibrato finally works`. Clicking the chip opens the `TakeControl` popover for this week. Nothing is sorted or filtered by take.
+
+### SwiftUI
+
+The sparkline cell becomes `VStack(spacing: 2) { Chart; HStack { ForEach(weeks) { TakeMarkView } } }` with the same x positions as the chart's week bands (shared `GeometryReader` or fixed slot width).
+
+### Acceptance
+
+- [ ] Marks line up with their weeks; the track never changes the bar scale.
+- [ ] Demo: 🎻 `▶ ✦ · ▶ ● ▷` in W35–W40, 📐 a dashed spark in W38, 🇮🇹 no marks and `quiet for 29 days` unchanged.
+- [ ] A Leap can be found in a row without colour (shape and size).
+- [ ] Checked in Russian (`Подъём · черновик`).

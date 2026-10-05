@@ -31,3 +31,7 @@ An overlay in the window (`ZStack` + `.transition(.opacity)`), or an `NSPanel` v
 
 - [ ] Opens from any view in < 100 ms; typing updates in < 50 ms on demo data.
 - [ ] Fully keyboard operable; esc restores focus.
+
+## My take (draft-4)
+
+Drawn as a panel on `TakeStates`. A command `My take: <line>…` (typing `my take vio` finds `My take: 🎻 Violin…`). `↩` turns the palette into a one-line note field for that line; `1`–`4` set an optional direction; `↩` saves a dated **draft** on the current week and closes the palette. Nothing is confirmed from the palette.

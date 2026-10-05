@@ -43,4 +43,4 @@ The owner's rule: goals, artifacts, plans and budgets live in Obsidian; OmniFocu
 
 ### Confirmation
 
-Parser tests on fixture notes; invalid YAML shows a banner, never a crash; until phase 6 no code path writes to the vault (CI grep).
+Parser tests on fixture notes; invalid YAML shows a banner, never a crash; until the Act phase no code path writes to the vault (CI grep).

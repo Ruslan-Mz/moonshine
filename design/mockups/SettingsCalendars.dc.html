@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Settings — Calendars</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0A64D8}a:hover{color:#084FA8}
+button{font:inherit;color:inherit;cursor:default}
+</style>
+</helmet>
+<div style="width:780px;height:660px;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;border-radius:12px;border:1px solid {{c.windowBorder}};font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;font-size:13px;line-height:1.35;color:{{c.text}};background:{{c.rail}};-webkit-font-smoothing:antialiased"><div style="display:flex;flex-direction:column;gap:6px;padding:12px 14px 8px;background:{{c.sidebar}};border-bottom:1px solid {{c.sep}}"><div style="display:flex;align-items:center;gap:8px"><span style="width:12px;height:12px;border-radius:6px;background:#FF5F57"></span><span style="width:12px;height:12px;border-radius:6px;background:#FEBC2E"></span><span style="width:12px;height:12px;border-radius:6px;background:#28C840"></span><span style="flex:1;text-align:center;font-weight:600;margin-inline-end:52px">Calendars</span></div><div style="display:flex;justify-content:center;gap:4px"><button style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:74px;padding:6px 10px;border:0;border-radius:8px;background:transparent;font-size:11.5px;color:{{c.sec}}"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><circle cx="8" cy="8" r="3"></circle><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"></path></svg><span>General</span></button><button style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:74px;padding:6px 10px;border:0;border-radius:8px;background:transparent;font-size:11.5px;color:{{c.sec}}"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M1.8 4.5a1.5 1.5 0 0 1 1.5-1.5h3l1.5 1.7h5a1.5 1.5 0 0 1 1.5 1.5v5.6a1.5 1.5 0 0 1-1.5 1.5H3.3a1.5 1.5 0 0 1-1.5-1.5z"></path></svg><span>Data</span></button><button style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:74px;padding:6px 10px;border:0;border-radius:8px;background:{{c.navSel}};font-size:11.5px;color:{{c.accent}}"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><rect x="2" y="3" width="12" height="11" rx="2"></rect><path d="M2 6.5h12M5 1.8v2.4M11 1.8v2.4"></path><path d="M5 9.2h.01M8 9.2h.01M11 9.2h.01M5 11.6h.01M8 11.6h.01" stroke-width="2.2"></path></svg><span>Calendars</span></button><button style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:74px;padding:6px 10px;border:0;border-radius:8px;background:transparent;font-size:11.5px;color:{{c.sec}}"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M13 8a5 5 0 1 1-1.5-3.55M13 2.5v3h-3"></path></svg><span>Refresh</span></button></div></div><div style="flex:1;min-height:0;display:flex;flex-direction:column;gap:12px;padding:18px 22px"><div style="display:flex;flex-direction:column;border-radius:10px;background:{{c.card}};border:1px solid {{c.cardBorder}}"><div style="display:flex;align-items:center;gap:12px;min-height:44px;padding:6px 14px"><span style="flex:1;display:flex;align-items:center;gap:10px"><span>Calendar access</span><sc-if value="{{demo}}" hint-placeholder-val="{{true}}"><span style="display:inline-flex;align-items:center;gap:5px;padding:1px 8px;border-radius:10px;border:1px solid {{c.badgeBorder}};font-size:11.5px;color:{{c.sec}}"><span style="width:6px;height:6px;border-radius:3px;background:{{c.sec}}"></span>Demo data</span></sc-if></span><span style="font-size:12.5px;font-weight:600">{{stateL}}</span><button style="height:24px;padding:0 12px;border-radius:6px;border:1px solid {{c.fieldBorder}};background:{{c.ctrlSel}};font-size:12px;{{primBtn}}">{{actionL}}</button></div></div><div style="font-size:11.5px;color:{{c.ter}};padding:0 4px;line-height:1.45">{{accessCap}}</div><sc-if value="{{connected}}" hint-placeholder-val="{{true}}"><div style="display:flex;flex-direction:column;border-radius:10px;background:{{c.card}};border:1px solid {{c.cardBorder}}"><div style="display:grid;grid-template-columns:minmax(0, 1fr) 64px 110px 150px;align-items:center;height:28px;padding:0 14px;font-size:11px;color:{{c.ter}};border-bottom:1px solid {{c.sep}}"><span>Calendar</span><span>Show</span><span>Counts as busy</span><span>Line</span></div><sc-for list="{{accts}}" as="a" hint-placeholder-count="3"><div style="padding:8px 14px 3px;font-size:11px;font-weight:600;color:{{c.ter}}">{{a.n}}</div><sc-for list="{{a.rows}}" as="r" hint-placeholder-count="2"><div style="display:grid;grid-template-columns:minmax(0, 1fr) 64px 110px 150px;align-items:center;height:32px;padding:0 14px;border-top:1px solid {{c.rowSep}};color:{{r.fg}}"><span style="display:flex;align-items:center;gap:9px"><span style="width:8px;height:8px;border-radius:4px;background:{{r.col}}"></span>{{r.n}}</span><span><span role="switch" aria-checked="{{r.show.on}}" style="display:inline-flex;width:30px;height:18px;padding:2px;box-sizing:border-box;border-radius:9px;background:{{r.show.bg}};justify-content:{{r.show.jc}}"><span style="width:14px;height:14px;border-radius:7px;background:#FFFFFF;box-shadow:0 1px 2px rgba(0,0,0,0.3)"></span></span></span><span><span role="switch" aria-checked="{{r.busy.on}}" style="display:inline-flex;width:30px;height:18px;padding:2px;box-sizing:border-box;border-radius:9px;background:{{r.busy.bg}};justify-content:{{r.busy.jc}}"><span style="width:14px;height:14px;border-radius:7px;background:#FFFFFF;box-shadow:0 1px 2px rgba(0,0,0,0.3)"></span></span></span><span><button style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 5px 0 9px;border-radius:6px;border:1px solid {{c.fieldBorder}};background:{{c.ctrlSel}};font-size:12px;color:{{r.fg}}">{{r.line}}<span style="display:flex;color:{{c.sec}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M5 6l3-3 3 3M5 10l3 3 3-3"></path></svg></span></button></span></div></sc-for></sc-for></div><div style="display:flex;flex-direction:column;border-radius:10px;background:{{c.card}};border:1px solid {{c.cardBorder}}"><div style="display:flex;align-items:center;gap:10px;min-height:40px;padding:6px 14px"><span style="flex:1">Day window</span><button style="height:24px;padding:0 12px;border-radius:6px;border:1px solid {{c.fieldBorder}};background:{{c.ctrlSel}};font-size:12px;font-variant-numeric:tabular-nums">08:00</button><span style="color:{{c.ter}}">–</span><button style="height:24px;padding:0 12px;border-radius:6px;border:1px solid {{c.fieldBorder}};background:{{c.ctrlSel}};font-size:12px;font-variant-numeric:tabular-nums">22:00</button></div></div><div style="font-size:11.5px;color:{{c.ter}};padding:0 4px;line-height:1.45">Free time = day window − time in calendars that count as busy − tasks with a planned time and an estimate. Overlaps count once. Tentative and all-day events are shown but not counted; declined events are hidden.</div></sc-if><sc-if value="{{notConnected}}" hint-placeholder-val="{{false}}"><div style="display:flex;flex-direction:column;border-radius:10px;background:{{c.card}};border:1px solid {{c.cardBorder}};align-items:center;justify-content:center;gap:6px;padding:34px 20px;color:{{c.ter}}"><span style="display:flex"><svg width="26" height="26" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><rect x="2" y="3" width="12" height="11" rx="2"></rect><path d="M2 6.5h12M5 1.8v2.4M11 1.8v2.4"></path><path d="M5 9.2h.01M8 9.2h.01M11 9.2h.01M5 11.6h.01M8 11.6h.01" stroke-width="2.2"></path></svg></span><span style="font-size:12.5px">{{emptyL}}</span></div></sc-if><div style="flex:1"></div><div style="font-size:11.5px;color:{{c.ter}};padding:0 4px;line-height:1.45">Events stay on this device. They are not synced by MoonShine.</div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark": {"editor": "boolean", "default": false}, "lang": {"editor": "enum", "options": ["en", "ru", "he"], "default": "en"}, "mode": {"editor": "enum", "options": ["connected", "none", "denied"], "default": "connected"}, "$preview": {"width": 780, "height": 660}}'>
+
+function theme(d) {
+  return d ? {
+    dark:true, window:'#1E1E21', sidebar:'#28272C', rail:'#232326', band:'#252528', text:'#EDEDF0', sec:'#A6A6AD', ter:'#8D8D95',
+    sep:'rgba(255,255,255,0.08)', rowSep:'rgba(255,255,255,0.045)', chip:'rgba(255,255,255,0.075)', chipText:'#BDBDC4',
+    accent:'#5A9DFF', accentFill:'#2F6BD0', selBg:'rgba(90,157,255,0.16)', navSel:'rgba(255,255,255,0.09)', check:'#64646C', checkDone:'#4C8DF0',
+    dueText:'#FFC266', dueBg:'rgba(255,176,64,0.15)', card:'#2A2A2E', cardBorder:'rgba(255,255,255,0.07)',
+    field:'rgba(255,255,255,0.07)', fieldBorder:'rgba(255,255,255,0.12)', badgeBorder:'rgba(255,255,255,0.2)', paused:'#7E7E86',
+    windowBorder:'rgba(255,255,255,0.14)', rhythm:'#5E92EE', progress:'#3FA690', done:'#7E7E86', track:'rgba(255,255,255,0.07)',
+    heat:'94,146,238', scrim:'rgba(0,0,0,0.42)', sheet:'#2A2A2E', shadow:'0 24px 70px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.1)',
+    band1:'rgba(94,146,238,0.22)', bandLine:'#5E92EE', grid:'rgba(255,255,255,0.07)', seg:'#4A5468', segAlt:'#596378', segText:'#EDEDF0',
+    hatch:'rgba(255,255,255,0.22)', ctrl:'#3A3A3F', ctrlSel:'#5C5C63', knob:'#E6E6EA', future:'#B9A6F0'
+  } : {
+    dark:false, window:'#FFFFFF', sidebar:'#EFEEF2', rail:'#F8F8FA', band:'#F6F6F8', text:'#1D1D1F', sec:'#5F5F67', ter:'#74747C',
+    sep:'rgba(0,0,0,0.08)', rowSep:'rgba(0,0,0,0.045)', chip:'rgba(0,0,0,0.045)', chipText:'#4F4F57',
+    accent:'#0A64D8', accentFill:'#0A64D8', selBg:'rgba(10,100,216,0.08)', navSel:'rgba(0,0,0,0.07)', check:'#B4B4BB', checkDone:'#0A64D8',
+    dueText:'#8A4B00', dueBg:'#FFEFD6', card:'#FFFFFF', cardBorder:'rgba(0,0,0,0.08)',
+    field:'rgba(0,0,0,0.045)', fieldBorder:'rgba(0,0,0,0.12)', badgeBorder:'rgba(0,0,0,0.18)', paused:'#8E8E95',
+    windowBorder:'rgba(0,0,0,0.16)', rhythm:'#2F68C8', progress:'#14917A', done:'#9A9AA2', track:'rgba(0,0,0,0.05)',
+    heat:'47,104,200', scrim:'rgba(0,0,0,0.18)', sheet:'#FFFFFF', shadow:'0 24px 70px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.08)',
+    band1:'rgba(47,104,200,0.16)', bandLine:'#2F68C8', grid:'rgba(0,0,0,0.06)', seg:'#C9D3E6', segAlt:'#B4C1DA', segText:'#1D2A44',
+    hatch:'rgba(0,0,0,0.22)', ctrl:'#E4E4E8', ctrlSel:'#FFFFFF', knob:'#FFFFFF', future:'#5B3FA8'
+  };
+}
+var SS = {
+  en:{ lang:'en', dir:'ltr', today:'Today', week:'Week', month:'Month', lines:'Lines', search:'Search', demo:'Demo data', updated:'Updated 3 min ago',
+       keys:'⌘1–⌘4 Views · ⌘K Search · ⌘R Refresh', tiers:{ foundation:'Foundation', active:'Active this season', maintenance:'Maintenance', paused:'Not in focus — on purpose' } },
+  ru:{ lang:'ru', dir:'ltr', today:'Сегодня', week:'Неделя', month:'Месяц', lines:'Линии', search:'Поиск', demo:'Демо-данные', updated:'Обновлено 3 мин назад',
+       keys:'⌘1–⌘4 Виды · ⌘K Поиск · ⌘R Обновить', tiers:{ foundation:'Фундамент', active:'Активные в сезоне', maintenance:'На поддержании', paused:'Не в фокусе — намеренно' } },
+  he:{ lang:'he', dir:'rtl', today:'היום', week:'שבוע', month:'חודש', lines:'תחומים', search:'חיפוש', demo:'נתוני הדגמה', updated:'עודכן לפני 3 דק׳',
+       keys:'⌘1–⌘4 תצוגות · ⌘K חיפוש · ⌘R רענון', tiers:{ foundation:'יסוד', active:'פעילים העונה', maintenance:'תחזוקה', paused:'לא בפוקוס — בכוונה' } }
+};
+var SIDE_T = [
+  ['foundation', [['🧘','Core practice'],['💪','Calisthenics']], true],
+  ['active', [['🎻','Violin'],['🇮🇹','Italian'],['🇯🇵','Japanese'],['📐','Math'],['🤖','AI/ML'],['🔬','Research'],['👨‍👩‍👧','Family']], true],
+  ['maintenance', [['🎹','Piano']], true],
+  ['paused', [['✒️','Calligraphy']], false]
+];
+function side(c, lang) {
+  var ss = SS[lang] || SS.en;
+  return SIDE_T.map(function (t) { var paused = t[0] === 'paused';
+    return { n: ss.tiers[t[0]], open: t[2], count: t[2] ? '' : String(t[1].length), chev: t[2] ? 'M3.5 6L8 10.5 12.5 6' : (ss.dir === 'rtl' ? 'M10 3.5L5.5 8 10 12.5' : 'M6 3.5L10.5 8 6 12.5'),
+      rows: t[1].map(function (r) { return { e:r[0], n:r[1], fg: paused ? c.paused : c.text, op: paused ? 0.5 : 1 }; }) }; });
+}
+function fmt(m) { if (m < 60) return '≈ ' + m + ' min est.'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : '') + ' est.'; }
+function short(m) { if (m < 60) return '≈ ' + m + ' min'; var h = Math.floor(m / 60), r = m % 60; return '≈ ' + h + ' h' + (r ? ' ' + r + ' min' : ''); }
+var L = {
+  violin:{e:'🎻',n:'Violin',a:'Spring recital 2027'},
+  piano:{e:'🎹',n:'Piano',a:'Keep repertoire alive'},
+  italian:{e:'🇮🇹',n:'Italian',a:'B1 by summer 2027'},
+  japanese:{e:'🇯🇵',n:'Japanese',a:'Kana and first 300 words'},
+  math:{e:'📐',n:'Math',a:'Linear algebra foundation'},
+  ai:{e:'🤖',n:'AI/ML',a:'Eval toolkit v1'},
+  research:{e:'🔬',n:'Research',a:'Practice-drift paper'},
+  cal:{e:'💪',n:'Calisthenics',a:'20 strict pull-ups'},
+  core:{e:'🧘',n:'Core practice',a:'Daily practice 2026'},
+  family:{e:'👨‍👩‍👧',n:'Family',a:'Family year 2026'},
+  life:{e:'🧺',n:'Life ops',a:'Household'}
+};
+// ---------- calendar (draft-3) ----------
+var CALS = {
+  work:{ n:'Work', l:'#6C84AE', d:'#8FA6CE', acct:'Work · Exchange' },
+  family:{ n:'Family', l:'#6E9A80', d:'#8FBDA0', acct:'iCloud' },
+  music:{ n:'Music lessons', l:'#9282B4', d:'#B3A3D4', acct:'iCloud', line:'violin' },
+  personal:{ n:'Personal', l:'#B0946A', d:'#D0B78C', acct:'iCloud' }
+};
+// W40, index 0 = Mon 28 Sep … 6 = Sun 4 Oct. [start, end, title, calendar, flags]
+var EVD = [
+  [['09:30','10:00','Team stand-up','work'],['14:00','15:30','Design review','work']],
+  [['09:30','10:00','Team stand-up','work'],['15:00','16:30','Quarterly planning','work'],['16:00','17:00','Dentist — kids','family']],
+  [['09:30','10:00','Team stand-up','work'],['12:30','13:30','Physio','personal']],
+  [['09:30','10:00','Team stand-up','work'],['13:00','14:00','Lunch with Marta','personal'],['17:00','18:00','Violin lesson','music'],['18:30','20:00','Parents’ evening at school','family']],
+  [['09:30','10:00','Team stand-up','work'],['15:00','16:00','Sprint demo','work',{tent:1}],['19:00','21:00','Concert — string quartet','personal']],
+  [['11:00','12:30','Castle walk','family']],
+  [['18:00','19:00','Call with parents','family']]
+];
+var ALLDAY = [{ from:5, to:6, title:'Weekend in Sigulda', cal:'family' }];
+var NEXTWEEK = [['Mon 5','06:40','08:55','Flight to Munich','work'],['Tue 6','10:00','17:00','Workshop, day 1','work'],['Wed 7','21:10','23:25','Flight home','work'],['Thu 8','17:00','18:00','Violin lesson','music'],['Sat 10','12:00','15:00','Grandmother’s birthday','family']];
+var EVMIX = { 'Team stand-up':['Планёрка команды','ru'], 'Lunch with Marta':['Pranzo con Marta','it'], 'Violin lesson':['バイオリンのレッスン','ja'], 'Parents’ evening at school':['אסיפת הורים בבית הספר','he'] };
+var CAL_NOW = 16 * 60 + 20, CAL_TODAY = 3, DAY_FROM = 480, DAY_TO = 1320;
+var CT = {
+  en:{ fixed:'Fixed today', inCal:'in calendar', planned:'planned', free:'free', ev:['event','events'], inn:'in', tent:'tentative', allDay:'all day', busy:'Busy',
+    notConn:'Calendar is not connected.', connect:'Connect calendars…', notNow:'Not now', stay:'Events stay on this device.', fixedNext:'Fixed next week', overlap:'overlap',
+    day:'Day', now:'now', win:'day window 08–22', upcoming:'Upcoming', next:'Next', more:function (n) { return '+ ' + n + ' more today'; }, tasks:'Tasks', cal:'Calendar', noEvents:'No events today', h:'h', min:'min' },
+  ru:{ fixed:'По календарю сегодня', inCal:'в календаре', planned:'по плану', free:'свободно', ev:['событие','события','событий'], inn:'через', tent:'под вопросом', allDay:'весь день', busy:'Занято',
+    notConn:'Календарь не подключён.', connect:'Подключить календари…', notNow:'Не сейчас', stay:'События остаются на этом устройстве.', fixedNext:'По календарю на следующей неделе', overlap:'пересечение',
+    day:'День', now:'сейчас', win:'окно дня 08–22', upcoming:'Ближайшие', next:'Далее', more:function (n) { return 'ещё ' + n + ' сегодня'; }, tasks:'Задачи', cal:'Календарь', noEvents:'Сегодня без событий', h:'ч', min:'мин' }
+};
+CT.he = CT.en;
+function hm(t) { var p = t.split(':'); return +p[0] * 60 + +p[1]; }
+function cpl(lang, n, f) { if (lang === 'ru') { var a = n % 10, b = n % 100; return f[(a === 1 && b !== 11) ? 0 : (a >= 2 && a <= 4 && (b < 10 || b >= 20)) ? 1 : 2]; } return f[n === 1 ? 0 : 1]; }
+function durL(m, lang) { var k = CT[lang] || CT.en, h = Math.floor(m / 60), r = m % 60; return ((h ? h + ' ' + k.h : '') + (h && r ? ' ' : '') + (r ? r + ' ' + k.min : '')) || ('0 ' + k.min); }
+function busyMin(day) {   // union of non-tentative timed events, clipped to the day window; overlaps counted once
+  var iv = EVD[day].filter(function (e) { return !(e[4] && e[4].tent); }).map(function (e) { return [Math.max(DAY_FROM, hm(e[0])), Math.min(DAY_TO, hm(e[1]))]; })
+    .filter(function (x) { return x[1] > x[0]; }).sort(function (a, b) { return a[0] - b[0]; });
+  var tot = 0, end = -1;
+  iv.forEach(function (x) { if (x[0] >= end) { tot += x[1] - x[0]; end = x[1]; } else if (x[1] > end) { tot += x[1] - end; end = x[1]; } });
+  return tot;
+}
+// tasks with a planned time and an estimate, per day: [planned time, estimate in minutes]. Same tasks as in the Today list.
+var PLAN = { 3: [['07:30', 15], ['12:00', 10], ['15:00', 20], ['20:30', 45]] };
+function unionMin(iv) { var tot = 0, end = -1;
+  iv.filter(function (x) { return x[1] > x[0]; }).sort(function (a, b) { return a[0] - b[0]; })
+    .forEach(function (x) { if (x[0] >= end) { tot += x[1] - x[0]; end = x[1]; } else if (x[1] > end) { tot += x[1] - end; end = x[1]; } });
+  return tot; }
+function plannedMin(day) {   // minutes that planned tasks add on top of calendar time, inside the day window; overlaps with events count once
+  var ev = EVD[day].filter(function (e) { return !(e[4] && e[4].tent); }).map(function (e) { return [Math.max(DAY_FROM, hm(e[0])), Math.min(DAY_TO, hm(e[1]))]; });
+  var pl = (PLAN[day] || []).map(function (p) { var s = hm(p[0]); return [Math.max(DAY_FROM, s), Math.min(DAY_TO, s + p[1])]; });
+  return unionMin(ev.concat(pl)) - unionMin(ev); }
+function freeMin(day) { return DAY_TO - DAY_FROM - busyMin(day) - plannedMin(day); }
+function calFact(day, lang, withFree) { var k = CT[lang] || CT.en, n = EVD[day].length;
+  return n + ' ' + cpl(lang, n, k.ev) + ' · ' + durL(busyMin(day), lang) + ' ' + k.inCal + (withFree ? (plannedMin(day) ? ' · ' + durL(plannedMin(day), lang) + ' ' + k.planned : '') + ' · ≈ ' + durL(freeMin(day), lang) + ' ' + k.free : ''); }
+function evList(c, day, lang, mixed, now) {   // now: minutes for today, -1 = whole day in the future, 1e9 = past day
+  var k = CT[lang] || CT.en, E = EVD[day], nextSet = false;
+  return E.map(function (e, i) {
+    var cal = CALS[e[3]], s = hm(e[0]), en = hm(e[1]), o = e[4] || {}, mx = mixed && EVMIX[e[2]];
+    var past = en <= now, ov = E.some(function (x, j) { return j !== i && hm(x[0]) < en && hm(x[1]) > s; });
+    var next = !past && !nextSet && now >= 0 && now < 1e8 && s > now; if (next) nextSet = true;
+    var col = c.dark ? cal.d : cal.l, wait = s - now;
+    return { time: e[0] + '–' + e[1], start: e[0], title: mx ? mx[0] : e[2], tl: mx ? mx[1] : 'en', col: col, calN: cal.n, lineE: cal.line ? L[cal.line].e : '',
+      past: past, next: next, tent: !!o.tent, ov: ov, s: s, e: en, op: past ? 0.5 : 1,
+      when: next ? k.inn + ' ' + durL(wait, lang) : (o.tent ? k.tent : (ov ? k.overlap : '')), ww: next ? 600 : 400, wc: next ? c.text : c.ter,
+      dotbg: o.tent ? 'transparent' : col, dotbd: o.tent ? '1.5px dashed ' + col : '0',
+      tbd: o.tent ? '1px dashed ' + c.badgeBorder : '1px solid transparent',
+      tbg: o.tent ? 'repeating-linear-gradient(135deg, ' + c.track + ' 0 3px, transparent 3px 7px)' : 'transparent' };
+  });
+}
+function calNow(day) { return day === CAL_TODAY ? CAL_NOW : (day < CAL_TODAY ? 1e9 : -1); }
+
+
+function build(c) {
+  var mode = this.props.mode || 'connected', on = { on:true, bg:c.accentFill, jc:'flex-end' }, off = { on:false, bg:c.ctrl, jc:'flex-start' };
+  function col(k) { return c.dark ? CALS[k].d : CALS[k].l; }
+  var A = [
+    ['iCloud', [['Family', col('family'), 1, 1, 'None'], ['Music lessons', col('music'), 1, 1, '🎻 Violin'], ['Personal', col('personal'), 1, 1, 'None'], ['Birthdays', c.dark ? '#8E8E95' : '#A0A0A8', 0, 0, 'None']]],
+    ['Work · Exchange', [['Work', col('work'), 1, 1, 'None']]],
+    ['Subscribed', [['Holidays in Latvia', c.dark ? '#B58A8A' : '#B08484', 1, 0, 'None']]]
+  ];
+  var T = {
+    connected:['Connected', 'Open System Settings…', 'MoonShine reads events through macOS (EventKit), read-only. It never creates or edits events.', ''],
+    none:['Not connected', 'Connect calendars…', 'MoonShine asks macOS for read-only access. Nothing is created or edited. The app works fully without it.', 'Calendars appear here after you connect.'],
+    denied:['Access denied', 'Open System Settings', 'Calendar access is off for MoonShine. Allow it in System Settings → Privacy & Security → Calendars. Today, Week and Month work without events.', 'No calendars to show while access is off.']
+  }[mode];
+  return { connected: mode === 'connected', notConnected: mode !== 'connected', demo: true, stateL: T[0], actionL: T[1], accessCap: T[2], emptyL: T[3],
+    primBtn: mode === 'none' ? 'background:' + c.accentFill + ';color:#FFFFFF;border-color:' + c.accentFill + ';font-weight:600' : '',
+    accts: A.map(function (a) { return { n:a[0], rows:a[1].map(function (r) { return { n:r[0], col:r[1], show: r[2] ? on : off, busy: r[3] ? on : off, line:r[4], fg: r[2] ? c.text : c.ter }; }) }; }) };
+}
+
+class Component extends DCLogic {
+  renderVals() {
+    var c = theme(!!this.props.dark);
+    var v = build.call(this, c, this.props.lang || 'en') || {};
+    var lang = this.props.lang || 'en'; v.c = c; v.ss = SS[lang] || SS.en; v.side = side(c, lang);
+    return v;
+  }
+}
+</script>
+</body>
+</html>

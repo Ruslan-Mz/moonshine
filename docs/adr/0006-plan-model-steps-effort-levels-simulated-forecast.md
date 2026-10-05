@@ -71,7 +71,7 @@ One screen: rows = selected projects; per row a level switch (min / normal / max
 - Good — showcase: a tested forecasting engine (deterministic seeds in tests).
 - Bad — plans take input effort. Mitigation: plan templates (progression, repertoire, course) and the assistant drafting a plan from plain text ("my calisthenics plan: …") as a proposal.
 - Bad — until evidence exists, forecasts rest on estimates; the UI says so ("based on estimates only").
-- Neutral — scenarios, levels and plans are MoonShine-native data; the active scenario's h/week can be published to the vault budget note once writes exist (phase 6), keeping Obsidian the human-readable truth.
+- Neutral — scenarios, levels and plans are MoonShine-native data; the active scenario's h/week can be published to the vault budget note once writes exist (the Act phase), keeping Obsidian the human-readable truth.
 
 ### Confirmation
 

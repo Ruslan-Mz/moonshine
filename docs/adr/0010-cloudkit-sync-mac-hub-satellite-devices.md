@@ -44,10 +44,16 @@ Phase 3b brings an iPad "planning studio" (and an iPhone capture app). OmniFocus
 
 Option 3 is revisited if real conflicts on plans appear in the conflict log.
 
+**Conflict rules for specific native records** (added 2026-10-03, owner decision on design draft-4):
+
+- `Take` draft notes merge: append-only, no note is ever overwritten.
+- A confirmed `Take` is last-writer-wins per (subject, ISO week); the losing value goes to the conflict log.
+- A `Proposal` reviewed on two devices at once: the first confirmation wins; the other device shows the result (ADR-0013).
+
 ### Consequences
 
 - Good — iPad and iPhone work offline and converge; no server; data stays in the owner's iCloud.
-- Good — the importer stays on the Mac, matching ADR-0003; iPad shows provider data read-only until phase 6 writes.
+- Good — the importer stays on the Mac, matching ADR-0003; iPad shows provider data read-only until the Act phase writes.
 - Bad — requires the paid Apple Developer Program (CloudKit entitlement, device builds beyond 7-day provisioning).
 - Bad — per-field LWW can drop one of two near-simultaneous edits to the same field; mitigated by the conflict log (shown in Settings) and by the rarity of single-user conflicts.
 - Bad — CloudKit ties sync to Apple; an own backend (phase 8) would need a second sync adapter behind the same port.

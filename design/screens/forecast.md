@@ -24,3 +24,32 @@ Step kinds → criterion line; three-point estimate × calibrated bias; `maxRate
 ## SwiftUI
 
 Swift Charts. Plan: `BarMark(xStart:xEnd:y:)` + `RuleMark(x:)` for p50 and today. Drift: `AreaMark(x:, yStart:, yEnd:)` + `LineMark` + `PointMark`, `.chartYScale(domain: .automatic(reversed: true))`. Practice: its own `Chart`.
+
+## My take (draft-4)
+
+Artboards: `Forecast-Take`, `Forecast-Take-Dark` (1440 × 1040). Future (phase 2–3), direction only.
+
+### Layout
+
+- Toolbar button `Add my take` (opens `TakeControl` for this project and the current week).
+- **Take marks on the drift chart's week axis.** Under the drift chart, on the same x positions as W29–W40, a two-row strip labelled `my take`: `this project` (W36 ✦) and `🎻 Violin line` (W35 ▶, W36 ✦, W38 ▶, W39 ●, W40 ▷ draft). It is a strip of marks, not a third series: no y-axis, no line through the marks. The practice chart stays below it, separate.
+- A third fact line under the two existing ones: `W36: 0.6 h on this project · my take: Leap — “Vibrato finally works”.` Facts and the take are joined by `·` only.
+- **Re-estimate row** between the headline card and the plan: `✦ W36 · my take: Leap — “Vibrato finally works” │ Re-estimate what is left? · Open estimates · Nothing changes by itself · Not now`. One quiet row on the band fill.
+
+### Data
+
+Project-level takes (optional, independent of the line's takes) and the line's takes for the charted weeks. A take never enters the forecast model: no weight, no bias, no feature.
+
+### Behaviour
+
+The re-estimate row appears when a Leap is set on the project and stays until the owner opens the estimates or chooses `Not now`. `Open estimates` goes to the plan's three-point estimates; the owner changes the numbers; the forecast is recomputed from them as usual. A Leap on the line alone does not show the row here; it shows the row in Line detail, listing the line's projects that have plans (`line-detail.md` § My take). `Add my take` saves a draft (only the weekly review confirms).
+
+### SwiftUI
+
+The strip is a plain `HStack`/`Canvas` aligned with the chart's plot area (`chartPlotStyle` / `ChartProxy.position(forX:)`), not a `Chart` mark.
+
+### Acceptance
+
+- [ ] The forecast (p10, p50, p90) is identical with and without takes.
+- [ ] Marks sit on the weeks of the axis above them; the strip has its own label and no scale.
+- [ ] The row asks a question and offers a link; it never proposes numbers.

@@ -16,14 +16,7 @@ import { pathToFileURL } from "node:url";
 
 // Every exception, with its reason. An entry that no longer matches anything fails the check,
 // so it is removed as soon as its reason is gone.
-export const ALLOWLIST = [
-  { rule: "adr", target: "ADR-0012", reason: "lands with the draft-3 docs PR" },
-  {
-    rule: "wikilink",
-    target: "0012-calendar-eventkit-read-only-per-device",
-    reason: "lands with the draft-3 docs PR",
-  },
-];
+export const ALLOWLIST = [];
 
 // Files where rule 4 does not apply: specs name files still to be created, and the
 // append-only method log names files that were renamed or deleted later.

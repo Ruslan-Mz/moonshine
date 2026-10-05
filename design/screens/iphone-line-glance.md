@@ -26,3 +26,22 @@ Line detail model (8 weeks + averages, last completion, the line's flagged or fi
 
 - [ ] Rhythm and progress never combined into one number or chart.
 - [ ] VoiceOver reads the eight weekly values as text.
+
+## My take (draft-4)
+
+Artboards: `iPhoneLine-Take`, `iPhoneLine-Take-Dark`.
+
+### Layout
+
+Under the Rhythm and Progress cards, a third card **My take**: spark mark + `My take` + `set by you`; on the right this week's state as a chip (`▷ Rise · draft`, dashed border; solid when confirmed; absent when there is no take). Then one row of `TakeMark`s (14 pt, Leap 18 pt) over the same week labels W33–W40, and the latest note on one line (`Wed · Teacher asked for the Sarabande next`). Below the cards: the pill button `Note for my take` (44 pt). Last activity, the suggested next step and `Open in OmniFocus` follow below the fold.
+
+### Behaviour
+
+`Note for my take` opens the capture sheet with this line preselected. Tapping a mark shows its note in a popover. No widget and no notification for takes.
+
+### Acceptance
+
+- [ ] The take card has no bars; it cannot be read as a measured chart.
+- [ ] VoiceOver reads the strip as text: "My take: W35 Rise, W36 Leap, W38 Rise, W39 Steady, W40 Rise, draft".
+
+Also fixed in this round: the averages on the Rhythm and Progress cards are `avg 4.0` and `avg 1.0` (they showed 5.5 and 1.3).

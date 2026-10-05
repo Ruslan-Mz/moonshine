@@ -13,5 +13,7 @@
 | [0009](0009-localization-string-catalogs-and-in-app-language.md)              | Localization: String Catalogs, values-not-strings in Core, in-app language switch                   | proposed |
 | [0010](0010-cloudkit-sync-mac-hub-satellite-devices.md)                       | Sync for iPad/iPhone: CloudKit private database, Mac as the only importer, native data multi-writer | proposed |
 | [0011](0011-change-driven-import-full-snapshots-on-omnifocus-deactivation.md) | Change-driven import: full snapshots through the bridge, triggered when OmniFocus resigns active    | proposed |
+| [0012](0012-calendar-eventkit-read-only-per-device.md)                        | Calendar: EventKit read-only on each device; events are never stored or synced                      | proposed |
+| [0013](0013-captures-proposals-command-queue-autonomy.md)                     | Voice captures, proposals and a command queue; autonomy levels for the assistant                    | proposed |
 
 Accepted ADRs are immutable; changes go into a new ADR that supersedes the old one.

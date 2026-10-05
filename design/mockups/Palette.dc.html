@@ -76,6 +76,65 @@ var L = {
   family:{e:'👨‍👩‍👧',n:'Family',a:'Family year 2026'},
   life:{e:'🧺',n:'Life ops',a:'Household'}
 };
+// ---------- calendar (draft-3) ----------
+var CALS = {
+  work:{ n:'Work', l:'#6C84AE', d:'#8FA6CE', acct:'Work · Exchange' },
+  family:{ n:'Family', l:'#6E9A80', d:'#8FBDA0', acct:'iCloud' },
+  music:{ n:'Music lessons', l:'#9282B4', d:'#B3A3D4', acct:'iCloud', line:'violin' },
+  personal:{ n:'Personal', l:'#B0946A', d:'#D0B78C', acct:'iCloud' }
+};
+// W40, index 0 = Mon 28 Sep … 6 = Sun 4 Oct. [start, end, title, calendar, flags]
+var EVD = [
+  [['09:30','10:00','Team stand-up','work'],['14:00','15:30','Design review','work']],
+  [['09:30','10:00','Team stand-up','work'],['15:00','16:30','Quarterly planning','work'],['16:00','17:00','Dentist — kids','family']],
+  [['09:30','10:00','Team stand-up','work'],['12:30','13:30','Physio','personal']],
+  [['09:30','10:00','Team stand-up','work'],['13:00','14:00','Lunch with Marta','personal'],['17:00','18:00','Violin lesson','music'],['18:30','20:00','Parents’ evening at school','family']],
+  [['09:30','10:00','Team stand-up','work'],['15:00','16:00','Sprint demo','work',{tent:1}],['19:00','21:00','Concert — string quartet','personal']],
+  [['11:00','12:30','Castle walk','family']],
+  [['18:00','19:00','Call with parents','family']]
+];
+var ALLDAY = [{ from:5, to:6, title:'Weekend in Sigulda', cal:'family' }];
+var NEXTWEEK = [['Mon 5','06:40','08:55','Flight to Munich','work'],['Tue 6','10:00','17:00','Workshop, day 1','work'],['Wed 7','21:10','23:25','Flight home','work'],['Thu 8','17:00','18:00','Violin lesson','music'],['Sat 10','12:00','15:00','Grandmother’s birthday','family']];
+var EVMIX = { 'Team stand-up':['Планёрка команды','ru'], 'Lunch with Marta':['Pranzo con Marta','it'], 'Violin lesson':['バイオリンのレッスン','ja'], 'Parents’ evening at school':['אסיפת הורים בבית הספר','he'] };
+var CAL_NOW = 16 * 60 + 20, CAL_TODAY = 3, DAY_FROM = 480, DAY_TO = 1320;
+var CT = {
+  en:{ fixed:'Fixed today', inCal:'in calendar', free:'free', ev:['event','events'], inn:'in', tent:'tentative', allDay:'all day', busy:'Busy',
+    notConn:'Calendar is not connected.', connect:'Connect calendars…', notNow:'Not now', stay:'Events stay on this device.', fixedNext:'Fixed next week', overlap:'overlap',
+    day:'Day', now:'now', win:'day window 08–22', upcoming:'Upcoming', next:'Next', more:function (n) { return '+ ' + n + ' more today'; }, tasks:'Tasks', cal:'Calendar', noEvents:'No events today', h:'h', min:'min' },
+  ru:{ fixed:'По календарю сегодня', inCal:'в календаре', free:'свободно', ev:['событие','события','событий'], inn:'через', tent:'под вопросом', allDay:'весь день', busy:'Занято',
+    notConn:'Календарь не подключён.', connect:'Подключить календари…', notNow:'Не сейчас', stay:'События остаются на этом устройстве.', fixedNext:'По календарю на следующей неделе', overlap:'пересечение',
+    day:'День', now:'сейчас', win:'окно дня 08–22', upcoming:'Ближайшие', next:'Далее', more:function (n) { return 'ещё ' + n + ' сегодня'; }, tasks:'Задачи', cal:'Календарь', noEvents:'Сегодня без событий', h:'ч', min:'мин' }
+};
+CT.he = CT.en;
+function hm(t) { var p = t.split(':'); return +p[0] * 60 + +p[1]; }
+function cpl(lang, n, f) { if (lang === 'ru') { var a = n % 10, b = n % 100; return f[(a === 1 && b !== 11) ? 0 : (a >= 2 && a <= 4 && (b < 10 || b >= 20)) ? 1 : 2]; } return f[n === 1 ? 0 : 1]; }
+function durL(m, lang) { var k = CT[lang] || CT.en, h = Math.floor(m / 60), r = m % 60; return ((h ? h + ' ' + k.h : '') + (h && r ? ' ' : '') + (r ? r + ' ' + k.min : '')) || ('0 ' + k.min); }
+function busyMin(day) {   // union of non-tentative timed events, clipped to the day window; overlaps counted once
+  var iv = EVD[day].filter(function (e) { return !(e[4] && e[4].tent); }).map(function (e) { return [Math.max(DAY_FROM, hm(e[0])), Math.min(DAY_TO, hm(e[1]))]; })
+    .filter(function (x) { return x[1] > x[0]; }).sort(function (a, b) { return a[0] - b[0]; });
+  var tot = 0, end = -1;
+  iv.forEach(function (x) { if (x[0] >= end) { tot += x[1] - x[0]; end = x[1]; } else if (x[1] > end) { tot += x[1] - end; end = x[1]; } });
+  return tot;
+}
+function freeMin(day) { return DAY_TO - DAY_FROM - busyMin(day); }
+function calFact(day, lang, withFree) { var k = CT[lang] || CT.en, n = EVD[day].length;
+  return n + ' ' + cpl(lang, n, k.ev) + ' · ' + durL(busyMin(day), lang) + ' ' + k.inCal + (withFree ? ' · ≈ ' + durL(freeMin(day), lang) + ' ' + k.free : ''); }
+function evList(c, day, lang, mixed, now) {   // now: minutes for today, -1 = whole day in the future, 1e9 = past day
+  var k = CT[lang] || CT.en, E = EVD[day], nextSet = false;
+  return E.map(function (e, i) {
+    var cal = CALS[e[3]], s = hm(e[0]), en = hm(e[1]), o = e[4] || {}, mx = mixed && EVMIX[e[2]];
+    var past = en <= now, ov = E.some(function (x, j) { return j !== i && hm(x[0]) < en && hm(x[1]) > s; });
+    var next = !past && !nextSet && now >= 0 && now < 1e8 && s > now; if (next) nextSet = true;
+    var col = c.dark ? cal.d : cal.l, wait = s - now;
+    return { time: e[0] + '–' + e[1], start: e[0], title: mx ? mx[0] : e[2], tl: mx ? mx[1] : 'en', col: col, calN: cal.n, lineE: cal.line ? L[cal.line].e : '',
+      past: past, next: next, tent: !!o.tent, ov: ov, s: s, e: en, op: past ? 0.5 : 1,
+      when: next ? k.inn + ' ' + durL(wait, lang) : (o.tent ? k.tent : (ov ? k.overlap : '')), ww: next ? 600 : 400, wc: next ? c.text : c.ter,
+      dotbg: o.tent ? 'transparent' : col, dotbd: o.tent ? '1.5px dashed ' + col : '0',
+      tbd: o.tent ? '1px dashed ' + c.badgeBorder : '1px solid transparent',
+      tbg: o.tent ? 'repeating-linear-gradient(135deg, ' + c.track + ' 0 3px, transparent 3px 7px)' : 'transparent' };
+  });
+}
+function calNow(day) { return day === CAL_TODAY ? CAL_NOW : (day < CAL_TODAY ? 1e9 : -1); }
 
 
 function hl(s, q) { var i = s.toLowerCase().indexOf(q); if (i < 0) return [s, '', '']; return [s.slice(0, i), s.slice(i, i + q.length), s.slice(i + q.length)]; }

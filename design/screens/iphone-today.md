@@ -32,7 +32,7 @@ Same Overview service; the phone shows the trace as line emoji + project (the fu
 
 ## Behaviour
 
-- Tap a row: detail sheet (trace, estimate, notes, "Open in OmniFocus"). Swipe actions arrive with writes (phase 6).
+- Tap a row: detail sheet (trace, estimate, notes, "Open in OmniFocus"). Swipe actions arrive with writes (the Act phase).
 - Pull to refresh pulls the replicated store; no import runs on the phone.
 - **Dynamic Type XXL** (artboard drawn with the type scale ×1.35): titles **wrap** instead of truncating, chips wrap to several lines, the tab bar keeps its size (labels shown through the Large Content Viewer).
 - Russian UI: `Сегодня`, `открыто 23`, `Якоря · 3 из 5`, tab labels from the catalog.
@@ -46,3 +46,14 @@ Same Overview service; the phone shows the trace as line emoji + project (the fu
 - [ ] At XXL nothing is clipped; at AX sizes rows grow, nothing overlaps the tab bar.
 - [ ] One-hand reach: primary actions in the bottom half (tab bar, Log).
 - [ ] VoiceOver order: anchors, Top 3, lines.
+
+## Calendar (draft-3)
+
+Artboards: `iPhoneToday-Cal`, `iPhoneToday-Cal-Dark`.
+
+A **Next event** card at the top (`NextEventRow`): 3 pt calendar bar · `Next · 17:00–18:00` · `Violin lesson 🎻` · `in 40 min`. Below it one 44 pt row: `+ 1 more today` on the left, `4 h in calendar · ≈ 2 h 25 min free until 22:00` on the right (compact form: the `planned` term is left out, the free time already includes it); tapping expands the rest of the day's events. No events left today → the card is absent (no "nothing more today" message). No access → nothing is shown here; the quiet connect row lives in Settings on the phone.
+
+**Acceptance.**
+
+- [ ] The card never uses amber; `in 40 min` is semibold text.
+- [ ] At Dynamic Type XXL the title wraps and the time stays on one line.

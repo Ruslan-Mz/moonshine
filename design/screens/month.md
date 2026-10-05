@@ -42,3 +42,18 @@ Toolbar: month name, subtitle, ‹ Today ›. **Opens on the current month**; �
 - [ ] Neutral palette only: dots use the text colour, tint uses the accent; no per-line hues.
 - [ ] Clicking a day updates the list without reloading the note.
 - [ ] The note is read-only; "Open in Obsidian" uses `obsidian://open`.
+
+## Calendar (draft-3)
+
+Artboards: `Month-Cal`, `Month-Cal-Dark`.
+
+- **All-day / multi-day events**: a 14 pt `AllDayBar` segment in each day cell between the date row and the dot strip; the title is in the first cell, the bar continues across the gap into the next cell.
+- **Timed events**: a small outlined count next to the date (`▢ 3`, 15 pt high, hairline border). It is a number in a box — deliberately unlike the per-line activity dots, which stay at the bottom of the cell.
+- **Legend** adds `▢ 3 timed events` and the all-day swatch.
+- **Selected-day list**: events first (dot · time · title · calendar; `all day` rows first), then tasks. Header: `Thursday, 1 October · today · 4 events · 6 completed · 4 lines`.
+- Future days show their events (the calendar knows them) but still no activity dots.
+
+**Acceptance.**
+
+- [ ] Event marks cannot be mistaken for activity dots (shape, position, number).
+- [ ] The cell tint still means completions only; events never tint a cell.
