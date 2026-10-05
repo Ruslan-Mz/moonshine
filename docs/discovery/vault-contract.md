@@ -10,7 +10,7 @@ Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault write
 
 ## Design choices driven by the data
 
-1. **Existing keys are honoured as-is.** The vault already has `type`, `parent`, `period_start`/`period_end`, `month`, `year`, `horizons` on its horizon notes. The reader derives `scale` and `period` from them, so the owner only has to **add two blocks**: `lines:` (budget note) and `artifacts:` (year note).
+1. **Existing keys are honoured as-is.** The vault already has `type`, `parent`, `period_start`/`period_end`, `month`, `year`, `horizons` on its horizon notes. The reader derives `scale` and `period` from them, so the owner only has to make **three edits**: the `moonshine: budget` marker and the `lines:` block (budget note), and `artifacts:` (year note).
 2. **Artifacts are list items, not notes.** Year artifacts and quarter focuses live as table rows / headings inside one note each. The contract puts them in a frontmatter list in that note rather than asking for one note per artifact.
 3. **New key `scale`, not `horizon`** (decision Q1, 2026-09-30). 18 existing notes use `horizon:` as a human phrase (a year range or duration plus a comment); MoonShine never reads `horizon` and never asks to change it. The machine-readable level of a note is `scale`.
 
