@@ -267,7 +267,7 @@ public enum ImportIssue: Hashable, Sendable {
 /// name set by the reader (`lines[3].budget_h_week`), never a value from the note.
 public struct VaultProblem: Hashable, Sendable, CustomStringConvertible {
   public enum Kind: String, Hashable, Sendable, Codable {
-    /// The note could not be opened or read.
+    /// The note, or a folder of notes, could not be opened or read.
     case unreadable
     /// The frontmatter is not UTF-8 text.
     case notUTF8
@@ -275,7 +275,7 @@ public struct VaultProblem: Hashable, Sendable, CustomStringConvertible {
     case frontmatterTooLarge
     /// The frontmatter is not valid YAML, or never closes.
     case malformedYAML
-    /// Too many YAML nodes (aliases included) or too deep a nesting.
+    /// A YAML anchor (aliases need one), too many nodes or too deep a nesting.
     case yamlTooComplex
     /// A symbolic link; the reader never follows one.
     case symlinkSkipped

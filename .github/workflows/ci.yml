@@ -44,7 +44,9 @@ jobs:
           fi
 
       - name: Core imports (ADR-0001)
-        run: scripts/check-core-imports.sh
+        run: |
+          node --test scripts/check-core-imports.test.mjs
+          scripts/check-core-imports.sh
 
       - name: Markdown format check
         run: |

@@ -91,6 +91,20 @@ func problems(_ issues: [ImportIssue]) -> [String] {
     }
   }
 
+  @Test func anUnreadableFolderIsAnIssueAndTheRestStillLoads() throws {
+    let vault = try TemporaryVault()
+    try vault.write("a.md", note("type: x"))
+    try vault.write("Locked/b.md", note("type: x"))
+    let locked = vault.root.appending(path: "Locked").path
+    try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: locked)
+    defer {
+      try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: locked)
+    }
+    let (files, issues) = try VaultWalk.markdownFiles(in: vault.root, limits: VaultLimits())
+    #expect(files.map(\.path) == ["a.md"])
+    #expect(problems(issues) == ["Locked:-:unreadable"])
+  }
+
   @Test func aMissingRootIsUnreadable() {
     let missing = FileManager.default.temporaryDirectory.appending(path: "no-vault-\(UUID())")
     #expect(throws: VaultReadError.rootUnreadable) {
@@ -138,6 +152,18 @@ func problems(_ issues: [ImportIssue]) -> [String] {
     let bytes: [UInt8] = Array("---\na: ".utf8) + [0xFF, 0xFE] + Array("\n---\n".utf8)
     #expect(throws: FrontmatterFailure(kind: .notUTF8, line: nil)) {
       try Frontmatter.extract(from: bytes, atEnd: true, limit: 1024)
+    }
+  }
+
+  @Test func aNoteReadFromDiskKeepsFrontmatterOfExactlyTheCapAndRejectsOneByteMore() throws {
+    let vault = try TemporaryVault()
+    let limit = 64
+    let atCap = String(repeating: "x", count: limit - 1) + "\n"
+    let fits = try vault.write("fits.md", "---\n\(atCap)---\nbody\n")
+    let over = try vault.write("over.md", "---\nx\(atCap)---\nbody\n")
+    #expect(try Frontmatter.text(of: fits, limit: limit) == atCap)
+    #expect(throws: FrontmatterFailure(kind: .frontmatterTooLarge, line: nil)) {
+      try Frontmatter.text(of: over, limit: limit)
     }
   }
 
@@ -203,14 +229,56 @@ func problems(_ issues: [ImportIssue]) -> [String] {
     #expect(throws: FrontmatterFailure(kind: .yamlTooComplex, line: nil)) { try parse(yaml) }
   }
 
-  @Test func aliasExpansionIsBoundedByTheNodeCap() {
+  /// An alias bomb: each level is ten aliases of the one below, 10^9 scalars at the top.
+  func aliasBomb(levels: Int) -> [String] {
     var lines = ["a0: &a0 [x, x, x, x, x, x, x, x, x, x]"]
-    for level in 1...8 {
+    for level in 1...levels {
       let previous = Array(repeating: "*a\(level - 1)", count: 10).joined(separator: ", ")
       lines.append("a\(level): &a\(level) [\(previous)]")
     }
+    return lines
+  }
+
+  @Test func anAliasBombInValuesIsRejectedBeforeParsing() {
     #expect(throws: FrontmatterFailure(kind: .yamlTooComplex, line: nil)) {
-      try parse(lines.joined(separator: "\n"))
+      try parse(aliasBomb(levels: 8).joined(separator: "\n"))
+    }
+  }
+
+  /// Yams hashes mapping keys while composing, so an alias in key position would expand there.
+  @Test(.timeLimit(.minutes(1))) func anAliasBombInKeyPositionIsRejectedBeforeParsing() {
+    for key in ["*a8 : v", "? *a8\n: v", "b: {*a8 : v}", "b: [*a8 : v]"] {
+      #expect(throws: FrontmatterFailure(kind: .yamlTooComplex, line: nil)) {
+        try parse((aliasBomb(levels: 8) + [key]).joined(separator: "\n"))
+      }
+    }
+  }
+
+  @Test func everyAnchorFormIsRejected() {
+    for yaml in [
+      "a: &x 1", "a: [&x 1]", "a: {b: &x 1}", "- &x a", "a:\n  - &x 1", "a: !!str &x 1",
+      "a: \"q\" \n&x b: 1",
+    ] {
+      #expect(throws: FrontmatterFailure(kind: .yamlTooComplex, line: nil), "\(yaml)") {
+        try parse(yaml)
+      }
+    }
+  }
+
+  @Test func anAmpersandInsideAWordIsPlainText() throws {
+    let root = try parse("title: R&D, Q&A and AT&T\nb: x & y")
+    guard case .mapping(let entries) = root.value else {
+      Issue.record("not a mapping")
+      return
+    }
+    #expect(entries.map(\.node.value) == [.scalar("R&D, Q&A and AT&T"), .scalar("x & y")])
+  }
+
+  @Test func theNodeCapBoundsALongDocument() {
+    var limits = VaultLimits()
+    limits.maxNodes = 5
+    #expect(throws: FrontmatterFailure(kind: .yamlTooComplex, line: nil)) {
+      try parse("a: [1, 2, 3, 4, 5, 6]", limits: limits)
     }
   }
 }

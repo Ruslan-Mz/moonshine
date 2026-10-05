@@ -24,7 +24,9 @@ struct FrontNode: Equatable {
   /// Parses frontmatter text; the root must be a mapping.
   static func parse(_ text: String, limits: VaultLimits) throws(FrontmatterFailure) -> FrontNode {
     // libyaml parses flow collections recursively: reject deep `[[[…` before it sees them.
-    guard flowDepth(of: text) <= limits.maxDepth else {
+    // Yams expands aliases while composing (it hashes mapping keys), before any cap of ours
+    // runs, so anchors are rejected outright: no anchor, no alias, no alias bomb.
+    guard flowDepth(of: text) <= limits.maxDepth, !hasAnchor(text) else {
       throw FrontmatterFailure(kind: .yamlTooComplex, line: nil)
     }
     let composed: Node?
@@ -93,6 +95,25 @@ struct FrontNode: Equatable {
       }
     }
     return deepest
+  }
+
+  /// Whether `text` may hold an anchor (`&name`). Lexical and deliberately coarse: quotes are
+  /// not tracked, so an `&` in a quoted string counts too. An `&` right after a Latin letter or
+  /// digit cannot start a YAML token, so `R&D` stays plain text.
+  private static func hasAnchor(_ text: String) -> Bool {
+    let bytes = Array(text.utf8)
+    for index in bytes.indices where bytes[index] == UInt8(ascii: "&") {
+      let next = index + 1 < bytes.count ? bytes[index + 1] : UInt8(ascii: " ")
+      let startsName = !" \t\r\n,[]{}".utf8.contains(next)
+      let afterWord = index > 0 && isWordByte(bytes[index - 1])
+      if startsName && !afterWord { return true }
+    }
+    return false
+  }
+
+  private static func isWordByte(_ byte: UInt8) -> Bool {
+    (UInt8(ascii: "a")...UInt8(ascii: "z")).contains(byte | 0x20)
+      || (UInt8(ascii: "0")...UInt8(ascii: "9")).contains(byte)
   }
 
   private static func noteLine(of error: any Error) -> Int? {

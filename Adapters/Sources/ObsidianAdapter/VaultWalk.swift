@@ -33,12 +33,18 @@ enum VaultWalk {
   ) throws(VaultReadError) -> (files: [VaultFile], issues: [ImportIssue]) {
     let root = root.resolvingSymlinksInPath().standardizedFileURL
     let keys: [URLResourceKey] = [.isSymbolicLinkKey, .isRegularFileKey]
+    // A folder the walk cannot enter is an issue, not a silent hole in the vault.
+    let unreadable = UnreadablePaths()
     var isFolder: ObjCBool = false
     guard FileManager.default.fileExists(atPath: root.path, isDirectory: &isFolder),
       isFolder.boolValue,
       let walker = FileManager.default.enumerator(
         at: root, includingPropertiesForKeys: keys,
-        options: [.skipsHiddenFiles, .skipsPackageDescendants])
+        options: [.skipsHiddenFiles, .skipsPackageDescendants],
+        errorHandler: { url, _ in
+          unreadable.paths.append(relativePath(of: url, under: root) ?? "")
+          return true
+        })
     else { throw .rootUnreadable }
 
     var files: [VaultFile] = []
@@ -52,6 +58,7 @@ enum VaultWalk {
         continue
       }
       guard values?.isRegularFile == true, url.pathExtension.lowercased() == "md" else { continue }
+      // Defence in depth behind the symlink skip (a link swapped in during the walk).
       guard relativePath(of: url.resolvingSymlinksInPath(), under: root) != nil else {
         issues.append(.vault(path: path, line: nil, problem: VaultProblem(.outsideVault)))
         continue
@@ -59,7 +66,15 @@ enum VaultWalk {
       guard files.count < limits.maxNotes else { throw .tooManyNotes(limit: limits.maxNotes) }
       files.append(VaultFile(path: path, url: url))
     }
+    issues += unreadable.paths.map {
+      .vault(path: $0, line: nil, problem: VaultProblem(.unreadable))
+    }
     return (files.sorted { $0.path < $1.path }, issues.sorted { "\($0)" < "\($1)" })
+  }
+
+  /// Collects what the enumerator's error handler reports; the walk is synchronous.
+  private final class UnreadablePaths {
+    var paths: [String] = []
   }
 
   /// The path of `url` relative to `root`, or nil when it is not inside `root`.
