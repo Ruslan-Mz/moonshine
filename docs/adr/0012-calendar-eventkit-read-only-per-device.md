@@ -47,10 +47,10 @@ Rules that follow:
 - **Read-only.** No EventKit write API (`save`, `remove`) is called until the Act phase spec exists. Access is requested with `requestFullAccessToEvents` (the only level that allows reading); reminders are not requested.
 - **No storage, no sync.** Events are not written to the MoonShine store, the change log, CloudKit, logs or crash reports. They are held in memory for the visible range only.
 - **Derived numbers may be stored.** From phase 2, per-day busy minutes (numbers only, no titles, no attendees) may be stored as MoonShine-native data for calibration and synced under ADR-0010. This is the only calendar-derived data that leaves the device.
-- **Settings.** Per-calendar `show`, `countsAsBusy`, `line` and the day window are local in phase 1 (keyed by `calendarIdentifier`). When the iPad arrives (3b) they become synced native settings keyed by account title + calendar title, with `calendarIdentifier` kept as a per-device cache, because the identifier is not stable across devices.
+- **Settings.** Per-calendar `show`, `countsAsBusy` and `line` are per device (keyed by `calendarIdentifier`) and are **never synced**: calendar and account titles do not leave the device, and each device maps its own calendars. The day window is a preference, not calendar data: local in phase 1, a synced native setting from 3b.
 - **Day load in Core.** Busy, planned and free time are computed by a Core service from events (values), tasks and the day window, so that every platform shows the same numbers for the same inputs. The presentation rules live in `design/screens/`.
-- **Timed tasks.** A task appears on the day rail by its planned date-time; a due date-time today is a due mark. OmniFocus stores a time on every date, so the bridge exports OmniFocus' default times and Core treats a time equal to the default as "date only".
-- **Change signal.** `EKEventStoreChanged` feeds the change stream; views refresh without the importer. It is the first source for change-driven refresh (ADR-0011, planned).
+- **Timed tasks.** A task appears on the day rail by its planned date-time; a due date-time today is a due mark. OmniFocus stores a time on every date, so the bridge exports OmniFocus' default times and Core treats a time equal to the default as "date only". When `defaultTimes` or one of its keys is absent, only 00:00 counts as "date only" for that date kind.
+- **Change signal.** `EKEventStoreChanged` feeds the `ChangeSignal` port of ADR-0011; a calendar change refreshes the views and does not start the importer.
 - **Assistant (phase 4).** Tools expose event counts and busy time by default. Event titles are exposed only after an explicit opt-in in Settings.
 - **Demo mode** uses the fixture provider and never calls EventKit.
 
@@ -70,7 +70,7 @@ Rules that follow:
 - Architecture test: `MoonShineCore` does not import EventKit; no call to `EKEventStore.save` / `remove` exists in the repository.
 - With access not requested, denied or revoked, every screen renders completely; Demo mode makes no EventKit call (mock provider asserts zero calls).
 - Core tests derive the demo day's facts from the fixtures: `4 events · 4 h in calendar · 1 h 15 min planned`, overlap counted once, tentative and all-day events not counted.
-- The store schema has no table or column that can hold an event title.
+- The store schema has no table or column that can hold an event title, a calendar title or an account title; per-calendar settings live in local, unsynced preferences.
 
 ## Pros and Cons of the Options
 

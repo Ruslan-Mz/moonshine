@@ -168,7 +168,7 @@ The draft-2 artboards are unchanged in appearance; the calendar variants are the
 
 - Busy = union of timed events from calendars that count as busy, clipped to the day window; overlaps count once.
 - The day window is **configurable** (decided 2 Oct 2026), default 08:00–22:00, in Settings → Calendars.
-- **Planned tasks reduce free time** (decided 2 Oct 2026): a task with a planned time **and** an estimate occupies [planned time, planned time + estimate], clipped to the day window. It is reported as its own term (`1 h 15 min planned`), never added to `in calendar`. Overlap with an event or another planned task counts once. Done or open makes no difference. A planned task without an estimate, and a due time, occupy nothing.
+- **Planned tasks reduce free time** (decided 2 Oct 2026): a task with a planned time **and** an estimate occupies [planned time, planned time + estimate], clipped to the day window. It is reported as its own term (`1 h 15 min planned`), never added to `in calendar`. Overlap counts once: `planned` reports only planned-task time not already covered by a calendar event, and free = window − the union of both (`screens/today.md` § Calendar). Done or open makes no difference. A planned task without an estimate, and a due time, occupy nothing.
 - Tentative and all-day events are shown but **not** counted; declined events are hidden.
 - Free = day window − calendar − planned. On Today it counts **from now** to the end of the window (decided 3 Oct 2026); a future day in Week uses the whole window.
 
@@ -179,25 +179,25 @@ The draft-2 artboards are unchanged in appearance; the calendar variants are the
 3. **All-day events and trips** as busy time: decided in the phase-2 spec.
 4. **Calendar vs capacity in forecasts**: decided in the phase-2 spec.
 5. **Per-device events vs synced plans**: per ADR-0012 — events never sync; from phase 2 per-day busy minutes (numbers only) are stored and synced as native data.
-6. **Line mapping per device or synced?** Per ADR-0012 — local in phase 1 (by `calendarIdentifier`); synced native settings keyed by account title + calendar title from 3b.
+6. **Line mapping per device or synced?** **Per device**, never synced (ADR-0012): per-calendar Show, Counts as busy and Line stay on the device, keyed by `calendarIdentifier`; calendar and account titles do not leave it.
 7. **Events outside the day window** (the 06:40 flight): **yes** — shown, pinned, not counted.
 8. **Assistant / MCP (phase 4)**: per ADR-0012 — counts and busy time by default; titles only after an explicit opt-in in Settings.
 9. **Quiet connect row**: **yes**, `Not now` hides it for 30 days. On iPhone it lives in Settings only.
 10. **Slice and ADR**: ADR-0012; the work is slice **S3c**, before S4 (`docs/specs/phase-1-see.md`).
 11. Which OmniFocus time puts a task on the rail: already decided — planned. The bridge exports the planned date-time (OmniFocus ≥ 4.7, `docs/discovery/snapshot-contract.md`).
 12. Do tasks with a time reduce free time: already decided — yes, when they have an estimate.
-13. **Day window: per device or synced?** Per ADR-0012 — local in phase 1, a synced native setting from 3b.
+13. **Day window: per device or synced?** **Synced** from 3b (ADR-0012): it is a preference, not calendar data; local in phase 1.
 14. **Day rail on iPad and iPhone**: as proposed — the iPad inspector gets the same `DayRail`; the iPhone keeps the Next event card and lists timed tasks in time order. Drawn in the 3b round.
 
 ### Contract change for timed tasks
 
-The task model needs the time part of the due date and a planned date-time (`plannedAt`), plus a flag for "date only". **"Date only" = a time equal to OmniFocus' default time** for that date kind; the bridge exports those defaults (`defaultTimes`, `docs/discovery/snapshot-contract.md` § Default times). Known limit, stated there: a task deliberately planned or due exactly at the default time is indistinguishable from a date-only one and is treated as date-only.
+The task model needs the time part of the due date and a planned date-time (`plannedAt`), plus a flag for "date only". **"Date only" = a time equal to OmniFocus' default time** for that date kind (when `defaultTimes` or that key is absent: only 00:00); the bridge exports those defaults (`defaultTimes`, `docs/discovery/snapshot-contract.md` § Default times). Known limit, stated there: a task deliberately planned or due exactly at the default time is indistinguishable from a date-only one and is treated as date-only.
 
 ## Draft-4 changes — my take
 
 The owner's weekly take: a qualitative assessment of how a line went this week, set only by the owner. Canvas page: "My take · draft-4". Every artboard has a `-Dark` twin. Prompt of the round: the model below is as decided there.
 
-**Model (decided).** A take belongs to one line (optionally one project, independent of the line take) and one ISO week: a direction (`Leap · Rise · Steady · Dip`) and an optional one-line note. It can be captured at any moment as a dated **draft** note, with or without a direction; at the weekly review the owner **confirms** the week's take, prefilled from the drafts. Never computed, suggested, averaged, counted or reminded. No take is a valid, blank state. A take does not change forecasts. A line with a take for the week is not flagged as quiet that week.
+**Model (decided).** A take belongs to one line (optionally one project, independent of the line take) and one ISO week: a direction (`Leap · Rise · Steady · Dip`) and an optional one-line note. It can be captured at any moment as a dated **draft** note, with or without a direction; at the weekly review the owner **confirms** the week's take, prefilled from the drafts. Never computed, suggested, averaged, counted or reminded. No take is a valid, blank state. A take does not change forecasts. Any take or note resets the line's quiet count from its date (the date the note was written or the take was set, never a future date).
 
 1. **Three tracks, never one score.** Rhythm and progress are measured (coloured bars); the take is judged (ink marks, the label `my take`). They sit side by side and are never combined. → `components.md` § Take components.
 2. **Weekly review** gets a second step, `2 · My take`, with the section "How did each line go?": one row per foundation and active line — measured facts · four-segment control · note · Confirm. Drafts are listed with their day and prefill the control. → `screens/week.md`, `screens/ipad-week.md`.
@@ -206,7 +206,7 @@ The owner's weekly take: a qualitative assessment of how a line went this week, 
 5. **Project forecast (future)**: take marks on the drift chart's week axis, one quiet row `Re-estimate what is left?` after a Leap. → `screens/forecast.md`.
 6. **Quarterly review**: take strips per line, notes when a row is opened, Leaps as supporting notes under the focus outcomes. → `screens/quarterly-review.md`.
 7. **Capture**: iPhone sheet `Note for my take` (Log tab and line glance), Mac ⌘K command and `Add a note`, iPad popover. → `screens/iphone-quick-log.md`, `screens/iphone-line-glance.md`, `screens/command-palette.md`.
-8. **Quiet rule**: a take this week suppresses the quiet flag for that week (Today rail, review, Lines). → `screens/today.md`.
+8. **Quiet rule**: any take or note resets the quiet count from its date (the date the note was written or the take was set, never a future date) (Today rail, review, Lines). → `screens/today.md`.
 9. **Fixed on the way**: Line detail and the iPhone line glance showed `avg 5.5` / `avg 1.3`; they now show `avg 4.0` / `avg 1.0`, as `demo-data.md` gives. The Mac weekly-review artboard is named `Week-Review` (the Screens table said `WeekReview`).
 
 | Screen                         | Spec                                      | Artboards                                                 |
@@ -254,7 +254,7 @@ Why horizontal triangles and not vertical: the words are Forward and Back, not U
 7. **Storage, slice and ADR.** Storage in the first native slice of phase 2; no separate ADR. ADR-0010's conflict rules gain: draft notes merge (append-only); a confirmed take is last-writer-wins per (subject, week). Writing confirmed takes to the vault is decided in the Act phase spec.
 8. **Project take vs line take.** Independent; no roll-up.
 9. **Hours wording.** `2 h of 6 h budget` / «2 ч из 6 ч бюджета».
-10. **Quiet rule detail.** Any take or note resets the quiet count from its date (the latest dated note, or the end of the week for a take without notes).
+10. **Quiet rule detail.** Any take or note resets the quiet count from its date (the date the note was written or the take was set, never a future date).
 11. **Re-estimate row.** In the project's forecast after a Leap on that project; in Line detail after a Leap on the line, listing the line's projects that have plans. Dismissed with `Not now`.
 12. **One tap vs Confirm.** The place decides, not the day: in the weekly review choosing a direction confirms the take; everywhere else (Line detail, the iPhone sheet, ⌘K) it creates a draft.
 13. **Demo data.** Keep the AI/ML Leap in W37 and drop the claim "fewer tasks than average"; the Violin W36 example carries that case.

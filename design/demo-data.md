@@ -45,6 +45,7 @@ The Violin dip in W35–W37 is the same story the forecast drift chart tells.
 - **Anchors (5):** 🧘 Morning session (done) · 🎻 Violin 15 min (done) · 💪 Walk 30 min (done) · 👨‍👩‍👧 Evening reading with the kids · 🧘 Evening session. → `3 of 5 done`.
 - **Flagged (Top 3):** 🤖 Submit workshop abstract (due 23:59) · 🎻 Allemande, bars 1–16 · 📐 Chapter 3.A exercises — plus 2 more flagged (`5 flagged — 3 shown`).
 - **Quarter focus (Q4, 5 artifacts):** Spring recital programme chosen 🎻 (done) · Eval toolkit v1 published 🤖 · Practice-drift paper draft 🔬 · Linear algebra ch. 1–4 📐 (done) · 10 strict pull-ups 💪.
+- **Q3 focus (quarterly review, 6 artifacts):** Allemande — notes learned 🎻 (done) · Linear algebra, chapters 1–2 📐 (done) · Eval harness prototype 🤖 (carried to Q4) · Italian A2 exam 🇮🇹 (to decide) · 8 strict pull-ups 💪 (done) · Drift paper — related work 🔬 (done). As in `mockups/QuarterReview.dc.html`.
 
 ## Today (21 line tasks + 3 from earlier + 5 Life ops)
 

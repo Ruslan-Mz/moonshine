@@ -92,6 +92,6 @@ Same sparkline + mark strip as Lines, with 13 or 14 slots. Opened notes: a `Disc
 
 ### Acceptance
 
-- [ ] 🤖 AI/ML shows one spark (W37) and one ▶ (W39) in an otherwise blank strip; the spark is found at a glance.
+- [ ] 🤖 AI/ML shows one spark (W37), one ▶ (W39) and a dashed ▷ (W40 draft) in an otherwise blank strip; the spark is found at a glance.
 - [ ] 📐 Math shows a dashed spark in W38, and the artifact "Linear algebra, chapters 1–2" lists it as `(draft)`.
 - [ ] No counts, sums or averages of takes; no amber.

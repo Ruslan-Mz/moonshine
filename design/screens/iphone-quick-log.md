@@ -32,7 +32,7 @@ The phone writes **time entries** (MoonShine-native data, `platforms.md`). It ne
 
 **Live Activity**:
 
-- Lock Screen: emoji badge, `Violin · practice`, the next action, elapsed time in the accent colour; Pause and Stop & save buttons (44).
+- Lock Screen: emoji badge, `Violin · practice`, the next action, elapsed time in the accent colour; Pause and Stop & save buttons (44). The next action is a task title: redacted on the Lock Screen by default (`.privacySensitive()`), shown only with the setting **Show titles on the Lock Screen** (off by default; `iphone-widgets.md` § Privacy on the Lock Screen).
 - Dynamic Island: compact (emoji · `18:42`), minimal (emoji only), expanded (title, subtitle, time, Pause / Stop & save).
 
 ## Data

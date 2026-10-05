@@ -12,7 +12,7 @@ See `docs/ROADMAP.md`. **Only build what the current phase's spec asks for.** La
 
 1. **Spec first.** Every change starts from `docs/specs/`. Missing/ambiguous spec → propose a spec change and stop.
 2. **One slice = one PR**, < ~400 changed lines of production code (tests, fixtures and generated files excluded).
-3. **Ports & adapters (ADR-0001).** `MoonShineCore` imports no AppKit/SwiftUI/OSAKit/GRDB. UI talks to view models/services, never to adapters.
+3. **Ports & adapters (ADR-0001).** `MoonShineCore` imports no AppKit/SwiftUI/OSAKit/GRDB/EventKit. UI talks to view models/services, never to adapters.
 4. **Tests first in Core.** New domain logic → failing test → code.
 5. **Privacy.** Raw content — titles, labels, values, names, ids — from the vault (`~/ObsidianV`), OmniFocus, calendars (events: no real titles, attendees or calendar names), `data/`, `snapshots/` and `*.local.*` is never committed or pasted into PRs, commits or logs. Aggregates (counts, timings, orders of magnitude) and structure descriptions (shapes, field names, layouts) are allowed, as in `docs/discovery/` since phase 0. Fixtures are invented.
 6. **No writes to external tools before the Act phase.** No writes to the vault, OmniFocus or calendars anywhere in code until the Act phase spec exists.

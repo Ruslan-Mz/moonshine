@@ -36,7 +36,7 @@ Refresh follows ADR-0011: imports are always full and start when OmniFocus resig
 **Deadlines** group (owner decision 2026-10-02)
 
 - Which due dates are deadlines: `Picker(.radioGroup)` **All due dates** (default) | **Due date + tag**.
-- Tag (only with "Due date + tag"): text field, default `deadline`, matched by leaf name like `anchor`. The tag may sit on the task or on its project, so an inherited project due date follows the same rule.
+- Tag (only with "Due date + tag"): text field, default `deadline`, matched by leaf name like `anchor`. The value is trimmed; an empty value reverts to `deadline`; the leaf name is compared case-insensitively (`Deadline` matches `deadline`). The tag counts when it is on the task or on **any of its ancestors** (action group or project), so an inherited due date follows the same rule.
 - Caption: "Only deadlines get the amber due badge. Other due dates are shown as plain text."
 - The rule is a Core value (`DeadlineRule`) that the Overview service uses for urgency on Today and Week; the view only displays the result.
 

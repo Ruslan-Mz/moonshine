@@ -22,11 +22,13 @@ A tab in the native `Settings` scene (General · Data · **Calendars** · Refres
 
 1. **Access row**: `Calendar access` + state + one button.
 
-   | State               | Label           | Button                                | Caption                                                                                                                                        |
-   | ------------------- | --------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-   | not determined      | `Not connected` | `Connect calendars…` (default button) | MoonShine asks macOS for read-only access. Nothing is created or edited. The app works fully without it.                                       |
-   | granted             | `Connected`     | `Open System Settings…`               | MoonShine reads events through macOS (EventKit), read-only.                                                                                    |
-   | denied / restricted | `Access denied` | `Open System Settings`                | Calendar access is off for MoonShine. Allow it in System Settings → Privacy & Security → Calendars. Today, Week and Month work without events. |
+   | State                          | Label               | Button                                | Caption                                                                                                                                                       |
+   | ------------------------------ | ------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | not determined                 | `Not connected`     | `Connect calendars…` (default button) | MoonShine asks macOS for read-only access. Nothing is created or edited. The app works fully without it.                                                      |
+   | granted                        | `Connected`         | `Open System Settings…`               | MoonShine reads events through macOS (EventKit), read-only.                                                                                                   |
+   | denied                         | `Access denied`     | `Open System Settings`                | Calendar access is off for MoonShine. Allow it in System Settings → Privacy & Security → Calendars. Today, Week and Month work without events.                |
+   | write-only ("Add Events Only") | `Can't read events` | `Open System Settings`                | MoonShine can only read calendars with Full Access. Change it in System Settings → Privacy & Security → Calendars. Today, Week and Month work without events. |
+   | restricted                     | `Not available`     | —                                     | Calendar access is restricted on this device, for example by a device-management profile. Today, Week and Month work without events.                          |
 
    Demo mode shows invented calendars and a `Demo data` badge next to the label.
 
@@ -39,7 +41,7 @@ Not connected / denied: the list is replaced by one neutral placeholder line (`C
 ## Data
 
 - `EKEventStore`, full read access to events (`requestFullAccessToEvents`), no reminders. Per calendar (by `calendarIdentifier`) the app stores **locally**: `show`, `countsAsBusy`, `lineID?`. Day window: two local settings.
-- These settings and the events are **per device** and never enter the MoonShine store that syncs (ADR-0010). Each device asks for its own access.
+- The per-calendar settings and the events are **per device** and never enter the MoonShine store that syncs (ADR-0010), in any phase. Each device asks for its own access. The day window is the only setting here that syncs, from 3b (a preference, not calendar data; ADR-0012).
 - Event → view model: start, end, isAllDay, title (empty or private → `Busy`), calendar (name, colour), participation status (tentative → hatched, declined → hidden), time zone.
 
 ## Behaviour

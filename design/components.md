@@ -39,7 +39,7 @@ SwiftUI: `Section(header:)` content, or a `DisclosureGroup` label for Life ops.
 
 ## DueBadge
 
-`clock` symbol 10 + `Due 18:00`, 11 semibold `dueText` on `dueFill`, radius 4, padding 1×6. **Only** for a **deadline** — a due date that counts under the deadline rule (`screens/settings.md` § Deadlines: all due dates by default, or only those whose task or project carries the deadline tag) — in the shown period, local time zone: **Week** — `effectiveDueDate` inside the displayed ISO week (Monday 00:00 ≤ due < next Monday 00:00), so a task due before that week gets no badge there; **Today** — `effectiveDueDate` before the start of tomorrow (earlier due dates included). An inherited project due date is a real due date (phase-1 spec S3) and follows the same deadline rule.
+`clock` symbol 10 + `Due 18:00`, 11 semibold `dueText` on `dueFill`, radius 4, padding 1×6. **Only** for a **deadline** — a due date that counts under the deadline rule (`screens/settings.md` § Deadlines: all due dates by default, or only those whose task or one of its ancestors (action group, project) carries the deadline tag) — in the shown period, local time zone: **Week** — `effectiveDueDate` inside the displayed ISO week (Monday 00:00 ≤ due < next Monday 00:00), so a task due before that week gets no badge there; **Today** — `effectiveDueDate` before the start of tomorrow (earlier due dates included). An inherited project due date is a real due date (phase-1 spec S3) and follows the same deadline rule.
 
 **Plain due text.** A due date in the shown period that is not a deadline: `due 20:35` / `due Fri 12:00`, 11.5 `secondary`, no symbol, no fill, in the same column. Never amber.
 

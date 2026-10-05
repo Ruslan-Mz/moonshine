@@ -11,6 +11,7 @@ superseded-by:
 related:
   - "[[0001-own-domain-model-with-ports-and-adapters]]"
   - "[[0008-license-and-distribution]]"
+  - "[[0013-captures-proposals-command-queue-autonomy]]"
 ---
 
 # 0005 — Assistant: provider-agnostic, typed tools over the domain, write-as-proposal, exposed via MCP
@@ -36,6 +37,8 @@ The assistant must answer questions (summaries, "where is X", plan checks) and p
 
 **Chosen option: "2"**, because typed tools make behaviour testable (evals), proposals keep every write visible and undoable, and serving the registry over MCP gives option 3 for free.
 
+**Amendment (2026-10-03, ADR-0013).** Every write is a proposal confirmed by the owner, **except commands of the `auto` class** defined in ADR-0013 (simple, unambiguous, undoable changes that follow from the owner's own utterance and pass its checks). `auto` commands are applied at once, logged in the activity log and undoable; everything else stays a confirmed proposal.
+
 ### Consequences
 
 - Good — one tool schema for UI actions, assistant and MCP.
@@ -46,4 +49,4 @@ The assistant must answer questions (summaries, "where is X", plan checks) and p
 
 ### Confirmation
 
-Eval suite runs in CI on every PR touching `Assistant/`; a test asserts that no write tool mutates the store without a confirmed proposal; token/cost logged per request.
+Eval suite runs in CI on every PR touching `Assistant/`; a test asserts that no write tool mutates the store without a confirmed proposal, except an `auto` command that passes ADR-0013's checks (a command of the `confirm` class, or an `auto` command that fails a check, never executes without confirmation); token/cost logged per request.

@@ -46,11 +46,13 @@ Parts of this already exist as decisions: typed tools and write-as-proposal (ADR
 
 **Chosen option: "1"**, because it gives an immediate answer on the phone, keeps the Mac as the only writer to OmniFocus, needs no server, and reuses the proposal and command concepts already decided.
 
+**This ADR amends ADR-0005**: every write stays a proposal confirmed by the owner, except commands of the `auto` class defined below (ADR-0005 § Amendment).
+
 ### Entities (MoonShine-native, change-logged, synced under ADR-0010)
 
 - **`Capture`**: the text exactly as dictated, device, time, state (`new` → `interpreted` → `closed`). It is saved locally before any network call.
-- **`Proposal`**: its source capture; a one-paragraph summary of what was understood; a list of commands, each with a preview; the impact computed by the planning services (what drops out, what moves, by how much); alternatives where they exist; state (`draft` → `confirmed` | `partly confirmed` | `rejected` → `applied`).
-- **`Command`**: a typed change (`CompleteTask`, `CreateTask`, `SetPlannedDate`, `Defer`, `LogTime`, `AddTakeNote`, `AddCapacityException`, …) with target ids, parameters, autonomy class, origin (`owner` through the UI, or `assistant` from an utterance), state (`pending` → `queued` → `executing` → `done` | `failed` | `undone`) and what is needed to undo it.
+- **`Proposal`**: its source capture; a one-paragraph summary of what was understood; a list of commands, each with a preview; the impact computed by the planning services (what drops out, what moves, by how much); alternatives where they exist; state (`draft` → `confirmed` | `partly confirmed` | `rejected` → `applied`, or `needs attention` for a failed or unresolved `auto` command, below).
+- **`Command`**: a typed change (`CompleteTask`, `CreateTask`, `SetPlannedDate`, `Defer`, `LogTime`, `AddTakeNote`, `AddCapacityException`, …) with a MoonShine id (the **idempotency key**), target ids, parameters, autonomy class, origin (`owner` through the UI, or `assistant` from an utterance), for an `assistant` command the literal spans of the utterance it was built from, state (`pending` → `queued` → `executing` → `done` | `failed` | `unknown` | `undone`) and what is needed to undo it.
 
 ### One command bus
 
@@ -60,14 +62,23 @@ The UI and the assistant change data only through the `CommandBus`. It is introd
 
 - A native command executes at once on the device where it was created.
 - A provider command (OmniFocus, later calendar and vault) is **queued**. The Mac executes it when it is online and the provider's capabilities allow it, then the result syncs back. A failure is shown on the proposal, never silently dropped.
+- **Executed once.** The command id is the idempotency key. The Mac records the attempt (`executing`, with its time) before running the command. A provider command found `executing` after a restart is **never re-run blindly**: its outcome is `unknown` until the next full import shows the result (the task is completed; or a new inbox task with that title was created after the attempt), and then it becomes `done` or is run again. If the import cannot tell, the command goes to the review inbox for the owner.
 - Until the Act phase ships, provider commands in a proposal are shown as a checklist with deep links ("do these in OmniFocus"); native ones are applied.
 
 ### Autonomy classes
 
-- **`auto`** — applied without confirmation, when unambiguous: log time; add a take note or draft; complete a task; create a task in the inbox.
+- **`auto`** — applied without confirmation, when unambiguous. **Until the Act phase ships, `auto` covers native commands only**: log time; add a take note (a draft). **From the Act phase** it also covers `CompleteTask` and `CreateTask` (inbox), executed through the queue.
+- A take note filed by the assistant carries only the owner's own words. It gets a direction only when the owner said one of the four words; the assistant never picks a direction and never confirms a take (takes are set only by the owner).
 - **`confirm`** — everything else: planned, defer or due dates; dropping or deleting; editing an existing task; project changes; capacity, plan or scenario changes; calendar writes; any change that touches several items.
 
-Conditions for `auto`, all required: the command follows from the owner's own utterance; exactly one entity matches (for a task: one open task, by an exact or near-exact title within the named line or today's list); the change can be undone; the assistant answers with one line that names what it did. If any condition fails, the command becomes part of a draft proposal, and the assistant asks at most one clarifying question. It never guesses.
+Conditions for `auto`, all required and checked by the app, not by the model:
+
+1. **Spans.** The model returns the action plus the literal spans of the owner's utterance that name the target and each value. The app checks that every span is a substring of the capture text.
+2. **Target resolved by the app.** The app resolves the target itself from its span: exactly one match (for a task: one open task, by an exact or near-exact title within the named line or today's list). The model's own choice of id is not used.
+3. The change can be undone.
+4. The assistant answers with one line that names what happened (below).
+
+Only then is the command executed. If any condition fails, the command becomes part of a draft proposal, and the assistant asks at most one clarifying question. It never guesses.
 
 The classes are fixed defaults now. A per-class setting in Settings comes later (owner decision 2026-10-03).
 
@@ -77,7 +88,9 @@ On each device, against that device's replicated store, through the typed read t
 
 ### Answers
 
-- For `auto` actions: one line, for example `Done: "Scales — G minor" completed, 25 min logged to Violin.`
+- `Done` only for a command that has executed: `Done: 25 min logged to Violin.`
+- A queued provider command (from the Act phase) is answered as queued: `"Scales — G minor" will be completed in OmniFocus when the Mac is online.`
+- A failed or unresolved `auto` command creates an item in the **review inbox** — a proposal in state `needs attention` with the command and the reason — plus an activity-log entry. Nothing fails silently.
 - For proposals: `Draft ready: 3 tasks move, 1 drops out. Review it on your Mac or iPad.` The phone shows the summary; the full report waits in a review inbox on every device.
 
 ### Standing context
@@ -86,7 +99,7 @@ The assistant receives a fixed context pack chosen by the owner in Settings: the
 
 ### Safety
 
-- Tool results and any imported text are data. Write tools can be called only in a turn that answers an owner utterance, and a command's origin is recorded.
+- Tool results and any imported text are data. An `auto` command executes only when its target and values are spans of the owner's utterance and the app resolved the target from that span (conditions above); text read through tools cannot supply a target or a value. While interpreting for `auto`, tools return entity titles only, never note bodies. A command's origin and spans are recorded.
 - Reproducible evaluation: a set of invented utterances (Russian, English and mixed-script task titles, with typical dictation errors) with expected commands and classes runs in CI. Wrong `auto` actions are counted separately from wrong drafts.
 - A wrong completion of a repeating task is awkward to undo in OmniFocus; this is why completion needs exactly one match.
 
@@ -102,14 +115,14 @@ System dictation into a text field, plus an App Intent (Shortcuts, Action button
 - Bad — OmniFocus changes wait for the Mac; a confirmed proposal can stay "queued" for hours.
 - Bad — a provider key on each device, and a cost per utterance.
 - Bad — three new synced entities with state machines; a proposal reviewed on two devices at once needs a clear rule (first confirmation wins; the other device shows the result).
-- Bad — unattended actions can be wrong; the exact-match rule, the one-line answer, undo and the evaluation set reduce this and do not remove it.
+- Bad — unattended actions can be wrong; the span check with app-side target resolution, the one-line answer, undo, the review inbox for failures and the evaluation set reduce this and do not remove it.
 - Neutral — VISION principle 4 is reworded: every AI change is visible and reversible; simple, unambiguous changes of the `auto` class are applied at once, everything else waits for confirmation.
 - Neutral — the roadmap order changes: Act moves directly after Ask; the lifetime timeline follows.
 
 ### Confirmation
 
-- Core tests: a capture is stored when the AI port fails; a command with two matching tasks never executes as `auto`; a command whose origin is tool output is rejected; undo restores the previous state for every native command.
-- Contract tests for the queue: a provider command created on a non-Mac device is executed once by the Mac, survives a restart, and reports failure.
+- Core tests: a capture is stored when the AI port fails; a command with two matching tasks never executes as `auto`; a command whose target or value is not a span of the utterance never executes as `auto` (it becomes a draft proposal); before the Act phase a provider command is never `auto`; a failed `auto` command creates a `needs attention` item and an activity-log entry; undo restores the previous state for every native command.
+- Contract tests for the queue: a provider command created on a non-Mac device is executed once by the Mac; the attempt is recorded before it runs; a command found `executing` after a restart is not re-run until an import resolves it, and goes to the review inbox when the import cannot tell; a failure is reported.
 - The evaluation set runs in CI; the method log records the rate of wrong `auto` actions per release.
 
 ## Pros and Cons of the Options
