@@ -105,6 +105,27 @@ func problems(_ issues: [ImportIssue]) -> [String] {
     #expect(problems(issues) == ["Locked:-:unreadable"])
   }
 
+  @Test func aRootThatExistsButCannotBeListedIsUnreadable() throws {
+    let vault = try TemporaryVault()
+    try vault.write("a.md", note("type: x"))
+    try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: vault.root.path)
+    defer {
+      try? FileManager.default.setAttributes(
+        [.posixPermissions: 0o755], ofItemAtPath: vault.root.path)
+    }
+    #expect(throws: VaultReadError.rootUnreadable) {
+      try VaultWalk.markdownFiles(in: vault.root, limits: VaultLimits())
+    }
+  }
+
+  @Test func aRootThatIsAFileIsUnreadable() throws {
+    let vault = try TemporaryVault()
+    let file = try vault.write("a.md", note("type: x"))
+    #expect(throws: VaultReadError.rootUnreadable) {
+      try VaultWalk.markdownFiles(in: file, limits: VaultLimits())
+    }
+  }
+
   @Test func aMissingRootIsUnreadable() {
     let missing = FileManager.default.temporaryDirectory.appending(path: "no-vault-\(UUID())")
     #expect(throws: VaultReadError.rootUnreadable) {

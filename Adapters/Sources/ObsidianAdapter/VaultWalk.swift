@@ -6,7 +6,8 @@ import MoonShineCore
 public struct VaultLimits: Sendable {
   public var maxNotes = 20_000
   public var maxFrontmatterBytes = 64 * 1024
-  /// Nodes visited per note, aliases counted at every use; bounds alias expansion.
+  /// Nodes per note after parsing; bounds document size. Alias expansion is prevented earlier:
+  /// anchors are rejected before Yams parses (`FrontNode.parse`, contract §3).
   public var maxNodes = 10_000
   /// Nesting of YAML collections, checked before parsing for flow style and after it for all.
   public var maxDepth = 32
@@ -33,7 +34,8 @@ enum VaultWalk {
   ) throws(VaultReadError) -> (files: [VaultFile], issues: [ImportIssue]) {
     let root = root.resolvingSymlinksInPath().standardizedFileURL
     let keys: [URLResourceKey] = [.isSymbolicLinkKey, .isRegularFileKey]
-    // A folder the walk cannot enter is an issue, not a silent hole in the vault.
+    // A folder the walk cannot enter is an issue, not a silent hole in the vault; the root
+    // itself (permissions, macOS privacy protection) fails the whole read.
     let unreadable = UnreadablePaths()
     var isFolder: ObjCBool = false
     guard FileManager.default.fileExists(atPath: root.path, isDirectory: &isFolder),
@@ -42,7 +44,11 @@ enum VaultWalk {
         at: root, includingPropertiesForKeys: keys,
         options: [.skipsHiddenFiles, .skipsPackageDescendants],
         errorHandler: { url, _ in
-          unreadable.paths.append(relativePath(of: url, under: root) ?? "")
+          if let path = relativePath(of: url, under: root) {
+            unreadable.paths.append(path)
+          } else {
+            unreadable.root = true
+          }
           return true
         })
     else { throw .rootUnreadable }
@@ -66,6 +72,7 @@ enum VaultWalk {
       guard files.count < limits.maxNotes else { throw .tooManyNotes(limit: limits.maxNotes) }
       files.append(VaultFile(path: path, url: url))
     }
+    guard !unreadable.root else { throw .rootUnreadable }
     issues += unreadable.paths.map {
       .vault(path: $0, line: nil, problem: VaultProblem(.unreadable))
     }
@@ -75,6 +82,7 @@ enum VaultWalk {
   /// Collects what the enumerator's error handler reports; the walk is synchronous.
   private final class UnreadablePaths {
     var paths: [String] = []
+    var root = false
   }
 
   /// The path of `url` relative to `root`, or nil when it is not inside `root`.

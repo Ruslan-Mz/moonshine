@@ -2,8 +2,9 @@ import Foundation
 import MoonShineCore
 import Yams
 
-/// Frontmatter in the reader's own bounded form. Yams' nodes never leave this file: aliases are
-/// expanded here under the node cap, and scalars stay raw strings (no YAML date or number types).
+/// Frontmatter in the reader's own bounded form. Yams' nodes never leave this file; anchors (and
+/// so aliases) are rejected before parsing, the node and depth caps bound the parsed tree, and
+/// scalars stay raw strings (no YAML date or number types).
 struct FrontNode: Equatable {
   enum Value: Equatable {
     case null
