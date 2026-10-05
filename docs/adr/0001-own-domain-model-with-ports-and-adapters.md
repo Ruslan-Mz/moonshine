@@ -45,7 +45,7 @@ MoonShine must show and eventually edit tasks, projects, goals and notes that to
 
 ### Confirmation
 
-`MoonShineCore` has no imports of AppKit/SwiftUI/OSAKit/GRDB (CI grep); adapters depend on Core, never the reverse; the Demo-mode app runs entirely on fixture adapters.
+`MoonShineCore` has no imports of AppKit/SwiftUI/OSAKit/GRDB/EventKit/Yams (CI: `scripts/check-core-imports.sh`); adapters depend on Core, never the reverse; the Demo-mode app runs entirely on fixture adapters.
 
 ## Pros and Cons of the Options
 

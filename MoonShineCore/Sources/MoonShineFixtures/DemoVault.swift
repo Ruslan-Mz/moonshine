@@ -81,7 +81,7 @@ public struct DemoVault: NoteProvider {
         period: Horizon(
           scale: .years(5), start: date(2026, 1), end: date(2031, 1)),
         parentLink: "[[Long_horizons]]", status: "draft"),
-      // `horizons: [2036, 2041, 2051]` is a list of target years; phase 5 models it.
+      // `horizons: [2036, 2041, 2051]` is a list of target years; the Zoom out phase models it.
       SourceNote(
         path: "00_Strategy/Long_horizons.md", title: "Long horizons", type: "horizon_corridor",
         parentLink: "[[_index]]", status: "draft"),

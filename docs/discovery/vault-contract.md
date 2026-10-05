@@ -4,6 +4,8 @@ Status: **draft from phase-0 discovery** (see `data-report.md`). Implements ADR-
 
 v0.2 (2026-10-01, design draft-2): optional line keys `foundation`, `floor_h_day`, `language`; quarter notes with `scale: quarter` and `artifacts:` (§2.2); R1 keys `done`, `carried_to`, `active_lines` (read from R1 on).
 
+2026-10-05 (S3b): the budget note is found by its key only (§1); the reader's limits for untrusted input (§3).
+
 Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault writes before the Act phase).
 
 ## Design choices driven by the data
@@ -14,7 +16,7 @@ Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault write
 
 ## 1. Lines — the budget note
 
-Identified by `moonshine: budget` in frontmatter, or (fallback) filename `Бюджет_часов_по_линиям.md` anywhere in the vault. Exactly one; more than one → banner, first by path wins.
+Identified only by `moonshine: budget` in frontmatter (no file-name fallback: a file name is the owner's data). Exactly one; none → the typed problem `budgetNoteMissing`; more than one → banner, first by path wins.
 
 ```yaml
 moonshine: budget # marker; optional if the filename fallback matches
@@ -126,6 +128,12 @@ artifacts:
 ## 3. Validation
 
 - Invalid YAML or a `lines:` item missing a required key → one calm banner with note path and line number; the rest of the vault still loads. Never a crash.
+- Problems are typed (`VaultProblem`: a kind and, at most, a contract key name) with the note's vault-relative path and line; they never carry note content.
+- The vault is untrusted input (synced or pasted from elsewhere). One guard per threat:
+  - **leaving the vault:** symbolic links are skipped (`symlinkSkipped`); every resolved path must stay under the resolved vault folder (`outsideVault`);
+  - **size:** at most 20,000 notes (more stops the read with a typed error; nothing is imported), frontmatter at most 64 KiB (`frontmatterTooLarge`);
+  - **YAML:** at most 10,000 nodes per note, aliases counted at every use, and nesting depth 32, with flow nesting (`[`, `{`) checked before parsing (`yamlTooComplex`).
+- Hidden files and folders (`.obsidian`, `.trash`) are not read. A note without frontmatter is skipped, not a problem.
 - Unknown keys are ignored and preserved (future-proof; the vault has 200+ distinct keys).
 - `review_cadence` and `review-cadence` both exist in the vault (19 vs 8 notes); MoonShine reads either.
 

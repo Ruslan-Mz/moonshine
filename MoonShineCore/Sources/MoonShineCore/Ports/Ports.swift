@@ -1,12 +1,12 @@
 import Foundation
 
-/// A task manager (OmniFocus today). Read-only until phase 6.
+/// A task manager (OmniFocus today). Read-only until the Act phase.
 public protocol TaskProvider: Sendable {
   /// All items, or only those modified since the given date (incremental refresh).
   func snapshot(modifiedSince: Date?) async throws -> TaskSourceSnapshot
 }
 
-/// A notes vault (Obsidian today): lines, artifacts and horizon notes. Read-only until phase 6.
+/// A notes vault (Obsidian today): lines, artifacts and horizon notes. Read-only until the Act phase.
 public protocol NoteProvider: Sendable {
   func vault() async throws -> VaultSnapshot
 }
