@@ -19,7 +19,7 @@ Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault write
 Identified only by `moonshine: budget` in frontmatter (no file-name fallback: a file name is the owner's data). Exactly one; none → the typed problem `budgetNoteMissing`; more than one → banner, first by path wins.
 
 ```yaml
-moonshine: budget # marker; optional if the filename fallback matches
+moonshine: budget # required marker: the only way the budget note is found
 active_lines: { min: 3, max: 5 } # optional (v0.2, read from R1): the "3–5 active lines" rule as data
 lines: # order = display order within a block
   - id: violin # required. slug [a-z0-9-]+, unique, never renamed (ids survive renames of `name`)
@@ -64,14 +64,14 @@ Common frontmatter keys (all notes MoonShine reads as `NoteRef`):
 
 Recognised types and derivation of `scale` / `period` when they are absent:
 
-| `type`                  | Derived `scale` | Derived `period` from                                                 | Found in vault                                   |
-| ----------------------- | --------------- | --------------------------------------------------------------------- | ------------------------------------------------ |
-| `month_plan`            | `month`         | `month: YYYY-MM`, else `period_start`                                 | 3 notes, name `Месяц_YYYY-MM`                    |
-| `quarter_focus`         | `quarter`       | `quarter`, else `period_start` → `YYYY-Qn`                            | 2 notes, name `Qn_YYYY_focus`                    |
-| `year_artifacts`        | `year`          | `year: YYYY`                                                          | 1 note, name `Артефакты_YYYY`                    |
-| `horizon_corridor`      | `years`         | `period_start..period_end` (ints or dates), else `horizons: [YYYY,…]` | 2 notes                                          |
-| `yearly-goals`, `focus` | `year`          | `year`, else 4-digit year in filename                                 | 2 legacy journal notes (read-only, low priority) |
-| `lifetime` _(new)_      | `lifetime`      | —                                                                     | 0                                                |
+| `type`                  | Derived `scale` | Derived `period` from                                                                                                                   | Found in vault                                   |
+| ----------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `month_plan`            | `month`         | `month: YYYY-MM`, else `period_start`                                                                                                   | 3 notes, name `Месяц_YYYY-MM`                    |
+| `quarter_focus`         | `quarter`       | `quarter`, else `period_start` → `YYYY-Qn`                                                                                              | 2 notes, name `Qn_YYYY_focus`                    |
+| `year_artifacts`        | `year`          | `year: YYYY`                                                                                                                            | 1 note, name `Артефакты_YYYY`                    |
+| `horizon_corridor`      | `years`         | `period_start..period_end` (ints or dates); only `horizons: [YYYY,…]` → no scale or period until the Zoom out phase (owner, 2026-10-05) | 2 notes                                          |
+| `yearly-goals`, `focus` | `year`          | `year`, else 4-digit year in filename                                                                                                   | 2 legacy journal notes (read-only, low priority) |
+| `lifetime` _(new)_      | `lifetime`      | —                                                                                                                                       | 0                                                |
 
 Weekly review notes (`YYYY-Www`, journal) currently have no frontmatter; phase 1 does not need them.
 
@@ -128,11 +128,11 @@ artifacts:
 ## 3. Validation
 
 - Invalid YAML or a `lines:` item missing a required key → one calm banner with note path and line number; the rest of the vault still loads. Never a crash.
-- Problems are typed (`VaultProblem`: a kind and, at most, a contract key name) with the note's vault-relative path and line; they never carry note content.
+- Problems are typed (`VaultProblem`: a kind and, at most, a contract key name) with the note's vault-relative path and line; they never carry note content. A vault-wide problem (`budgetNoteMissing`) belongs to no note, so it is reported without a path (its issue shape lands with S3b-2).
 - The vault is untrusted input (synced or pasted from elsewhere). One guard per threat:
-  - **leaving the vault:** symbolic links are skipped (`symlinkSkipped`); every resolved path must stay under the resolved vault folder (`outsideVault`);
+  - **leaving the vault:** symbolic links are skipped (`symlinkSkipped`); every resolved path must stay under the resolved vault folder (`outsideVault`; defence in depth behind the symlink skip, for a link swapped in during the walk); a folder the walk cannot enter is `unreadable`, never a silent gap;
   - **size:** at most 20,000 notes (more stops the read with a typed error; nothing is imported), frontmatter at most 64 KiB (`frontmatterTooLarge`);
-  - **YAML:** at most 10,000 nodes per note, aliases counted at every use, and nesting depth 32, with flow nesting (`[`, `{`) checked before parsing (`yamlTooComplex`).
+  - **YAML:** no anchors (`&name`; aliases need one, and Yams expands aliases while parsing, before any cap can run), checked lexically before parsing — an `&` right after a Latin letter or digit (`R&D`) is plain text, any other `&name` counts, quoted or not; flow nesting (`[`, `{`) at most 32, also checked before parsing; after parsing, at most 10,000 nodes and depth 32 per note (`yamlTooComplex`).
 - Hidden files and folders (`.obsidian`, `.trash`) are not read. A note without frontmatter is skipped, not a problem.
 - Unknown keys are ignored and preserved (future-proof; the vault has 200+ distinct keys).
 - `review_cadence` and `review-cadence` both exist in the vault (19 vs 8 notes); MoonShine reads either.

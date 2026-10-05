@@ -8,7 +8,7 @@ The spec in `docs/specs/` is the source of truth for the slice. `CLAUDE.md` hold
 2. **Satisfiable at all**: can each requirement and acceptance line be met given the others, the design tokens and the measured numbers? Do the arithmetic.
 3. **Ticked honestly**: is a checkbox ticked while part of its text is not done or was changed by a decision that the text does not record?
 4. **Scope**: anything from a later phase built now? Anything the slice requires that is missing? Any abstraction beyond the ports in `ARCHITECTURE.md` without an ADR?
-5. **Hard rules, one by one** (`CLAUDE.md`): Core imports no AppKit, SwiftUI, OSAKit, GRDB or EventKit; the UI never talks to adapters; tests came first in Core; privacy; no external writes; dependencies pre-approved and licence-compatible; tone (no red, no forbidden words, amber only for deadlines under the active rule); keyboard access; method-log row present.
+5. **Hard rules, one by one** (`CLAUDE.md`): Core imports no AppKit (nor Cocoa, Carbon, Quartz), SwiftUI, OSAKit, GRDB, EventKit or Yams; the UI never talks to adapters; tests came first in Core; privacy; no external writes; dependencies pre-approved and licence-compatible; tone (no red, no forbidden words, amber only for deadlines under the active rule); keyboard access; method-log row present.
 6. **Size**: count the changed production lines. State the number and whether the PR declares an overrun.
 7. **ADRs**: does the change contradict an ADR? Does it make a costly-to-reverse choice without one? Does a new ADR leave an older one stating the opposite?
 8. **Claims versus diff**: for each statement in the PR description and the method-log row ("X is tested", "Y is removed", numbers), check it against the diff.
