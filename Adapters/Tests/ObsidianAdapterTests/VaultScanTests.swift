@@ -232,4 +232,16 @@ func problems(_ issues: [ImportIssue]) -> [String] {
     #expect(notes.map(\.path) == ["good.md"])
     #expect(problems(issues) == ["Bad/broken.md:3:malformedYAML"])
   }
+
+  @Test func noteContentNeverReachesAnIssue() throws {
+    let vault = try TemporaryVault()
+    let secret = "planted-secret-title"
+    try vault.write("a.md", note("title: \(secret)\n  bad: [\(secret)"))
+    try vault.write("b.md", "---\ntitle: \(secret)\n")
+    try vault.write(
+      "c.md", Data("---\ntitle: \(secret) ".utf8) + Data([0xFF]) + Data("\n---\n".utf8))
+    let (_, issues) = try VaultScan.notes(in: vault.root)
+    #expect(issues.count == 3)
+    #expect(!"\(issues)".contains(secret))
+  }
 }
