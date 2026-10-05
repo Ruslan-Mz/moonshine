@@ -12,8 +12,55 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Two jobs: macOS minutes count ×10 in a private repository, so the Swift job runs only when a
+# change can affect Swift code or its fixtures; the cheap checks run on Linux every time.
 jobs:
-  checks:
+  docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      swift: ${{ steps.changes.outputs.swift }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Does the change touch Swift code, its fixtures or this workflow?
+        id: changes
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: |
+          # No usable base (first push, force push): run the Swift job to be safe.
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo "swift=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          pattern='\.swift$|(^|/)Package\.resolved$|^bridge/|^fixtures/|^project\.yml$|^\.github/workflows/ci\.yml$'
+          if git diff --name-only "$BASE" "$HEAD" | grep -qE "$pattern"; then
+            echo "swift=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "swift=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Core imports (ADR-0001)
+        run: |
+          node --test scripts/check-core-imports.test.mjs
+          scripts/check-core-imports.sh
+
+      - name: Markdown format check
+        run: |
+          npm ci
+          npx prettier --check '**/*.md'
+
+      - name: Markdown references (links, wikilinks, ADR numbers, repo paths)
+        run: |
+          node --test scripts/check-refs.test.mjs
+          node scripts/check-refs.mjs
+
+  swift:
+    needs: docs
+    if: ${{ !cancelled() && needs.docs.outputs.swift == 'true' }}
     runs-on: macos-latest
     timeout-minutes: 30
     steps:
@@ -45,13 +92,3 @@ jobs:
 
       - name: Swift format lint
         run: swift format lint --strict --recursive MoonShineCore Adapters
-
-      - name: Markdown format check
-        run: |
-          npm ci
-          npx prettier --check '**/*.md'
-
-      - name: Markdown references (links, wikilinks, ADR numbers, repo paths)
-        run: |
-          node --test scripts/check-refs.test.mjs
-          node scripts/check-refs.mjs

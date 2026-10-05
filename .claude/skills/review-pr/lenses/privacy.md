@@ -1,6 +1,6 @@
 # Lens: privacy — nothing personal leaves the machine or enters the repository
 
-`CLAUDE.md` rule 5: raw content from the vault, OmniFocus, calendars and `data/` (titles, labels, values, names, ids) is never committed, logged or pasted. Aggregates and structure descriptions are allowed. Rule 6: no writes to external tools before phase 6.
+`CLAUDE.md` rule 5: raw content from the vault, OmniFocus, calendars and `data/` (titles, labels, values, names, ids) is never committed, logged or pasted. Aggregates and structure descriptions are allowed. Rule 6: no writes to external tools before the Act phase.
 
 ## Questions
 

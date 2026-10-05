@@ -12,7 +12,7 @@ See `docs/ROADMAP.md`. **Only build what the current phase's spec asks for.** La
 
 1. **Spec first.** Every change starts from `docs/specs/`. Missing/ambiguous spec → propose a spec change and stop.
 2. **One slice = one PR**, < ~400 changed lines of production code (tests, fixtures and generated files excluded).
-3. **Ports & adapters (ADR-0001).** `MoonShineCore` imports no AppKit/SwiftUI/OSAKit/GRDB/EventKit. UI talks to view models/services, never to adapters.
+3. **Ports & adapters (ADR-0001).** `MoonShineCore` imports no AppKit (nor Cocoa, Carbon, Quartz)/SwiftUI/OSAKit/GRDB/EventKit/Yams (`scripts/check-core-imports.sh` in CI). UI talks to view models/services, never to adapters.
 4. **Tests first in Core.** New domain logic → failing test → code.
 5. **Privacy.** Raw content — titles, labels, values, names, ids — from the vault (`~/ObsidianV`), OmniFocus, calendars (events: no real titles, attendees or calendar names), `data/`, `snapshots/` and `*.local.*` is never committed or pasted into PRs, commits or logs. Aggregates (counts, timings, orders of magnitude) and structure descriptions (shapes, field names, layouts) are allowed, as in `docs/discovery/` since phase 0. Fixtures are invented.
 6. **No writes to external tools before the Act phase.** No writes to the vault, OmniFocus or calendars anywhere in code until the Act phase spec exists.
@@ -37,7 +37,7 @@ Start every slice with `git fetch && git switch main && git pull --ff-only`, the
   - a size overrun is stated in the PR and in the method-log row.
 - **Review**: the owner runs `/review-pr <n>` in a **new** session (`.claude/skills/review-pr/`). The session that wrote the PR never reviews it.
 - **After a review is posted**, the author session reads it from the PR itself (`gh pr view <n> --comments` and the review threads), fixes the `author` findings, replies to each thread, and asks the owner only about the `owner` findings. The owner does not copy review text between sessions.
-- **Rounds** — one rule for every PR, docs-only included: reviewed with `/review-pr`; a further round only after a confirmed High; from round 2 on only High findings must be fixed, the rest are listed in the PR as deferred; at most three rounds, then the owner decides.
+- **Rounds** — one rule for every PR, docs-only included: round 1 is a full `/review-pr`. If round N had a confirmed High, run round N+1 after the fixes, on the changes since round N. Otherwise no further round. From round 2 on only High findings must be fixed, the rest are listed in the PR as deferred; at most three rounds, then the owner decides.
 
 ## Definition of done
 

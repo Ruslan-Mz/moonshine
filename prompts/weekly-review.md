@@ -4,7 +4,7 @@ Use in Claude Code / Claude Desktop (before MoonShine exists) with the OmniFocus
 
 ---
 
-Read `~/ObsidianV/<path>/Бюджет_часов_по_линиям.md` (frontmatter `lines:` if present, otherwise the table) and my current quarter focus note. Then, using only **read** tools of the OmniFocus MCP server:
+Read the budget note (the one with `moonshine: budget`) in `~/ObsidianV` (frontmatter `lines:` if present, otherwise the table) and my current quarter focus note. Then, using only **read** tools of the OmniFocus MCP server:
 
 1. For each line: completions this week and in each of the previous 7 weeks, days since last completion, number of available next actions.
 2. List **quiet lines** (active, no completion ≥ 14 days) — neutral wording, no "failed/behind". Paused lines: mention only that they are paused.

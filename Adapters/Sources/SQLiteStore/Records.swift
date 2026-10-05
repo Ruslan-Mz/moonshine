@@ -322,7 +322,7 @@ struct WorkspaceRecord: Codable, FetchableRecord, PersistableRecord {
   enum Issue: Codable, Equatable {
     case ruleClaimedTwice(rule: String, kept: String, ignored: String)
     case unknownLineKey(key: String, in: String)
-    case vault(path: String, line: Int?, message: String)
+    case vault(path: String, line: Int?, kind: VaultProblem.Kind, key: String?)
   }
   struct Attrs: Codable, Equatable {
     var issues: [Issue]
@@ -344,8 +344,8 @@ struct WorkspaceRecord: Codable, FetchableRecord, PersistableRecord {
           .ruleClaimedTwice(rule: rule, kept: kept.rawValue, ignored: ignored.rawValue)
         case .unknownLineKey(let key, let artifact):
           .unknownLineKey(key: key.rawValue, in: artifact)
-        case .vault(let path, let line, let message):
-          .vault(path: path, line: line, message: message)
+        case .vault(let path, let line, let problem):
+          .vault(path: path, line: line, kind: problem.kind, key: problem.key)
         }
       })
   }
@@ -357,8 +357,8 @@ struct WorkspaceRecord: Codable, FetchableRecord, PersistableRecord {
         .ruleClaimedTwice(rule: rule, kept: LineKey(kept), ignored: LineKey(ignored))
       case .unknownLineKey(let key, let artifact):
         .unknownLineKey(LineKey(key), in: artifact)
-      case .vault(let path, let line, let message):
-        .vault(path: path, line: line, message: message)
+      case .vault(let path, let line, let kind, let key):
+        .vault(path: path, line: line, problem: VaultProblem(kind, key: key))
       }
     }
   }
