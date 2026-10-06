@@ -13,6 +13,7 @@ The author of a change cannot review it well: it reads what it meant, not what i
 ## 0. Preconditions
 
 - **Fresh session.** If this session wrote or edited code in the PR, stop and tell the owner to run the skill in a new session.
+- **Read barrier on.** Before starting any reviewer, run `ls ~ >/dev/null 2>&1; echo $?` in the sandbox (not unsandboxed). Exit `0` means the sandbox's read barrier is off — it lives in the git-ignored local settings file (`settings.local.json` next to `settings.json`, key `sandbox.filesystem.denyRead`) — so stop and tell the owner. Any other exit code: go on.
 - Arguments: `$ARGUMENTS`. The PR number comes first. If none is given, use the PR of the current branch (`gh pr view --json number`).
 - The owner may add: `standard` or `deep` (the mode, see §2; default `standard`), `local` (do not post to GitHub, report here only), `since <sha>` (review only what changed after that commit) or `at <sha>` (review the PR as it was at that commit: the worktree is created from that commit and diffed against the base; always `local`).
 - You orchestrate. You do not review the code yourself and you do not fix anything.

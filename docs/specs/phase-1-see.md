@@ -67,7 +67,8 @@
     4. move the ADRs the owner agrees with from proposed to accepted;
     5. add the AGPL-3.0 `LICENSE` file and a `CONTRIBUTING.md` that states the CLA requirement (ADR-0008);
     6. re-read `docs/method/log.md` as an outsider would;
-    7. once the repository is public, turn on branch protection for `main` with the `docs` and `swift` checks required (not available for a private repository on the current plan).
+    7. once the repository is public, turn on branch protection for `main` with the `docs` and `swift` checks required (not available for a private repository on the current plan);
+    8. PRs from forks: `/review-pr` never builds or runs their code locally (`swift` is excluded from the sandbox); CI only.
 
     If the audit finds something that must not be public, stop and ask the owner: rewrite history, or publish from one clean commit.
 
