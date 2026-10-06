@@ -43,6 +43,9 @@ jobs:
             echo "swift=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Read-boundary hook (Read, Grep, Glob)
+        run: python3 -m unittest discover -s .claude/hooks -p 'test_*.py'
+
       - name: Core imports (ADR-0001)
         run: |
           node --test scripts/check-core-imports.test.mjs

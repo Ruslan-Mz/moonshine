@@ -13,6 +13,8 @@ The author of a change cannot review it well: it reads what it meant, not what i
 ## 0. Preconditions
 
 - **Fresh session.** If this session wrote or edited code in the PR, stop and tell the owner to run the skill in a new session.
+- **Read barrier on.** Before starting any reviewer, run `ls ~ >/dev/null 2>&1; echo $?` in the sandbox (not unsandboxed). Exit `0` means the sandbox's read barrier is off — it lives in the git-ignored local settings file (`settings.local.json` next to `settings.json`, key `sandbox.filesystem.denyRead`) — so stop and tell the owner. Any other exit code: go on. The barrier's entries are in `.claude/settings.local.example.json`.
+- **Read hook on.** Then call the Read tool on `~/.CFUserTextEncoding`. The read-boundary hook (`.claude/hooks/read-boundary.py`) must deny it. If the read is allowed, the hook is not running: stop and tell the owner. Never print or quote what the read returned.
 - Arguments: `$ARGUMENTS`. The PR number comes first. If none is given, use the PR of the current branch (`gh pr view --json number`).
 - The owner may add: `standard` or `deep` (the mode, see §2; default `standard`), `local` (do not post to GitHub, report here only), `since <sha>` (review only what changed after that commit) or `at <sha>` (review the PR as it was at that commit: the worktree is created from that commit and diffed against the base; always `local`).
 - You orchestrate. You do not review the code yourself and you do not fix anything.
@@ -25,7 +27,7 @@ The author of a change cannot review it well: it reads what it meant, not what i
 2. Fetch over HTTPS, never through `origin` (SSH fails in Claude sessions), with `gh` as a one-off credential helper (the repository is private; a bare HTTPS fetch asks for a username):
    `git -c credential.helper= -c credential.helper='!gh auth git-credential' fetch https://github.com/<owner>/<repo>.git +refs/heads/<baseRefName>:refs/remotes/review/<baseRefName> +refs/pull/<n>/head:refs/remotes/review/pr-<n>`
    If it still asks for a username, stop and say so. Check that `review/pr-<n>` points at `headRefOid`; if not, the PR moved during the run — stop.
-3. Check the PR out into a separate worktree so the owner's working tree is never touched: `git worktree add .build/review/pr-<n> review/pr-<n>`, or with `at <sha>`: `git worktree add .build/review/pr-<n> <sha>` (`.build/` is git-ignored). If the worktree exists from an earlier run, remove it first (`git worktree list` shows it). With `at <sha>`, first check that the commit belongs to the PR (`git merge-base --is-ancestor <sha> review/pr-<n>`).
+3. Check the PR out into a separate worktree **in this session's scratchpad**, so the owner's working tree is never touched: `git worktree add <scratchpad>/review/pr-<n> review/pr-<n>`, or with `at <sha>`: `git worktree add <scratchpad>/review/pr-<n> <sha>`. Run it in the sandbox. Not under the repository: the sandbox write-protects every `.claude/` folder there, so git can neither create nor delete the worktree's `.claude/` files (PR #11's review left 80 files behind). The scratchpad is also the only temporary folder the read-boundary hook lets reviewers read. If a worktree for this PR exists from an earlier run, `git worktree list` shows it; remove it as in §6. With `at <sha>`, first check that the commit belongs to the PR (`git merge-base --is-ancestor <sha> review/pr-<n>`).
 4. Work out the round: look in the PR's reviews for the marker `<!-- moonshine-review round=… head=… -->`. No marker means round 1.
 
 ## 2. Choose the lenses
@@ -37,11 +39,11 @@ Lens files are `${CLAUDE_SKILL_DIR}/lenses/<name>.md`.
 | `spec`       | always                                                                                                                                                    |
 | `privacy`    | always                                                                                                                                                    |
 | `docs`       | any `*.md`, `design/`, `docs/`                                                                                                                            |
-| `contract`   | any `*.swift`, `bridge/`, `fixtures/`, `scripts/`, `*.mjs`, `*.js`                                                                                        |
-| `robustness` | any `*.swift`, `bridge/`, `scripts/`, `*.mjs`, `*.js`                                                                                                     |
+| `contract`   | any `*.swift`, `bridge/`, `fixtures/`, `scripts/`, `*.mjs`, `*.js`, `*.py`, `.claude/hooks/`                                                              |
+| `robustness` | any `*.swift`, `bridge/`, `scripts/`, `*.mjs`, `*.js`, `*.py`, `.claude/hooks/`                                                                           |
 | `security`   | any `*.swift`, `bridge/`, `.github/workflows/`, `.claude/`, `scripts/`, `Package.swift`, `Package.resolved`, `package*.json`, `project.yml`, entitlements |
 | `platform`   | any `*.swift`, `bridge/`, `Package.swift`, `project.yml`, `.github/workflows/`, or an ADR                                                                 |
-| `tests`      | any `*.swift`, `scripts/`, `*.mjs`, `*.js`                                                                                                                |
+| `tests`      | any `*.swift`, `scripts/`, `*.mjs`, `*.js`, `*.py`, `.claude/hooks/`                                                                                      |
 
 ### Modes
 
@@ -56,9 +58,16 @@ Lens files are `${CLAUDE_SKILL_DIR}/lenses/<name>.md`.
 
 ## 3. Review
 
-Start the `pr-reviewer` subagents of the chosen mode, **all in parallel**. Give each: the worktree path, the base ref (`review/<baseRefName>`; reviewers diff with `git -C <worktree> diff review/<baseRefName>...HEAD`), the absolute paths of its lens files, the changed file list, and the PR title and description. Give nothing else: no summary of what you expect, no findings from other reviewers.
+Start the `pr-reviewer` subagents of the chosen mode, **all in parallel**. Give each: the worktree path, the main repository path, the pinned dependency sources (`<main repo>/Adapters/.build/checkouts/`, so nobody searches for them), the base ref (`review/<baseRefName>`; reviewers diff with `git -C <worktree> diff review/<baseRefName>...HEAD`), the absolute paths of its lens files, the changed file list, and the PR title and description. Give nothing else: no summary of what you expect, no findings from other reviewers. Give the verifiers the same paths.
 
-In round 2 and later, also pass the earlier findings and the commit they were made on, and ask the reviewer to (a) check that each earlier `High` and `Medium` is really fixed and (b) review only `git diff <previous head>..HEAD`.
+In round 2 and later, also pass the earlier findings and the commit they were made on, and ask the reviewer to (a) check that each earlier `High` and `Medium` is really fixed, (b) for every finding marked fixed, check the neighbouring cases of the same defect — root vs subfolder, first vs last, empty vs one (round 2 on #10 found a fix that covered subfolders but not the vault root), and (c) review only `git diff <previous head>..HEAD`.
+
+**Reports.** Round 3 of PR #11 posted a review early and had to replace it.
+
+- A reviewer's or verifier's report is only what its Agent call returns, with the json block. A completion notice or a summary that arrives in a user turn is a status signal, never a report.
+- Before verifying, posting or cleaning up, confirm that no reviewer or verifier is still running.
+- If a spot check shows a claim in a report to be false, do not drop the claim and go on: get the report again from that agent.
+- The worktree is removed only after the review is posted.
 
 ## 4. Verify
 
@@ -86,7 +95,9 @@ Build the request as a JSON file under `$TMPDIR` and send it with `gh api --meth
 
 ## 6. Clean up
 
-`git worktree remove .build/review/pr-<n>`, then delete the refs: `git update-ref -d refs/remotes/review/pr-<n>` and `git update-ref -d refs/remotes/review/<baseRefName>`. Leave nothing else behind.
+In the sandbox (see "Reports" in §3 for when): `git worktree remove --force <scratchpad>/review/pr-<n>` (`--force` because reviewers may leave untracked files, such as test caches), then `git worktree prune`, then delete the refs: `git update-ref -d refs/remotes/review/pr-<n>` and `git update-ref -d refs/remotes/review/<baseRefName>`. Leave nothing else behind.
+
+Never delete anything unsandboxed (no `rm -rf`, no unsandboxed `git worktree remove`). If a sandboxed step fails, stop cleaning up and end the report with the exact command for the owner to run, for example `git worktree remove --force <absolute path>` followed by `git worktree prune`.
 
 ## Rounds
 
@@ -94,7 +105,7 @@ The round rule is stated once, in `CLAUDE.md` → "Pull requests". Round 1 revie
 
 ## For the method log
 
-End with a block the author can paste into the PR's row in `docs/method/log.md`: round number, mode, number of reviewers and verifiers, findings per severity and per decision (`author` / `owner`), confirmed / refuted counts, the classes found, which lens found each `High`, and the token cost (the subagents' reported token totals plus this session's, from `npx ccusage@latest session --json` when available; `n/a` otherwise).
+End with a block the author can paste into the PR's row in `docs/method/log.md`: round number, mode, number of reviewers and verifiers, findings per severity and per decision (`author` / `owner`), confirmed / refuted counts, the classes found, which lens found each `High`, and the subagents' reported token totals. Session cost is what the owner pastes from `/cost`; `n/a` otherwise.
 
 ## Keeping the lenses sharp
 

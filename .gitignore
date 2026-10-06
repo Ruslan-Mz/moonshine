@@ -2,6 +2,8 @@
 data/
 snapshots/
 *.local.*
+# The sandbox template has placeholders only (CLAUDE.md → Commands).
+!.claude/settings.local.example.json
 deny-list.txt
 
 # Xcode / SwiftPM
@@ -22,3 +24,8 @@ settings.local.json
 node_modules/
 
 Claude outputs/
+
+# Python bytecode (hook tests)
+__pycache__/
+# Leftover of a killed read-boundary hook test run
+.read-boundary-test-*/
