@@ -24,3 +24,4 @@ Everything that crosses a boundary (bridge JSON, vault YAML, CLI arguments, file
 - A missing timing marker was accepted as `nil` and reported as `0 s`.
 - `full 0` reached `1...runs` and trapped.
 - A partial snapshot could have been committed as a full import, which would soft-delete everything outside the delta.
+- A path check against a name or a folder must ignore case and Unicode form on macOS: APFS ignores case, and realpath keeps the case as typed (`DATA/x` passed a check for `data/`).

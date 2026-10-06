@@ -54,7 +54,7 @@ Tests green · `swift format lint` clean · `prettier --check '**/*.md'` clean �
 - References: `node scripts/check-refs.mjs` · its tests: `node --test scripts/check-refs.test.mjs`
 - Core import check: `scripts/check-core-imports.sh` · its tests: `node --test scripts/check-core-imports.test.mjs`
 - Read-boundary hook tests: `python3 -m unittest discover -s .claude/hooks -p 'test_*.py'`
-- Local sandbox (read barrier, git-ignored): copy `.claude/settings.local.example.json` to `settings.local.json` next to it and fill in the placeholders; `/review-pr` stops without it. `~/.gitconfig` and `~/.config/git/ignore` are allowed for git, `~/.nvm/versions/node` for node; `env.PATH` lists no home folder so node can start git and bash.
+- Local sandbox (read barrier, git-ignored): copy `.claude/settings.local.example.json` to `settings.local.json` next to it and fill in the placeholders; `/review-pr` stops without it. `~/.gitconfig` and `~/.config/git/ignore` are allowed for git, `~/.nvm/versions/node` for node; `env.PATH` puts the system folders first and lists only folders the sandbox can read (node stops at the first unreadable one and cannot start git or bash). Probes and throwaway files go under the session scratchpad and are read there; the read-boundary hook (`.claude/hooks/read-boundary.py`) denies the Read tool everything outside this session's folders, including the shared `$TMPDIR`. It does not guard names inside the repository: `data/` is protected from the built-in tools by rule 5 and `.gitignore` only, until S4 moves real data out.
 
 ## Owner
 

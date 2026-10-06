@@ -34,9 +34,9 @@ class ReadBoundaryTests(unittest.TestCase):
     def assertAllowed(self, result):
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def assertDenied(self, result):
+    def assertDenied(self, result, reason="read-boundary:"):
         self.assertEqual(result.returncode, 2, result.stderr)
-        self.assertIn("read-boundary:", result.stderr)
+        self.assertIn(reason, result.stderr)
 
     # Allowed
 
@@ -87,9 +87,8 @@ class ReadBoundaryTests(unittest.TestCase):
         self.assertDenied(self.call("Read", file_path="../../x.md"))
 
     def test_a_symlink_inside_an_allowed_folder_pointing_out(self):
-        scratch = tempfile.mkdtemp(dir=REPO + "/.build") if os.path.isdir(REPO + "/.build") else None
-        if scratch is None:
-            self.skipTest("no .build folder to hold the link")
+        # A temporary folder inside the repository (an allowed root), so it runs in CI too.
+        scratch = tempfile.mkdtemp(dir=REPO, prefix=".read-boundary-test-")
         try:
             os.symlink("/etc", os.path.join(scratch, "link"))
             self.assertDenied(self.call("Read", file_path=os.path.join(scratch, "link", "hosts")))
@@ -114,7 +113,8 @@ class ReadBoundaryTests(unittest.TestCase):
 
     def test_dot_dot_in_any_spelling(self):
         for pattern in ["../../**/*.md", "docs/**/../../../x", "{..,x}/{..,y}/*", "{docs,..}/*",
-                        "[.][.]/*", ".[.]/*", "[.]./*", "??/*", "docs/[.][.]/x"]:
+                        "[.][.]/*", ".[.]/*", "[.]./*", "??/*", "docs/[.][.]/x", "[^x][^x]/*",
+                        "[!x][!x]/*", "[,-0][,-0]/*", "*./*", "[].][.]/*"]:
             with self.subTest(pattern=pattern):
                 self.assertDenied(self.call("Glob", pattern=pattern))
                 self.assertDenied(self.call("Grep", pattern="x", glob=pattern))
@@ -123,20 +123,14 @@ class ReadBoundaryTests(unittest.TestCase):
         result = self.call("Glob", pattern="/etc/*")
         self.assertIn("pass the folder in `path` and a relative pattern", result.stderr)
 
-    # Denied: real data inside the repository
+    # Not denied by name: the hook has one job, nothing outside the allowed roots (owner,
+    # PR #11 round 2). Real data is kept out by CLAUDE.md rule 5 and .gitignore until S4.
 
-    def test_data_folder_and_deny_list(self):
-        self.assertDenied(self.call("Read", file_path=os.path.join(REPO, "data", "import.local.sqlite")))
-        self.assertDenied(self.call("Read", file_path="data/x"))
-        self.assertDenied(self.call("Read", file_path=os.path.join(REPO, "deny-list.txt")))
-        self.assertDenied(self.call("Read", file_path=os.path.join(REPO, "docs", "deny-list.txt")))
-        self.assertDenied(self.call("Grep", pattern="x", path="data"))
-        self.assertDenied(self.call("Glob", pattern="*", path=os.path.join(REPO, "data")))
-        for pattern in ["data/*", "data/**", "{data,docs}/*", "[d]ata/*", "dat?/*", "./data/*",
-                        "deny-list.txt", "**/deny-list.txt"]:
-            with self.subTest(pattern=pattern):
-                self.assertDenied(self.call("Glob", pattern=pattern))
-                self.assertDenied(self.call("Grep", pattern="x", glob=pattern))
+    def test_names_inside_the_repository_are_not_denied(self):
+        self.assertAllowed(self.call("Read", file_path=os.path.join(REPO, "data", "x.txt")))
+        self.assertAllowed(self.call("Glob", pattern="data/*"))
+        self.assertAllowed(self.call("Glob", pattern="*.md"))
+        self.assertAllowed(self.call("Glob", pattern="[a-z]*/**/*.{swift,md}"))
 
     # Denied: input it cannot parse or check
 
@@ -145,6 +139,8 @@ class ReadBoundaryTests(unittest.TestCase):
         self.assertDenied(self.run_hook(""))
         self.assertDenied(self.run_hook({"tool_name": "Read"}))
         self.assertDenied(self.run_hook({"tool_name": "Read", "tool_input": {}}))
+        self.assertDenied(self.call("Read", file_path=""), "Read without a file_path")
+        self.assertDenied(self.call("Read"), "could not check the call")
         self.assertDenied(self.run_hook({"tool_name": "Read", "session_id": SESSION, "cwd": REPO,
                                          "tool_input": {"file_path": 3}}))
         self.assertDenied(self.run_hook({"tool_name": "Read", "cwd": REPO,

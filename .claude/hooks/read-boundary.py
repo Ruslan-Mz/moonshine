@@ -2,8 +2,8 @@
 """PreToolUse hook for Read, Grep and Glob: deny any read outside the read boundary.
 
 The sandbox's `denyRead` limits Bash only; Claude's built-in file tools follow permission rules
-and hooks instead. Allowed roots:
-- this repository, except `data/` and any `deny-list.txt` (real data, never read by agents);
+and hooks instead. This hook has one job: nothing outside these roots.
+- this repository;
 - this session's own files: its folder and transcript under ~/.claude/projects/<project> (tool
   results and subagents live there), and its folder under /private/tmp/claude-<uid>/<project>
   (scratchpad, background task output);
@@ -11,15 +11,18 @@ and hooks instead. Allowed roots:
 - the Xcode developer folder (toolchain and SDKs).
 Earlier sessions are outside: a reviewer that can read the author's transcript is not independent.
 
+It does not deny names inside an allowed root (such as `data/`): a deny-by-name rule has no end
+of spellings (case on APFS, Unicode forms, patterns), and `**/*` reaches the files anyway. Real
+data is kept out of agents by CLAUDE.md rule 5 and .gitignore, and leaves the repository in S4.
+
 Paths are resolved with realpath first (symlinks, then `..`). A Glob pattern or a Grep glob is
-allowed only when every brace expansion is relative (no leading `/` or `~`), has no segment that
-can match `..`, and names no denied folder; the search root comes only from `path`.
+allowed only when every brace expansion is relative (no leading `/` or `~`) and has no segment
+that can match `..`; the search root comes only from `path`.
 
 Exit 2 blocks the call. Any failure (unparseable input, a missing field, an exception) also exits
 2, because Claude Code treats every other non-zero exit as a non-blocking error.
 """
 
-import fnmatch
 import json
 import os
 import re
@@ -28,7 +31,6 @@ import sys
 
 TOOLS = {"Read", "Grep", "Glob"}
 SESSION_ID = re.compile(r"[A-Za-z0-9-]{1,128}")
-DENIED_NAMES = ("data", "deny-list.txt")
 MAX_EXPANSIONS = 256
 HINT = "pass the folder in `path` and a relative pattern (no leading / or ~, no ..)"
 
@@ -49,8 +51,7 @@ def slug(path):
     return re.sub(r"[^A-Za-z0-9]", "-", path)
 
 
-def boundary(event):
-    """The allowed roots and the denied paths for this call."""
+def allowed_roots(event):
     repo = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", ".."))
     session = event.get("session_id")
     if not isinstance(session, str) or not SESSION_ID.fullmatch(session):
@@ -71,20 +72,11 @@ def boundary(event):
             roots.append(developer)
     except (OSError, subprocess.SubprocessError):
         pass  # No Xcode (e.g. Linux CI): no toolchain root.
-    denied = [os.path.join(repo, "data")]
-    return [os.path.realpath(root) for root in roots], [os.path.realpath(d) for d in denied]
+    return [os.path.realpath(root) for root in roots]
 
 
 def under(path, root):
     return path == root or path.startswith(root.rstrip("/") + "/")
-
-
-def check_path(path, roots, denied, tool):
-    if not any(under(path, root) for root in roots):
-        deny(f"{tool} outside the repository, this session's folders, the project memory and "
-             "the Xcode toolchain")
-    if any(under(path, d) for d in denied) or os.path.basename(path) == "deny-list.txt":
-        deny(f"{tool} of real data (data/, deny-list.txt)")
 
 
 def expand_braces(pattern, budget):
@@ -122,8 +114,56 @@ def expand_braces(pattern, budget):
     return [pattern]
 
 
-def can_match(segment, name):
-    return re.fullmatch(fnmatch.translate(segment), name) is not None
+def atoms(segment):
+    """A glob segment as atoms: '*', '?', a set test for one character, or a literal."""
+    result, index = [], 0
+    while index < len(segment):
+        char = segment[index]
+        if char in "*?":
+            result.append(char)
+            index += 1
+            continue
+        if char == "[":
+            end = index + 1
+            negated = end < len(segment) and segment[end] in "!^"  # both are negation in globs
+            end += 1 if negated else 0
+            end += 1 if end < len(segment) and segment[end] == "]" else 0
+            close = segment.find("]", end)
+            if close != -1:
+                body = segment[index + 1 + (1 if negated else 0):close]
+                result.append((negated, body))
+                index = close + 1
+                continue
+        result.append(char)
+        index += 1
+    return result
+
+
+def matches_dot(atom):
+    if atom in ("*", "?"):
+        return True
+    if isinstance(atom, tuple):
+        negated, body = atom
+        hit = any(body[i] <= "." <= body[i + 2] for i in range(len(body) - 2) if body[i + 1] == "-")
+        return ("." in body or hit) != negated
+    return atom == "."
+
+
+def can_match_dot_dot(segment):
+    """Whether a glob segment can match the name `..`. A segment of stars only is exempt: glob
+    engines never return `.` or `..` for `*` or `**`."""
+    if set(segment) <= {"*"}:
+        return False
+    states = {0}  # how many dots of ".." are matched
+    for atom in atoms(segment):
+        following = set()
+        for state in states:
+            if atom == "*":  # zero or more of the remaining dots
+                following |= set(range(state, 3))
+            elif state < 2 and matches_dot(atom):
+                following.add(state + 1)
+        states = following
+    return 2 in states
 
 
 def check_pattern(tool, key, pattern):
@@ -138,32 +178,24 @@ def check_pattern(tool, key, pattern):
     for expansion in expansions:
         if expansion.startswith(("/", "~")):
             deny(f"{tool} {key} is absolute; {HINT}")
-        segments = expansion.split("/")
-        for position, segment in enumerate(segments):
-            if segment in ("", ".", "*", "**"):
-                continue
-            if can_match(segment, ".."):
-                deny(f"{tool} {key} can climb with '..'; {HINT}")
-            last = position == len(segments) - 1
-            if (not last and can_match(segment, "data")) or can_match(segment, "deny-list.txt"):
-                if "*" not in segment or segment == "deny-list.txt":
-                    deny(f"{tool} {key} names real data (data/, deny-list.txt)")
+        if any(can_match_dot_dot(segment) for segment in expansion.split("/") if segment):
+            deny(f"{tool} {key} can climb with '..'; {HINT}")
 
 
-def checked_paths(tool, tool_input, cwd):
-    """The resolved paths a call reads from; patterns are checked on the way."""
+def checked_path(tool, tool_input, cwd):
+    """The resolved path a call reads from; patterns are checked on the way."""
     if tool == "Read":
         path = tool_input["file_path"]
         if not isinstance(path, str) or not path:
             deny("Read without a file_path")
-        return [resolve(path, cwd)]
+        return resolve(path, cwd)
     path = tool_input.get("path") or cwd
     if not isinstance(path, str):
         deny(f"{tool} with a non-string path")
     key = "pattern" if tool == "Glob" else "glob"
     if tool_input.get(key) is not None:
         check_pattern(tool, key, tool_input[key])
-    return [resolve(path, cwd)]
+    return resolve(path, cwd)
 
 
 def main():
@@ -176,9 +208,10 @@ def main():
         cwd = event.get("cwd") or os.getcwd()
         if not isinstance(tool_input, dict) or not isinstance(cwd, str):
             deny("unexpected input shape")
-        roots, denied = boundary(event)
-        for path in checked_paths(tool, tool_input, cwd):
-            check_path(path, roots, denied, tool)
+        roots = allowed_roots(event)
+        if not any(under(checked_path(tool, tool_input, cwd), root) for root in roots):
+            deny(f"{tool} outside the repository, this session's folders, the project memory and "
+                 "the Xcode toolchain")
     except SystemExit:
         raise
     except BaseException:  # noqa: BLE001 - fail closed on anything unexpected

@@ -5,7 +5,7 @@ Green tests prove little by themselves. Find the behaviour that no test protects
 ## Method
 
 1. For each behaviour the PR adds or changes, name the test that fails if the change is reverted. If you cannot, that is a finding.
-2. **Mutate in your head.** Pick the three most important lines of the diff. For each: flip the condition, move the boundary by one, remove the guard. Would a test go red? Where it is cheap, check it for real in a copy under `$TMPDIR`.
+2. **Mutate in your head.** Pick the three most important lines of the diff. For each: flip the condition, move the boundary by one, remove the guard. Would a test go red? Where it is cheap, check it for real in a copy under the session scratchpad, where probes are written and read.
 3. Read each new test as an adversary: what wrong implementation would still pass it?
 
 ## Questions

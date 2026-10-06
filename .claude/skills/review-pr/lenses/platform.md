@@ -5,7 +5,7 @@ Models state APIs with confidence that do not exist, have a different signature,
 ## Method
 
 1. List every framework symbol, language feature, automation property, CLI flag and system behaviour that the PR introduces or relies on, in code and in documents.
-2. Verify each one. In order of preference: it compiles (`swift build`, or a snippet under `$TMPDIR`); it appears in the SDK interface (`xcrun --show-sdk-path`, then search the `.swiftinterface` or headers); it is in the official documentation (the Context7 tools are allowed). If you cannot verify a claim, report it as unverified with what you tried.
+2. Verify each one. In order of preference: it compiles (`swift build`, or a snippet under the session scratchpad, where probes are written and read); it appears in the SDK interface (`xcrun --show-sdk-path`, then search the `.swiftinterface` or headers); it is in the official documentation (the Context7 tools are allowed). If you cannot verify a claim, report it as unverified with what you tried.
 3. Check availability against the deployment targets, and Swift 6 concurrency rules (`Sendable`, actor isolation, `nonisolated`).
 
 ## Questions

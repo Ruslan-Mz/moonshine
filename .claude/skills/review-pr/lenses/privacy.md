@@ -24,3 +24,4 @@
 - The Excel contract described the real workbook (month range, layout change dates, exact counts).
 - CloudKit sync was introduced while VISION promised that data never leaves the device.
 - Running the bridge script directly would have put real titles into the agent's context; only the count-printing tool may be run.
+- A path check against a name or a folder must ignore case and Unicode form on macOS: APFS ignores case, and realpath keeps the case as typed (`DATA/x` passed a check for `data/`).
