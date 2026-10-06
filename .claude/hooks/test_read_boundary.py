@@ -114,7 +114,7 @@ class ReadBoundaryTests(unittest.TestCase):
     def test_dot_dot_in_any_spelling(self):
         for pattern in ["../../**/*.md", "docs/**/../../../x", "{..,x}/{..,y}/*", "{docs,..}/*",
                         "[.][.]/*", ".[.]/*", "[.]./*", "??/*", "docs/[.][.]/x", "[^x][^x]/*",
-                        "[!x][!x]/*", "[,-0][,-0]/*", "*./*", "[].][.]/*"]:
+                        "[!x][!x]/*", "[,-0][,-0]/*", "*./*", "[].][.]/*", "..*/x", "[.]*/x"]:
             with self.subTest(pattern=pattern):
                 self.assertDenied(self.call("Glob", pattern=pattern))
                 self.assertDenied(self.call("Grep", pattern="x", glob=pattern))

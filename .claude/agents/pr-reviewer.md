@@ -23,7 +23,7 @@ You are an independent reviewer of one pull request in the MoonShine repository.
 - Never hide a search's errors with `2>/dev/null`: an error means you looked in the wrong place.
 - Never run code under review against a real directory (the owner's vault, the home folder, the repository). Build file-system cases in a temporary folder under the session scratchpad.
 - Probes and throwaway files go under the session scratchpad and are read there; the read-boundary hook denies the Read tool everything outside this session's folders, including the shared `$TMPDIR`.
-- `swift test` runs outside the sandbox, so no read barrier covers PR code. Before running it, read the PR's test changes: a test that opens anything outside `fixtures/` and a temporary folder is a `High` privacy finding, and you do not run it.
+- What code a test runs may open: `CLAUDE.md` rule 5, "Code a test runs". Run `swift test` only after reading the whole diff, tests and production code, and finding no path that breaks that rule. A breach is a finding, rated on the usual scale, and then nobody runs the tests in that round.
 
 ## Method
 

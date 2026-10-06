@@ -62,6 +62,13 @@ Start the `pr-reviewer` subagents of the chosen mode, **all in parallel**. Give 
 
 In round 2 and later, also pass the earlier findings and the commit they were made on, and ask the reviewer to (a) check that each earlier `High` and `Medium` is really fixed, (b) for every finding marked fixed, check the neighbouring cases of the same defect — root vs subfolder, first vs last, empty vs one (round 2 on #10 found a fix that covered subfolders but not the vault root), and (c) review only `git diff <previous head>..HEAD`.
 
+**Reports.** Round 3 of PR #11 posted a review early and had to replace it.
+
+- A reviewer's or verifier's report is only what its Agent call returns, with the json block. A completion notice or a summary that arrives in a user turn is a status signal, never a report.
+- Before verifying, posting or cleaning up, confirm that no reviewer or verifier is still running.
+- If a spot check shows a claim in a report to be false, do not drop the claim and go on: get the report again from that agent.
+- The worktree is removed only after the review is posted.
+
 ## 4. Verify
 
 1. Parse the `json` block from each reviewer. Merge duplicates: same file, lines within five of each other, same defect. Keep the clearer wording and note both lenses.
@@ -88,7 +95,7 @@ Build the request as a JSON file under `$TMPDIR` and send it with `gh api --meth
 
 ## 6. Clean up
 
-In the sandbox: `git worktree remove --force <scratchpad>/review/pr-<n>` (`--force` because reviewers may leave untracked files, such as test caches), then `git worktree prune`, then delete the refs: `git update-ref -d refs/remotes/review/pr-<n>` and `git update-ref -d refs/remotes/review/<baseRefName>`. Leave nothing else behind.
+In the sandbox (see "Reports" in §3 for when): `git worktree remove --force <scratchpad>/review/pr-<n>` (`--force` because reviewers may leave untracked files, such as test caches), then `git worktree prune`, then delete the refs: `git update-ref -d refs/remotes/review/pr-<n>` and `git update-ref -d refs/remotes/review/<baseRefName>`. Leave nothing else behind.
 
 Never delete anything unsandboxed (no `rm -rf`, no unsandboxed `git worktree remove`). If a sandboxed step fails, stop cleaning up and end the report with the exact command for the owner to run, for example `git worktree remove --force <absolute path>` followed by `git worktree prune`.
 

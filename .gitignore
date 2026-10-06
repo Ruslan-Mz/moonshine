@@ -27,3 +27,5 @@ Claude outputs/
 
 # Python bytecode (hook tests)
 __pycache__/
+# Leftover of a killed read-boundary hook test run
+.read-boundary-test-*/

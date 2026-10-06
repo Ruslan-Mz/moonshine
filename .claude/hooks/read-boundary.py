@@ -13,7 +13,8 @@ Earlier sessions are outside: a reviewer that can read the author's transcript i
 
 It does not deny names inside an allowed root (such as `data/`): a deny-by-name rule has no end
 of spellings (case on APFS, Unicode forms, patterns), and `**/*` reaches the files anyway. Real
-data is kept out of agents by CLAUDE.md rule 5 and .gitignore, and leaves the repository in S4.
+data in the repository is kept out of agents by CLAUDE.md rule 5 and .gitignore only, until S4
+moves it out (docs/specs/phase-1-see.md, S4).
 
 Paths are resolved with realpath first (symlinks, then `..`). A Glob pattern or a Grep glob is
 allowed only when every brace expansion is relative (no leading `/` or `~`) and has no segment
