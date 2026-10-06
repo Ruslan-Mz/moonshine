@@ -15,8 +15,6 @@
       "Bash(gh pr diff:*)",
       "Bash(git worktree list:*)",
       "Bash(git -c credential.helper= -c credential.helper='!gh auth git-credential' fetch https://github.com/*)",
-      "Bash(git worktree add .build/review/*)",
-      "Bash(git worktree remove .build/review/*)",
       "Bash(git update-ref -d refs/remotes/review/*)"
     ]
   },

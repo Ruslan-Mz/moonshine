@@ -7,10 +7,14 @@ set -euo pipefail
 
 dir="${1:-MoonShineCore}"
 forbidden='AppKit|Cocoa|Carbon|Quartz|SwiftUI|SwiftUICore|OSAKit|GRDB|EventKit|Yams'
-# Any mix of attributes, with or without arguments (`@testable`, `@_spi(X)`), and access
-# modifiers (`public import`), then an optional symbol kind (`import struct AppKit.NSColor`).
+# An import at line start or after `;`; any mix of attributes, with or without arguments
+# (`@testable`, `@_spi(X)`), and access modifiers (`public import`); an optional symbol kind
+# (`import struct AppKit.NSColor`); block comments before the name; a name in backticks.
 prefix='(@[A-Za-z_]+([[:space:]]*\([^)]*\))?|public|package|internal|fileprivate|private)'
-pattern="^[[:space:]]*($prefix[[:space:]]+)*import[[:space:]]+((typealias|struct|class|enum|protocol|let|var|func)[[:space:]]+)?($forbidden)([^A-Za-z0-9_]|$)"
+comment='(/\*[^*]*\*/[[:space:]]*)*'
+kind='((typealias|struct|class|enum|protocol|let|var|func)[[:space:]]+)?'
+module='`?('"$forbidden"')`?'
+pattern="(^|;)[[:space:]]*($prefix[[:space:]]+)*import[[:space:]]+$comment$kind$comment$module([^A-Za-z0-9_]|$)"
 
 if [ ! -d "$dir" ]; then
   echo "check-core-imports: $dir is not a folder" >&2

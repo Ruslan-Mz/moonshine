@@ -52,6 +52,9 @@ Tests green · `swift format lint` clean · `prettier --check '**/*.md'` clean �
 - Lint: `swift format lint --recursive MoonShineCore Adapters Apps`
 - Markdown: `npm install` once, then `npx prettier --write '**/*.md'` · check: `npx prettier --check '**/*.md'`
 - References: `node scripts/check-refs.mjs` · its tests: `node --test scripts/check-refs.test.mjs`
+- Core import check: `scripts/check-core-imports.sh` · its tests: `node --test scripts/check-core-imports.test.mjs`
+- Read-boundary hook tests: `python3 -m unittest discover -s .claude/hooks -p 'test_*.py'`
+- Local sandbox (read barrier, git-ignored): copy `.claude/settings.local.example.json` to `settings.local.json` next to it and fill in the placeholders; `/review-pr` stops without it. `~/.gitconfig` and `~/.config/git/ignore` are allowed for git, `~/.nvm/versions/node` for node; `env.PATH` lists no home folder so node can start git and bash.
 
 ## Owner
 

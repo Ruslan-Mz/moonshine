@@ -45,6 +45,10 @@ test("every forbidden module fails in every import form", () => {
     ...["public", "package", "internal", "fileprivate", "private"].map((access) => `${access} import ${name}`),
     `import struct ${name}.X`,
     `public import class ${name}.X`,
+    `import Foundation; import ${name}`,
+    `import \`${name}\``,
+    `import /* x */ ${name}`,
+    `import struct /* x */ \`${name}\`.X`,
   ];
   for (const name of forbidden) {
     for (const line of forms(name)) {

@@ -2,6 +2,8 @@
 data/
 snapshots/
 *.local.*
+# The sandbox template has placeholders only (CLAUDE.md → Commands).
+!.claude/settings.local.example.json
 deny-list.txt
 
 # Xcode / SwiftPM
