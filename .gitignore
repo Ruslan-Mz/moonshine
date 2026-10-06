@@ -22,3 +22,6 @@ settings.local.json
 node_modules/
 
 Claude outputs/
+
+# Python bytecode (hook tests)
+__pycache__/
