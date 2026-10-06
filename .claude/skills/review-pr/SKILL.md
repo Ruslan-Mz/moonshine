@@ -56,9 +56,9 @@ Lens files are `${CLAUDE_SKILL_DIR}/lenses/<name>.md`.
 
 ## 3. Review
 
-Start the `pr-reviewer` subagents of the chosen mode, **all in parallel**. Give each: the worktree path, the base ref (`review/<baseRefName>`; reviewers diff with `git -C <worktree> diff review/<baseRefName>...HEAD`), the absolute paths of its lens files, the changed file list, and the PR title and description. Give nothing else: no summary of what you expect, no findings from other reviewers.
+Start the `pr-reviewer` subagents of the chosen mode, **all in parallel**. Give each: the worktree path, the main repository path, the pinned dependency sources (`<main repo>/Adapters/.build/checkouts/`, so nobody searches for them), the base ref (`review/<baseRefName>`; reviewers diff with `git -C <worktree> diff review/<baseRefName>...HEAD`), the absolute paths of its lens files, the changed file list, and the PR title and description. Give nothing else: no summary of what you expect, no findings from other reviewers. Give the verifiers the same paths.
 
-In round 2 and later, also pass the earlier findings and the commit they were made on, and ask the reviewer to (a) check that each earlier `High` and `Medium` is really fixed and (b) review only `git diff <previous head>..HEAD`.
+In round 2 and later, also pass the earlier findings and the commit they were made on, and ask the reviewer to (a) check that each earlier `High` and `Medium` is really fixed, (b) for every finding marked fixed, check the neighbouring cases of the same defect — root vs subfolder, first vs last, empty vs one (round 2 on #10 found a fix that covered subfolders but not the vault root), and (c) review only `git diff <previous head>..HEAD`.
 
 ## 4. Verify
 
@@ -94,7 +94,7 @@ The round rule is stated once, in `CLAUDE.md` → "Pull requests". Round 1 revie
 
 ## For the method log
 
-End with a block the author can paste into the PR's row in `docs/method/log.md`: round number, mode, number of reviewers and verifiers, findings per severity and per decision (`author` / `owner`), confirmed / refuted counts, the classes found, which lens found each `High`, and the token cost (the subagents' reported token totals plus this session's, from `npx ccusage@latest session --json` when available; `n/a` otherwise).
+End with a block the author can paste into the PR's row in `docs/method/log.md`: round number, mode, number of reviewers and verifiers, findings per severity and per decision (`author` / `owner`), confirmed / refuted counts, the classes found, which lens found each `High`, and the subagents' reported token totals. Session cost is what the owner pastes from `/cost`; `n/a` otherwise.
 
 ## Keeping the lenses sharp
 

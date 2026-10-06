@@ -16,6 +16,13 @@ You are an independent reviewer of one pull request in the MoonShine repository.
 - `changed`: the list of changed files, and the PR title and description.
 - Optionally `previous`: findings from an earlier round and the commit they were made on.
 
+## Where you may read
+
+- Read only inside: the worktree, the main repository, `$TMPDIR`, the session scratchpad, and the toolchain and SDK paths that `xcrun` returns (`xcrun --show-sdk-path`, `xcrun --find swift`). Pinned dependency sources are in `<main repo>/Adapters/.build/checkouts/`; the skill passes that path.
+- Never search or walk the home folder, `/Volumes` or the disk root: no `find`, `grep -r`, `mdfind` or `ls ~/Library` there.
+- Never hide a search's errors with `2>/dev/null`: an error means you looked in the wrong place.
+- Never run code under review against a real directory (the owner's vault, the home folder, the repository). Build file-system cases in a temporary folder under `$TMPDIR`.
+
 ## Method
 
 1. Read your lens files, then `CLAUDE.md` (hard rules), then the slice's section in `docs/specs/` and every ADR the PR names.

@@ -12,14 +12,14 @@ See `docs/ROADMAP.md`. **Only build what the current phase's spec asks for.** La
 
 1. **Spec first.** Every change starts from `docs/specs/`. Missing/ambiguous spec → propose a spec change and stop.
 2. **One slice = one PR**, < ~400 changed lines of production code (tests, fixtures and generated files excluded).
-3. **Ports & adapters (ADR-0001).** `MoonShineCore` imports no AppKit (nor Cocoa, Carbon, Quartz)/SwiftUI/OSAKit/GRDB/EventKit/Yams (`scripts/check-core-imports.sh` in CI). UI talks to view models/services, never to adapters.
+3. **Ports & adapters (ADR-0001).** `MoonShineCore` imports no AppKit (nor Cocoa, Carbon, Quartz)/SwiftUI/SwiftUICore/OSAKit/GRDB/EventKit/Yams (`scripts/check-core-imports.sh` in CI). UI talks to view models/services, never to adapters.
 4. **Tests first in Core.** New domain logic → failing test → code.
 5. **Privacy.** Raw content — titles, labels, values, names, ids — from the vault (`~/ObsidianV`), OmniFocus, calendars (events: no real titles, attendees or calendar names), `data/`, `snapshots/` and `*.local.*` is never committed or pasted into PRs, commits or logs. Aggregates (counts, timings, orders of magnitude) and structure descriptions (shapes, field names, layouts) are allowed, as in `docs/discovery/` since phase 0. Fixtures are invented.
 6. **No writes to external tools before the Act phase.** No writes to the vault, OmniFocus or calendars anywhere in code until the Act phase spec exists.
 7. **Dependencies:** ask first. Pre-approved: `GRDB` (store), `Yams` (YAML), `CoreXLSX` (phase 2), official MCP Swift SDK (phase 4); EventKit is a pre-approved system framework (ADR-0012). Check licence compatibility with AGPL-3.0.
 8. **UI tone is a requirement:** no red and no "failed/overdue/behind" wording for intentions or lines; drift and quiet lines are facts with a suggested next step; paused lines are "paused on purpose". Urgent colour only for tasks with a real `due` date. "Hours" only next to real time data or the vault budget (ADR-0006).
 9. **UX bar:** keyboard-first on Mac (every view reachable by shortcut, ⌘K command palette from phase 1), dense but calm layout, instant view switching (reads come from the local store).
-10. **Log the method:** append a row to `docs/method/log.md` at the end of each PR. Honest numbers; `n/a` if unknown. Before appending, run `npx ccusage@latest session --json`, take this session's tokens (input / output / cache write / cache read, separately) and its API-equivalent cost, and put them in the Tokens / cost column marked "API-equiv" (e.g. `session <id>: input … · output … · cache write … · cache read …; API-equiv $…`).
+10. **Log the method:** append a row to `docs/method/log.md` at the end of each PR. Honest numbers; `n/a` if unknown. The Tokens / cost column takes the subagents' reported token totals (when any ran); the session's cost is what the owner pastes from `/cost`, otherwise `n/a`.
 
 ## Git
 

@@ -8,6 +8,13 @@ effort: high
 
 You receive findings that another reviewer produced for a pull request, and the `worktree` where the PR's head is checked out. Assume each finding is wrong until the code shows otherwise. A false finding costs the owner more than a missed one costs here, because every reported finding is acted on.
 
+## Where you may read
+
+- Read only inside: the worktree, the main repository, `$TMPDIR`, the session scratchpad, and the toolchain and SDK paths that `xcrun` returns (`xcrun --show-sdk-path`, `xcrun --find swift`). Pinned dependency sources are in `<main repo>/Adapters/.build/checkouts/`; the skill passes that path.
+- Never search or walk the home folder, `/Volumes` or the disk root: no `find`, `grep -r`, `mdfind` or `ls ~/Library` there.
+- Never hide a search's errors with `2>/dev/null`: an error means you looked in the wrong place.
+- Never run code under review against a real directory (the owner's vault, the home folder, the repository). Build file-system cases in a temporary folder under `$TMPDIR`.
+
 ## Method, per finding
 
 1. Open the cited file and line yourself. Do not trust the quoted evidence.
