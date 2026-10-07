@@ -20,7 +20,7 @@ public struct ObsidianVault: Sendable {
       lines: .unavailable, issues: scan.issues + BudgetNote.issues(for: budget),
       notesFound: scan.noteCount, frontmatterRead: scan.notes.count,
       rejected: Self.count(scan.noteIssues), skipped: Self.count(scan.walkIssues),
-      budgetNotes: budget.count)
+      anchorLikeAccepted: scan.anchorLikeAccepted, budgetNotes: budget.count)
   }
 
   private static func count(_ issues: [ImportIssue]) -> [VaultProblem.Kind: Int] {
@@ -44,6 +44,9 @@ public struct VaultRead: Sendable {
   public let rejected: [VaultProblem.Kind: Int]
   /// Entries the walk skipped or could not open, by problem.
   public let skipped: [VaultProblem.Kind: Int]
+  /// Notes accepted although their frontmatter has anchor-like text: an `&` that may start an
+  /// anchor, with no alias to use it.
+  public let anchorLikeAccepted: Int
   /// Notes with `moonshine: budget`; the first by path is the budget note.
   public let budgetNotes: Int
 
@@ -53,12 +56,14 @@ public struct VaultRead: Sendable {
     let rejectedCount = rejected.values.reduce(0, +)
     let rejectedKinds: [VaultProblem.Kind] = [
       .unreadable, .notUTF8, .frontmatterTooLarge, .malformedYAML, .yamlTooComplex, .yamlAnchor,
+      .yamlDirective,
     ]
     var lines = [
       "vault: \(notesFound) notes found · \(frontmatterRead) frontmatter read",
       "rejected notes: \(rejectedCount) ("
         + Self.list(rejected, rejectedKinds.map { ($0, $0.rawValue) }) + ")",
       "notes rejected for an anchor: \(rejected[.yamlAnchor, default: 0])",
+      "notes with anchor-like text and no alias, accepted: \(anchorLikeAccepted)",
       "skipped: "
         + Self.list(
           skipped,

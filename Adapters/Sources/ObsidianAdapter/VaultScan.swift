@@ -17,6 +17,8 @@ enum VaultScan {
     let walkIssues: [ImportIssue]
     /// Notes whose frontmatter was rejected.
     let noteIssues: [ImportIssue]
+    /// Accepted notes whose frontmatter has anchor-like text (and so no alias).
+    let anchorLikeAccepted: Int
 
     var issues: [ImportIssue] { walkIssues + noteIssues }
   }
@@ -29,18 +31,21 @@ enum VaultScan {
     let (files, walkIssues) = try VaultWalk.markdownFiles(in: root, limits: limits)
     var noteIssues: [ImportIssue] = []
     var notes: [ScannedNote] = []
+    var anchorLikeAccepted = 0
     for file in files {
       do {
         guard let text = try Frontmatter.text(of: file.url, limit: limits.maxFrontmatterBytes)
         else { continue }
         notes.append(
           ScannedNote(path: file.path, frontmatter: try FrontNode.parse(text, limits: limits)))
+        if FrontNode.hasAnchor(text) { anchorLikeAccepted += 1 }
       } catch {
         noteIssues.append(
           .vault(path: file.path, line: error.line, problem: VaultProblem(error.kind)))
       }
     }
     return Result(
-      notes: notes, noteCount: files.count, walkIssues: walkIssues, noteIssues: noteIssues)
+      notes: notes, noteCount: files.count, walkIssues: walkIssues, noteIssues: noteIssues,
+      anchorLikeAccepted: anchorLikeAccepted)
   }
 }

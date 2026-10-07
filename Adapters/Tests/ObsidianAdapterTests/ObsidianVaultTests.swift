@@ -38,13 +38,16 @@ import Testing
     #expect(problems(read.issues) == ["B/budget.md:3:budgetNoteDuplicate (moonshine)"])
   }
 
-  /// A vault with one good note, a note rejected for an anchor, a malformed one and a link.
+  /// A vault with one good note, a note with anchor-like text, a note rejected for an anchor
+  /// and an alias, one rejected for a directive, a malformed one and a link.
   func troubledVault(budget: Bool) throws -> TemporaryVault {
     let vault = try TemporaryVault()
     let outside = try TemporaryVault()
     try vault.write("good.md", note(budget ? "moonshine: budget" : "type: x"))
     try vault.write("plain.md", "# No frontmatter\n")
-    try vault.write("anchor.md", note("a: &x 1"))
+    try vault.write("anchor-like.md", note("tags:\n  - \"&x and y\""))
+    try vault.write("anchor.md", note("a: &x 1\nb: *x"))
+    try vault.write("directive.md", note("%TAG !e! tag:x,2026:\n--- {a: !e!b 1}"))
     try vault.write("broken.md", note("a: [unclosed"))
     try vault.link("linked.md", to: try outside.write("other.md", note("type: x")))
     return vault
@@ -54,10 +57,11 @@ import Testing
     let read = try ObsidianVault(root: try troubledVault(budget: false).root).read()
     #expect(
       read.report == [
-        "vault: 4 notes found · 1 frontmatter read",
-        "rejected notes: 2 (unreadable 0 · notUTF8 0 · frontmatterTooLarge 0 · malformedYAML 1"
-          + " · yamlTooComplex 0 · yamlAnchor 1)",
+        "vault: 6 notes found · 2 frontmatter read",
+        "rejected notes: 3 (unreadable 0 · notUTF8 0 · frontmatterTooLarge 0 · malformedYAML 1"
+          + " · yamlTooComplex 0 · yamlAnchor 1 · yamlDirective 1)",
         "notes rejected for an anchor: 1",
+        "notes with anchor-like text and no alias, accepted: 1",
         "skipped: symlinks 1 · outside vault 0 · unreadable entries 0",
         "budget note: missing",
         "the budget note may be among the rejected notes",

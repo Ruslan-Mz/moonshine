@@ -275,13 +275,13 @@ func problems(_ issues: [ImportIssue]) -> [String] {
     }
   }
 
-  @Test func everyAnchorFormIsRejected() {
+  @Test func everyAnchorFormWithAnAliasIsRejected() {
     for yaml in [
       "a: &x 1", "a: [&x 1]", "a: {b: &x 1}", "- &x a", "a:\n  - &x 1", "a: !!str &x 1",
       "a: \"q\" \n&x b: 1",
     ] {
       #expect(throws: FrontmatterFailure(kind: .yamlAnchor, line: nil), "\(yaml)") {
-        try parse(yaml)
+        try parse(yaml + "\nz: *x")
       }
     }
   }
@@ -304,7 +304,8 @@ func problems(_ issues: [ImportIssue]) -> [String] {
 
   @Test(arguments: ["a: Музыка &танец", "a: 音楽 &x 1", "a: [&מ 1]", "a: (&x)"])
   func anAmpersandAfterSpaceOrPunctuationIsStillAnAnchor(yaml: String) {
-    #expect(throws: FrontmatterFailure(kind: .yamlAnchor, line: nil)) { try parse(yaml) }
+    #expect(FrontNode.hasAnchor(yaml))
+    #expect(throws: FrontmatterFailure(kind: .yamlAnchor, line: nil)) { try parse(yaml + " *x") }
   }
 
   @Test func theNodeCapBoundsALongDocument() {
