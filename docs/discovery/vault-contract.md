@@ -16,7 +16,7 @@ Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault write
 
 ## 1. Lines — the budget note
 
-Identified only by `moonshine: budget` at the top level of the frontmatter (no file-name fallback: a file name is the owner's data). Exactly one; none → the vault-wide problem `budgetNoteMissing` (no path); more than one → `budgetNoteDuplicate` on each later note, first by path wins.
+Identified only by `moonshine: budget` at the top level of the frontmatter (no file-name fallback: a file name is the owner's data). Rejected notes count too: a note whose frontmatter failed to parse is searched lexically for a top-level `moonshine: budget` line (quotes around the key or the value and a trailing comment allowed). Exactly one marked note that parsed → the budget note; exactly one that was rejected → lines unavailable, `budgetNoteRejected` on that note next to its own problem, and the live check prints `rejected (<kind>)`; more than one, parsed or not → ambiguous: lines unavailable, `budgetNoteDuplicate` on each, none wins (the owner removes the marker from the copy); none → the vault-wide problem `budgetNoteMissing` (no path). Known gap: a note whose frontmatter cannot be extracted (unreadable, not UTF-8, over the size cap, never closed) cannot be searched.
 
 The reader says whether it could read the lines, not only which ones it read (2026-10-07):
 
