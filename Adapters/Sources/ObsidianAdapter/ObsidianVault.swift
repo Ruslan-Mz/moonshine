@@ -77,6 +77,19 @@ public struct VaultRead: Sendable {
     ]
   }
 
+  /// Owner only: each problem's kind, vault-relative path and line, never anything from the
+  /// note. Paths are owner data: printed in the owner's own terminal, never logged.
+  public var problemLocations: [String] {
+    issues.compactMap { issue in
+      switch issue {
+      case .vault(let path, let line, let problem):
+        "\(problem.kind.rawValue) \(path)" + (line.map { ":\($0)" } ?? "")
+      case .vaultWide(let problem): problem.kind.rawValue
+      default: nil
+      }
+    }
+  }
+
   private var budgetLabel: String {
     switch budget {
     case .found: "found"

@@ -156,6 +156,26 @@ import Testing
     #expect(!report.joined().contains("Secret"))
   }
 
+  @Test func problemLocationsGiveKindPathAndLineAndNothingFromTheNote() throws {
+    let vault = try TemporaryVault()
+    let secret = "planted-secret-title"
+    try vault.write("Notes/b.md", note("title: \(secret)\na: [unclosed"))
+    try vault.write("a.md", note("title: \(secret)\na: &x 1\nb: *x"))
+    try vault.write("c.md", "---\ntitle: \(secret)\n")
+    let locations = try ObsidianVault(root: vault.root).read().problemLocations
+    #expect(
+      locations == [
+        "malformedYAML Notes/b.md:4", "yamlAnchor a.md", "malformedYAML c.md:1",
+        "budgetNoteMissing",
+      ])
+    #expect(!locations.joined().contains(secret))
+  }
+
+  @Test func theCountsReportCarriesNoPath() throws {
+    let report = try ObsidianVault(root: try troubledVault(budget: false).root).read().report
+    #expect(!report.joined().contains(".md"))
+  }
+
   /// Every entry under `folder`: relative path, size, modification date and contents.
   func tree(_ folder: URL) throws -> [String] {
     let keys: [URLResourceKey] = [.fileSizeKey, .contentModificationDateKey]

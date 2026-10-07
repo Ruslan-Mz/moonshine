@@ -7,15 +7,18 @@ import SQLiteStore
 #if os(macOS)
 
   /// Measures the live OmniFocus import (phase 1, S3a-1) and checks the vault (S3b-2). Prints
-  /// counts and timings only, never titles, ids, paths or note names. Run from the repository
-  /// root (OmniFocus running for the first three):
+  /// counts and timings only, never titles, ids, paths or note names (except `vault --paths`,
+  /// below). Run from the repository root (OmniFocus running for the first three):
   ///
   ///     swift run -c release --package-path Adapters moonshine-import full [runs]
   ///     swift run -c release --package-path Adapters moonshine-import incremental <minutes>
   ///     swift run -c release --package-path Adapters moonshine-import probe
   ///     swift run -c release --package-path Adapters moonshine-import vault <folder>
+  ///     swift run -c release --package-path Adapters moonshine-import vault --paths <folder>
   ///
-  /// `vault` only reads the vault folder and writes nothing: no store, no files.
+  /// `vault` only reads the vault folder and writes nothing: no store, no files. `--paths` also
+  /// prints each problem's kind, vault-relative path and line: owner only, in the owner's own
+  /// terminal. An agent never runs it, and its output never goes into a log, commit or PR.
   ///
   /// `full` imports into `data/import.local.sqlite` (git-ignored), recreated before the first run;
   /// one run unless `runs` is given. The vault is left empty (its reader is S3b), so every task
@@ -42,7 +45,9 @@ import SQLiteStore
           guard let minutes = Int(minutes), minutes > 0 else { usage() }
           try await incremental(minutes: minutes)
         case ("probe", nil): try await probe()
-        case ("vault", let folder?) where arguments.count == 2: try vault(at: folder)
+        case ("vault", "--paths") where arguments.count == 3:
+          try vault(at: arguments[2], paths: true)
+        case ("vault", let folder?) where arguments.count == 2: try vault(at: folder, paths: false)
         default: usage()
         }
       } catch {
@@ -54,8 +59,12 @@ import SQLiteStore
     static func usage() -> Never {
       print(
         """
-        usage: moonshine-import full [runs] | incremental <minutes> | probe | vault <folder>
+        usage: moonshine-import full [runs] | incremental <minutes> | probe
+                             | vault [--paths] <folder>
           vault <folder>  reads the vault and prints counts only; writes nothing (no store, no files)
+          vault --paths <folder>  also prints each problem's kind, vault-relative path and line;
+                          for the owner's own terminal only: never run by an agent, never pasted
+                          into a log, commit or PR
         """)
       exit(2)
     }
@@ -143,13 +152,17 @@ import SQLiteStore
       }
     }
 
-    /// Reads the vault and prints its counts. Writes nothing: no store, no files.
-    static func vault(at folder: String) throws {
+    /// Reads the vault and prints its counts; with `paths` (owner only) each problem's kind,
+    /// path and line too. Writes nothing: no store, no files.
+    static func vault(at folder: String, paths: Bool) throws {
       let start = clock.now
       let read = try ObsidianVault(root: URL(filePath: folder, directoryHint: .isDirectory)).read()
       let elapsed = clock.now - start
       for line in read.report { print(line) }
       print(line([elapsed], ["time"]))
+      guard paths else { return }
+      print("problems (owner only; do not paste):")
+      for location in read.problemLocations { print("  " + location) }
     }
 
     // MARK: Report (counts only)
