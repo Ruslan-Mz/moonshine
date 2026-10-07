@@ -18,7 +18,7 @@ public struct ObsidianVault: Sendable {
     // `lines:` is read from S3b-2b on; until then the lines are unavailable, never empty.
     return VaultRead(
       lines: .unavailable, issues: scan.issues + BudgetNote.issues(for: budget),
-      notesRead: scan.noteCount, notesWithFrontmatter: scan.notes.count,
+      notesFound: scan.noteCount, frontmatterRead: scan.notes.count,
       rejected: Self.count(scan.noteIssues), skipped: Self.count(scan.walkIssues),
       budgetNotes: budget.count)
   }
@@ -34,10 +34,12 @@ public struct ObsidianVault: Sendable {
 public struct VaultRead: Sendable {
   public let lines: VaultLines
   public let issues: [ImportIssue]
-  /// Markdown notes found; hidden folders and symbolic links are not walked.
-  public let notesRead: Int
-  /// Notes whose frontmatter was read; a note without frontmatter is not counted.
-  public let notesWithFrontmatter: Int
+  /// Markdown notes the walk found, including those later rejected or unreadable; hidden
+  /// folders, symbolic links and files outside the vault are not counted.
+  public let notesFound: Int
+  /// Notes whose frontmatter was read and parsed; notes without frontmatter and rejected
+  /// notes are not counted.
+  public let frontmatterRead: Int
   /// Notes rejected while reading their frontmatter, by problem.
   public let rejected: [VaultProblem.Kind: Int]
   /// Entries the walk skipped or could not open, by problem.
@@ -53,7 +55,7 @@ public struct VaultRead: Sendable {
       .unreadable, .notUTF8, .frontmatterTooLarge, .malformedYAML, .yamlTooComplex, .yamlAnchor,
     ]
     var lines = [
-      "vault: \(notesRead) notes read · \(notesWithFrontmatter) with frontmatter",
+      "vault: \(notesFound) notes found · \(frontmatterRead) frontmatter read",
       "rejected notes: \(rejectedCount) ("
         + Self.list(rejected, rejectedKinds.map { ($0, $0.rawValue) }) + ")",
       "notes rejected for an anchor: \(rejected[.yamlAnchor, default: 0])",

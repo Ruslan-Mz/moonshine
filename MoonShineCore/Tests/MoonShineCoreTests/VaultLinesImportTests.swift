@@ -29,7 +29,7 @@ import Testing
   func storedAfterACleanRead() -> (StoredWorkspace, IdentityMap) {
     var identities = IdentityMap()
     let first = Importer().makeWorkspace(
-      tasks: source, vault: vault(.read([violin, piano], complete: true)),
+      tasks: source, vault: vault(.read([violin, piano], complete: true)), storedLines: [],
       identities: &identities, now: earlier)
     return (StoredWorkspace(timeZone: TestWorld.timeZone).merging(first, at: earlier), identities)
   }
@@ -67,6 +67,26 @@ import Testing
     #expect(workspace.lines.map(\.key) == ["violin"])
     #expect(stored.lines.filter(\.isRemoved).map(\.entity.key) == ["piano"])
     #expect(workspace.tasks.first?.line == .lifeOps)
+  }
+
+  func line(_ key: String, _ name: String) -> SourceLine {
+    SourceLine(key: LineKey(key), name: name, block: "Creative", state: .active)
+  }
+
+  @Test func aCleanReadTakesTheOrderFromTheNote() {
+    let (workspace, _, _) = reimport(.read([piano, violin], complete: true))
+    #expect(workspace.lines.map(\.key) == ["piano", "violin"])
+  }
+
+  @Test func aPartialReadKeepsStoredPositionsAndAppendsNewLinesInNoteOrder() {
+    let (workspace, _, _) = reimport(
+      .read([line("drum", "Drum"), piano, line("cello", "Cello")], complete: false))
+    #expect(workspace.lines.map(\.key) == ["violin", "piano", "drum", "cello"])
+  }
+
+  @Test func unavailableLinesKeepTheStoredOrder() {
+    let (workspace, _, before) = reimport(.unavailable)
+    #expect(workspace.lines.map(\.key) == before.map(\.key))
   }
 
   /// Serves a clean read first, then unavailable lines.

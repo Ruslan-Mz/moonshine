@@ -8,8 +8,8 @@ import Testing
   @Test func findsTheFixtureBudgetNoteByItsMarker() throws {
     let read = try ObsidianVault(root: fixtureVault).read()
     #expect(read.budgetNotes == 1)
-    #expect(read.notesRead == 6)
-    #expect(read.notesWithFrontmatter == 6)
+    #expect(read.notesFound == 6)
+    #expect(read.frontmatterRead == 6)
     #expect(read.issues.isEmpty)
   }
 
@@ -54,7 +54,7 @@ import Testing
     let read = try ObsidianVault(root: try troubledVault(budget: false).root).read()
     #expect(
       read.report == [
-        "vault: 4 notes read · 1 with frontmatter",
+        "vault: 4 notes found · 1 frontmatter read",
         "rejected notes: 2 (unreadable 0 · notUTF8 0 · frontmatterTooLarge 0 · malformedYAML 1"
           + " · yamlTooComplex 0 · yamlAnchor 1)",
         "notes rejected for an anchor: 1",

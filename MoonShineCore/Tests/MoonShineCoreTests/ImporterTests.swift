@@ -44,7 +44,8 @@ import Testing
   }
 
   func run(_ source: TaskSourceSnapshot, identities: inout IdentityMap) -> Workspace {
-    Importer().makeWorkspace(tasks: source, vault: vault, identities: &identities, now: now)
+    Importer().makeWorkspace(
+      tasks: source, vault: vault, storedLines: [], identities: &identities, now: now)
   }
 
   func run(_ source: TaskSourceSnapshot) -> Workspace {

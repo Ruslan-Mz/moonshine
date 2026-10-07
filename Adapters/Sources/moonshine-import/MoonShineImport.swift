@@ -87,7 +87,7 @@ import SQLiteStore
         var identities = try await store.identityMap()
         let workspace = Importer().makeWorkspace(
           tasks: source, vault: VaultSnapshot(lines: .unavailable, artifacts: [], notes: []),
-          identities: &identities.map, now: Date())
+          storedLines: try await store.workspace().lines, identities: &identities.map, now: Date())
         marks.append(clock.now)
         try await store.commit(
           workspace, identities: identities.map, expectedVersion: identities.version, at: Date())

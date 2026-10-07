@@ -36,7 +36,8 @@ import Testing
     let source = try fixtureSnapshot()
     var identities = IdentityMap()
     let workspace = Importer().makeWorkspace(
-      tasks: source, vault: try await DemoVault().vault(), identities: &identities, now: first)
+      tasks: source, vault: try await DemoVault().vault(), storedLines: [], identities: &identities,
+      now: first)
     try await store.commit(workspace, identities: identities, expectedVersion: 0, at: first)
 
     expectSame(try await store.workspace(), workspace)
@@ -151,7 +152,7 @@ import Testing
     let stale = try await store.identityMap()
     var mine = stale.map
     let workspace = Importer().makeWorkspace(
-      tasks: source, vault: vault, identities: &mine, now: first)
+      tasks: source, vault: vault, storedLines: [], identities: &mine, now: first)
     try await importer(source, into: store).run(now: first)
     let before = try await store.stored()
 
