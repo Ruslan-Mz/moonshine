@@ -14,9 +14,12 @@ public struct Importer: Sendable {
     self.metaTagGroups = metaTagGroups
   }
 
+  /// `storedLines` are the store's current lines, in stored order; they stand in for the lines
+  /// the vault could not read (`VaultLines`), so an unclean read never drops a line. No default:
+  /// leaving them out would drop every stored line on an unavailable read.
   public func makeWorkspace(
-    tasks source: TaskSourceSnapshot, vault: VaultSnapshot, identities: inout IdentityMap,
-    now: Date
+    tasks source: TaskSourceSnapshot, vault: VaultSnapshot, storedLines: [Line],
+    identities: inout IdentityMap, now: Date
   ) -> Workspace {
     func ref(_ provider: ProviderID, _ externalId: String) -> ExternalRef {
       ExternalRef(provider: provider, externalId: externalId, lastSeen: now)
@@ -32,7 +35,7 @@ public struct Importer: Sendable {
         scale: note.scale, period: note.period, parentLink: note.parentLink,
         lineKey: note.lineKey, status: note.status)
     }
-    let lines = vault.lines.map { line in
+    let read = vault.lines.read.map { line in
       Line(
         id: identities.id(for: ref(.obsidian, line.key.rawValue), now: now),
         refs: [ref(.obsidian, line.key.rawValue)], key: line.key, name: line.name,
@@ -40,6 +43,15 @@ public struct Importer: Sendable {
         budgetHoursPerWeek: line.budgetHoursPerWeek, parentLink: line.parentLink,
         taskRules: line.taskRules)
     }
+    // Only a clean read may drop a line, and it takes the order from the note. Otherwise every
+    // stored line keeps its position (updated when read, as it was when not, so it still maps
+    // tasks and the merge never soft-deletes it); lines new to the store follow in note order.
+    let readByID = Dictionary(read.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    let storedIDs = Set(storedLines.map(\.id))
+    let lines =
+      vault.lines.isComplete
+      ? read
+      : storedLines.map { readByID[$0.id] ?? $0 } + read.filter { !storedIDs.contains($0.id) }
     let lineByKey = Dictionary(
       lines.map { ($0.key, $0.id) }, uniquingKeysWith: { first, _ in first })
     let noteByPath = Dictionary(
@@ -194,8 +206,11 @@ public actor ImportService {
     let (source, vault) = try await (taskSnapshot, vaultSnapshot)
     if let since = source.modifiedSince { throw PartialSnapshotError(modifiedSince: since) }
     var identities = try await store.identityMap()
+    // Read after the identity map: a commit in between bumps the version and this one fails.
+    let storedLines = try await store.workspace().lines
     let workspace = importer.makeWorkspace(
-      tasks: source, vault: vault, identities: &identities.map, now: now)
+      tasks: source, vault: vault, storedLines: storedLines, identities: &identities.map,
+      now: now)
     try await store.commit(
       workspace, identities: identities.map, expectedVersion: identities.version, at: now)
     return workspace

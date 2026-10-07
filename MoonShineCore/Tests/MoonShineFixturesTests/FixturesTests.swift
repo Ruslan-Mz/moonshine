@@ -9,14 +9,14 @@ import Testing
 
   @Test func mirrorsTheFixtureBudgetNote() {
     #expect(
-      vault.lines.map(\.key.rawValue) == [
+      vault.lines.read.map(\.key.rawValue) == [
         "violin", "piano", "calligraphy", "italian", "math", "calisthenics", "research", "work",
       ])
-    let calligraphy = vault.lines.first { $0.key == "calligraphy" }
+    let calligraphy = vault.lines.read.first { $0.key == "calligraphy" }
     #expect(calligraphy?.state == .paused)
-    #expect(vault.lines.first { $0.key == "piano" }?.budgetHoursPerWeek == 1.25)
-    #expect(vault.lines.first { $0.key == "math" }?.taskRules.folders == ["Study"])
-    #expect(vault.lines.first { $0.key == "research" }?.taskRules.tags == ["исследование"])
+    #expect(vault.lines.read.first { $0.key == "piano" }?.budgetHoursPerWeek == 1.25)
+    #expect(vault.lines.read.first { $0.key == "math" }?.taskRules.folders == ["Study"])
+    #expect(vault.lines.read.first { $0.key == "research" }?.taskRules.tags == ["исследование"])
   }
 
   @Test func mirrorsTheFixtureArtifactsAndNotes() {

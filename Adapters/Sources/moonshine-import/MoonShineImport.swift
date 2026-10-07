@@ -1,16 +1,21 @@
 import Foundation
 import MoonShineCore
+import ObsidianAdapter
 import OmniFocusAdapter
 import SQLiteStore
 
 #if os(macOS)
 
-  /// Measures the live OmniFocus import (phase 1, S3a-1). Prints counts and timings only, never
-  /// titles or ids. Run from the repository root while OmniFocus is running:
+  /// Measures the live OmniFocus import (phase 1, S3a-1) and checks the vault (S3b-2). Prints
+  /// counts and timings only, never titles, ids, paths or note names. Run from the repository
+  /// root (OmniFocus running for the first three):
   ///
   ///     swift run -c release --package-path Adapters moonshine-import full [runs]
   ///     swift run -c release --package-path Adapters moonshine-import incremental <minutes>
   ///     swift run -c release --package-path Adapters moonshine-import probe
+  ///     swift run -c release --package-path Adapters moonshine-import vault <folder>
+  ///
+  /// `vault` only reads the vault folder and writes nothing: no store, no files.
   ///
   /// `full` imports into `data/import.local.sqlite` (git-ignored), recreated before the first run;
   /// one run unless `runs` is given. The vault is left empty (its reader is S3b), so every task
@@ -37,6 +42,7 @@ import SQLiteStore
           guard let minutes = Int(minutes), minutes > 0 else { usage() }
           try await incremental(minutes: minutes)
         case ("probe", nil): try await probe()
+        case ("vault", let folder?) where arguments.count == 2: try vault(at: folder)
         default: usage()
         }
       } catch {
@@ -46,7 +52,11 @@ import SQLiteStore
     }
 
     static func usage() -> Never {
-      print("usage: moonshine-import full [runs] | incremental <minutes> | probe")
+      print(
+        """
+        usage: moonshine-import full [runs] | incremental <minutes> | probe | vault <folder>
+          vault <folder>  reads the vault and prints counts only; writes nothing (no store, no files)
+        """)
       exit(2)
     }
 
@@ -76,8 +86,8 @@ import SQLiteStore
         marks.append(clock.now)
         var identities = try await store.identityMap()
         let workspace = Importer().makeWorkspace(
-          tasks: source, vault: VaultSnapshot(lines: [], artifacts: [], notes: []),
-          identities: &identities.map, now: Date())
+          tasks: source, vault: VaultSnapshot(lines: .unavailable, artifacts: [], notes: []),
+          storedLines: try await store.workspace().lines, identities: &identities.map, now: Date())
         marks.append(clock.now)
         try await store.commit(
           workspace, identities: identities.map, expectedVersion: identities.version, at: Date())
@@ -131,6 +141,15 @@ import SQLiteStore
         let age = latest.map { "\(Int(Date().timeIntervalSince($0) / 60)) min ago" } ?? "n/a"
         print("probe: tasks \(probe.taskCount) · latest change \(age)")
       }
+    }
+
+    /// Reads the vault and prints its counts. Writes nothing: no store, no files.
+    static func vault(at folder: String) throws {
+      let start = clock.now
+      let read = try ObsidianVault(root: URL(filePath: folder, directoryHint: .isDirectory)).read()
+      let elapsed = clock.now - start
+      for line in read.report { print(line) }
+      print(line([elapsed], ["time"]))
     }
 
     // MARK: Report (counts only)
@@ -206,6 +225,9 @@ import SQLiteStore
           + violations.prefix(5).map(\.description).joined(separator: "; ")
       case SnapshotError.badValue(let path): return "bad value at \(path)"
       case SnapshotError.undecodable(let path): return "JSON does not decode at \(path)"
+      case VaultReadError.rootUnreadable: return "the vault folder cannot be read"
+      case VaultReadError.tooManyNotes(let limit):
+        return "the vault has more than \(limit) notes; nothing was read"
       default: return "\(type(of: error))"
       }
     }

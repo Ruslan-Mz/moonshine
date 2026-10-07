@@ -323,6 +323,7 @@ struct WorkspaceRecord: Codable, FetchableRecord, PersistableRecord {
     case ruleClaimedTwice(rule: String, kept: String, ignored: String)
     case unknownLineKey(key: String, in: String)
     case vault(path: String, line: Int?, kind: VaultProblem.Kind, key: String?)
+    case vaultWide(kind: VaultProblem.Kind, key: String?)
   }
   struct Attrs: Codable, Equatable {
     var issues: [Issue]
@@ -346,6 +347,8 @@ struct WorkspaceRecord: Codable, FetchableRecord, PersistableRecord {
           .unknownLineKey(key: key.rawValue, in: artifact)
         case .vault(let path, let line, let problem):
           .vault(path: path, line: line, kind: problem.kind, key: problem.key)
+        case .vaultWide(let problem):
+          .vaultWide(kind: problem.kind, key: problem.key)
         }
       })
   }
@@ -359,6 +362,8 @@ struct WorkspaceRecord: Codable, FetchableRecord, PersistableRecord {
         .unknownLineKey(LineKey(key), in: artifact)
       case .vault(let path, let line, let kind, let key):
         .vault(path: path, line: line, problem: VaultProblem(kind, key: key))
+      case .vaultWide(let kind, let key):
+        .vaultWide(VaultProblem(kind, key: key))
       }
     }
   }

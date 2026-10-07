@@ -30,11 +30,11 @@ let package = Package(
         .product(name: "MoonShineCore", package: "MoonShineCore"),
         .product(name: "GRDB", package: "GRDB.swift"),
       ]),
-    // Measures the live import; prints counts and timings only (phase 1, S3a-1).
+    // Measures the live import and checks the vault; prints counts and timings only.
     .executableTarget(
       name: "moonshine-import",
       dependencies: [
-        "OmniFocusAdapter", "SQLiteStore",
+        "OmniFocusAdapter", "ObsidianAdapter", "SQLiteStore",
         .product(name: "MoonShineCore", package: "MoonShineCore"),
       ]),
     .testTarget(

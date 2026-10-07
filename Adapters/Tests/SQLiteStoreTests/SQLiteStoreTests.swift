@@ -41,6 +41,7 @@ import Testing
     let issues: [ImportIssue] = [
       .vault(path: "Notes/a.md", line: 3, problem: VaultProblem(.malformedYAML)),
       .vault(path: "Notes/b.md", line: nil, problem: VaultProblem(.unreadable, key: "lines[2]")),
+      .vaultWide(VaultProblem(.budgetNoteMissing)),
     ]
     let store = try SQLiteStore(path: temporaryDatabasePath())
     try await store.commit(
@@ -180,7 +181,7 @@ import Testing
     var workspace = Workspace(timeZone: .gmt)
     let build = clock.measure {
       workspace = Importer().makeWorkspace(
-        tasks: source, vault: vault, identities: &identities, now: first)
+        tasks: source, vault: vault, storedLines: [], identities: &identities, now: first)
     }
     let commit = try await clock.measure {
       try await store.commit(workspace, identities: identities, expectedVersion: 0, at: first)

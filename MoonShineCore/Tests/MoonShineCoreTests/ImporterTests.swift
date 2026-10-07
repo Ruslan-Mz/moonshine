@@ -7,12 +7,13 @@ import Testing
   let now = Date(timeIntervalSince1970: 1_790_000_000)
 
   let vault = VaultSnapshot(
-    lines: [
-      SourceLine(
-        key: "violin", name: "Violin", block: "Creative", state: .active, tags: ["violin"]),
-      SourceLine(
-        key: "morning", name: "Morning", block: "Foundation", state: .active, tags: ["Утро"]),
-    ],
+    lines: .read(
+      [
+        SourceLine(
+          key: "violin", name: "Violin", block: "Creative", state: .active, tags: ["violin"]),
+        SourceLine(
+          key: "morning", name: "Morning", block: "Foundation", state: .active, tags: ["Утро"]),
+      ], complete: true),
     artifacts: [
       SourceArtifact(
         key: "a26-02", title: "Partita", lineKeys: ["violin"], status: .inProgress,
@@ -43,7 +44,8 @@ import Testing
   }
 
   func run(_ source: TaskSourceSnapshot, identities: inout IdentityMap) -> Workspace {
-    Importer().makeWorkspace(tasks: source, vault: vault, identities: &identities, now: now)
+    Importer().makeWorkspace(
+      tasks: source, vault: vault, storedLines: [], identities: &identities, now: now)
   }
 
   func run(_ source: TaskSourceSnapshot) -> Workspace {

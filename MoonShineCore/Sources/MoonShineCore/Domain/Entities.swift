@@ -261,6 +261,8 @@ public enum ImportIssue: Hashable, Sendable {
   case unknownLineKey(LineKey, in: String)
   /// `path` is vault-relative; `line` is the note's line number, when known.
   case vault(path: String, line: Int?, problem: VaultProblem)
+  /// A problem of the whole vault that belongs to no note (`budgetNoteMissing`).
+  case vaultWide(VaultProblem)
 }
 
 /// What went wrong with one vault note. Never carries note content: `key` is a contract key
@@ -284,6 +286,10 @@ public struct VaultProblem: Hashable, Sendable, CustomStringConvertible {
     case symlinkSkipped
     /// The resolved file lies outside the vault folder.
     case outsideVault
+    /// No note has `moonshine: budget` (vault-wide). A rejected note may be the budget note.
+    case budgetNoteMissing
+    /// Another note has `moonshine: budget`; the first by path is the budget note.
+    case budgetNoteDuplicate
   }
 
   public let kind: Kind
