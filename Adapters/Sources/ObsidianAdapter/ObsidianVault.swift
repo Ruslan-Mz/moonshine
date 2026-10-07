@@ -14,13 +14,15 @@ public struct ObsidianVault: Sendable {
 
   public func read() throws(VaultReadError) -> VaultRead {
     let scan = try VaultScan.notes(in: root, limits: limits)
-    let budget = BudgetNote.marked(in: scan.notes)
+    let marked = BudgetNote.marked(in: scan.notes)
     // `lines:` is read from S3b-2b on; until then the lines are unavailable, never empty.
     return VaultRead(
-      lines: .unavailable, issues: scan.issues + BudgetNote.issues(for: budget),
+      lines: .unavailable,
+      issues: scan.issues + BudgetNote.issues(marked: marked, rejected: scan.rejectedMarks),
       notesFound: scan.noteCount, frontmatterRead: scan.notes.count,
       rejected: Self.count(scan.noteIssues), skipped: Self.count(scan.walkIssues),
-      anchorLikeAccepted: scan.anchorLikeAccepted, budgetNotes: budget.count)
+      anchorLikeAccepted: scan.anchorLikeAccepted,
+      budget: BudgetNote.status(marked: marked, rejected: scan.rejectedMarks))
   }
 
   private static func count(_ issues: [ImportIssue]) -> [VaultProblem.Kind: Int] {
@@ -47,8 +49,8 @@ public struct VaultRead: Sendable {
   /// Notes accepted although their frontmatter has anchor-like text: an `&` that may start an
   /// anchor, with no alias to use it.
   public let anchorLikeAccepted: Int
-  /// Notes with `moonshine: budget`; the first by path is the budget note.
-  public let budgetNotes: Int
+  /// The budget note, or why there is none.
+  public let budget: BudgetNoteStatus
 
   /// Counts only: never a path, a note name or a value from a note. Every kind is listed,
   /// zeros included, so an anchor rejection can never be missed.
@@ -58,7 +60,7 @@ public struct VaultRead: Sendable {
       .unreadable, .notUTF8, .frontmatterTooLarge, .malformedYAML, .yamlTooComplex, .yamlAnchor,
       .yamlDirective,
     ]
-    var lines = [
+    return [
       "vault: \(notesFound) notes found · \(frontmatterRead) frontmatter read",
       "rejected notes: \(rejectedCount) ("
         + Self.list(rejected, rejectedKinds.map { ($0, $0.rawValue) }) + ")",
@@ -71,14 +73,17 @@ public struct VaultRead: Sendable {
             (.symlinkSkipped, "symlinks"), (.outsideVault, "outside vault"),
             (.unreadable, "unreadable entries"),
           ]),
-      "budget note: "
-        + (budgetNotes == 0
-          ? "missing" : budgetNotes == 1 ? "found" : "\(budgetNotes) found, first by path used"),
+      "budget note: " + budgetLabel,
     ]
-    if budgetNotes == 0 && rejectedCount > 0 {
-      lines.append("the budget note may be among the rejected notes")
+  }
+
+  private var budgetLabel: String {
+    switch budget {
+    case .found: "found"
+    case .missing: "missing"
+    case .rejected(let kind): "rejected (\(kind.rawValue))"
+    case .ambiguous(let marked): "\(marked) marked notes"
     }
-    return lines
   }
 
   /// `name count` for each kind in the given order, zeros included.

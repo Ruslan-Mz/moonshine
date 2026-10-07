@@ -290,10 +290,14 @@ public struct VaultProblem: Hashable, Sendable, CustomStringConvertible {
     case symlinkSkipped
     /// The resolved file lies outside the vault folder.
     case outsideVault
-    /// No note has `moonshine: budget` (vault-wide). A rejected note may be the budget note.
+    /// No note has `moonshine: budget` (vault-wide), rejected notes searched too. A note that
+    /// cannot be read or whose frontmatter cannot be extracted cannot be searched.
     case budgetNoteMissing
-    /// Another note has `moonshine: budget`; the first by path is the budget note.
+    /// More than one note has `moonshine: budget`, parsed or rejected; set on each of them,
+    /// and none is the budget note.
     case budgetNoteDuplicate
+    /// The one note with `moonshine: budget` was rejected; its other problem names the kind.
+    case budgetNoteRejected
   }
 
   public let kind: Kind
