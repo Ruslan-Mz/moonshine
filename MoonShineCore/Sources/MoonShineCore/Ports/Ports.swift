@@ -160,13 +160,13 @@ public struct SourceTask: Sendable {
 // MARK: - Vault records
 
 public struct VaultSnapshot: Sendable {
-  public let lines: [SourceLine]
+  public let lines: VaultLines
   public let artifacts: [SourceArtifact]
   public let notes: [SourceNote]
   public let issues: [ImportIssue]
 
   public init(
-    lines: [SourceLine], artifacts: [SourceArtifact], notes: [SourceNote],
+    lines: VaultLines, artifacts: [SourceArtifact], notes: [SourceNote],
     issues: [ImportIssue] = []
   ) {
     self.lines = lines
@@ -176,7 +176,26 @@ public struct VaultSnapshot: Sendable {
   }
 }
 
-public struct SourceLine: Sendable {
+/// What the vault said about its lines. "Could not read the lines" is not "there are no lines":
+/// only a clean read may soft-delete a stored line (`Importer.makeWorkspace`).
+public enum VaultLines: Equatable, Sendable {
+  /// The budget note is missing or rejected, or its `lines:` is missing or not a list.
+  case unavailable
+  /// `complete` is false when any `lines:` item was skipped.
+  case read([SourceLine], complete: Bool)
+
+  /// The lines that were read; none when unavailable.
+  public var read: [SourceLine] {
+    if case .read(let lines, _) = self { lines } else { [] }
+  }
+
+  /// A clean read: the budget note was found, `lines:` parsed and no item skipped.
+  public var isComplete: Bool {
+    if case .read(_, complete: true) = self { true } else { false }
+  }
+}
+
+public struct SourceLine: Equatable, Sendable {
   public let key: LineKey
   public let name: String
   public let emoji: String?

@@ -318,7 +318,8 @@ func problems(_ issues: [ImportIssue]) -> [String] {
 
 @Suite struct VaultScanTests {
   @Test func readsEveryFixtureNoteWithoutIssues() throws {
-    let (notes, issues) = try VaultScan.notes(in: fixtureVault)
+    let scan = try VaultScan.notes(in: fixtureVault)
+    let (notes, issues) = (scan.notes, scan.issues)
     #expect(notes.count == 6)
     #expect(notes.first?.path == "00_Strategy/Hours_budget_by_line.md")
     #expect(issues.isEmpty)
@@ -329,7 +330,8 @@ func problems(_ issues: [ImportIssue]) -> [String] {
     try vault.write("good.md", note("type: x"))
     try vault.write("plain.md", "# No frontmatter\n")
     try vault.write("Bad/broken.md", note("a: [unclosed"))
-    let (notes, issues) = try VaultScan.notes(in: vault.root)
+    let scan = try VaultScan.notes(in: vault.root)
+    let (notes, issues) = (scan.notes, scan.issues)
     #expect(notes.map(\.path) == ["good.md"])
     #expect(problems(issues) == ["Bad/broken.md:3:malformedYAML"])
   }
@@ -341,7 +343,7 @@ func problems(_ issues: [ImportIssue]) -> [String] {
     try vault.write("b.md", "---\ntitle: \(secret)\n")
     try vault.write(
       "c.md", Data("---\ntitle: \(secret) ".utf8) + Data([0xFF]) + Data("\n---\n".utf8))
-    let (_, issues) = try VaultScan.notes(in: vault.root)
+    let issues = try VaultScan.notes(in: vault.root).issues
     #expect(issues.count == 3)
     #expect(!"\(issues)".contains(secret))
   }

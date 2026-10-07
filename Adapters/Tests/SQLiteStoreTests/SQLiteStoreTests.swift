@@ -41,6 +41,7 @@ import Testing
     let issues: [ImportIssue] = [
       .vault(path: "Notes/a.md", line: 3, problem: VaultProblem(.malformedYAML)),
       .vault(path: "Notes/b.md", line: nil, problem: VaultProblem(.unreadable, key: "lines[2]")),
+      .vaultWide(VaultProblem(.budgetNoteMissing)),
     ]
     let store = try SQLiteStore(path: temporaryDatabasePath())
     try await store.commit(

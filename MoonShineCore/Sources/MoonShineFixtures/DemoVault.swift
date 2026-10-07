@@ -14,32 +14,33 @@ public struct DemoVault: NoteProvider {
   private static let year = "00_Strategy/Years/Artifacts_2026.md"
 
   public static let snapshot = VaultSnapshot(
-    lines: [
-      SourceLine(
-        key: "violin", name: "Violin", emoji: "🎻", block: "Creative", state: .active,
-        budgetHoursPerWeek: 6, parentLink: "[[Artifacts_2026]]", tags: ["violin"]),
-      SourceLine(
-        key: "piano", name: "Piano", emoji: "🎹", block: "Creative", state: .maintenance,
-        budgetHoursPerWeek: 1.25, tags: ["piano"]),
-      SourceLine(
-        key: "calligraphy", name: "Calligraphy", emoji: "✒️", block: "Creative", state: .paused,
-        budgetHoursPerWeek: 0, tags: ["calligraphy"]),
-      SourceLine(
-        key: "italian", name: "Italiano", emoji: "🇮🇹", block: "Languages", state: .active,
-        budgetHoursPerWeek: 2, tags: ["italian"]),
-      SourceLine(
-        key: "math", name: "Математика", emoji: "📐", block: "Foundation", state: .active,
-        budgetHoursPerWeek: 1.5, folders: ["Study"]),
-      SourceLine(
-        key: "calisthenics", name: "Calisthenics", emoji: "💪", block: "Foundation",
-        state: .active, budgetHoursPerWeek: 2, tags: ["calisthenics"]),
-      SourceLine(
-        key: "research", name: "Research", emoji: "🔬", block: "Professional", state: .active,
-        budgetHoursPerWeek: 4, parentLink: "[[Artifacts_2026]]", tags: ["исследование"]),
-      SourceLine(
-        key: "work", name: "Client work", emoji: "💻", block: "Professional", state: .active,
-        budgetHoursPerWeek: 13, folders: ["Work"]),
-    ],
+    lines: .read(
+      [
+        SourceLine(
+          key: "violin", name: "Violin", emoji: "🎻", block: "Creative", state: .active,
+          budgetHoursPerWeek: 6, parentLink: "[[Artifacts_2026]]", tags: ["violin"]),
+        SourceLine(
+          key: "piano", name: "Piano", emoji: "🎹", block: "Creative", state: .maintenance,
+          budgetHoursPerWeek: 1.25, tags: ["piano"]),
+        SourceLine(
+          key: "calligraphy", name: "Calligraphy", emoji: "✒️", block: "Creative", state: .paused,
+          budgetHoursPerWeek: 0, tags: ["calligraphy"]),
+        SourceLine(
+          key: "italian", name: "Italiano", emoji: "🇮🇹", block: "Languages", state: .active,
+          budgetHoursPerWeek: 2, tags: ["italian"]),
+        SourceLine(
+          key: "math", name: "Математика", emoji: "📐", block: "Foundation", state: .active,
+          budgetHoursPerWeek: 1.5, folders: ["Study"]),
+        SourceLine(
+          key: "calisthenics", name: "Calisthenics", emoji: "💪", block: "Foundation",
+          state: .active, budgetHoursPerWeek: 2, tags: ["calisthenics"]),
+        SourceLine(
+          key: "research", name: "Research", emoji: "🔬", block: "Professional", state: .active,
+          budgetHoursPerWeek: 4, parentLink: "[[Artifacts_2026]]", tags: ["исследование"]),
+        SourceLine(
+          key: "work", name: "Client work", emoji: "💻", block: "Professional", state: .active,
+          budgetHoursPerWeek: 13, folders: ["Work"]),
+      ], complete: true),
     artifacts: [
       SourceArtifact(
         key: "a26-01", title: "First paper draft submitted", lineKeys: ["research"],

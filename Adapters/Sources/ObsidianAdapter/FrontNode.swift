@@ -22,6 +22,17 @@ struct FrontNode: Equatable {
   /// Line in the note (the frontmatter starts on line 2).
   let line: Int
 
+  /// The value of `key` when this node is a mapping.
+  subscript(key: String) -> FrontNode? {
+    guard case .mapping(let entries) = value else { return nil }
+    return entries.first { $0.key == key }?.node
+  }
+
+  /// The text of a scalar node; nil for null, sequences and mappings.
+  var scalar: String? {
+    if case .scalar(let text) = value { text } else { nil }
+  }
+
   /// Parses frontmatter text; the root must be a mapping.
   static func parse(_ text: String, limits: VaultLimits) throws(FrontmatterFailure) -> FrontNode {
     // libyaml parses flow collections recursively: reject deep `[[[…` before it sees them.

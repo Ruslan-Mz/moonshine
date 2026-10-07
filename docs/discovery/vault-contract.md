@@ -16,7 +16,13 @@ Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault write
 
 ## 1. Lines — the budget note
 
-Identified only by `moonshine: budget` in frontmatter (no file-name fallback: a file name is the owner's data). Exactly one; none → the typed problem `budgetNoteMissing`; more than one → banner, first by path wins.
+Identified only by `moonshine: budget` at the top level of the frontmatter (no file-name fallback: a file name is the owner's data). Exactly one; none → the vault-wide problem `budgetNoteMissing` (no path); more than one → `budgetNoteDuplicate` on each later note, first by path wins.
+
+The reader says whether it could read the lines, not only which ones it read (2026-10-07):
+
+- **Unavailable** — the budget note is missing or rejected, or its `lines:` is missing or not a list. The stored lines stay as they are and keep mapping tasks.
+- **Read with skipped items** — the lines read are updated; no stored line is removed.
+- **Clean read** — note found, list parsed, no item skipped. Only then does a line missing from the list leave the store (soft delete).
 
 ```yaml
 moonshine: budget # required marker: the only way the budget note is found
@@ -128,7 +134,7 @@ artifacts:
 ## 3. Validation
 
 - Invalid YAML or a `lines:` item missing a required key → one calm banner with note path and line number; the rest of the vault still loads. Never a crash.
-- Problems are typed (`VaultProblem`: a kind and, at most, a contract key name) with the note's vault-relative path and line; they never carry note content. A vault-wide problem (`budgetNoteMissing`) belongs to no note, so it is reported without a path (its issue shape lands with S3b-2).
+- Problems are typed (`VaultProblem`: a kind and, at most, a contract key name) with the note's vault-relative path and line; they never carry note content. A vault-wide problem (`budgetNoteMissing`) belongs to no note, so it is reported without a path (`ImportIssue.vaultWide`).
 - The vault is untrusted input (synced or pasted from elsewhere). One guard per threat:
   - **leaving the vault:** symbolic links are skipped (`symlinkSkipped`); every resolved path must stay under the resolved vault folder (`outsideVault`; defence in depth behind the symlink skip, for a link swapped in during the walk); a folder the walk cannot enter is `unreadable`, never a silent gap;
   - **size:** at most 20,000 notes (more stops the read with a typed error; nothing is imported), frontmatter at most 64 KiB (`frontmatterTooLarge`);
