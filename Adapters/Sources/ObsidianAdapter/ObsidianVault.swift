@@ -83,11 +83,24 @@ public struct VaultRead: Sendable {
     issues.compactMap { issue in
       switch issue {
       case .vault(let path, let line, let problem):
-        "\(problem.kind.rawValue) \(path)" + (line.map { ":\($0)" } ?? "")
+        "\(problem.kind.rawValue) \(Self.printable(path))" + (line.map { ":\($0)" } ?? "")
       case .vaultWide(let problem): problem.kind.rawValue
       default: nil
       }
     }
+  }
+
+  /// A file name is untrusted: every control and format character (newlines, ESC, bidi
+  /// controls) is shown as `\u{…}`, and a backslash as `\\`, so a name cannot rewrite, hide
+  /// or forge a printed line.
+  static func printable(_ path: String) -> String {
+    path.unicodeScalars.map { scalar in
+      switch scalar.properties.generalCategory {
+      case .control, .format, .lineSeparator, .paragraphSeparator:
+        "\\u{\(String(scalar.value, radix: 16, uppercase: true))}"
+      default: scalar == "\\" ? "\\\\" : String(scalar)
+      }
+    }.joined()
   }
 
   private var budgetLabel: String {

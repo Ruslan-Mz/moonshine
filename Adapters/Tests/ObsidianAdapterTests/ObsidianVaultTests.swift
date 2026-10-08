@@ -171,6 +171,14 @@ import Testing
     #expect(!locations.joined().contains(secret))
   }
 
+  @Test func problemLocationsShowControlAndFormatCharactersInAPathAsEscapes() throws {
+    let vault = try TemporaryVault()
+    try vault.write("a\nb\u{1B}[2K\u{202E}c\\d.md", note("a: [unclosed"))
+    let locations = try ObsidianVault(root: vault.root).read().problemLocations
+    #expect(locations.first == "malformedYAML a\\u{A}b\\u{1B}[2K\\u{202E}c\\\\d.md:3")
+    #expect(!locations.joined().unicodeScalars.contains { $0.value < 0x20 || $0 == "\u{202E}" })
+  }
+
   @Test func theCountsReportCarriesNoPath() throws {
     let report = try ObsidianVault(root: try troubledVault(budget: false).root).read().report
     #expect(!report.joined().contains(".md"))
