@@ -13,10 +13,6 @@ import Testing
     #expect(read.issues.isEmpty)
   }
 
-  @Test func linesStayUnavailableUntilTheReaderParsesThem() throws {
-    #expect(try ObsidianVault(root: fixtureVault).read().lines == .unavailable)
-  }
-
   @Test func onlyTheTopLevelMarkerWithTheExactValueMarksTheBudgetNote() throws {
     let vault = try TemporaryVault()
     try vault.write("a.md", note("moonshine: Budget"))
@@ -132,19 +128,22 @@ import Testing
         "notes with anchor-like text and no alias, accepted: 1",
         "skipped: symlinks 1 · outside vault 0 · unreadable entries 0",
         "budget note: missing",
+        "lines: unavailable",
+        "line problems: missingKey 0 · invalidValue 0 · duplicateLineId 0 · keyIgnored 0",
+        "foundation lines: 0 · with a floor: 0 · with a language: 0",
       ])
   }
 
   @Test func theReportNamesTheBudgetNoteStatus() throws {
     let found = try ObsidianVault(root: try troubledVault(budget: true).root).read()
-    #expect(found.report.last == "budget note: found")
+    #expect(found.report.contains("budget note: found"))
     let vault = try TemporaryVault()
     try vault.write("a.md", note("type: x"))
-    #expect(try ObsidianVault(root: vault.root).read().report.last == "budget note: missing")
+    #expect(try ObsidianVault(root: vault.root).read().report.contains("budget note: missing"))
     try vault.write("b.md", note("moonshine: budget\na: [unclosed"))
     #expect(
-      try ObsidianVault(root: vault.root).read().report.last
-        == "budget note: rejected (malformedYAML)")
+      try ObsidianVault(root: vault.root).read().report.contains(
+        "budget note: rejected (malformedYAML)"))
   }
 
   @Test func theReportNamesDuplicateBudgetNotesWithoutTheirPaths() throws {
@@ -152,7 +151,7 @@ import Testing
     try vault.write("Secret A.md", note("moonshine: budget"))
     try vault.write("Secret B.md", note("moonshine: budget"))
     let report = try ObsidianVault(root: vault.root).read().report
-    #expect(report.last == "budget note: 2 marked notes")
+    #expect(report.contains("budget note: 2 marked notes"))
     #expect(!report.joined().contains("Secret"))
   }
 

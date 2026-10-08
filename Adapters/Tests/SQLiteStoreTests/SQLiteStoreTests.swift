@@ -50,6 +50,20 @@ import Testing
     #expect(try await store.workspace().issues == issues)
   }
 
+  @Test func aLineStoredBeforeTheVersionPointTwoKeysReadsWithoutThem() throws {
+    let attrs = Data(#"{"parentLink":null,"tags":["a"],"folders":[],"projects":[]}"#.utf8)
+    let decoded = try JSONDecoder().decode(LineRecord.Attrs.self, from: attrs)
+    let stored = Line(
+      id: LineID(uuid: UUID()), refs: [], key: "a", name: "A", emoji: nil, block: "B",
+      state: .active, budgetHoursPerWeek: nil, parentLink: nil, taskRules: LineTaskRules(),
+      foundation: true, floorHoursPerDay: 1, language: "de")
+    var record = LineRecord(stored, ordinal: 0, removedAt: nil)
+    record.attrs = decoded
+    let line = try record.entity(refs: [])
+    #expect(!line.foundation && line.floorHoursPerDay == nil && line.language == nil)
+    #expect(line.taskRules.tags == ["a"])
+  }
+
   @Test func migratesAnEmptyDatabaseOnceWithEveryTableAndEffectiveDateColumns() async throws {
     let path = temporaryDatabasePath()
     let store = try SQLiteStore(path: path)

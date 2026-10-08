@@ -15,14 +15,20 @@ public struct ObsidianVault: Sendable {
   public func read() throws(VaultReadError) -> VaultRead {
     let scan = try VaultScan.notes(in: root, limits: limits)
     let marked = BudgetNote.marked(in: scan.notes)
-    // `lines:` is read from S3b-2b on; until then the lines are unavailable, never empty.
+    let budget = BudgetNote.status(marked: marked, rejected: scan.rejectedMarks)
+    // Only the one marked note that parsed is read; otherwise the lines are unavailable.
+    let lines =
+      if budget == .found, let note = marked.first { BudgetLines.read(note) } else {
+        BudgetLines(lines: .unavailable, issues: [], skipped: 0)
+      }
     return VaultRead(
-      lines: .unavailable,
-      issues: scan.issues + BudgetNote.issues(marked: marked, rejected: scan.rejectedMarks),
+      lines: lines.lines,
+      issues: scan.issues + BudgetNote.issues(marked: marked, rejected: scan.rejectedMarks)
+        + lines.issues,
       notesFound: scan.noteCount, frontmatterRead: scan.notes.count,
       rejected: Self.count(scan.noteIssues), skipped: Self.count(scan.walkIssues),
-      anchorLikeAccepted: scan.anchorLikeAccepted,
-      budget: BudgetNote.status(marked: marked, rejected: scan.rejectedMarks))
+      anchorLikeAccepted: scan.anchorLikeAccepted, budget: budget,
+      linesSkipped: lines.skipped, lineProblems: Self.count(lines.issues))
   }
 
   private static func count(_ issues: [ImportIssue]) -> [VaultProblem.Kind: Int] {
@@ -51,6 +57,10 @@ public struct VaultRead: Sendable {
   public let anchorLikeAccepted: Int
   /// The budget note, or why there is none.
   public let budget: BudgetNoteStatus
+  /// `lines:` items skipped for a missing, invalid or duplicate value.
+  public let linesSkipped: Int
+  /// Problems in the budget note's `lines:`, by kind.
+  public let lineProblems: [VaultProblem.Kind: Int]
 
   /// Counts only: never a path, a note name or a value from a note. Every kind is listed,
   /// zeros included, so an anchor rejection can never be missed.
@@ -74,6 +84,14 @@ public struct VaultRead: Sendable {
             (.unreadable, "unreadable entries"),
           ]),
       "budget note: " + budgetLabel,
+      "lines: " + linesLabel,
+      "line problems: "
+        + Self.list(
+          lineProblems,
+          [.missingKey, .invalidValue, .duplicateLineId, .keyIgnored].map { ($0, $0.rawValue) }),
+      "foundation lines: \(lines.read.count { $0.foundation })"
+        + " · with a floor: \(lines.read.count { $0.floorHoursPerDay != nil })"
+        + " · with a language: \(lines.read.count { $0.language != nil })",
     ]
   }
 
@@ -110,6 +128,10 @@ public struct VaultRead: Sendable {
     case .rejected(let kind): "rejected (\(kind.rawValue))"
     case .ambiguous(let marked): "\(marked) marked notes"
     }
+  }
+
+  private var linesLabel: String {
+    lines == .unavailable ? "unavailable" : "\(lines.read.count) read · \(linesSkipped) skipped"
   }
 
   /// `name count` for each kind in the given order, zeros included.

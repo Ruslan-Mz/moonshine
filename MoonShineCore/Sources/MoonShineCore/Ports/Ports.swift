@@ -205,11 +205,15 @@ public struct SourceLine: Equatable, Sendable {
   public let budgetHoursPerWeek: Double?
   public let parentLink: String?
   public let taskRules: LineTaskRules
+  public let foundation: Bool
+  public let floorHoursPerDay: Double?
+  public let language: String?
 
   public init(
     key: LineKey, name: String, emoji: String? = nil, block: String, state: LineState,
     budgetHoursPerWeek: Double? = nil, parentLink: String? = nil,
-    tags: [String] = [], folders: [String] = [], projects: [String] = []
+    tags: [String] = [], folders: [String] = [], projects: [String] = [],
+    foundation: Bool = false, floorHoursPerDay: Double? = nil, language: String? = nil
   ) {
     self.key = key
     self.name = name
@@ -219,6 +223,9 @@ public struct SourceLine: Equatable, Sendable {
     self.budgetHoursPerWeek = budgetHoursPerWeek
     self.parentLink = parentLink
     self.taskRules = LineTaskRules(tags: tags, folders: folders, projects: projects)
+    self.foundation = foundation
+    self.floorHoursPerDay = floorHoursPerDay
+    self.language = language
   }
 }
 

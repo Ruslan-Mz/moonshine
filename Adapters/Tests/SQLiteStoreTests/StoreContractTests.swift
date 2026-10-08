@@ -47,6 +47,29 @@ import Testing
   }
 
   @Test(arguments: StoreKind.allCases)
+  func versionPointTwoLineKeysReadBackExactly(kind: StoreKind) async throws {
+    let store = try kind.make()
+    let lines: VaultLines = .read(
+      [
+        SourceLine(
+          key: "core", name: "Core", block: "Foundation", state: .active, budgetHoursPerWeek: 3,
+          foundation: true, floorHoursPerDay: 0.75, language: "zh-Hant"),
+        SourceLine(key: "plain", name: "Plain", block: "Life", state: .paused),
+      ], complete: true)
+    var identities = IdentityMap()
+    let workspace = Importer().makeWorkspace(
+      tasks: try fixtureSnapshot(), vault: VaultSnapshot(lines: lines, artifacts: [], notes: []),
+      storedLines: [], identities: &identities, now: first)
+    try await store.commit(workspace, identities: identities, expectedVersion: 0, at: first)
+
+    let read = try await store.workspace().lines
+    #expect(read == workspace.lines)
+    #expect(read.map(\.foundation) == [true, false])
+    #expect(read.map(\.floorHoursPerDay) == [0.75, nil])
+    #expect(read.map(\.language) == ["zh-Hant", nil])
+  }
+
+  @Test(arguments: StoreKind.allCases)
   func reimportKeepsEveryIDAndAddsNothing(kind: StoreKind) async throws {
     let store = try kind.make()
     let service = importer(try fixtureSnapshot(), into: store)

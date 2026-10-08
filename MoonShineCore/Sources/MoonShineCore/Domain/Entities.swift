@@ -37,10 +37,17 @@ public struct Line: Hashable, Sendable, Identifiable {
   public let budgetHoursPerWeek: Double?
   public let parentLink: String?
   public let taskRules: LineTaskRules
+  /// Foundation tier (vault `foundation: true`): shown first, never "quiet".
+  public let foundation: Bool
+  /// Daily floor of a foundation line (vault `floor_h_day`); nil on every other line.
+  public let floorHoursPerDay: Double?
+  /// BCP-47 tag (vault `language`); stored only, a content-language hint later.
+  public let language: String?
 
   public init(
     id: LineID, refs: [ExternalRef], key: LineKey, name: String, emoji: String?, block: String,
-    state: LineState, budgetHoursPerWeek: Double?, parentLink: String?, taskRules: LineTaskRules
+    state: LineState, budgetHoursPerWeek: Double?, parentLink: String?, taskRules: LineTaskRules,
+    foundation: Bool = false, floorHoursPerDay: Double? = nil, language: String? = nil
   ) {
     self.id = id
     self.refs = refs
@@ -52,6 +59,9 @@ public struct Line: Hashable, Sendable, Identifiable {
     self.budgetHoursPerWeek = budgetHoursPerWeek
     self.parentLink = parentLink
     self.taskRules = taskRules
+    self.foundation = foundation
+    self.floorHoursPerDay = floorHoursPerDay
+    self.language = language
   }
 }
 
@@ -298,6 +308,17 @@ public struct VaultProblem: Hashable, Sendable, CustomStringConvertible {
     case budgetNoteDuplicate
     /// The one note with `moonshine: budget` was rejected; its other problem names the kind.
     case budgetNoteRejected
+    /// A required key is missing: `lines` in the budget note, or a required key of a line
+    /// item, which is then skipped.
+    case missingKey
+    /// A value has the wrong type, shape or range; its line item is skipped, so the stored
+    /// line stays as it was. `lines` that is not a list leaves the lines unavailable.
+    case invalidValue
+    /// More than one line item has this `id`; every one of them is skipped.
+    case duplicateLineId
+    /// A value the contract ignores where it stands (`floor_h_day` without `foundation: true`);
+    /// the line item is kept without it.
+    case keyIgnored
   }
 
   public let kind: Kind
