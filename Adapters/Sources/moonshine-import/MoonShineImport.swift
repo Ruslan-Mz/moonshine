@@ -46,6 +46,12 @@ import SQLiteStore
           try await incremental(minutes: minutes)
         case ("probe", nil): try await probe()
         case ("vault", "--paths") where arguments.count == 3:
+          // Checked before anything is read: paths go only to the owner's own terminal.
+          if let refusal = pathsRefusal(output: STDOUT_FILENO) {
+            // To standard error: standard output is the pipe or file being refused.
+            FileHandle.standardError.write(Data((refusal + "\n").utf8))
+            exit(2)
+          }
           try vault(at: arguments[2], paths: true)
         case ("vault", let folder?) where arguments.count == 2: try vault(at: folder, paths: false)
         default: usage()
@@ -150,6 +156,14 @@ import SQLiteStore
         let age = latest.map { "\(Int(Date().timeIntervalSince($0) / 60)) min ago" } ?? "n/a"
         print("probe: tasks \(probe.taskCount) · latest change \(age)")
       }
+    }
+
+    /// Why `vault --paths` refuses to run, or nil when `output` is a terminal. A pipe or a file
+    /// (an agent's tool call, a redirect into a log) is refused.
+    static func pathsRefusal(output: Int32) -> String? {
+      guard isatty(output) == 0 else { return nil }
+      return "vault --paths prints note paths and is for the owner's own terminal only; "
+        + "it refuses to run when its output is a pipe or a file. Nothing was read."
     }
 
     /// Reads the vault and prints its counts; with `paths` (owner only) each problem's kind,
