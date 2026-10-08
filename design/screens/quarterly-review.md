@@ -9,7 +9,7 @@ related: ["[[week]]"]
 
 # Quarterly review (draft-2)
 
-The owner's end-of-quarter ritual: look back at the quarter's artifacts and lines, then set up the next quarter. **Read-only.** The app shows facts and questions. Decisions are written in the quarter note in Obsidian (writes come in the Act phase).
+The owner's end-of-quarter ritual: look back at the quarter's artifacts and lines, then set up the next quarter. **Read-only.** The app shows facts and questions. Decisions are written in the quarter note in Obsidian (MoonShine writes to the vault from the Write phase, ADR-0015).
 
 Opened from: ⌘K ("Quarterly review"), a second footer link `Open quarter review` that R1 adds to the Quarter focus card (next to phase 1's `Open quarter note`, `components.md`) and, during the first 14 days of a quarter, a link in the Today rail. No sidebar item for now.
 

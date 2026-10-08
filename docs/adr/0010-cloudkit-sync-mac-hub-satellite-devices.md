@@ -53,7 +53,7 @@ Option 3 is revisited if real conflicts on plans appear in the conflict log.
 ### Consequences
 
 - Good — iPad and iPhone work offline and converge; no server; data stays in the owner's iCloud.
-- Good — the importer stays on the Mac, matching ADR-0003; iPad shows provider data read-only until the Act phase writes.
+- Good — the importer stays on the Mac, matching ADR-0003; iPad shows provider data read-only until the Act phase writes (vault notes: commands queued for the Mac from the Write phase, ADR-0015).
 - Bad — requires the paid Apple Developer Program (CloudKit entitlement, device builds beyond 7-day provisioning).
 - Bad — per-field LWW can drop one of two near-simultaneous edits to the same field; mitigated by the conflict log (shown in Settings) and by the rarity of single-user conflicts.
 - Bad — CloudKit ties sync to Apple; an own backend (phase 8) would need a second sync adapter behind the same port.

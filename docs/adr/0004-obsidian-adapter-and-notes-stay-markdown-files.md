@@ -35,6 +35,8 @@ The owner's rule: goals, artifacts, plans and budgets live in Obsidian; OmniFocu
 
 **Chosen option: "3"**, because it keeps Obsidian as the source of truth without fragile parsing, and makes the future notes module "just another markdown folder", so switching away from Obsidian is not a migration.
 
+**Amendment (2026-10-06, ADR-0015).** Vault writes start in the Write phase, not the Act phase, and only through the vault commands of ADR-0015 (`CreateNote`, `AppendToNote`, `UpdateNoteBody`, `SetNoteProperty`) on the `CommandBus`, with a precondition, byte fidelity and undo. Notes stay Markdown files that Obsidian also edits; there is no own notes store.
+
 ### Consequences
 
 - Good — the owner already uses frontmatter (`type`, `parent`, `related`, `review_cadence`).
@@ -43,4 +45,4 @@ The owner's rule: goals, artifacts, plans and budgets live in Obsidian; OmniFocu
 
 ### Confirmation
 
-Parser tests on fixture notes; invalid YAML shows a banner, never a crash; until the Act phase no code path writes to the vault (CI grep).
+Parser tests on fixture notes; invalid YAML shows a banner, never a crash; until the Write phase no code path writes to the vault: a CI check that fails on file-writing calls in the Obsidian adapter (added in S3b-3; from the Write phase on, allowed only inside `VaultWriter`).

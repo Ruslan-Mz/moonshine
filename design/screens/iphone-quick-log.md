@@ -16,7 +16,7 @@ related: ["[[platforms]]"]
 
 # iPhone — Quick log and practice timer (draft-2)
 
-The phone writes **time entries** (MoonShine-native data, `platforms.md`). It never writes to OmniFocus or the vault.
+The quick log and the timer write **time entries** (MoonShine-native data, `platforms.md`). They never write to OmniFocus or the vault.
 
 ## Layout
 
@@ -37,13 +37,13 @@ The phone writes **time entries** (MoonShine-native data, `platforms.md`). It ne
 
 ## Data
 
-`TimeEntry { lineID, start, minutes, note, source: quickLog | timer }`. Recent lines = last 7 days of entries, then foundation lines, then the vault order. A timer entry is created on Stop; Pause accumulates.
+`TimeEntry { day, start?, end?, minutes, subject, note, source: manual | timer, session? }` (ADR-0016). The subject is a line, or a task or a project with its line. Recent lines = last 7 days of entries, then foundation lines, then the vault order. A timer session gives one entry per interval: Pause closes an interval and Resume opens the next, so a paused session gives several entries.
 
 ## Behaviour
 
 - One-hand: all controls in the lower two thirds; Save is reachable with the thumb.
-- Starting a timer while one runs asks to stop the first (a single timer at a time).
-- No streaks or goals in the log. The line's rhythm updates after save.
+- One timer at a time (ADR-0016): starting a timer stops the running one at that instant and shows a one-line notice with Undo (`Violin stopped · 25 min · Undo`).
+- No streaks. Targets and day marks are optional and shown as neutral facts (ADR-0016). The line's rhythm updates after save.
 
 ## SwiftUI
 

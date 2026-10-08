@@ -263,12 +263,28 @@ Why horizontal triangles and not vertical: the words are Forward and Back, not U
 
 Phase 1: the Lines (S4) and weekly review (S5) layouts leave room for the third track; no code for takes in phase 1 (`docs/specs/phase-1-see.md`).
 
-### For the next design round (3b)
+### Pending design rounds
 
-The mockups are generated files and are not edited by hand; where a mockup and a spec differ, the spec wins. Items for the designer:
+The mockups are generated files and are not edited by hand; where a mockup and a spec differ, the spec wins. Each item is listed under the earliest phase or slice whose spec needs it (owner, 2026-10-08). No S4 screen needs a redraw: S4 follows the screen specs, which win over the mockups, so there is no "Before S4" list. Items for the designer:
 
-1. **Rise and Dip marks**: redraw as terrain shapes that are not arrows (a rising slope, a falling slope). Until then the triangles stay.
-2. **`Lines.dc.html` — Math's block**: the draft-4 mockup shows 📐 Math under the block `Foundation` and has dropped the `Science` / «Наука» block label; `demo-data.md` keeps Math in **Science** (tier unchanged: active). Restore Science.
-3. **Names in the mockups**: Forward / Back → Rise / Dip (EN, RU, LV, IT, DE); hours `2 h of 6 h budget`.
-4. **Draft-4 items not drawn**: Split View for the take section, the take on the Today rail, RTL marks, the Mac note popover; how a project take is confirmed in the weekly review.
-5. **Draft-3 items**: the day rail on iPad and iPhone (open question 14 above); free time on Today as the rest of the window (`≈ 2 h 25 min free until 22:00` at 16:20); the deadline rule (`screens/settings.md` § Deadlines: the setting, and plain `due 20:35` text and neutral day-rail marks for due dates that are not deadlines); read-only checkboxes on the day rail.
+#### Before phase 2
+
+1. **Rise and Dip marks**: redraw as terrain shapes that are not arrows (a rising slope, a falling slope). Until then the triangles stay. My take is phase 2's first slice.
+2. **Project take**: how a project take is confirmed in the weekly review.
+3. **Project page** (the Hub slice, ADR-0014): tasks, plan, with places reserved for the rendered project note and for the mentions.
+4. **Time tracking on the Mac** (the Timer slice, ADR-0016): the menu bar timer; starting from a row and from ⌘K; tracked intervals on the Today rail with editing; the week table; the reconcile list; the four nudges with the `Break` action; the check mark of a forgotten timer.
+
+#### Before the Write phase
+
+1. **Journal** (ADR-0015): the daily and weekly notes, a pending entry from the iPhone or iPad.
+2. **A ritual**: a template rendered into a draft, written, saved.
+3. **The note view and the editor**: the rendered read-only view, the plain editor with a preview, "Open in Obsidian".
+4. **The conflict screen**: two versions of a note when the precondition fails.
+5. **Settings**: role folders (daily, weekly, project notes, inbox) and the assistant's allowlist.
+
+#### Before 3b
+
+1. **`Lines.dc.html` — Math's block**: the draft-4 mockup shows 📐 Math under the block `Foundation` and has dropped the `Science` / «Наука» block label; `demo-data.md` keeps Math in **Science** (tier unchanged: active). Restore Science.
+2. **Names in the mockups**: Forward / Back → Rise / Dip (EN, RU, LV, IT, DE); hours `2 h of 6 h budget`.
+3. **Draft-4 items not drawn**: Split View for the take section, the take on the Today rail, RTL marks, the Mac note popover.
+4. **Draft-3 items**: the day rail on iPad and iPhone (open question 14 above); free time on Today as the rest of the window (`≈ 2 h 25 min free until 22:00` at 16:20); the deadline rule (`screens/settings.md` § Deadlines: the setting, and plain `due 20:35` text and neutral day-rail marks for due dates that are not deadlines); read-only checkboxes on the day rail.

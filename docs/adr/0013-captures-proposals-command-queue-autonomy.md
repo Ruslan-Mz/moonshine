@@ -82,6 +82,10 @@ Only then is the command executed. If any condition fails, the command becomes p
 
 The classes are fixed defaults now. A per-class setting in Settings comes later (owner decision 2026-10-03).
 
+**Amendment (2026-10-06, ADR-0015).** `AppendJournal` (the owner's dictated words appended to today's daily note) is the one provider command in the `auto` class before the Act phase, from the time the Write and Ask phases both exist; the four conditions above hold. The assistant's read tools return note bodies only from the folders the owner listed in Settings → Assistant, never from a note with `moonshine_ai: false`; while interpreting for `auto` they still return entity titles only (§ Safety). Vault commands created on the iPad or iPhone use the queue under the same once-only rules as other provider commands (§ Execution).
+
+**Amendment (2026-10-07, ADR-0016).** `StartTimer`, `PauseTimer`, `ResumeTimer` and `StopTimer` are native `auto` commands; the subject and any time offset are spans of the utterance and the app resolves the subject itself. `EditTimeEntry` is `auto` only for the entry just stopped; any other edit is a proposal.
+
 ### Where the assistant runs
 
 On each device, against that device's replicated store, through the typed read tools of ADR-0005. The provider key is stored in that device's Keychain. Without a network the capture stays `new` and is interpreted when a connection returns.
@@ -121,7 +125,7 @@ System dictation into a text field, plus an App Intent (Shortcuts, Action button
 
 ### Confirmation
 
-- Core tests: a capture is stored when the AI port fails; a command with two matching tasks never executes as `auto`; a command whose target or value is not a span of the utterance never executes as `auto` (it becomes a draft proposal); before the Act phase a provider command is never `auto`; a failed `auto` command creates a `needs attention` item and an activity-log entry; undo restores the previous state for every native command.
+- Core tests: a capture is stored when the AI port fails; a command with two matching tasks never executes as `auto`; a command whose target or value is not a span of the utterance never executes as `auto` (it becomes a draft proposal); before the Act phase a provider command is never `auto`, except `AppendJournal` (§ Amendment, ADR-0015); a failed `auto` command creates a `needs attention` item and an activity-log entry; undo restores the previous state for every native command.
 - Contract tests for the queue: a provider command created on a non-Mac device is executed once by the Mac; the attempt is recorded before it runs; a command found `executing` after a restart is not re-run until an import resolves it, and goes to the review inbox when the import cannot tell; a failure is reported.
 - The evaluation set runs in CI; the method log records the rate of wrong `auto` actions per release.
 

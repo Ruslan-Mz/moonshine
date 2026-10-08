@@ -21,7 +21,7 @@ Anchors and Top 3 from the replicated store; refreshed by timeline at the top of
 
 ## Behaviour
 
-Tap opens Today (deep link to the anchor or task). Interactive check-off arrives with writes (the Act phase; App Intents).
+Tap opens Today (deep link to the anchor or task). Interactive check-off arrives with writes (the Act phase; App Intents). Timer buttons (start, pause, stop) are allowed before the Act phase, because a timer is native data, not a provider write (ADR-0016).
 
 ## SwiftUI
 

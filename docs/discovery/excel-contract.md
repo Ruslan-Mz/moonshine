@@ -41,5 +41,7 @@ The markers above are examples. The importer reads markers, weekday abbreviation
 ## Import semantics
 
 - Idempotent by (sheet, row label, date): re-importing a sheet replaces that sheet's entries for that source.
-- The workbook stays the source of truth for hours until MoonShine has its own quick log; the import is one-way.
+- The import is one-way. The workbook and MoonShine's own entries (timer, quick log, a confirmed calendar event) both stay sources of hours (ADR-0016, owner decision 2026-10-07); imported entries have source `excel`, a day and minutes, and no clock times.
+- Two sources are compared by **(day, line)**, never summed. When a (day, line) has both native and `excel` entries and their totals differ by more than the tolerance (10 minutes), the pair goes to a **reconcile list**; within the tolerance the native entries stand and nothing is listed. Until the owner decides, the native entries are counted and the cell is marked "two sources".
+- Choices: keep MoonShine · keep the workbook · keep both (different sessions) · the workbook's total is right (the difference becomes one manual entry without clock times). The choice is stored for that (day, line); a re-import does not reopen it unless the workbook's value changed.
 - Context rows feed `Capacity` exceptions; indicator rows feed `Measurement`.
