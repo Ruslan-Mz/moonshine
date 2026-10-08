@@ -14,7 +14,8 @@ struct BudgetLines: Equatable {
     guard let list = root["lines"], list.value != .null else {
       return unavailable(note.path, .missingKey, line: root.line)
     }
-    guard case .sequence(let items) = list.value else {
+    // An empty list is more often a broken edit than "no lines": it would remove them all.
+    guard case .sequence(let items) = list.value, !items.isEmpty else {
       return unavailable(note.path, .invalidValue, line: list.line)
     }
     let ids = Dictionary(items.compactMap { $0["id"]?.scalar }.map { ($0, 1) }, uniquingKeysWith: +)

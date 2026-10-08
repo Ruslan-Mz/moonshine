@@ -130,8 +130,9 @@ import Testing
   }
 
   @Test func aSkippedItemIsReportedOnItsOwnLine() throws {
+    // `other` takes lines 4–7; a changed key moves to the end of its item, line 13.
     let lines = try read(items: other, item(["state": "done"]))
-    #expect(problems(lines.issues) == ["budget.md:12:invalidValue (lines.state)"])
+    #expect(problems(lines.issues) == ["budget.md:13:invalidValue (lines.state)"])
   }
 
   @Test(arguments: ["id", "name", "block", "state"])
@@ -186,17 +187,11 @@ import Testing
     }
   }
 
-  @Test(arguments: ["lines: core", "lines: {a: 1}"])
+  @Test(arguments: ["lines: core", "lines: {a: 1}", "lines: []"])
   func linesThatAreNotAListLeaveTheLinesUnavailable(yaml: String) throws {
     let lines = try read("moonshine: budget\n" + yaml)
     #expect(lines.lines == .unavailable)
     #expect(problems(lines.issues).map(dropLine) == ["budget.md:invalidValue (lines)"])
-  }
-
-  @Test func anEmptyListIsACleanReadOfNoLines() throws {
-    let lines = try read("moonshine: budget\nlines: []")
-    #expect(lines.lines == .read([], complete: true))
-    #expect(lines.issues.isEmpty)
   }
 
   @Test func noValueFromTheNoteReachesAnIssue() throws {

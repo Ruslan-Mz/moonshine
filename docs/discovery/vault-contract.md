@@ -63,7 +63,7 @@ Validation of `lines:` (owner, 2026-10-07 and 2026-10-08):
 - `null` is the same as an absent key.
 - Any missing, invalid or duplicate value skips its item: the stored line stays exactly as it was and the read is incomplete (no stored line is removed). Problems: `missingKey`, `invalidValue`, `duplicateLineId` (every item with that `id`; none wins), each with its key path (`lines.state`, `lines.omnifocus.tags`) and line; every problem of an item is reported.
 - `floor_h_day` without `foundation: true` → `keyIgnored`; the item is kept without the floor.
-- `lines:` absent or `null` → `missingKey`, not a list → `invalidValue`; either leaves the lines unavailable. `lines: []` is a clean read of no lines.
+- `lines:` absent or `null` → `missingKey`; not a list, or an empty list (`lines: []`) → `invalidValue`. Each leaves the lines unavailable: an empty list is more often a broken edit than "no lines", and as a clean read it would remove every stored line.
 
 ## 2. Horizon and artifact notes
 
