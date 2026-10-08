@@ -133,6 +133,8 @@ import Yams
   /// A prefix longer than the default one, so a directive that slips through shows in tags.
   static let tagDirective = "%TAG !e! tag:x,2026:" + String(repeating: "p", count: 200) + "\n---\n"
 
+  static let aliasedHead = "- &a x\n- *a\n- "
+
   static let taggedHead = tagDirective + "- !e!a 1\n- !e!a 2\n- !e!a 3\n- "
 
   static let pieces = [
@@ -181,11 +183,12 @@ import Yams
     let limits = VaultLimits()
     let clock = ContinuousClock()
     var parsed = 0
-    for _ in 0..<3_000 {
+    for _ in 0..<5_000 {
       let count = Int.random(in: 1...30, using: &generator)
       // A directive takes effect only at the start of the stream: a quarter of the documents
       // start with one and three nodes that use it, enough for its copies to outgrow the text.
-      let head = Int.random(in: 0..<4, using: &generator) == 0 ? Self.taggedHead : ""
+      // Another quarter start with an anchor and an alias, which only the guard rejects.
+      let head = [Self.taggedHead, Self.aliasedHead, "", ""].randomElement(using: &generator)!
       let text =
         head + (0..<count).map { _ in Self.pieces.randomElement(using: &generator)! }.joined()
       let accepted = FrontNode.preParseFailure(of: text, limits: limits) == nil
@@ -196,14 +199,18 @@ import Yams
       #expect(clock.now - start < .seconds(1), "\(text.debugDescription)")
       parsed += 1
       var found: [Node] = []
+      var aliasResolved = false
       withExtendedLifetime(parser) {
         nodes(root, cap: limits.maxNodes, into: &found)
-        if found.contains(where: { $0.anchor != nil }) {
-          #expect(FrontNode.hasAnchor(text), "\(text.debugDescription)")
-        }
+        // Yams resolves an alias to its anchor's node: one anchor on two nodes is an alias.
+        let anchors = found.compactMap(\.anchor).map(ObjectIdentifier.init)
+        aliasResolved = Set(anchors).count < anchors.count
+        if !anchors.isEmpty { #expect(FrontNode.hasAnchor(text), "\(text.debugDescription)") }
+        if aliasResolved { #expect(FrontNode.hasAlias(text), "\(text.debugDescription)") }
       }
       guard accepted else { continue }
-      #expect(found.count <= limits.maxNodes, "\(text.debugDescription)")
+      // No alias, no expansion: an accepted document never reaches Yams with a usable alias.
+      #expect(!aliasResolved, "\(text.debugDescription)")
       // Without a directive a tag other than a core one spells out only its own text, plus
       // the default prefix; a `%TAG` prefix would be copied into every tag that uses it.
       let tags = found.map(storedTag).filter { !$0.isEmpty && !Self.coreTags.contains($0) }
