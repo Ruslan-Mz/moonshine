@@ -64,18 +64,18 @@ private struct Item {
       (1...64).contains($0.utf8.count) && $0.utf8.allSatisfy(Self.isSlug)
     }
     if let id, duplicates.contains(id) { report(.duplicateLineId, "lines.id", line(of: "id")) }
-    let name = required("name") { !$0.isEmpty && $0.count <= 120 }
-    let block = required("block") { !$0.isEmpty && $0.count <= 60 }
+    let name = required("name") { Self.text($0, characters: 120, bytes: 1024) }
+    let block = required("block") { Self.text($0, characters: 60, bytes: 512) }
     let state = required("state") { LineState(rawValue: $0) != nil }.flatMap {
       LineState(rawValue: $0)
     }
-    let emoji = optional("emoji") { !$0.isEmpty && $0.count <= 8 }
+    let emoji = optional("emoji") { Self.text($0, characters: 8, bytes: 256) }
     let budget = optional("budget_h_week") { Self.number($0, max: 168) != nil }
-    let parent = optional("parent") { _ in true }
+    let parent = optional("parent") { !Self.hasControl($0) }
     let foundation = optional("foundation") { $0 == "true" || $0 == "false" } == "true"
     let floor = optional("floor_h_day") { Self.number($0, max: 24) != nil }
     let language = optional("language") {
-      $0.utf8.count <= 35 && $0.allSatisfy(\.isASCII)
+      $0.utf8.count <= 35 && $0.allSatisfy(\.isASCII) && !Self.hasControl($0)
         && $0.wholeMatch(of: #/[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*/#) != nil
     }
     let rules = taskRules()
@@ -97,13 +97,26 @@ private struct Item {
     return value
   }
 
-  /// `[a-z0-9-]`, byte by byte: a Character range would let a decomposed `á` through.
+  /// Non-empty, at most `characters` grapheme clusters (what the limit means to a reader) and
+  /// `bytes` UTF-8 bytes (a cluster can hold any number of combining marks), no control.
+  private static func text(_ text: String, characters: Int, bytes: Int) -> Bool {
+    !text.isEmpty && text.count <= characters && text.utf8.count <= bytes && !hasControl(text)
+  }
+
+  /// A C0 control character or DEL. The store's text columns end at a NUL, so `Life\0X` would
+  /// come back as `Life`.
+  private static func hasControl(_ text: String) -> Bool {
+    text.utf8.contains { $0 < 0x20 || $0 == 0x7F }
+  }
+
+  /// `[a-z0-9-]`, byte by byte: a Character range would let `a` + U+0332 through (a letter
+  /// with a combining mark that has no precomposed form).
   private static func isSlug(_ byte: UInt8) -> Bool {
     (UInt8(ascii: "a")...UInt8(ascii: "z")).contains(byte)
       || (UInt8(ascii: "0")...UInt8(ascii: "9")).contains(byte) || byte == UInt8(ascii: "-")
   }
 
-  /// `omnifocus:`: each list at most 100 names of at most 200 characters.
+  /// `omnifocus:`: each list at most 100 names of at most 200 characters and 1 KiB, no control.
   private mutating func taskRules() -> LineTaskRules {
     guard let rules = present("omnifocus") else { return LineTaskRules() }
     guard case .mapping = rules.value else {
@@ -118,7 +131,10 @@ private struct Item {
   private mutating func names(_ list: String, in rules: FrontNode) -> [String] {
     guard let node = rules[list], node.value != .null else { return [] }
     guard case .sequence(let items) = node.value, items.count <= 100,
-      items.allSatisfy({ $0.scalar.map { $0.count <= 200 } ?? false })
+      items.allSatisfy({
+        $0.scalar.map { $0.count <= 200 && $0.utf8.count <= 1024 && !Self.hasControl($0) }
+          ?? false
+      })
     else {
       report(.invalidValue, "lines.omnifocus.\(list)", node.line)
       return []

@@ -180,7 +180,7 @@ public struct VaultSnapshot: Sendable {
 /// only a clean read may soft-delete a stored line (`Importer.makeWorkspace`).
 public enum VaultLines: Equatable, Sendable {
   /// The budget note is missing, rejected or ambiguous (more than one marked note), or its
-  /// `lines:` is missing or not a list.
+  /// `lines:` is missing, not a list or an empty list.
   case unavailable
   /// `complete` is false when any `lines:` item was skipped.
   case read([SourceLine], complete: Bool)

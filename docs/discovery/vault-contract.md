@@ -22,7 +22,7 @@ Identified only by `moonshine: budget` at the top level of the frontmatter (no f
 
 The reader says whether it could read the lines, not only which ones it read (2026-10-07):
 
-- **Unavailable** — the budget note is missing, rejected or ambiguous (more than one marked note), or its `lines:` is missing or not a list. The stored lines stay as they are and keep mapping tasks.
+- **Unavailable** — the budget note is missing, rejected or ambiguous (more than one marked note), or its `lines:` is missing, not a list or an empty list. The stored lines stay as they are and keep mapping tasks.
 - **Read with skipped items** — the lines read are updated; no stored line is removed.
 - **Clean read** — note found, list parsed, no item skipped. Only then does a line missing from the list leave the store (soft delete).
 
@@ -53,13 +53,13 @@ Rules
 - `state: paused` = "paused on purpose" in the UI. It is never shown as missing activity.
 - Tasks that match no line belong to **Life ops** (not a line; see `snapshot-contract.md`).
 - A task maps to **at most one** line. Precedence: task tag → project tag → project name → folder. Two lines claiming the same tag/folder → banner naming both line ids; first in list wins.
-- Hours shown for a line are only `budget_h_week` (vault budget) — CLAUDE.md §8 / ADR-0006.
+- Hours shown for a line come only from the vault values `budget_h_week` and `floor_h_day`, or from real time data — CLAUDE.md rule 8 / ADR-0006.
 - The markdown table in the note may stay; the YAML block is authoritative for MoonShine (ADR-0004).
 
 Validation of `lines:` (owner, 2026-10-07 and 2026-10-08):
 
 - Numbers match `^[0-9]+(\.[0-9]+)?$` (no sign, exponent, hex, `nan`, `inf` or decimal comma); `budget_h_week` 0…168, `floor_h_day` 0…24.
-- `id` `[a-z0-9-]+`, at most 64 characters, unique; `name` 1–120 characters, `block` 1–60, `emoji` 1–8 grapheme clusters; `state` one of the three values; `foundation` only `true` / `false`; `language` shaped `^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$`, at most 35 characters; each `omnifocus` list at most 100 names of at most 200 characters; `parent` is stored as written.
+- `id` `[a-z0-9-]+`, at most 64 characters, unique; `name` 1–120 characters and at most 1 KiB, `block` 1–60 characters and at most 512 bytes, `emoji` 1–8 characters and at most 256 bytes; characters are grapheme clusters (what a limit means to a reader), bytes are UTF-8, and a value over either limit is invalid (owner, 2026-10-08: a cluster can hold any number of combining marks); `state` one of the three values; `foundation` only `true` / `false`; `language` shaped `^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$`, at most 35 characters; each `omnifocus` list at most 100 names of at most 200 characters and 1 KiB; no string value (`name`, `block`, `emoji`, `language`, `parent`, `omnifocus` names) may hold a C0 control character (U+0000–U+001F) or DEL (U+007F): the store's text columns end at a NUL; `parent` is stored as written.
 - `null` is the same as an absent key.
 - Any missing, invalid or duplicate value skips its item: the stored line stays exactly as it was and the read is incomplete (no stored line is removed). Problems: `missingKey`, `invalidValue`, `duplicateLineId` (every item with that `id`; none wins), each with its key path (`lines.state`, `lines.omnifocus.tags`) and line; every problem of an item is reported.
 - `lines:` absent or `null` → `missingKey`; not a list, or an empty list (`lines: []`) → `invalidValue`. Each leaves the lines unavailable: an empty list is more often a broken edit than "no lines", and as a clean read it would remove every stored line.

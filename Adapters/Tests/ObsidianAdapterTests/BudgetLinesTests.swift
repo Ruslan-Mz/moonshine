@@ -27,6 +27,48 @@ import Testing
   let other = "  - id: other\n    name: Other\n    block: Life\n    state: paused"
   let otherLine = SourceLine(key: "other", name: "Other", block: "Life", state: .paused)
 
+  /// Keys and values at their limits, all accepted.
+  static let valuesAtTheirLimits: [(String, String)] = [
+    ("budget_h_week", "0"), ("budget_h_week", "168"), ("budget_h_week", "1.25"),
+    ("budget_h_week", "007"), ("floor_h_day", "0"), ("floor_h_day", "24"),
+    ("id", String(repeating: "a-9", count: 21) + "z"), ("name", String(repeating: "ж", count: 120)),
+    ("block", String(repeating: "b", count: 60)),
+    ("emoji", "\"" + String(repeating: "🇮🇹", count: 8) + "\""),
+    // A ZWJ family is one cluster of 25 bytes: eight stay under 256 bytes.
+    ("emoji", "\"" + String(repeating: "👨‍👩‍👧‍👦", count: 8) + "\""),
+    ("name", "\"a\u{301}b\""),
+    ("language", "de"), ("language", "zh-Hant-TW"),
+    ("language", "abcdefgh-abcdefgh-abcdefgh-abcdefgh"),
+    ("omnifocus", "{tags: [\(Array(repeating: "t", count: 100).joined(separator: ", "))]}"),
+    ("omnifocus", "{tags: [\(String(repeating: "t", count: 200))]}"),
+  ]
+
+  /// Keys and values each invalid on its own.
+  static let invalidValues: [(String, String)] = [
+    ("budget_h_week", "-1"), ("budget_h_week", "+1"), ("budget_h_week", "1e2"),
+    ("budget_h_week", "0x10"), ("budget_h_week", ".nan"), ("budget_h_week", ".inf"),
+    ("budget_h_week", "nan"), ("budget_h_week", "\"1,5\""), ("budget_h_week", "1."),
+    ("budget_h_week", ".5"), ("budget_h_week", "168.01"), ("budget_h_week", "\"\""),
+    ("budget_h_week", "[1]"), ("budget_h_week", "abc"), ("floor_h_day", "24.5"),
+    ("floor_h_day", "-0"), ("id", "Core"), ("id", "a_b"), ("id", "\"\""), ("id", "[a]"),
+    ("id", String(repeating: "a", count: 65)), ("name", "\"\""), ("name", "{a: 1}"),
+    ("name", String(repeating: "ж", count: 121)), ("block", "\"\""),
+    ("block", String(repeating: "b", count: 61)), ("emoji", "\"\""),
+    ("emoji", "\"" + String(repeating: "🇮🇹", count: 9) + "\""), ("state", "Active"),
+    ("state", "done"), ("foundation", "yes"), ("foundation", "True"), ("foundation", "1"),
+    ("language", "e"), ("language", "en_US"), ("language", "toolongtag"), ("language", "en-"),
+    ("language", "abcdefgh-abcdefgh-abcdefgh-abcdef-ab"), ("parent", "[a]"),
+    // One cluster each, over the byte cap: `a` with combining marks.
+    ("name", "a" + String(repeating: "\u{301}", count: 600)),
+    ("block", "b" + String(repeating: "\u{301}", count: 300)),
+    ("emoji", "\"🧘" + String(repeating: "\u{301}", count: 150) + "\""),
+    // NUL, other C0 controls and DEL (YAML double-quoted escapes).
+    ("name", "\"a\\0b\""), ("block", "\"Life\\0X\""), ("emoji", "\"\\0\""),
+    ("parent", "\"[[a\\0]]\""), ("language", "\"de\\0\""), ("name", "\"a\\tb\""),
+    ("block", "\"a\\nb\""), ("name", "\"a\\x7Fb\""), ("parent", "\"\\x1B[2K\""),
+    ("omnifocus", "[a]"), ("omnifocus", "x"),
+  ]
+
   func read(_ yaml: String) throws -> BudgetLines {
     BudgetLines.read(
       ScannedNote(
@@ -64,17 +106,7 @@ import Testing
     #expect(lines.skipped == 0)
   }
 
-  @Test(arguments: [
-    ("budget_h_week", "0"), ("budget_h_week", "168"), ("budget_h_week", "1.25"),
-    ("budget_h_week", "007"), ("floor_h_day", "0"), ("floor_h_day", "24"),
-    ("id", String(repeating: "a-9", count: 21) + "z"), ("name", String(repeating: "ж", count: 120)),
-    ("block", String(repeating: "b", count: 60)),
-    ("emoji", "\"" + String(repeating: "🇮🇹", count: 8) + "\""),
-    ("language", "de"), ("language", "zh-Hant-TW"),
-    ("language", "abcdefgh-abcdefgh-abcdefgh-abcdefgh"),
-    ("omnifocus", "{tags: [\(Array(repeating: "t", count: 100).joined(separator: ", "))]}"),
-    ("omnifocus", "{tags: [\(String(repeating: "t", count: 200))]}"),
-  ])
+  @Test(arguments: Self.valuesAtTheirLimits)
   func valuesAtTheirLimitsAreAccepted(key: String, value: String) throws {
     let lines = try read(items: item(foundationWith(key, value)), other)
     #expect(lines.issues.isEmpty)
@@ -93,22 +125,7 @@ import Testing
     if key == "emoji" { #expect(line.emoji == nil) }
   }
 
-  @Test(arguments: [
-    ("budget_h_week", "-1"), ("budget_h_week", "+1"), ("budget_h_week", "1e2"),
-    ("budget_h_week", "0x10"), ("budget_h_week", ".nan"), ("budget_h_week", ".inf"),
-    ("budget_h_week", "nan"), ("budget_h_week", "\"1,5\""), ("budget_h_week", "1."),
-    ("budget_h_week", ".5"), ("budget_h_week", "168.01"), ("budget_h_week", "\"\""),
-    ("budget_h_week", "[1]"), ("budget_h_week", "abc"), ("floor_h_day", "24.5"),
-    ("floor_h_day", "-0"), ("id", "Core"), ("id", "a_b"), ("id", "\"\""), ("id", "[a]"),
-    ("id", String(repeating: "a", count: 65)), ("name", "\"\""), ("name", "{a: 1}"),
-    ("name", String(repeating: "ж", count: 121)), ("block", "\"\""),
-    ("block", String(repeating: "b", count: 61)), ("emoji", "\"\""),
-    ("emoji", "\"" + String(repeating: "🇮🇹", count: 9) + "\""), ("state", "Active"),
-    ("state", "done"), ("foundation", "yes"), ("foundation", "True"), ("foundation", "1"),
-    ("language", "e"), ("language", "en_US"), ("language", "toolongtag"), ("language", "en-"),
-    ("language", "abcdefgh-abcdefgh-abcdefgh-abcdefgh-a"), ("parent", "[a]"),
-    ("omnifocus", "[a]"), ("omnifocus", "x"),
-  ])
+  @Test(arguments: Self.invalidValues)
   func anInvalidValueSkipsItsItemAndNamesTheKey(key: String, value: String) throws {
     let lines = try read(items: item(foundationWith(key, value)), other)
     #expect(lines.lines == .read([otherLine], complete: false))
@@ -119,7 +136,8 @@ import Testing
   @Test(arguments: [
     ("tags", "x"), ("tags", "[[a]]"), ("folders", "[\(String(repeating: "f", count: 201))]"),
     ("projects", "[\(Array(repeating: "p", count: 101).joined(separator: ", "))]"),
-    ("tags", "[null]"),
+    ("tags", "[null]"), ("tags", "[\"a\\0\"]"), ("projects", "[\"a\\x7F\"]"),
+    ("folders", "[f\(String(repeating: "\u{301}", count: 600))]"),
   ])
   func anInvalidTaskRuleSkipsItsItemAndNamesTheList(list: String, value: String) throws {
     let lines = try read(items: item(["omnifocus": "{\(list): \(value)}"]), other)

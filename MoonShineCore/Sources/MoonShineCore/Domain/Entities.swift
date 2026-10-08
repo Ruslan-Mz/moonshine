@@ -312,7 +312,8 @@ public struct VaultProblem: Hashable, Sendable, CustomStringConvertible {
     /// item, which is then skipped.
     case missingKey
     /// A value has the wrong type, shape or range; its line item is skipped, so the stored
-    /// line stays as it was. `lines` that is not a list leaves the lines unavailable.
+    /// line stays as it was. `lines` that is not a list, or an empty list, leaves the lines
+    /// unavailable.
     case invalidValue
     /// More than one line item has this `id`; every one of them is skipped.
     case duplicateLineId
