@@ -6,6 +6,8 @@ v0.2 (2026-10-01, design draft-2): optional line keys `foundation`, `floor_h_day
 
 2026-10-05 (S3b): the budget note is found by its key only (§1); the reader's limits for untrusted input (§3).
 
+2026-10-08 (S3b-2b+2c): `lines:` items are validated (§1, "Validation of `lines:`"); any invalid value skips its item.
+
 Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault writes before the Act phase).
 
 ## Design choices driven by the data
@@ -53,6 +55,15 @@ Rules
 - A task maps to **at most one** line. Precedence: task tag → project tag → project name → folder. Two lines claiming the same tag/folder → banner naming both line ids; first in list wins.
 - Hours shown for a line are only `budget_h_week` (vault budget) — CLAUDE.md §8 / ADR-0006.
 - The markdown table in the note may stay; the YAML block is authoritative for MoonShine (ADR-0004).
+
+Validation of `lines:` (owner, 2026-10-07 and 2026-10-08):
+
+- Numbers match `^[0-9]+(\.[0-9]+)?$` (no sign, exponent, hex, `nan`, `inf` or decimal comma); `budget_h_week` 0…168, `floor_h_day` 0…24.
+- `id` `[a-z0-9-]+`, at most 64 characters, unique; `name` 1–120 characters, `block` 1–60, `emoji` 1–8 grapheme clusters; `state` one of the three values; `foundation` only `true` / `false`; `language` shaped `^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$`, at most 35 characters; each `omnifocus` list at most 100 names of at most 200 characters; `parent` is stored as written.
+- `null` is the same as an absent key.
+- Any missing, invalid or duplicate value skips its item: the stored line stays exactly as it was and the read is incomplete (no stored line is removed). Problems: `missingKey`, `invalidValue`, `duplicateLineId` (every item with that `id`; none wins), each with its key path (`lines.state`, `lines.omnifocus.tags`) and line; every problem of an item is reported.
+- `floor_h_day` without `foundation: true` → `keyIgnored`; the item is kept without the floor.
+- `lines:` absent or `null` → `missingKey`, not a list → `invalidValue`; either leaves the lines unavailable. `lines: []` is a clean read of no lines.
 
 ## 2. Horizon and artifact notes
 
@@ -133,7 +144,7 @@ artifacts:
 
 ## 3. Validation
 
-- Invalid YAML or a `lines:` item missing a required key → one calm banner with note path and line number; the rest of the vault still loads. Never a crash.
+- Invalid YAML or a `lines:` item with a missing, invalid or duplicate value (§1) → one calm banner with note path and line number; the rest of the vault still loads. Never a crash.
 - Problems are typed (`VaultProblem`: a kind and, at most, a contract key name) with the note's vault-relative path and line; they never carry note content. A vault-wide problem (`budgetNoteMissing`) belongs to no note, so it is reported without a path (`ImportIssue.vaultWide`).
 - The vault is untrusted input (synced or pasted from elsewhere). One guard per threat:
   - **leaving the vault:** symbolic links are skipped (`symlinkSkipped`); every resolved path must stay under the resolved vault folder (`outsideVault`; defence in depth behind the symlink skip, for a link swapped in during the walk); a folder the walk cannot enter is `unreadable`, never a silent gap;

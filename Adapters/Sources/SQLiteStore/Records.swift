@@ -62,6 +62,10 @@ struct LineRecord: EntityRecord {
   struct Attrs: Codable, Equatable, Sendable {
     var parentLink: String?
     var tags, folders, projects: [String]
+    /// Absent in rows stored before the v0.2 keys; `foundation` is kept only when true.
+    var foundation: Bool?
+    var floorHoursPerDay: Double?
+    var language: String?
   }
   var id: UUID
   var ordinal: Int
@@ -84,7 +88,8 @@ struct LineRecord: EntityRecord {
     self.removedAt = removedAt
     attrs = Attrs(
       parentLink: line.parentLink, tags: line.taskRules.tags, folders: line.taskRules.folders,
-      projects: line.taskRules.projects)
+      projects: line.taskRules.projects, foundation: line.foundation ? true : nil,
+      floorHoursPerDay: line.floorHoursPerDay, language: line.language)
   }
 
   func entity(refs: [ExternalRef]) throws -> Line {
@@ -93,7 +98,9 @@ struct LineRecord: EntityRecord {
       block: block, state: try decode(state, "line.state"),
       budgetHoursPerWeek: budgetHoursPerWeek, parentLink: attrs.parentLink,
       taskRules: LineTaskRules(
-        tags: attrs.tags, folders: attrs.folders, projects: attrs.projects))
+        tags: attrs.tags, folders: attrs.folders, projects: attrs.projects),
+      foundation: attrs.foundation ?? false, floorHoursPerDay: attrs.floorHoursPerDay,
+      language: attrs.language)
   }
 }
 
