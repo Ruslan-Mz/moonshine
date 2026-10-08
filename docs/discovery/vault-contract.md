@@ -37,7 +37,7 @@ lines: # order = display order within a block
     state: active # required. active | maintenance | paused
     budget_h_week: 6 # optional number ≥ 0; null/absent = no weekly budget ("no schedule")
     foundation: false # optional (v0.2); true = foundation tier (the spine), shown first, never "quiet"
-    floor_h_day: null # optional number ≥ 0 (v0.2); daily floor of a foundation line, shown instead of budget_h_week
+    floor_h_day: null # optional number ≥ 0 (v0.2); daily minimum, on any line
     language: it # optional BCP-47 tag (v0.2); language lines only. Parsed and stored; a content-language detection hint
     parent: "[[Artifacts_2026]]" # optional wikilink to the note that holds this line's artifact(s)
     omnifocus: # how OmniFocus items map to this line (see snapshot-contract.md §Mapping)
@@ -49,7 +49,7 @@ lines: # order = display order within a block
 Rules
 
 - Tier (UI grouping) = `foundation: true` → Foundation, else `state` → Active this season / Maintenance / Paused on purpose. `block` is a secondary label.
-- `floor_h_day` without `foundation: true` → ignored with a banner; a foundation line with `budget_h_week` keeps both, the UI shows the floor.
+- `floor_h_day` is allowed on any line (owner, 2026-10-08); `foundation: true` decides only the tier and the "never quiet" rule. A line may have both `floor_h_day` and `budget_h_week`: a foundation line shows the floor; any other line shows the floor as a daily minimum next to its weekly budget (exact form: the screen spec or the next design round).
 - `state: paused` = "paused on purpose" in the UI. It is never shown as missing activity.
 - Tasks that match no line belong to **Life ops** (not a line; see `snapshot-contract.md`).
 - A task maps to **at most one** line. Precedence: task tag → project tag → project name → folder. Two lines claiming the same tag/folder → banner naming both line ids; first in list wins.
@@ -62,7 +62,6 @@ Validation of `lines:` (owner, 2026-10-07 and 2026-10-08):
 - `id` `[a-z0-9-]+`, at most 64 characters, unique; `name` 1–120 characters, `block` 1–60, `emoji` 1–8 grapheme clusters; `state` one of the three values; `foundation` only `true` / `false`; `language` shaped `^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$`, at most 35 characters; each `omnifocus` list at most 100 names of at most 200 characters; `parent` is stored as written.
 - `null` is the same as an absent key.
 - Any missing, invalid or duplicate value skips its item: the stored line stays exactly as it was and the read is incomplete (no stored line is removed). Problems: `missingKey`, `invalidValue`, `duplicateLineId` (every item with that `id`; none wins), each with its key path (`lines.state`, `lines.omnifocus.tags`) and line; every problem of an item is reported.
-- `floor_h_day` without `foundation: true` → `keyIgnored`; the item is kept without the floor.
 - `lines:` absent or `null` → `missingKey`; not a list, or an empty list (`lines: []`) → `invalidValue`. Each leaves the lines unavailable: an empty list is more often a broken edit than "no lines", and as a clean read it would remove every stored line.
 
 ## 2. Horizon and artifact notes

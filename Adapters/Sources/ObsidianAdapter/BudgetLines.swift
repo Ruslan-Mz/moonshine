@@ -42,8 +42,8 @@ struct BudgetLines: Equatable {
   }
 }
 
-/// One `lines:` item. Every problem is reported, so the owner can fix them in one pass; a
-/// missing, invalid or duplicate value skips the item, an ignored one does not.
+/// One `lines:` item. Every problem is reported, so the owner can fix them in one pass; any
+/// missing, invalid or duplicate value skips the item.
 private struct Item {
   let path: String
   let node: FrontNode
@@ -73,11 +73,7 @@ private struct Item {
     let budget = optional("budget_h_week") { Self.number($0, max: 168) != nil }
     let parent = optional("parent") { _ in true }
     let foundation = optional("foundation") { $0 == "true" || $0 == "false" } == "true"
-    var floor = optional("floor_h_day") { Self.number($0, max: 24) != nil }
-    if floor != nil, !foundation {
-      report(.keyIgnored, "lines.floor_h_day", line(of: "floor_h_day"), skips: false)
-      floor = nil
-    }
+    let floor = optional("floor_h_day") { Self.number($0, max: 24) != nil }
     let language = optional("language") {
       $0.utf8.count <= 35 && $0.allSatisfy(\.isASCII)
         && $0.wholeMatch(of: #/[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*/#) != nil
@@ -160,10 +156,8 @@ private struct Item {
     return text
   }
 
-  private mutating func report(
-    _ kind: VaultProblem.Kind, _ key: String, _ line: Int, skips: Bool = true
-  ) {
+  private mutating func report(_ kind: VaultProblem.Kind, _ key: String, _ line: Int) {
     issues.append(.vault(path: path, line: line, problem: VaultProblem(kind, key: key)))
-    if skips { skip = true }
+    skip = true
   }
 }

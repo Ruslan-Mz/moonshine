@@ -161,14 +161,15 @@ import Testing
       ])
   }
 
-  @Test func aFloorWithoutFoundationIsIgnoredAndTheItemKept() throws {
+  @Test func aFloorIsKeptOnALineThatIsNotAFoundationLine() throws {
     for foundation: String? in [nil, "false"] {
-      let lines = try read(items: item(["floor_h_day": "2", "foundation": foundation]))
+      let lines = try read(items: item(["floor_h_day": "0.5", "foundation": foundation]))
       let line = try #require(lines.lines.read.first)
       #expect(lines.lines.isComplete)
-      #expect(line.floorHoursPerDay == nil)
+      #expect(lines.issues.isEmpty)
+      #expect(!line.foundation)
+      #expect(line.floorHoursPerDay == 0.5)
       #expect(line.budgetHoursPerWeek == 2)
-      #expect(problems(lines.issues).map(dropLine) == ["budget.md:keyIgnored (lines.floor_h_day)"])
     }
   }
 
@@ -201,7 +202,7 @@ import Testing
       item(["id": "b", "budget_h_week": "\"\(secret)\""]),
       item(["id": "c", "floor_h_day": "1", "language": "\(secret)_x"]))
     // Every problem of an item is reported, so the owner can fix them in one pass.
-    #expect(lines.issues.count == 6)
+    #expect(lines.issues.count == 5)
     #expect(!problems(lines.issues).joined().contains(secret))
   }
 
@@ -221,7 +222,7 @@ import Testing
     #expect(
       Array(report.suffix(3)) == [
         "lines: 8 read · 0 skipped",
-        "line problems: missingKey 0 · invalidValue 0 · duplicateLineId 0 · keyIgnored 0",
+        "line problems: missingKey 0 · invalidValue 0 · duplicateLineId 0",
         "foundation lines: 1 · with a floor: 1 · with a language: 1",
       ])
     let vault = try TemporaryVault()
@@ -233,8 +234,8 @@ import Testing
     #expect(
       Array(try ObsidianVault(root: vault.root).read().report.suffix(3)) == [
         "lines: 2 read · 1 skipped",
-        "line problems: missingKey 0 · invalidValue 1 · duplicateLineId 0 · keyIgnored 1",
-        "foundation lines: 0 · with a floor: 0 · with a language: 0",
+        "line problems: missingKey 0 · invalidValue 1 · duplicateLineId 0",
+        "foundation lines: 0 · with a floor: 1 · with a language: 0",
       ])
   }
 

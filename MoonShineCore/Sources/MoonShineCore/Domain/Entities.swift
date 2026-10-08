@@ -39,7 +39,7 @@ public struct Line: Hashable, Sendable, Identifiable {
   public let taskRules: LineTaskRules
   /// Foundation tier (vault `foundation: true`): shown first, never "quiet".
   public let foundation: Bool
-  /// Daily floor of a foundation line (vault `floor_h_day`); nil on every other line.
+  /// Daily minimum (vault `floor_h_day`), on any line; `foundation` decides only the tier.
   public let floorHoursPerDay: Double?
   /// BCP-47 tag (vault `language`); stored only, a content-language hint later.
   public let language: String?
@@ -316,9 +316,6 @@ public struct VaultProblem: Hashable, Sendable, CustomStringConvertible {
     case invalidValue
     /// More than one line item has this `id`; every one of them is skipped.
     case duplicateLineId
-    /// A value the contract ignores where it stands (`floor_h_day` without `foundation: true`);
-    /// the line item is kept without it.
-    case keyIgnored
   }
 
   public let kind: Kind

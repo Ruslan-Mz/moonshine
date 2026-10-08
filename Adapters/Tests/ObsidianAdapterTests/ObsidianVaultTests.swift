@@ -129,7 +129,7 @@ import Testing
         "skipped: symlinks 1 · outside vault 0 · unreadable entries 0",
         "budget note: missing",
         "lines: unavailable",
-        "line problems: missingKey 0 · invalidValue 0 · duplicateLineId 0 · keyIgnored 0",
+        "line problems: missingKey 0 · invalidValue 0 · duplicateLineId 0",
         "foundation lines: 0 · with a floor: 0 · with a language: 0",
       ])
   }

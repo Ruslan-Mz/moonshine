@@ -88,7 +88,7 @@ public struct VaultRead: Sendable {
       "line problems: "
         + Self.list(
           lineProblems,
-          [.missingKey, .invalidValue, .duplicateLineId, .keyIgnored].map { ($0, $0.rawValue) }),
+          [.missingKey, .invalidValue, .duplicateLineId].map { ($0, $0.rawValue) }),
       "foundation lines: \(lines.read.count { $0.foundation })"
         + " · with a floor: \(lines.read.count { $0.floorHoursPerDay != nil })"
         + " · with a language: \(lines.read.count { $0.language != nil })",
