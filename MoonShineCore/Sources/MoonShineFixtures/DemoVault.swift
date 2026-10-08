@@ -27,13 +27,14 @@ public struct DemoVault: NoteProvider {
           budgetHoursPerWeek: 0, tags: ["calligraphy"]),
         SourceLine(
           key: "italian", name: "Italiano", emoji: "🇮🇹", block: "Languages", state: .active,
-          budgetHoursPerWeek: 2, tags: ["italian"]),
+          budgetHoursPerWeek: 2, tags: ["italian"], language: "it"),
         SourceLine(
           key: "math", name: "Математика", emoji: "📐", block: "Foundation", state: .active,
           budgetHoursPerWeek: 1.5, folders: ["Study"]),
         SourceLine(
           key: "calisthenics", name: "Calisthenics", emoji: "💪", block: "Foundation",
-          state: .active, budgetHoursPerWeek: 2, tags: ["calisthenics"]),
+          state: .active, budgetHoursPerWeek: 2, tags: ["calisthenics"], foundation: true,
+          floorHoursPerDay: 1),
         SourceLine(
           key: "research", name: "Research", emoji: "🔬", block: "Professional", state: .active,
           budgetHoursPerWeek: 4, parentLink: "[[Artifacts_2026]]", tags: ["исследование"]),

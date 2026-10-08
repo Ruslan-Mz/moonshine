@@ -40,6 +40,7 @@ lines:
     block: Languages
     state: active
     budget_h_week: 2
+    language: it
     omnifocus:
       tags: [italian]
   - id: math
@@ -56,6 +57,8 @@ lines:
     block: Foundation
     state: active
     budget_h_week: 2
+    foundation: true
+    floor_h_day: 1
     omnifocus:
       tags: [calisthenics]
   - id: research

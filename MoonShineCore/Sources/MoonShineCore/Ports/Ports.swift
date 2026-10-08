@@ -180,7 +180,7 @@ public struct VaultSnapshot: Sendable {
 /// only a clean read may soft-delete a stored line (`Importer.makeWorkspace`).
 public enum VaultLines: Equatable, Sendable {
   /// The budget note is missing, rejected or ambiguous (more than one marked note), or its
-  /// `lines:` is missing or not a list.
+  /// `lines:` is missing, not a list or an empty list.
   case unavailable
   /// `complete` is false when any `lines:` item was skipped.
   case read([SourceLine], complete: Bool)
@@ -205,11 +205,15 @@ public struct SourceLine: Equatable, Sendable {
   public let budgetHoursPerWeek: Double?
   public let parentLink: String?
   public let taskRules: LineTaskRules
+  public let foundation: Bool
+  public let floorHoursPerDay: Double?
+  public let language: String?
 
   public init(
     key: LineKey, name: String, emoji: String? = nil, block: String, state: LineState,
     budgetHoursPerWeek: Double? = nil, parentLink: String? = nil,
-    tags: [String] = [], folders: [String] = [], projects: [String] = []
+    tags: [String] = [], folders: [String] = [], projects: [String] = [],
+    foundation: Bool = false, floorHoursPerDay: Double? = nil, language: String? = nil
   ) {
     self.key = key
     self.name = name
@@ -219,6 +223,9 @@ public struct SourceLine: Equatable, Sendable {
     self.budgetHoursPerWeek = budgetHoursPerWeek
     self.parentLink = parentLink
     self.taskRules = LineTaskRules(tags: tags, folders: folders, projects: projects)
+    self.foundation = foundation
+    self.floorHoursPerDay = floorHoursPerDay
+    self.language = language
   }
 }
 

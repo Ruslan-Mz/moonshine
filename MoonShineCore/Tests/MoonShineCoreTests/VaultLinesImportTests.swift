@@ -119,4 +119,21 @@ import Testing
     #expect(workspace.lines.map(\.key) == ["piano"])
     #expect(workspace.tasks.first?.line == .line(try #require(workspace.lines.first).id))
   }
+
+  @Test func theVersionPointTwoKeysAreCarriedToTheLine() throws {
+    let core = SourceLine(
+      key: "core", name: "Core", block: "Foundation", state: .active, budgetHoursPerWeek: 2,
+      foundation: true, floorHoursPerDay: 1.5, language: "pt-BR")
+    var identities = IdentityMap()
+    let workspace = Importer().makeWorkspace(
+      tasks: source, vault: vault(.read([core, piano], complete: true)), storedLines: [],
+      identities: &identities, now: now)
+    let line = try #require(workspace.lines.first)
+    #expect(line.foundation)
+    #expect(line.floorHoursPerDay == 1.5)
+    #expect(line.language == "pt-BR")
+    #expect(line.budgetHoursPerWeek == 2)
+    let other = try #require(workspace.lines.last)
+    #expect(!other.foundation && other.floorHoursPerDay == nil && other.language == nil)
+  }
 }

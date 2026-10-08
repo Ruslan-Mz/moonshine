@@ -41,7 +41,8 @@ public struct Importer: Sendable {
         refs: [ref(.obsidian, line.key.rawValue)], key: line.key, name: line.name,
         emoji: line.emoji, block: line.block, state: line.state,
         budgetHoursPerWeek: line.budgetHoursPerWeek, parentLink: line.parentLink,
-        taskRules: line.taskRules)
+        taskRules: line.taskRules, foundation: line.foundation,
+        floorHoursPerDay: line.floorHoursPerDay, language: line.language)
     }
     // Only a clean read may drop a line, and it takes the order from the note. Otherwise every
     // stored line keeps its position (updated when read, as it was when not, so it still maps
