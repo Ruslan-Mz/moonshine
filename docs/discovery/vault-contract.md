@@ -20,7 +20,7 @@ Identified only by `moonshine: budget` at the top level of the frontmatter (no f
 
 The reader says whether it could read the lines, not only which ones it read (2026-10-07):
 
-- **Unavailable** — the budget note is missing or rejected, or its `lines:` is missing or not a list. The stored lines stay as they are and keep mapping tasks.
+- **Unavailable** — the budget note is missing, rejected or ambiguous (more than one marked note), or its `lines:` is missing or not a list. The stored lines stay as they are and keep mapping tasks.
 - **Read with skipped items** — the lines read are updated; no stored line is removed.
 - **Clean read** — note found, list parsed, no item skipped. Only then does a line missing from the list leave the store (soft delete).
 
@@ -142,6 +142,7 @@ artifacts:
     - **anchor with alias** (`yamlAnchor`, counted on its own so false positives show): Yams expands aliases while parsing, before any cap can run, and an alias needs an anchor, so a note is rejected only when its frontmatter has both an anchor candidate and an alias candidate. Anchor candidate: an `&` followed by a non-blank that is not a flow indicator; an `&` right after a letter, combining mark or digit of any script (`R&D`, `Музыка&танец`, `音楽&舞踊`) is plain text, because a YAML token starts only after whitespace or an indicator. Alias candidate: a `*` followed by a non-blank (Markdown `**bold**` counts too). An anchor alone only labels its node and is accepted; the live check counts these notes ("anchor-like text and no alias, accepted"). An alias alone fails in Yams as `malformedYAML`;
     - **directive** (`yamlDirective`): a `%` at the start of the frontmatter or right after any line break libyaml knows (LF, CR, NEL, LS, PS), byte-order marks in between skipped. A `%TAG` prefix is copied into every tag that uses it (228 MB peak from 64 KiB of frontmatter, measured on Yams alone). A quoted scalar's continuation line that starts with `%` is rejected too (accepted false positive);
     - **flow nesting** (`[`, `{`) at most 32, also before parsing; after parsing, at most 10,000 nodes and depth 32 per note (`yamlTooComplex`).
+  - **owner-only paths:** `moonshine-import vault --paths` prints each problem's kind, vault-relative path and line, nothing from the note. Its help text says it is for the owner's own terminal, and the tool enforces it: it refuses to run unless standard output is a terminal, checked before anything is read. A printed path shows every control and format character and a backslash as an escape (`\u{…}`, `\\`);
   - **line breaks:** the frontmatter ends only at a `---` line after LF. A `---` after CR, NEL, LS or PS is not a delimiter for the reader but starts a second document for libyaml, so the note fails safe as `malformedYAML`.
 - Hidden files and folders (`.obsidian`, `.trash`) are not read. A note without frontmatter is skipped, not a problem.
 - Unknown keys are ignored and preserved (future-proof; the vault has 200+ distinct keys).
