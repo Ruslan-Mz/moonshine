@@ -17,6 +17,10 @@ enum VaultScan {
     let walkIssues: [ImportIssue]
     /// Notes whose frontmatter was rejected.
     let noteIssues: [ImportIssue]
+    /// Accepted notes whose frontmatter has anchor-like text (and so no alias).
+    let anchorLikeAccepted: Int
+    /// Rejected notes whose frontmatter text has the budget-note marker.
+    let rejectedMarks: [RejectedMark]
 
     var issues: [ImportIssue] { walkIssues + noteIssues }
   }
@@ -29,18 +33,34 @@ enum VaultScan {
     let (files, walkIssues) = try VaultWalk.markdownFiles(in: root, limits: limits)
     var noteIssues: [ImportIssue] = []
     var notes: [ScannedNote] = []
+    var anchorLikeAccepted = 0
+    var rejectedMarks: [RejectedMark] = []
     for file in files {
+      let text: String
       do {
-        guard let text = try Frontmatter.text(of: file.url, limit: limits.maxFrontmatterBytes)
+        guard let read = try Frontmatter.text(of: file.url, limit: limits.maxFrontmatterBytes)
         else { continue }
+        text = read
+      } catch {
+        // No text to search: a budget note rejected here is reported as missing.
+        noteIssues.append(
+          .vault(path: file.path, line: error.line, problem: VaultProblem(error.kind)))
+        continue
+      }
+      do {
         notes.append(
           ScannedNote(path: file.path, frontmatter: try FrontNode.parse(text, limits: limits)))
+        if FrontNode.hasAnchor(text) { anchorLikeAccepted += 1 }
       } catch {
         noteIssues.append(
           .vault(path: file.path, line: error.line, problem: VaultProblem(error.kind)))
+        if let line = BudgetNote.markerLine(in: text) {
+          rejectedMarks.append(RejectedMark(path: file.path, line: line, kind: error.kind))
+        }
       }
     }
     return Result(
-      notes: notes, noteCount: files.count, walkIssues: walkIssues, noteIssues: noteIssues)
+      notes: notes, noteCount: files.count, walkIssues: walkIssues, noteIssues: noteIssues,
+      anchorLikeAccepted: anchorLikeAccepted, rejectedMarks: rejectedMarks)
   }
 }

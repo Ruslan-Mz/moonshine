@@ -2,9 +2,9 @@ import Foundation
 import MoonShineCore
 import Yams
 
-/// Frontmatter in the reader's own bounded form. Yams' nodes never leave this file; anchors (and
-/// so aliases) are rejected before parsing, the node and depth caps bound the parsed tree, and
-/// scalars stay raw strings (no YAML date or number types).
+/// Frontmatter in the reader's own bounded form. Yams' nodes never leave this file; an anchor
+/// with an alias and any directive are rejected before parsing, the node and depth caps bound
+/// the parsed tree, and scalars stay raw strings (no YAML date or number types).
 struct FrontNode: Equatable {
   enum Value: Equatable {
     case null
@@ -35,13 +35,9 @@ struct FrontNode: Equatable {
 
   /// Parses frontmatter text; the root must be a mapping.
   static func parse(_ text: String, limits: VaultLimits) throws(FrontmatterFailure) -> FrontNode {
-    // libyaml parses flow collections recursively: reject deep `[[[…` before it sees them.
-    // Yams expands aliases while composing (it hashes mapping keys), before any cap of ours
-    // runs, so anchors are rejected outright: no anchor, no alias, no alias bomb.
-    guard flowDepth(of: text) <= limits.maxDepth else {
-      throw FrontmatterFailure(kind: .yamlTooComplex, line: nil)
+    if let kind = preParseFailure(of: text, limits: limits) {
+      throw FrontmatterFailure(kind: kind, line: nil)
     }
-    guard !hasAnchor(text) else { throw FrontmatterFailure(kind: .yamlAnchor, line: nil) }
     let composed: Node?
     do {
       composed = try Yams.compose(yaml: text)
@@ -55,6 +51,18 @@ struct FrontNode: Equatable {
     }
     var budget = limits.maxNodes
     return try convert(composed, depth: 0, budget: &budget, limits: limits)
+  }
+
+  /// Why `text` is rejected before Yams sees it, if it is.
+  static func preParseFailure(of text: String, limits: VaultLimits) -> VaultProblem.Kind? {
+    // libyaml parses flow collections recursively: reject deep `[[[…` before it sees them.
+    if flowDepth(of: text) > limits.maxDepth { return .yamlTooComplex }
+    // libyaml copies a `%TAG` prefix into every tag that uses it, before any cap of ours runs.
+    if hasDirective(text) { return .yamlDirective }
+    // Yams expands aliases while composing (it hashes mapping keys), before any cap of ours
+    // runs. An alias needs an anchor, so a document with only one of the two cannot expand.
+    if hasAnchor(text) && hasAlias(text) { return .yamlAnchor }
+    return nil
   }
 
   /// The frontmatter's first line is line 2 of the note, after the opening `---`.
@@ -114,7 +122,7 @@ struct FrontNode: Equatable {
   /// not tracked, so an `&` in a quoted string counts too. A YAML token starts only after
   /// whitespace or an indicator, so an `&` right after a letter, mark or digit of any script
   /// (`R&D`, `Музыка&танец`, `音楽&舞踊`) is plain text.
-  private static func hasAnchor(_ text: String) -> Bool {
+  static func hasAnchor(_ text: String) -> Bool {
     var previous: Unicode.Scalar?
     var iterator = text.unicodeScalars.makeIterator()
     var current = iterator.next()
@@ -130,6 +138,35 @@ struct FrontNode: Equatable {
     }
     return false
   }
+
+  /// Whether `text` may hold an alias (`*name`): a `*` followed by a non-blank. Lexical and
+  /// coarse like `hasAnchor`: a `*` in a quoted string or in Markdown `**bold**` counts too.
+  static func hasAlias(_ text: String) -> Bool {
+    zip(text.unicodeScalars, text.unicodeScalars.dropFirst()).contains { scalar, next in
+      scalar == "*" && next != " " && next != "\t" && !lineBreaks.contains(next)
+    }
+  }
+
+  /// Whether `text` may hold a directive: a `%` at its start or right after any line break
+  /// libyaml knows, byte-order marks in between skipped. Coarse: a quoted scalar's continuation
+  /// line that starts with `%` counts too.
+  static func hasDirective(_ text: String) -> Bool {
+    var atLineStart = true
+    for scalar in text.unicodeScalars {
+      if scalar == "%" && atLineStart { return true }
+      if lineBreaks.contains(scalar) {
+        atLineStart = true
+      } else if scalar != "\u{FEFF}" {
+        atLineStart = false
+      }
+    }
+    return false
+  }
+
+  /// LF, CR, NEL, LS and PS: every line break libyaml knows.
+  private static let lineBreaks: Set<Unicode.Scalar> = [
+    "\n", "\r", "\u{85}", "\u{2028}", "\u{2029}",
+  ]
 
   /// Letters, combining marks and digits of any script.
   private static func isWordScalar(_ scalar: Unicode.Scalar) -> Bool {

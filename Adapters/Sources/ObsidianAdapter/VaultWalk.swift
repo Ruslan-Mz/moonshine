@@ -6,8 +6,9 @@ import MoonShineCore
 public struct VaultLimits: Sendable {
   public var maxNotes = 20_000
   public var maxFrontmatterBytes = 64 * 1024
-  /// Nodes per note after parsing; bounds document size. Alias expansion is prevented earlier:
-  /// anchors are rejected before Yams parses (`FrontNode.parse`, contract §3).
+  /// Nodes per note after parsing; bounds document size. Expansion is prevented earlier: an
+  /// anchor together with an alias, and any directive, are rejected before Yams parses
+  /// (`FrontNode.preParseFailure`, contract §3).
   public var maxNodes = 10_000
   /// Nesting of YAML collections, checked before parsing for flow style and after it for all.
   public var maxDepth = 32

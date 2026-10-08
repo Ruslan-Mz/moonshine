@@ -50,6 +50,7 @@ let package = Package(
         "ObsidianAdapter",
         .product(name: "MoonShineCore", package: "MoonShineCore"),
       ]),
+    .testTarget(name: "MoonShineImportTests", dependencies: ["moonshine-import"]),
     .testTarget(
       name: "SQLiteStoreTests",
       dependencies: [

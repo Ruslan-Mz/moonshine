@@ -14,13 +14,15 @@ public struct ObsidianVault: Sendable {
 
   public func read() throws(VaultReadError) -> VaultRead {
     let scan = try VaultScan.notes(in: root, limits: limits)
-    let budget = BudgetNote.marked(in: scan.notes)
+    let marked = BudgetNote.marked(in: scan.notes)
     // `lines:` is read from S3b-2b on; until then the lines are unavailable, never empty.
     return VaultRead(
-      lines: .unavailable, issues: scan.issues + BudgetNote.issues(for: budget),
+      lines: .unavailable,
+      issues: scan.issues + BudgetNote.issues(marked: marked, rejected: scan.rejectedMarks),
       notesFound: scan.noteCount, frontmatterRead: scan.notes.count,
       rejected: Self.count(scan.noteIssues), skipped: Self.count(scan.walkIssues),
-      budgetNotes: budget.count)
+      anchorLikeAccepted: scan.anchorLikeAccepted,
+      budget: BudgetNote.status(marked: marked, rejected: scan.rejectedMarks))
   }
 
   private static func count(_ issues: [ImportIssue]) -> [VaultProblem.Kind: Int] {
@@ -44,8 +46,11 @@ public struct VaultRead: Sendable {
   public let rejected: [VaultProblem.Kind: Int]
   /// Entries the walk skipped or could not open, by problem.
   public let skipped: [VaultProblem.Kind: Int]
-  /// Notes with `moonshine: budget`; the first by path is the budget note.
-  public let budgetNotes: Int
+  /// Notes accepted although their frontmatter has anchor-like text: an `&` that may start an
+  /// anchor, with no alias to use it.
+  public let anchorLikeAccepted: Int
+  /// The budget note, or why there is none.
+  public let budget: BudgetNoteStatus
 
   /// Counts only: never a path, a note name or a value from a note. Every kind is listed,
   /// zeros included, so an anchor rejection can never be missed.
@@ -53,12 +58,14 @@ public struct VaultRead: Sendable {
     let rejectedCount = rejected.values.reduce(0, +)
     let rejectedKinds: [VaultProblem.Kind] = [
       .unreadable, .notUTF8, .frontmatterTooLarge, .malformedYAML, .yamlTooComplex, .yamlAnchor,
+      .yamlDirective,
     ]
-    var lines = [
+    return [
       "vault: \(notesFound) notes found · \(frontmatterRead) frontmatter read",
       "rejected notes: \(rejectedCount) ("
         + Self.list(rejected, rejectedKinds.map { ($0, $0.rawValue) }) + ")",
       "notes rejected for an anchor: \(rejected[.yamlAnchor, default: 0])",
+      "notes with anchor-like text and no alias, accepted: \(anchorLikeAccepted)",
       "skipped: "
         + Self.list(
           skipped,
@@ -66,14 +73,43 @@ public struct VaultRead: Sendable {
             (.symlinkSkipped, "symlinks"), (.outsideVault, "outside vault"),
             (.unreadable, "unreadable entries"),
           ]),
-      "budget note: "
-        + (budgetNotes == 0
-          ? "missing" : budgetNotes == 1 ? "found" : "\(budgetNotes) found, first by path used"),
+      "budget note: " + budgetLabel,
     ]
-    if budgetNotes == 0 && rejectedCount > 0 {
-      lines.append("the budget note may be among the rejected notes")
+  }
+
+  /// Owner only: each problem's kind, vault-relative path and line, never anything from the
+  /// note. Paths are owner data: printed in the owner's own terminal, never logged.
+  public var problemLocations: [String] {
+    issues.compactMap { issue in
+      switch issue {
+      case .vault(let path, let line, let problem):
+        "\(problem.kind.rawValue) \(Self.printable(path))" + (line.map { ":\($0)" } ?? "")
+      case .vaultWide(let problem): problem.kind.rawValue
+      default: nil
+      }
     }
-    return lines
+  }
+
+  /// A file name is untrusted: every control and format character (newlines, ESC, bidi
+  /// controls) is shown as `\u{…}`, and a backslash as `\\`, so a name cannot rewrite, hide
+  /// or forge a printed line.
+  static func printable(_ path: String) -> String {
+    path.unicodeScalars.map { scalar in
+      switch scalar.properties.generalCategory {
+      case .control, .format, .lineSeparator, .paragraphSeparator:
+        "\\u{\(String(scalar.value, radix: 16, uppercase: true))}"
+      default: scalar == "\\" ? "\\\\" : String(scalar)
+      }
+    }.joined()
+  }
+
+  private var budgetLabel: String {
+    switch budget {
+    case .found: "found"
+    case .missing: "missing"
+    case .rejected(let kind): "rejected (\(kind.rawValue))"
+    case .ambiguous(let marked): "\(marked) marked notes"
+    }
   }
 
   /// `name count` for each kind in the given order, zeros included.

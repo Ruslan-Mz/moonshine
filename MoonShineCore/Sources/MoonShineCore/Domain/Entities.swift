@@ -279,17 +279,25 @@ public struct VaultProblem: Hashable, Sendable, CustomStringConvertible {
     case malformedYAML
     /// Too many YAML nodes or too deep a nesting.
     case yamlTooComplex
-    /// A YAML anchor (`&name`). Aliases need one, and Yams expands aliases while parsing, so
-    /// the reader rejects anchors before parsing; counted on its own to spot false positives.
+    /// A YAML anchor (`&name`) together with an alias (`*name`). Yams expands aliases while
+    /// parsing, so the reader rejects the pair before parsing; counted on its own to spot false
+    /// positives.
     case yamlAnchor
+    /// A YAML directive (`%YAML`, `%TAG`): a `%TAG` prefix is copied into every tag that uses
+    /// it, so the reader rejects directives before parsing.
+    case yamlDirective
     /// A symbolic link; the reader never follows one.
     case symlinkSkipped
     /// The resolved file lies outside the vault folder.
     case outsideVault
-    /// No note has `moonshine: budget` (vault-wide). A rejected note may be the budget note.
+    /// No note has `moonshine: budget` (vault-wide), rejected notes searched too. A note that
+    /// cannot be read or whose frontmatter cannot be extracted cannot be searched.
     case budgetNoteMissing
-    /// Another note has `moonshine: budget`; the first by path is the budget note.
+    /// More than one note has `moonshine: budget`, parsed or rejected; set on each of them,
+    /// and none is the budget note.
     case budgetNoteDuplicate
+    /// The one note with `moonshine: budget` was rejected; its other problem names the kind.
+    case budgetNoteRejected
   }
 
   public let kind: Kind
