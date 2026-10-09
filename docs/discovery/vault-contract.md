@@ -56,7 +56,7 @@ Rules
 - `state: paused` = "paused on purpose" in the UI. It is never shown as missing activity.
 - Tasks that match no line belong to **Life ops** (not a line; see `snapshot-contract.md`).
 - A task maps to **at most one** line. Precedence: task tag → project tag → project name → folder. Two lines claiming the same tag/folder → banner naming both line ids; first in list wins.
-- Hours shown for a line come only from real time data or from numbers the owner set himself: the vault values `budget_h_week`, `floor_h_day` and `portion_h_day`, and the length of events in the line's calendar (the day portion of ADR-0016) — CLAUDE.md rule 8 / ADR-0006.
+- Hours shown for a line come only from real time data or from numbers the owner set himself: the vault values `budget_h_week`, `floor_h_day` and `portion_h_day`, and the length of events in the line's calendar (the day portion of ADR-0016; owner, 2026-10-08) — CLAUDE.md rule 8 / ADR-0006.
 - The markdown table in the note may stay; the YAML block is authoritative for MoonShine (ADR-0004).
 
 Validation of `lines:` (owner, 2026-10-07 and 2026-10-08):
@@ -157,8 +157,8 @@ artifacts:
     - **flow nesting** (`[`, `{`) at most 32, also before parsing; after parsing, at most 10,000 nodes and depth 32 per note (`yamlTooComplex`).
   - **owner-only paths:** `moonshine-import vault --paths` prints each problem's kind, vault-relative path and line, nothing from the note. Its help text says it is for the owner's own terminal, and the tool enforces it: it refuses to run unless standard output is a terminal, checked before anything is read. A printed path shows every control and format character and a backslash as an escape (`\u{…}`, `\\`);
   - **line breaks:** the frontmatter ends only at a `---` line after LF. A `---` after CR, NEL, LS or PS is not a delimiter for the reader but starts a second document for libyaml, so the note fails safe as `malformedYAML`.
-- Hidden files and folders (`.obsidian`, `.trash`) are not read. One exception from the Write phase (ADR-0015): Obsidian's named settings files for daily and periodic notes, and from them only the folder, the file-name pattern and the template path. A note without frontmatter is skipped, not a problem.
-- **Bodies (from the Hub slice; ADR-0014):** a note body is read for links and tags only, never for values; nothing around a link is stored. A body larger than 1 MB is not indexed and gives a typed problem; the walk limits above apply. A note is re-read only when its size or modification time changed.
+- Hidden files and folders (`.obsidian`, `.trash`) are not read. One exception from the Write phase (ADR-0015): Obsidian's named settings files for daily and periodic notes, and from them only the folder, the file-name pattern and the template path; those folders and that path pass the same checks as the walk (inside the vault root, no symbolic links) before anything is read (ADR-0015 write rule 6). A note without frontmatter is skipped for frontmatter reading, not a problem; its body is still indexed from the Hub slice (next item).
+- **Bodies (from the Hub slice; ADR-0014):** the body of every note, with or without frontmatter, is read for links and tags only, never for values; nothing around a link is stored, not its alias or anchor either (owner, 2026-10-09). A body larger than 1 MB is not indexed and gives a typed problem; the walk limits above apply. A note is re-read only when its size or modification time changed.
 - Unknown keys are ignored and preserved (future-proof; the vault has 200+ distinct keys).
 - `review_cadence` and `review-cadence` both exist in the vault (19 vs 8 notes); MoonShine reads either.
 
@@ -191,8 +191,8 @@ Rules
 
 - **`moonshine:`** — reserved values `budget` (§1) and `project` (§4). A note with any other value is not a problem and gives no banner.
 - **`portion_h_day`** on a line (§1; read from the Timer slice, ADR-0016).
-- **`moonshine_ai: false`** on any note (read from the Ask phase, ADR-0015): the assistant never reads the note's body, even inside a folder on its allowlist.
-- **Keys MoonShine owns and may write** (from the Write phase, ADR-0015, through `SetNoteProperty`, one line at a time): `omnifocus_id` (§4). No other key is written.
+- **`moonshine_ai: false`** on any note (read from the Ask phase, ADR-0015): the assistant never reads the note's body, even inside a folder on its allowlist, and the note is never sent in the standing context pack: it appears in the pack's list as excluded (owner, 2026-10-09).
+- **Keys MoonShine owns and may write** (from the Write phase, ADR-0015, through `SetNoteProperty`, one line at a time): `omnifocus_id` (§4). On an existing note no other key is written; a note made by `CreateNote` may carry §4's project-note keys and its template's own frontmatter.
 
 ## Open questions
 

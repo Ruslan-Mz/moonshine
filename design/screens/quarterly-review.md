@@ -84,7 +84,7 @@ Takes and drafts of every line for the quarter's ISO weeks. Artifact → line fr
 
 ### Behaviour
 
-Read-only, like the rest of the review: marks and notes are shown, not edited (the journal in Line detail is the place to change them). The chevron state is view state.
+Read-only, like the rest of the review: marks and notes are shown, not edited (the take history in Line detail is the place to change them). The chevron state is view state.
 
 ### SwiftUI
 

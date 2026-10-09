@@ -27,7 +27,7 @@ The owner wants a project to be one place that ties together its OmniFocus tasks
 - A binding must survive a rebuilt store and a renamed note.
 - A project may exist before it has any OmniFocus task, and without any note (as today).
 - Plans, time entries, forecasts and takes hang on the MoonShine project id. A re-binding must not orphan them.
-- Journal text is the most sensitive data: it must not be copied into the store or into CloudKit.
+- Journal text is the most sensitive data: it must not be copied into the store or into CloudKit (the one exception is the text of a pending vault command, ADR-0015 write rule 8).
 - The vault is untrusted input for the reader (limits in vault contract §3).
 - Obsidian keeps working: a link must mean the same thing in both tools.
 
@@ -87,14 +87,14 @@ Rules:
 
 ### The link index
 
-The `ObsidianAdapter` reads note bodies for links and tags only.
+The `ObsidianAdapter` reads note bodies for links and tags only. Bodies are indexed for every note, with or without frontmatter: most journal notes have none.
 
 - Extracted: `[[target]]`, `[[target|alias]]`, `[[target#heading]]`, `![[embed]]`, Markdown links to notes in the vault, `moonshine://` links, inline `#tags`, and wikilinks in any frontmatter value (`parent`, `related`, …).
 - Not extracted: anything inside code fences, inline code or `%% comments %%`.
-- Stored per link: source note path, target as written, resolved note path or none, kind (`wikilink` · `embed` · `markdown` · `frontmatter` · `moonshine`), alias and anchor as written, line number. **Nothing around the link is stored**: no snippet, no heading, no sentence.
-- Resolution follows Obsidian: an exact vault-relative path; else the file name without extension, case-insensitive; else a match in a note's `aliases`. Several candidates → the shortest path, and the link is flagged ambiguous. Unresolved links are kept.
+- Stored per link: source note path, target as written (without its anchor and alias), resolved note path or none, kind (`wikilink` · `embed` · `markdown` · `frontmatter` · `moonshine`), line number. **Nothing around the link is stored**: no alias, no anchor, no snippet, no heading, no sentence (owner, 2026-10-09).
+- Resolution follows Obsidian: an exact vault-relative path; else the file name without extension, case-insensitive. Several candidates → the shortest path, and the link is flagged ambiguous. Unresolved links are kept. A bare `[[name]]` that matches only a note's `aliases` stays unresolved, as in Obsidian: aliases feed its autocomplete, which inserts `[[Note|Alias]]`.
 - Backlinks and mentions are queries over the index.
-- The line of context shown next to a mention is read from the file at display time, on a device that has the vault. Other devices show the note's title and date.
+- The line of context, the alias and the anchor shown with a mention are read from the file at display time, on a device that has the vault. Other devices show the note's title and date.
 - Limits: a body larger than 1 MB is not indexed and gives a typed problem; the walk limits of vault contract §3 apply. A note is re-read only when its size or modification time changed.
 - The index is provider-sourced data: built on the Mac, synced read-only (ADR-0010). The sync consent text names it.
 
@@ -117,7 +117,7 @@ The Hub slice is placed after R1 so that the R1 deadline does not depend on it.
 - Good — one page per project: tasks, plan, note, notes of the project, mentions.
 - Good — a project can exist before its first OmniFocus task, so a draft plan in a note has something to attach to.
 - Good — the binding lives in the vault and survives a rebuilt store; Obsidian's own graph stays valid.
-- Good — no note text enters the store or CloudKit.
+- Good — the index puts no note text into the store or CloudKit (a pending vault command carries its own text, ADR-0015 write rule 8).
 - Bad — until the Write phase the owner adds two or three frontmatter lines to each project note by hand.
 - Bad — a second parser over untrusted text. Wikilink edge cases (escaped pipes in tables, nested brackets) and Obsidian's resolution rules can be mirrored wrongly; fixtures and the ambiguous flag reduce this and do not remove it.
 - Bad — a binding by name breaks when the project is renamed in OmniFocus, until `omnifocus_id` is written.
@@ -127,10 +127,10 @@ The Hub slice is placed after R1 so that the R1 deadline does not depend on it.
 
 ### Confirmation
 
-- Reader tests on synthetic fixtures: a note binds by id and by name; a duplicate `id` and a doubly claimed OmniFocus project give a banner and a stable winner; a missing OmniFocus project gives the typed problem; links inside code are ignored; an ambiguous link is flagged; an unresolved link is kept; a renamed note keeps its project through `id`.
-- Store test: after importing a fixture vault whose bodies contain a sentinel string, the sentinel does not occur anywhere in the store file.
+- Reader tests on synthetic fixtures: a note without frontmatter has its links indexed; a bare link that matches only an alias stays unresolved; a note binds by id and by name; a duplicate `id` and a doubly claimed OmniFocus project give a banner and a stable winner; a missing OmniFocus project gives the typed problem; links inside code are ignored; an ambiguous link is flagged; an unresolved link is kept; a renamed note keeps its project through `id`.
+- Store test: after importing a fixture vault whose bodies contain a sentinel string — in the text, inside an alias and inside an anchor — the sentinel does not occur anywhere in the store file.
 - Core tests: binding a note to an existing project keeps the project id; two projects with history are never merged without the command.
-- No code path writes to the vault before the Write phase: a CI check that fails on file-writing calls in the Obsidian adapter (added in S3b-3; from the Write phase on, allowed only inside `VaultWriter`).
+- No code path writes to the vault before the Write phase: a CI check (added in S3b-3) that covers every target that can reach the vault — `MoonShineCore`, all of `Adapters/` (the `moonshine-import` CLI included) and `Apps/` once it exists — and fails on any file-writing call outside a short allowlist of files that write MoonShine's own data (the store); from the Write phase `VaultWriter` joins the allowlist.
 
 ## Pros and Cons of the Options
 
@@ -151,5 +151,5 @@ The Hub slice is placed after R1 so that the R1 deadline does not depend on it.
 
 ## More Information
 
-- Obsidian's link resolution is mirrored from its documented behaviour and is checked against the owner's vault in the Hub slice by counts only (resolved / ambiguous / unresolved), never by content.
+- Obsidian's link resolution is mirrored from its documented behaviour. The resolution order, the shortest-path tie-break included, is checked against Obsidian with the Hub slice's fixtures, and against the owner's vault by counts only (resolved / ambiguous / unresolved), never by content.
 - Follow-up: several OmniFocus projects under one project; heading and block anchors resolved to positions; rename tracking for notes without an `id`.

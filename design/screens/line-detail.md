@@ -47,7 +47,7 @@ Artboards: `LineDetail-Take`, `LineDetail-Take-Dark`.
 ### Layout
 
 - **Three metric cards**, side by side and separate: Rhythm, Progress, **My take**. The third card has no bars and no axis: title (spark mark + `My take` + `set by you · not measured`), the current week's state in words (`▷ Rise` + `draft · this week so far`, or the confirmed direction, or nothing), and one row of `TakeMark`s (16 pt, Leap 21 pt) over the same week labels W33–W40 as the other cards.
-- **Journal** in the inspector, between the parent artifact and the last completions: header `My take` + filter `All | ✦ Leaps` + link `Add a note`. Rows are `TakeJournalRow`s, newest first: `W36 · Leap — Vibrato finally works` + `set Sun 6 Sep`; a draft reads `W40 · Rise — Bars 9–16 clean at ♩ = 60` + `draft · Mon 28 Sep`. Notes wrap. Under the list: `Confirm my take for week 40…` when the week has drafts — it opens the weekly review at step 2 for that week, where takes are confirmed — or `Set my take for this week` when it has none, which opens the `TakeControl` popover and saves a **draft** (outside the weekly review nothing is confirmed).
+- **Take history** in the inspector, between the parent artifact and the last completions: header `My take` + filter `All | ✦ Leaps` + link `Add a note`. Rows are `TakeHistoryRow`s, newest first: `W36 · Leap — Vibrato finally works` + `set Sun 6 Sep`; a draft reads `W40 · Rise — Bars 9–16 clean at ♩ = 60` + `draft · Mon 28 Sep`. Notes wrap. Under the list: `Confirm my take for week 40…` when the week has drafts — it opens the weekly review at step 2 for that week, where takes are confirmed — or `Set my take for this week` when it has none, which opens the `TakeControl` popover and saves a **draft** (outside the weekly review nothing is confirmed).
 - **Projects table** gains a column `My take` (112): the project's latest take as a chip (`✦ Leap · W36`), otherwise a quiet `+` button (`Add my take`), which opens the same control for the project.
 
 ### Data
@@ -56,18 +56,18 @@ The line's takes and draft notes for the visible weeks; project-level takes for 
 
 ### Behaviour
 
-`Add a note` opens a one-line field (optional `1`–`4`), saves a dated draft on the current week and shows it at once in the card and the journal. A past draft's journal row links to its week in the weekly review, where it can be confirmed. Opening a confirmed row shows the dated notes kept under the take.
+`Add a note` opens a one-line field (optional `1`–`4`), saves a dated draft on the current week and shows it at once in the card and the take history. A past draft's take-history row links to its week in the weekly review, where it can be confirmed. Opening a confirmed row shows the dated notes kept under the take.
 
 **Re-estimate row.** After a Leap on the line, a quiet row under the metric cards: `✦ W36 · my take: Leap │ Re-estimate what is left?` with the line's projects that have plans, each with `Open estimates`, and `Not now` to dismiss (same wording as `forecast.md` § My take). Project takes drawn here are independent of the line take; how a project take is confirmed is drawn in the 3b round. A take changed after its week ended shows `set Tue 29 Sep · changed after the week ended`.
 
 ### SwiftUI
 
-Third `MetricCard` variant without `Chart`: `HStack` of marks in the same week columns. Journal: `List` section with a segmented `Picker` for the filter. Popover: `.popover` hosting `TakeControlView`.
+Third `MetricCard` variant without `Chart`: `HStack` of marks in the same week columns. Take history: `List` section with a segmented `Picker` for the filter. Popover: `.popover` hosting `TakeControlView`.
 
 ### Acceptance
 
 - [ ] Three cards, three things; the take card cannot be mistaken for a chart of measured values.
-- [ ] Journal for 🎻 Violin, newest first: W40 draft (Wed, no direction) · W40 draft (Mon, Rise) · W39 Steady, set Tue 29 Sep · W38 Rise · W36 Leap · W35 Rise.
+- [ ] Take history for 🎻 Violin, newest first: W40 draft (Wed, no direction) · W40 draft (Mon, Rise) · W39 Steady, set Tue 29 Sep · W38 Rise · W36 Leap · W35 Rise.
 - [ ] `Leaps` filter leaves only W36.
 - [ ] No "N takes", no percentages.
 

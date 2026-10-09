@@ -54,6 +54,8 @@ Rules that follow:
 - **Assistant (phase 4).** Tools expose event counts and busy time by default. Event titles are exposed only after an explicit opt-in in Settings.
 - **Demo mode** uses the fixture provider and never calls EventKit.
 
+**Amendment (2026-10-09, ADR-0016).** A time entry the owner confirms from an event keeps the event's start, end and line, never its title, attendees, id or calendar name; it is MoonShine-native data and syncs under ADR-0010. A timer target taken from an event is only a duration. These, and the per-day busy minutes above, are the only calendar-derived data that leaves the device.
+
 ### Consequences
 
 - Good — events are current within a second on every device, with no importer and no Mac dependency.

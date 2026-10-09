@@ -45,4 +45,4 @@ The owner's rule: goals, artifacts, plans and budgets live in Obsidian; OmniFocu
 
 ### Confirmation
 
-Parser tests on fixture notes; invalid YAML shows a banner, never a crash; until the Write phase no code path writes to the vault: a CI check that fails on file-writing calls in the Obsidian adapter (added in S3b-3; from the Write phase on, allowed only inside `VaultWriter`).
+Parser tests on fixture notes; invalid YAML shows a banner, never a crash; until the Write phase no code path writes to the vault: a CI check (added in S3b-3) that covers every target that can reach the vault — `MoonShineCore`, all of `Adapters/` (the `moonshine-import` CLI included) and `Apps/` once it exists — and fails on any file-writing call outside a short allowlist of files that write MoonShine's own data (the store); from the Write phase `VaultWriter` joins the allowlist.

@@ -93,7 +93,7 @@ The weekly review gains a section **How did each line go?** where the owner sets
 ### Data
 
 - `Take` (confirmed): line (or project) · ISO week · direction (`leap | rise | steady | dip`) · note? · `setAt`. One per (line, week); the latest value wins and is shown with its date.
-- `TakeNote` (draft): line (or project) · ISO week · `writtenAt` · text · direction?. Any number per (line, week). On confirm the dated notes are **kept as data under the take** and shown when its journal row is opened. A note added to a week that is already confirmed is stored under that take; the take stays confirmed.
+- `TakeNote` (draft): line (or project) · ISO week · `writtenAt` · text · direction?. Any number per (line, week). On confirm the dated notes are **kept as data under the take** and shown when its take-history row is opened. A note added to a week that is already confirmed is stored under that take; the take stays confirmed.
 - A confirmed take needs a direction; a note without one stays a draft.
 - **Set only by the owner** means the content comes from the owner's own words. The assistant (phase 4) may file a dictated note as a draft; it never chooses a direction the owner did not say, and never confirms (ADR-0013).
 - A project take is independent of the line take: it never rolls up to the line and never replaces it.
@@ -107,7 +107,7 @@ The weekly review gains a section **How did each line go?** where the owner sets
 - On a row with drafts, `Confirm` (`⌘↩`) accepts the prefilled direction and note as they are; the owner can edit the note first. A row whose drafts carry no direction cannot be confirmed until a direction is chosen. The dated drafts stay under the confirmed take.
 - Keyboard: `↑` `↓` move between lines, `1`–`4` set the direction, `↩` opens the note, `⌘↩` confirms, `⌫` on a selected segment clears the take.
 - **No "Confirm all drafts".** It would save two or three taps a week and invites confirming without reading; `⌘↩` then `↓` already confirms a row in two keys.
-- **Nothing reminds.** No counter of lines without a take, no badge on the review toggle, no "seen" circle for this section. Drafts of earlier weeks are not listed in later reviews; they stay drafts and are reachable from the line's journal and the quarterly review, or by stepping back to their week (`‹`).
+- **Nothing reminds.** No counter of lines without a take, no badge on the review toggle, no "seen" circle for this section. Drafts of earlier weeks are not listed in later reviews; they stay drafts and are reachable from the line's take history and the quarterly review, or by stepping back to their week (`‹`).
 - Stepping to a past week shows that week's takes in the same list; rows are editable there too.
 - Any take or note **resets the quiet count** from its date (the date the note was written or the take was set, never a future date), so a line with a take for the week is not listed under "Quiet lines" in step 1.
 

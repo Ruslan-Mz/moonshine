@@ -44,14 +44,15 @@ The owner records his hours in an Excel workbook, mostly from memory at the end 
 
 **Chosen option: "1"**, because intervals on the clock give the forecast exact evidence, put actual time on the same day axis as the calendar and the plan, make corrections simple, and let two sources be compared instead of summed.
 
-**This ADR amends ADR-0013** (timer commands join the `auto` class) and the Excel import contract (the workbook is no longer "the source of truth until the quick log exists").
+**This ADR amends ADR-0013** (timer commands join the `auto` class), **ADR-0012** (what a confirmed calendar entry and a timer target keep of an event, below) and the Excel import contract (the workbook is no longer "the source of truth until the quick log exists").
 
 ### Records
 
-- **`TimerSession`** (native, synced under ADR-0010): subject, started at, state (`running` · `paused` · `stopped`), the device it was started on, an optional target (a duration or a clock time).
+- **`TimerSession`** (native, synced under ADR-0010): subject, started at, state (`running` · `paused` · `stopped`), the device it was started on, an optional target (a duration or a clock time; a target taken from an event is only a duration).
 - **`TimeEntry`** gains fields: `day` (the local calendar date it belongs to), optional `start` and `end` (instants) with the time zone at capture, `minutes`, the subject, `source`, `session`, `edited`.
   - **Subject:** a line (or Life ops, when the task maps to no line), and optionally a project, a task or a plan step. The line is stored on the entry at capture, so a later change of mapping does not rewrite history; re-attributing is an explicit command.
-  - **Source:** `timer` · `manual` · `excel` · `calendar` (confirmed from an ended event) · `omnifocusEstimate` (derived).
+  - **Source:** `timer` · `manual` · `excel` · `calendar` (confirmed by the owner from an ended event) · `omnifocusEstimate` (derived).
+- **Calendar entries** (owner, 2026-10-09; amends ADR-0012). A time entry the owner confirms from an event keeps the event's start, end and line, never its title, attendees, id or calendar name. A timer target taken from an event is only a duration. These are the only event-derived values besides ADR-0012's busy minutes that leave the device.
 - **Intervals are the atoms.** Pause closes an interval and resume opens the next one in the same session; each interval is one entry. An interval that crosses local midnight is split in two at stop. A workbook entry has a day and minutes and no clock times.
 
 ### One running timer
@@ -98,8 +99,8 @@ A nudge is a local notification on the device where the session was started, and
 | Day mark            | today's tracked time on a line reaches its floor or its portion                                                                       | `Today's 4 h are in`       |
 | Calendar suggestion | five minutes before an event in a line-mapped calendar: an offer to start a timer on that line, with the event's length as the target | `🏃 17:00 · Start timer?`  |
 
-- **Day mark.** The _floor_ is the line's `floor_h_day`. The _portion_ is the sum of today's events in the line's calendar, else the line's optional `portion_h_day` in the budget note. A line with neither has no day mark. From the Board phase a project's portion comes from the plan.
-- The calendar suggestion reads events on the device, as every calendar feature does (ADR-0012); nothing about the event is stored. It needs the app to have run that day, so it is best effort.
+- **Day mark.** The _floor_ is the line's `floor_h_day`. The _portion_ is the sum of today's events in the line's calendar, else the line's optional `portion_h_day` in the budget note. A line with neither has no day mark. From the Board phase a project's portion comes from the plan. Hours may be shown next to the portion: CLAUDE.md rule 8 names `portion_h_day` and the length of events in a line's calendar (owner, 2026-10-08).
+- The calendar suggestion reads events on the device, as every calendar feature does (ADR-0012); nothing about the event is stored except, once the owner starts the timer, the target's duration (§ Records). It needs the app to have run that day, so it is best effort.
 - Titles of tasks and events are not shown on a locked screen unless the existing setting allows it.
 - **Break reminder.** Its two actions are `Break` and `Keep going`. `Break` pauses the timer, so the break is not counted, and one reminder to resume follows after the break length (default 5 minutes). Without an answer the timer keeps running.
 - No streaks. A day mark is never shown as missed.
@@ -117,9 +118,10 @@ Both stay. The unit of comparison is **(day, line)**.
 
 - Entries are _measured_ (`timer`), _stated_ (`manual`, `excel`, `calendar`) or _derived_ (`omnifocusEstimate`).
 - A derived entry is counted only for a (day, line) that has no measured and no stated entry.
-- When a (day, line) has both native entries (`timer`, `manual`, `calendar`) and `excel` entries, and their totals differ by more than the tolerance (default 10 minutes), the pair goes to a **reconcile list**. Within the tolerance the native entries stand and nothing is listed.
+- When a (day, line) has both native entries (`timer`, `manual`, `calendar`) and `excel` entries, and their totals differ by more than the tolerance (default 10 minutes), the pair goes to a **reconcile list**. Within the tolerance the pair is resolved automatically as "the same session" (the native entries stand) and is not listed; it can be reopened from the day view, where all four choices are offered (owner, 2026-10-09).
 - Until the owner decides, the native entries are counted and the cell is marked "two sources". The two are never added together.
-- Choices: keep MoonShine · keep the workbook · keep both (they were different sessions) · **the workbook's total is right** (the difference becomes one manual entry without clock times).
+- Choices: keep MoonShine · keep the workbook · keep both (they were different sessions) · **the workbook's total is right** (the difference becomes one manual entry without clock times). Keeping the workbook marks that day's native entries for the line as not counted.
+- "The workbook's total is right" is offered only when the workbook's total is larger. When it is smaller, the choices are keep MoonShine or keep the workbook. No entry is ever negative, and no measured entry is deleted (owner, 2026-10-09).
 - The choice is stored for that (day, line). Importing the sheet again does not reopen it unless the workbook's value changed.
 
 ### Roadmap
@@ -150,9 +152,10 @@ Both stay. The unit of comparison is **(day, line)**.
 ### Confirmation
 
 - Core tests: starting a timer stops the running one at the same instant; two offline sessions merge to the same entries on both devices; pause and resume give separate intervals; an interval across midnight is split; a daylight-saving change and a time-zone change keep the minutes right; an edit that would overlap a neighbour is refused until the owner chooses; every command can be undone.
-- Reconcile tests: totals within the tolerance list nothing; beyond it the pair is listed, the native entries are counted and the two are never summed; each choice gives the stated result; a re-import does not reopen a decided pair unless the workbook's value changed; a derived entry is not counted next to a measured or stated one.
+- Reconcile tests: totals within the tolerance list nothing and resolve as "the same session", and reopening that pair from the day view offers all four choices; a smaller workbook total offers only keep MoonShine and keep the workbook, and keeping the workbook marks the native entries as not counted without deleting any; no choice creates a negative entry; beyond it the pair is listed, the native entries are counted and the two are never summed; each choice gives the stated result; a re-import does not reopen a decided pair unless the workbook's value changed; a derived entry is not counted next to a measured or stated one.
 - Assistant tests (the Ask phase): a subject with two matches never starts a timer; a time offset that is not in the utterance is never applied.
 - Nudge tests with a fake clock: each kind fires once per mark; none fires on a device that did not start the session; a line without a floor or a portion has no day mark; `Break` pauses the session and the resume reminder fires once.
+- Calendar tests: an entry confirmed from an event stores its start, end and line and no title, attendee, id or calendar name; a timer target from an event stores only a duration.
 - Check-mark tests: a session past its limit, or one that spans Mac sleep, is marked; nothing is trimmed without the owner's choice; a marked entry stays marked until it is confirmed or edited.
 - Timer-slice acceptance: one working week tracked on the Mac, compared by the owner with his workbook for the same week.
 

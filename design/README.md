@@ -202,7 +202,7 @@ The owner's weekly take: a qualitative assessment of how a line went this week, 
 1. **Three tracks, never one score.** Rhythm and progress are measured (coloured bars); the take is judged (ink marks, the label `my take`). They sit side by side and are never combined. → `components.md` § Take components.
 2. **Weekly review** gets a second step, `2 · My take`, with the section "How did each line go?": one row per foundation and active line — measured facts · four-segment control · note · Confirm. Drafts are listed with their day and prefill the control. → `screens/week.md`, `screens/ipad-week.md`.
 3. **Lines**: a third track of take marks under each sparkline and this week's chip. → `screens/lines.md`.
-4. **Line detail**: a third metric card "My take", a journal with a Leaps filter, a take per project. → `screens/line-detail.md`.
+4. **Line detail**: a third metric card "My take", a take history with a Leaps filter, a take per project. → `screens/line-detail.md`.
 5. **Project forecast (future)**: take marks on the drift chart's week axis, one quiet row `Re-estimate what is left?` after a Leap. → `screens/forecast.md`.
 6. **Quarterly review**: take strips per line, notes when a row is opened, Leaps as supporting notes under the focus outcomes. → `screens/quarterly-review.md`.
 7. **Capture**: iPhone sheet `Note for my take` (Log tab and line glance), Mac ⌘K command and `Add a note`, iPad popover. → `screens/iphone-quick-log.md`, `screens/iphone-line-glance.md`, `screens/command-palette.md`.
@@ -248,9 +248,9 @@ Why horizontal triangles and not vertical: the words are Forward and Back, not U
 1. **RU name.** **«Мой взгляд»**; EN `My take`.
 2. **`Back` as a label.** Replaced: the directions are `Leap · Rise · Steady · Dip` / «Рывок · Подъём · Ровно · Спуск». No `My take:` prefix workaround is needed. Rise and Dip get new marks in the next round (below).
 3. **Confirmed take without a direction?** No — confirming needs a direction; a note without one stays a draft.
-4. **Dated notes on confirm.** Kept as data under the take and shown when the journal row is opened.
+4. **Dated notes on confirm.** Kept as data under the take and shown when the take-history row is opened.
 5. **A note for a week that is already confirmed.** Stored under that take; the take stays confirmed.
-6. **Past drafts in later reviews.** Not listed; reachable from the journal and the quarterly review.
+6. **Past drafts in later reviews.** Not listed; reachable from the take history and the quarterly review.
 7. **Storage, slice and ADR.** Storage in the first native slice of phase 2; no separate ADR. ADR-0010's conflict rules gain: draft notes merge (append-only); a confirmed take is last-writer-wins per (subject, week). Writing confirmed takes to the vault is decided in the Act phase spec.
 8. **Project take vs line take.** Independent; no roll-up.
 9. **Hours wording.** `2 h of 6 h budget` / «2 ч из 6 ч бюджета».
@@ -269,7 +269,7 @@ The mockups are generated files and are not edited by hand; where a mockup and a
 
 #### Before phase 2
 
-1. **Rise and Dip marks**: redraw as terrain shapes that are not arrows (a rising slope, a falling slope). Until then the triangles stay. My take is phase 2's first slice.
+1. **Rise and Dip marks**: redraw as terrain shapes that are not arrows (a rising slope, a falling slope). Until then the triangles stay. My take is phase 2's first native slice.
 2. **Project take**: how a project take is confirmed in the weekly review.
 3. **Project page** (the Hub slice, ADR-0014): tasks, plan, with places reserved for the rendered project note and for the mentions.
 4. **Time tracking on the Mac** (the Timer slice, ADR-0016): the menu bar timer; starting from a row and from ⌘K; tracked intervals on the Today rail with editing; the week table; the reconcile list; the four nudges with the `Break` action; the check mark of a forgotten timer.

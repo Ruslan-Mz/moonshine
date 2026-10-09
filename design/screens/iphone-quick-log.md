@@ -28,7 +28,7 @@ The quick log and the timer write **time entries** (MoonShine-native data, `plat
 - `When` (default now, rounded to 5 min) and an optional note.
 - Primary button: `Save 20 min to 🎻 Violin` (full width, 54). Secondary: `Start practice timer`.
 
-**Practice timer sheet**: line + current next action, elapsed `18:42` (76 pt, tabular digits), `started 17:58 · running`; Pause (76 circle) and Stop & save (76, accent). Caption: stopping saves an N-minute time entry; the timer continues on the Lock Screen and in the Dynamic Island.
+**Practice timer sheet**: line + current next action, elapsed `18:42` (76 pt, tabular digits), `started 17:58 · running`; Pause (76 circle) and Stop & save (76, accent). Caption: stopping saves the session as time entries, one per interval between pauses; the timer continues on the Lock Screen and in the Dynamic Island.
 
 **Live Activity**:
 
@@ -37,7 +37,7 @@ The quick log and the timer write **time entries** (MoonShine-native data, `plat
 
 ## Data
 
-`TimeEntry { day, start?, end?, minutes, subject, note, source: manual | timer, session? }` (ADR-0016). The subject is a line, or a task or a project with its line. Recent lines = last 7 days of entries, then foundation lines, then the vault order. A timer session gives one entry per interval: Pause closes an interval and Resume opens the next, so a paused session gives several entries.
+`TimeEntry { day, start?, end?, minutes, subject, note, source: manual | timer | calendar, session? }` (ADR-0016). The subject is a line, or a task or a project with its line. Recent lines = last 7 days of entries, then foundation lines, then the vault order. A timer session gives one entry per interval: Pause closes an interval and Resume opens the next, so a paused session gives several entries.
 
 ## Behaviour
 
@@ -59,7 +59,7 @@ The quick log and the timer write **time entries** (MoonShine-native data, `plat
 
 Artboards: `iPhoneLog-Cal`, `iPhoneLog-Cal-Dark`.
 
-When an event from a **line-mapped** calendar has ended (today, within the last 3 hours, and no time entry overlaps it), the Log sheet offers a first row: `Log 60 min to 🎻 Violin` / `from "Violin lesson" · ended 18:00`. One tap fills the form (line, minutes = event duration, When = the event's time range, note = the event title); the user still presses Save. No notification in this round.
+When an event from a **line-mapped** calendar has ended (today, within the last 3 hours, and no time entry overlaps it), the Log sheet offers a first row: `Log 60 min to 🎻 Violin` / `from "Violin lesson" · ended 18:00`. One tap fills the form (line, minutes = event duration, When = the event's time range); the note stays empty: the entry keeps the event's start, end and line, never its title, attendees, id or calendar name (ADR-0016, owner 2026-10-09). The user still presses Save and the entry gets source `calendar`. No notification in this round.
 
 ## My take (draft-4)
 
@@ -79,7 +79,7 @@ The Log sheet gets a segmented control at the top: `Log time | Note for my take`
 ### Behaviour
 
 - Common case in three taps with one thumb: open the sheet (Log tab, or `Note for my take` on a line), type, `Save`. The sheet opens in the mode used last; from a line glance the line is fixed.
-- A saved note appears at once as a draft mark on the line's current week and in its journal with the day it was written. A direction is optional; a note without one shows the note-only mark.
+- A saved note appears at once as a draft mark on the line's current week and in its take history with the day it was written. A direction is optional; a note without one shows the note-only mark.
 - Nothing is confirmed on the iPhone; confirming happens only in the weekly review (Mac or iPad).
 
 ### SwiftUI
