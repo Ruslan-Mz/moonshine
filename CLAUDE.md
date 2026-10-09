@@ -18,9 +18,9 @@ See `docs/ROADMAP.md`. **Only build what the current phase's spec asks for.** La
 
    **Code a test runs** — the test itself and the production code it calls — may open only `fixtures/`, a temporary folder and files tracked in the repository, and may start only system tools named in the test (`/bin/sh`, `osacompile`). It never opens `data/`, `deny-list.txt`, `snapshots/`, `*.local.*`, the home folder or the vault, and never calls a live OmniFocus or EventKit.
 
-6. **No writes to external tools before the Act phase.** No writes to the vault, OmniFocus or calendars anywhere in code until the Act phase spec exists.
+6. **No writes to external tools before their phase:** the vault from the Write phase (ADR-0015), OmniFocus and calendars from the Act phase. No such code until that phase's spec exists.
 7. **Dependencies:** ask first. Pre-approved: `GRDB` (store), `Yams` (YAML), `CoreXLSX` (phase 2), official MCP Swift SDK (phase 4); EventKit is a pre-approved system framework (ADR-0012). Check licence compatibility with AGPL-3.0.
-8. **UI tone is a requirement:** no red and no "failed/overdue/behind" wording for intentions or lines; drift and quiet lines are facts with a suggested next step; paused lines are "paused on purpose". Urgent colour only for tasks with a real `due` date. "Hours" only next to real time data or the vault values `budget_h_week` and `floor_h_day` (ADR-0006).
+8. **UI tone is a requirement:** no red and no "failed/overdue/behind" wording for intentions or lines; drift and quiet lines are facts with a suggested next step; paused lines are "paused on purpose". Urgent colour only for tasks with a real `due` date. "Hours" only next to real time data or numbers the owner set himself: the vault values `budget_h_week`, `floor_h_day` and `portion_h_day`, and the length of events in a line's calendar (the day portion of ADR-0016; owner, 2026-10-08) (ADR-0006).
 9. **UX bar:** keyboard-first on Mac (every view reachable by shortcut, ⌘K command palette from phase 1), dense but calm layout, instant view switching (reads come from the local store).
 10. **Log the method:** append a row to `docs/method/log.md` at the end of each PR. Honest numbers; `n/a` if unknown. The Tokens / cost column takes the subagents' reported token totals (when any ran); the session's cost is what the owner pastes from `/cost`, otherwise `n/a`.
 

@@ -145,7 +145,7 @@ The owner's weekly take is a judgement, not a measurement. It must never look li
 
 - **One ink.** Rise, Steady and Dip use `secondary`; Leap uses `text`. No colour per direction, no red, no amber, no green. No new colour token.
 - **Set vs draft.** Set (confirmed) = filled. Draft = outline only, dashed (`2.3 1.7` on the 16 pt box, stroke 1.5). Below 12 pt the dashes merge into a thin outline; filled vs hollow still separates the two.
-- **Sizes** (nominal; Leap is 1.3×): Mac sparklines 9 · quarter strip 8 · Mac control and journal 11–12 · Mac metric card 16 · iPad control 13–15 · iPhone strip 14, direction buttons 15.
+- **Sizes** (nominal; Leap is 1.3×): Mac sparklines 9 · quarter strip 8 · Mac control and take history 11–12 · Mac metric card 16 · iPad control 13–15 · iPhone strip 14, direction buttons 15.
 - Take marks mirror with the layout direction (right-to-left layouts mirror them).
 - Accessibility: a mark never stands alone for VoiceOver. Strips are one element with a text value (`My take: W35 Rise, W36 Leap, …`); controls and chips carry the word.
 
@@ -165,7 +165,7 @@ Four segments (mark + word) + a one-line note + `Confirm`.
 
 States: empty (nothing selected) · prefilled from drafts (selected segment has a dashed outline, `Confirm` visible) · confirmed (selected segment raised, `✓ set Sun 4 Oct`) · focused (accent ring on the note, selection tint on the row). Segments are equal width, sized to the longest word of the UI language. Keys on Mac: `1`–`4`, `↩`, `⌘↩`.
 
-### TakeJournalRow
+### TakeHistoryRow
 
 Grid 18 · 34 · flex: mark 12 · `W36` (11.5, tertiary, tabular) · direction (semibold) `— note` (wraps, never truncated), then a meta line (11, tertiary): `set Sun 6 Sep`, `set Tue 29 Sep · changed after the week ended`, or `draft · Mon 28 Sep`. Newest first.
 

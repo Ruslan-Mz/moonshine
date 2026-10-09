@@ -26,7 +26,7 @@ One product, three roles. The owner plans on the iPad (OmniFocus is great for do
 - Touch targets ≥ 44 pt; Dynamic Type supported up to XXL without clipping; VoiceOver labels for every chart (values read as text).
 - iPad: size classes regular/compact; layouts must work full screen, in Split View next to OmniFocus (½ and ⅓) and in Stage Manager windows. Hardware keyboard shortcuts identical to Mac; pointer hover states.
 - Pencil: direct manipulation only (drag a forecast level, scrub a timeline, circle to select); no handwriting-as-data in v1.
-- iPhone: bottom tab bar; glanceable; a Home/Lock Screen widget; a practice timer as a Live Activity that becomes a time entry.
+- iPhone: bottom tab bar; glanceable; a Home/Lock Screen widget; a practice timer as a Live Activity whose session becomes time entries, one per interval (ADR-0016).
 
 ## When
 

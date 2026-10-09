@@ -1,6 +1,6 @@
-# Vault contract (Obsidian → MoonShine), v0.2
+# Vault contract (Obsidian → MoonShine), v0.3
 
-Status: **draft from phase-0 discovery** (see `data-report.md`). Implements ADR-0004: YAML frontmatter is the machine-readable truth; markdown bodies stay human text and are never parsed for data.
+Status: **draft from phase-0 discovery** (see `data-report.md`). Implements ADR-0004: YAML frontmatter is the machine-readable truth; markdown bodies stay human text and are read for links and tags only, never for values (from the Hub slice; ADR-0014).
 
 v0.2 (2026-10-01, design draft-2): optional line keys `foundation`, `floor_h_day`, `language`; quarter notes with `scale: quarter` and `artifacts:` (§2.2); R1 keys `done`, `carried_to`, `active_lines` (read from R1 on).
 
@@ -8,7 +8,9 @@ v0.2 (2026-10-01, design draft-2): optional line keys `foundation`, `floor_h_day
 
 2026-10-08 (S3b-2b+2c): `lines:` items are validated (§1, "Validation of `lines:`"); any invalid value skips its item.
 
-Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault writes before the Act phase).
+v0.3 (2026-10-08, ADR-0014, ADR-0015, ADR-0016): project notes (§4) and reserved keys and values (§5), all reserved now and read from the slice or phase named at each; line key `portion_h_day` (§1); note bodies read for links and tags (§3, from the Hub slice); Obsidian's settings files for daily and weekly notes (§3, from the Write phase).
+
+Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault writes before the Write phase; ADR-0015).
 
 ## Design choices driven by the data
 
@@ -38,6 +40,7 @@ lines: # order = display order within a block
     budget_h_week: 6 # optional number ≥ 0; null/absent = no weekly budget ("no schedule")
     foundation: false # optional (v0.2); true = foundation tier (the spine), shown first, never "quiet"
     floor_h_day: null # optional number ≥ 0 (v0.2); daily minimum, on any line
+    portion_h_day: null # optional number ≥ 0 (v0.3, reserved; read from the Timer slice, ADR-0016); the day mark's portion when the line's calendar has no events today
     language: it # optional BCP-47 tag (v0.2); language lines only. Parsed and stored; a content-language detection hint
     parent: "[[Artifacts_2026]]" # optional wikilink to the note that holds this line's artifact(s)
     omnifocus: # how OmniFocus items map to this line (see snapshot-contract.md §Mapping)
@@ -53,7 +56,7 @@ Rules
 - `state: paused` = "paused on purpose" in the UI. It is never shown as missing activity.
 - Tasks that match no line belong to **Life ops** (not a line; see `snapshot-contract.md`).
 - A task maps to **at most one** line. Precedence: task tag → project tag → project name → folder. Two lines claiming the same tag/folder → banner naming both line ids; first in list wins.
-- Hours shown for a line come only from the vault values `budget_h_week` and `floor_h_day`, or from real time data — CLAUDE.md rule 8 / ADR-0006.
+- Hours shown for a line come only from real time data or from numbers the owner set himself: the vault values `budget_h_week`, `floor_h_day` and `portion_h_day`, and the length of events in the line's calendar (the day portion of ADR-0016; owner, 2026-10-08) — CLAUDE.md rule 8 / ADR-0006.
 - The markdown table in the note may stay; the YAML block is authoritative for MoonShine (ADR-0004).
 
 Validation of `lines:` (owner, 2026-10-07 and 2026-10-08):
@@ -154,9 +157,42 @@ artifacts:
     - **flow nesting** (`[`, `{`) at most 32, also before parsing; after parsing, at most 10,000 nodes and depth 32 per note (`yamlTooComplex`).
   - **owner-only paths:** `moonshine-import vault --paths` prints each problem's kind, vault-relative path and line, nothing from the note. Its help text says it is for the owner's own terminal, and the tool enforces it: it refuses to run unless standard output is a terminal, checked before anything is read. A printed path shows every control and format character and a backslash as an escape (`\u{…}`, `\\`);
   - **line breaks:** the frontmatter ends only at a `---` line after LF. A `---` after CR, NEL, LS or PS is not a delimiter for the reader but starts a second document for libyaml, so the note fails safe as `malformedYAML`.
-- Hidden files and folders (`.obsidian`, `.trash`) are not read. A note without frontmatter is skipped, not a problem.
+- Hidden files and folders (`.obsidian`, `.trash`) are not read. One exception from the Write phase (ADR-0015): Obsidian's named settings files for daily and periodic notes, and from them only the folder, the file-name pattern and the template path; those folders and that path pass the same checks as the walk (inside the vault root, no symbolic links) before anything is read (ADR-0015 write rule 6). A note without frontmatter is skipped for frontmatter reading, not a problem; its body is still indexed from the Hub slice (next item).
+- **Bodies (from the Hub slice; ADR-0014):** the body of every note, with or without frontmatter, is read for links and tags only, never for values; nothing around a link is stored, not its alias or anchor either (owner, 2026-10-09). A body larger than 1 MB is not indexed and gives a typed problem; the walk limits above apply. A note is re-read only when its size or modification time changed.
 - Unknown keys are ignored and preserved (future-proof; the vault has 200+ distinct keys).
 - `review_cadence` and `review-cadence` both exist in the vault (19 vs 8 notes); MoonShine reads either.
+
+## 4. Project notes (reserved now; read from the Hub slice)
+
+ADR-0014. A note is a **project note** when its frontmatter carries the marker and an id:
+
+```yaml
+moonshine: project # marker
+id: thesis-ch2 # required. slug [a-z0-9-]+, unique among project notes, never renamed
+omnifocus_project: "Chapter 2" # optional: the OmniFocus project's name, exact match
+omnifocus_id: # optional: the OmniFocus project's id; wins over the name. Written by MoonShine from the Write phase (ADR-0015)
+line: research # optional line id; used only while the project has no OmniFocus project
+notes: folder # optional: every note in this note's folder and below belongs to the project
+status: active # optional, passed through like on other notes
+```
+
+Any other note joins a project with `project: <id>` (one id or a list), or by being linked from the project note.
+
+Rules
+
+- Keys are flat, so that MoonShine can later write `omnifocus_id` by editing one line.
+- A project note bound to an OmniFocus project that already is a `Project` attaches to that project; its id and history are kept. Two projects that both have history are never merged automatically.
+- Line: from the OmniFocus mapping when the project is bound (§1 precedence); when the note's `line` differs, the mapping wins and a banner names both.
+- Two project notes with the same `id`, or claiming the same OmniFocus project → banner naming both paths; first by path wins.
+- A binding that names an OmniFocus project the import does not contain is a typed problem; the project is shown as note-only.
+- One OmniFocus project per project note.
+
+## 5. Reserved keys and values
+
+- **`moonshine:`** — reserved values `budget` (§1) and `project` (§4). A note with any other value is not a problem and gives no banner.
+- **`portion_h_day`** on a line (§1; read from the Timer slice, ADR-0016).
+- **`moonshine_ai: false`** on any note (read from the Ask phase, ADR-0015): the assistant never reads the note's body, even inside a folder on its allowlist, and the note is never sent in the standing context pack: it appears in the pack's list as excluded (owner, 2026-10-09).
+- **Keys MoonShine owns and may write** (from the Write phase, ADR-0015, through `SetNoteProperty`, one line at a time): `omnifocus_id` (§4). On an existing note no other key is written; a note made by `CreateNote` may carry §4's project-note keys and its template's own frontmatter.
 
 ## Open questions
 

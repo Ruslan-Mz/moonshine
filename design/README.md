@@ -202,7 +202,7 @@ The owner's weekly take: a qualitative assessment of how a line went this week, 
 1. **Three tracks, never one score.** Rhythm and progress are measured (coloured bars); the take is judged (ink marks, the label `my take`). They sit side by side and are never combined. → `components.md` § Take components.
 2. **Weekly review** gets a second step, `2 · My take`, with the section "How did each line go?": one row per foundation and active line — measured facts · four-segment control · note · Confirm. Drafts are listed with their day and prefill the control. → `screens/week.md`, `screens/ipad-week.md`.
 3. **Lines**: a third track of take marks under each sparkline and this week's chip. → `screens/lines.md`.
-4. **Line detail**: a third metric card "My take", a journal with a Leaps filter, a take per project. → `screens/line-detail.md`.
+4. **Line detail**: a third metric card "My take", a take history with a Leaps filter, a take per project. → `screens/line-detail.md`.
 5. **Project forecast (future)**: take marks on the drift chart's week axis, one quiet row `Re-estimate what is left?` after a Leap. → `screens/forecast.md`.
 6. **Quarterly review**: take strips per line, notes when a row is opened, Leaps as supporting notes under the focus outcomes. → `screens/quarterly-review.md`.
 7. **Capture**: iPhone sheet `Note for my take` (Log tab and line glance), Mac ⌘K command and `Add a note`, iPad popover. → `screens/iphone-quick-log.md`, `screens/iphone-line-glance.md`, `screens/command-palette.md`.
@@ -248,9 +248,9 @@ Why horizontal triangles and not vertical: the words are Forward and Back, not U
 1. **RU name.** **«Мой взгляд»**; EN `My take`.
 2. **`Back` as a label.** Replaced: the directions are `Leap · Rise · Steady · Dip` / «Рывок · Подъём · Ровно · Спуск». No `My take:` prefix workaround is needed. Rise and Dip get new marks in the next round (below).
 3. **Confirmed take without a direction?** No — confirming needs a direction; a note without one stays a draft.
-4. **Dated notes on confirm.** Kept as data under the take and shown when the journal row is opened.
+4. **Dated notes on confirm.** Kept as data under the take and shown when the take-history row is opened.
 5. **A note for a week that is already confirmed.** Stored under that take; the take stays confirmed.
-6. **Past drafts in later reviews.** Not listed; reachable from the journal and the quarterly review.
+6. **Past drafts in later reviews.** Not listed; reachable from the take history and the quarterly review.
 7. **Storage, slice and ADR.** Storage in the first native slice of phase 2; no separate ADR. ADR-0010's conflict rules gain: draft notes merge (append-only); a confirmed take is last-writer-wins per (subject, week). Writing confirmed takes to the vault is decided in the Act phase spec.
 8. **Project take vs line take.** Independent; no roll-up.
 9. **Hours wording.** `2 h of 6 h budget` / «2 ч из 6 ч бюджета».
@@ -263,12 +263,28 @@ Why horizontal triangles and not vertical: the words are Forward and Back, not U
 
 Phase 1: the Lines (S4) and weekly review (S5) layouts leave room for the third track; no code for takes in phase 1 (`docs/specs/phase-1-see.md`).
 
-### For the next design round (3b)
+### Pending design rounds
 
-The mockups are generated files and are not edited by hand; where a mockup and a spec differ, the spec wins. Items for the designer:
+The mockups are generated files and are not edited by hand; where a mockup and a spec differ, the spec wins. Each item is listed under the earliest phase or slice whose spec needs it (owner, 2026-10-08). No S4 screen needs a redraw: S4 follows the screen specs, which win over the mockups, so there is no "Before S4" list. Items for the designer:
 
-1. **Rise and Dip marks**: redraw as terrain shapes that are not arrows (a rising slope, a falling slope). Until then the triangles stay.
-2. **`Lines.dc.html` — Math's block**: the draft-4 mockup shows 📐 Math under the block `Foundation` and has dropped the `Science` / «Наука» block label; `demo-data.md` keeps Math in **Science** (tier unchanged: active). Restore Science.
-3. **Names in the mockups**: Forward / Back → Rise / Dip (EN, RU, LV, IT, DE); hours `2 h of 6 h budget`.
-4. **Draft-4 items not drawn**: Split View for the take section, the take on the Today rail, RTL marks, the Mac note popover; how a project take is confirmed in the weekly review.
-5. **Draft-3 items**: the day rail on iPad and iPhone (open question 14 above); free time on Today as the rest of the window (`≈ 2 h 25 min free until 22:00` at 16:20); the deadline rule (`screens/settings.md` § Deadlines: the setting, and plain `due 20:35` text and neutral day-rail marks for due dates that are not deadlines); read-only checkboxes on the day rail.
+#### Before phase 2
+
+1. **Rise and Dip marks**: redraw as terrain shapes that are not arrows (a rising slope, a falling slope). Until then the triangles stay. My take is phase 2's first native slice.
+2. **Project take**: how a project take is confirmed in the weekly review.
+3. **Project page** (the Hub slice, ADR-0014): tasks, plan, with places reserved for the rendered project note and for the mentions.
+4. **Time tracking on the Mac** (the Timer slice, ADR-0016): the menu bar timer; starting from a row and from ⌘K; tracked intervals on the Today rail with editing; the week table; the reconcile list; the four nudges with the `Break` action; the check mark of a forgotten timer.
+
+#### Before the Write phase
+
+1. **Journal** (ADR-0015): the daily and weekly notes, a pending entry from the iPhone or iPad.
+2. **A ritual**: a template rendered into a draft, written, saved.
+3. **The note view and the editor**: the rendered read-only view, the plain editor with a preview, "Open in Obsidian".
+4. **The conflict screen**: two versions of a note when the precondition fails.
+5. **Settings**: role folders (daily, weekly, project notes, inbox) and the assistant's allowlist.
+
+#### Before 3b
+
+1. **`Lines.dc.html` — Math's block**: the draft-4 mockup shows 📐 Math under the block `Foundation` and has dropped the `Science` / «Наука» block label; `demo-data.md` keeps Math in **Science** (tier unchanged: active). Restore Science.
+2. **Names in the mockups**: Forward / Back → Rise / Dip (EN, RU, LV, IT, DE); hours `2 h of 6 h budget`.
+3. **Draft-4 items not drawn**: Split View for the take section, the take on the Today rail, RTL marks, the Mac note popover.
+4. **Draft-3 items**: the day rail on iPad and iPhone (open question 14 above); free time on Today as the rest of the window (`≈ 2 h 25 min free until 22:00` at 16:20); the deadline rule (`screens/settings.md` § Deadlines: the setting, and plain `due 20:35` text and neutral day-rail marks for due dates that are not deadlines); read-only checkboxes on the day rail.

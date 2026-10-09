@@ -40,7 +40,7 @@ Phase 3b brings an iPad "planning studio" (and an iPhone capture app). OmniFocus
 
 **Chosen option: "1"**, because `CKSyncEngine` handles change tracking, retries and account changes, keeps data in the owner's iCloud (sensitive fields via `encryptedValues`), and needs no server. Splitting ownership — **provider-sourced records are written only by the Mac importer; native records are multi-writer** — removes most conflicts by construction.
 
-**Sync is opt-in and off by default.** Nothing is uploaded until the owner turns it on in Settings → Sync, after a consent screen that states what is synced (the MoonShine store: imported OmniFocus and vault data, plans, time entries) and where (the owner's private iCloud database). Turning it off stops sync; a separate, confirmed action deletes the CloudKit data. Without sync, the iPad and iPhone apps have no data (Demo mode only). VISION principle 5 is amended to match.
+**Sync is opt-in and off by default.** Nothing is uploaded until the owner turns it on in Settings → Sync, after a consent screen that states what is synced (the MoonShine store: imported OmniFocus and vault data, including the link index of ADR-0014; plans, time entries; and, from the Write phase, the text of pending vault commands, in an encrypted field, pruned 30 days after the command finished, ADR-0015) and where (the owner's private iCloud database). Turning it off stops sync; a separate, confirmed action deletes the CloudKit data. Without sync, the iPad and iPhone apps have no data (Demo mode only). VISION principle 5 is amended to match.
 
 Option 3 is revisited if real conflicts on plans appear in the conflict log.
 
@@ -53,7 +53,7 @@ Option 3 is revisited if real conflicts on plans appear in the conflict log.
 ### Consequences
 
 - Good — iPad and iPhone work offline and converge; no server; data stays in the owner's iCloud.
-- Good — the importer stays on the Mac, matching ADR-0003; iPad shows provider data read-only until the Act phase writes.
+- Good — the importer stays on the Mac, matching ADR-0003; iPad shows provider data read-only until the Act phase writes (vault notes: commands queued for the Mac from the Write phase, ADR-0015).
 - Bad — requires the paid Apple Developer Program (CloudKit entitlement, device builds beyond 7-day provisioning).
 - Bad — per-field LWW can drop one of two near-simultaneous edits to the same field; mitigated by the conflict log (shown in Settings) and by the rarity of single-user conflicts.
 - Bad — CloudKit ties sync to Apple; an own backend (phase 8) would need a second sync adapter behind the same port.
