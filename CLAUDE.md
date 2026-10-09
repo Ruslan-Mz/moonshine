@@ -11,7 +11,11 @@ See `docs/ROADMAP.md`. **Only build what the current phase's spec asks for.** La
 ## Hard rules
 
 1. **Spec first.** Every change starts from `docs/specs/`. Missing/ambiguous spec → propose a spec change and stop.
-2. **One slice = one PR**, < ~400 changed lines of production code (tests, fixtures and generated files excluded).
+2. **One slice = one PR**, sized by risk (owner, 2026-10-09). Sizes are changed lines of production code after the factor ("Sizing a slice"; tests, fixtures and generated files excluded).
+   - **Risky slice**: it parses data from outside the repository (vault, OmniFocus, calendars, workbook), changes what is stored or deleted, adds a command, starts a process, or touches concurrency, sync, permissions or the assistant. Limit about 400; above it, split in the plan. `deep` review is proposed as before (`/review-pr` §2).
+   - **Plain slice**: everything else: SwiftUI views, view models and navigation over data the store already holds, layout, localisation, settings that add no storage rule. Limit about 800; one screen, or a group of related screens, is one PR.
+   - A slice with any risky part is risky. Prefer moving the risky part into its own PR first, so the rest can be plain. The plan names its class and the reason.
+   - Reason: the High findings so far came from risky slices of 200–400 lines (parser expansion, read-boundary bypass); in plain slices the fixed cost of each PR (plan, review, merge) dominates.
 3. **Ports & adapters (ADR-0001).** `MoonShineCore` imports no AppKit (nor Cocoa, Carbon, Quartz)/SwiftUI/SwiftUICore/OSAKit/GRDB/EventKit/Yams (`scripts/check-core-imports.sh` in CI). UI talks to view models/services, never to adapters.
 4. **Tests first in Core.** New domain logic → failing test → code.
 5. **Privacy.** Raw content — titles, labels, values, names, ids — from the vault (`~/ObsidianV`), OmniFocus, calendars (events: no real titles, attendees or calendar names), `data/`, `snapshots/` and `*.local.*` is never committed or pasted into PRs, commits or logs. Aggregates (counts, timings, orders of magnitude) and structure descriptions (shapes, field names, layouts) are allowed, as in `docs/discovery/` since phase 0. Fixtures are invented.
@@ -26,11 +30,21 @@ See `docs/ROADMAP.md`. **Only build what the current phase's spec asks for.** La
 
 ## Git
 
-Start every slice with `git fetch && git switch main && git pull --ff-only`, then branch. Plain `git fetch` is not auto-approved: it asks each time (only the HTTPS fetch with `gh` as credential helper that `/review-pr` uses is allowed).
+Start every slice with the HTTPS fetch, then `git switch main && git merge --ff-only origin/main`, then branch. The fetch uses `gh` as a one-off credential helper and is allowed without a prompt: `git -c credential.helper= -c credential.helper='!gh auth git-credential' fetch https://github.com/Ruslan-Mz/moonshine.git '+refs/heads/*:refs/remotes/origin/*'`. Plain `git fetch` goes over SSH, which fails from sessions.
+
+## Plans
+
+- A slice plan is written to a file in the session scratchpad.
+- Before the owner sees it, run `plan-critic` (`.claude/agents/plan-critic.md`) on it once, with the file path and the slice name, nothing else. Fix the `author` findings in the plan.
+- Show the owner three things: the plan; the critic's "For the owner" list, word for word; one line for each author finding, fixed or declined with the reason.
+- One run per plan. A second run only after the owner asks for a redesign.
+- No critic for a docs-only change, or for a slice under about 80 estimated lines that adds no parsing of outside data, no storage or deletion rule and no command.
+- A risky slice's plan always waits for the owner's OK. A plain slice's plan does not (owner, 2026-10-09) when the critic's verdict is "ready" and its "For the owner" list is empty: the author puts the plan and the critic's author list (fixed or declined) at the top of the PR description and starts coding; the owner can stop it at any time.
+- The critic's calibration case is in `docs/method/calibration/`; run it again when the agent's text or its model changes.
 
 ## Pull requests
 
-- **Sizing a slice**: when planning a slice, double your own estimate of production lines; if the result exceeds ~400, split the slice in the plan, before coding. Reason: estimates have run 1.5–2.6× low on every slice so far.
+- **Sizing a slice**: when planning a slice, multiply your own estimate of production lines by the measured factor of the last slices in `docs/method/log.md`, and say in the plan which factor you used; with no measured factor, double it. If the result exceeds the limit of the slice's class (rule 2), split the slice in the plan, before coding. Reason: estimates have run 1.5–2.6× low on every slice so far.
 - **Before opening a PR**, check that:
   - errors carry no raw values (no titles, ids, dates, payload text or stderr from a provider);
   - every decoded field is validated, on every path that decodes it;
@@ -39,12 +53,12 @@ Start every slice with `git fetch && git switch main && git pull --ff-only`, the
   - every link and ADR reference resolves;
   - a size overrun is stated in the PR and in the method-log row.
 - **Review**: the owner runs `/review-pr <n>` in a **new** session (`.claude/skills/review-pr/`). The session that wrote the PR never reviews it.
-- **After a review is posted**, the author session reads it from the PR itself (`gh pr view <n> --comments` and the review threads), fixes the `author` findings, replies to each thread, and asks the owner only about the `owner` findings. The owner does not copy review text between sessions.
+- **After a review is posted**, the author session reads it from the PR itself (`gh pr view <n> --comments`), fixes the `author` findings, answers with **one** PR comment that lists every finding and what was done with it, and asks the owner only about the `owner` findings. No reply per thread: everything that sends data to GitHub asks the owner, so one comment is one prompt instead of one per thread (owner, 2026-10-08). The owner does not copy review text between sessions.
 - **Rounds** — one rule for every PR, docs-only included: round 1 is a full `/review-pr`. If round N had a confirmed High, run round N+1 after the fixes, on the changes since round N. Otherwise no further round. From round 2 on only High findings must be fixed, the rest are listed in the PR as deferred; at most three rounds, then the owner decides.
 
 ## Definition of done
 
-Tests green · `swift format lint` clean · `prettier --check '**/*.md'` clean · `node scripts/check-refs.mjs` clean · app builds · spec checkboxes ticked · method-log row · ADR if a costly-to-reverse choice was made · screenshots only in Demo mode.
+Tests green · `swift format lint` clean · Prettier check clean · `node scripts/check-refs.mjs` clean · app builds · spec checkboxes ticked · method-log row · ADR if a costly-to-reverse choice was made · screenshots only in Demo mode.
 
 ## Commands
 
@@ -53,7 +67,7 @@ Tests green · `swift format lint` clean · `prettier --check '**/*.md'` clean �
 - Generate Xcode project: `xcodegen generate`
 - Build app: `xcodebuild -scheme MoonShineMac -destination 'platform=macOS' build`
 - Lint: `swift format lint --recursive MoonShineCore Adapters Apps`
-- Markdown: `npm install` once, then `npx prettier --write '**/*.md'` · check: `npx prettier --check '**/*.md'`
+- Markdown: `npm install` once, then `git ls-files -z '*.md' | xargs -0 node_modules/.bin/prettier --write` · check: `git ls-files -z '*.md' | xargs -0 node_modules/.bin/prettier --check`. Never `npx`: it can download a package when `node_modules` is missing. The local binary runs inside the sandbox, and `git ls-files` skips the unreadable `data/` folder (owner, 2026-10-08). CI keeps `npx`, after `npm ci`.
 - References: `node scripts/check-refs.mjs` · its tests: `node --test scripts/check-refs.test.mjs`
 - Core import check: `scripts/check-core-imports.sh` · its tests: `node --test scripts/check-core-imports.test.mjs`
 - Read-boundary hook tests: `python3 -m unittest discover -s .claude/hooks -p 'test_*.py'`
@@ -61,4 +75,4 @@ Tests green · `swift format lint` clean · `prettier --check '**/*.md'` clean �
 
 ## Owner
 
-Senior mobile/full-stack engineer, native iOS since 2008. He directs and reviews; agents write the code. Plan before coding and wait for his OK on each slice plan. Prefer clarity over cleverness; explicit types at module boundaries; no abstraction beyond the ports in ARCHITECTURE.md without an ADR.
+Senior mobile/full-stack engineer, native iOS since 2008. He directs and reviews; agents write the code. Plan before coding and wait for his OK on each slice plan, except as "Plans" allows for a plain slice. Prefer clarity over cleverness; explicit types at module boundaries; no abstraction beyond the ports in ARCHITECTURE.md without an ADR.

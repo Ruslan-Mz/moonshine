@@ -1,6 +1,6 @@
-# Phase 1 — See (3 weekends, read-only)
+# Phase 1 — See (until 2026-11-08, read-only)
 
-**Goal:** one macOS window where the owner sees everything he has to do and how his lines are moving, for today, this week and this month — fast, keyboard-first, calm. Timebox: 3 weekends (was 2; calendar and day rail, decision 2026-10-02); cut scope if exceeded (cut order: S6 → S5 polish → Month view). Calendar scope, if the timebox runs out: cut Month events first, then line mapping + Upcoming.
+**Goal:** one macOS window where the owner sees everything he has to do and how his lines are moving, for today, this week and this month — fast, keyboard-first, calm. Timebox: until 2026-11-08 (was 2 weekends, then 3 for the calendar and the day rail, decision 2026-10-02; re-baselined after measuring the pace, owner 2026-10-09); cut scope if exceeded (cut order: S6 → S5 polish → Month view). Calendar scope, if the timebox runs out: cut Month events first, then line mapping + Upcoming.
 
 ## Views
 
