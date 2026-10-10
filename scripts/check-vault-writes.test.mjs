@@ -1,7 +1,7 @@
 // Tests for check-vault-writes.mjs on throwaway folders: node --test scripts/check-vault-writes.test.mjs
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
@@ -12,29 +12,35 @@ const repository = dirname(dirname(fileURLToPath(import.meta.url)));
 const store = "Adapters/Sources/SQLiteStore/SQLiteStore.swift";
 const tool = "Adapters/Sources/moonshine-import/MoonShineImport.swift";
 const bridge = "Adapters/Sources/OmniFocusAdapter/OmniFocusBridge.swift";
+const adapter = "Adapters/Sources/ObsidianAdapter/A.swift";
+const app = "Apps/MoonShineMac/Sources/A.swift";
 
 function run(root) {
   return spawnSync("node", [script, root], { encoding: "utf8" });
 }
 
 /// A throwaway repository with the two required folders and the given files.
-function check(files, folders = ["MoonShineCore/Sources", "Adapters/Sources"]) {
+function repositoryWith(files, folders = ["MoonShineCore/Sources", "Adapters/Sources"]) {
   const root = mkdtempSync(join(tmpdir(), "vault-writes-"));
   for (const folder of folders) mkdirSync(join(root, folder), { recursive: true });
   for (const [path, text] of Object.entries(files)) {
     mkdirSync(dirname(join(root, path)), { recursive: true });
     writeFileSync(join(root, path), text);
   }
-  return run(root);
+  return root;
 }
 
-function fails(line, where = "Adapters/Sources/ObsidianAdapter/A.swift") {
+function check(files, folders) {
+  return run(repositoryWith(files, folders));
+}
+
+function fails(line, where = adapter) {
   const result = check({ [where]: `import Foundation\n${line}\n` });
   assert.equal(result.status, 1, `${line}\n${result.stdout}${result.stderr}`);
   assert.match(result.stdout, new RegExp(`${where.replaceAll(".", "\\.")}:2: `), line);
 }
 
-function passes(line, where = "Adapters/Sources/ObsidianAdapter/A.swift") {
+function passes(line, where = adapter) {
   const result = check({ [where]: `import Foundation\n${line}\n` });
   assert.equal(result.status, 0, `${line}\n${result.stdout}${result.stderr}`);
   assert.match(result.stdout, /clean/);
@@ -42,12 +48,14 @@ function passes(line, where = "Adapters/Sources/ObsidianAdapter/A.swift") {
 
 const fileManager = [
   "createFile", "createDirectory", "removeItem", "moveItem", "copyItem", "replaceItem", "replaceItemAt",
-  "linkItem", "createSymbolicLink", "trashItem", "setAttributes",
+  "linkItem", "createSymbolicLink", "trashItem", "setAttributes", "setUbiquitous",
 ];
 const cCalls = [
-  "fopen", "freopen", "open", "openat", "creat", "fwrite", "pwrite", "rename", "renamex_np", "unlink",
-  "remove", "mkdir", "rmdir", "truncate", "ftruncate", "symlink", "link", "copyfile", "clonefile",
-  "system", "popen",
+  "fopen", "freopen", "open", "openat", "creat", "write", "writev", "pwrite", "pwritev", "fwrite", "fputs",
+  "fputc", "rename", "renameat", "renamex_np", "renameatx_np", "unlink", "unlinkat", "remove", "removefile",
+  "mkdir", "mkdirat", "rmdir", "mkstemp", "mkstemps", "mkdtemp", "truncate", "ftruncate", "symlink",
+  "symlinkat", "link", "linkat", "copyfile", "clonefile", "chmod", "fchmod", "chown", "fchown", "lchown",
+  "system", "popen", "execv", "execve", "execvp", "execvP", "execl", "execle", "execlp",
 ];
 
 test("reading code passes", () => {
@@ -73,9 +81,13 @@ test("every FileManager change fails", () => {
 test("every way to write a file fails", () => {
   for (const line of [
     "try data.write(to: url)",
-    'try text.write(toFile: path, atomically: true, encoding: .utf8)',
+    "try text.write(toFile: path, atomically: true, encoding: .utf8)",
     "handle.write(data)",
     "FileHandle.standardError.write(data)",
+    "try descriptor.writeAll(bytes)",
+    "NSKeyedArchiver.archiveRootObject(object, toFile: path)",
+    "let fd = try FileDescriptor.open(FilePath(path), .writeOnly, options: [.create, .truncate])",
+    "var descriptor: FileDescriptor",
     "let handle = try FileHandle(forWritingTo: url)",
     "let handle = FileHandle(forWritingAtPath: path)",
     "let handle = try FileHandle(forUpdating: url)",
@@ -89,17 +101,31 @@ test("every way to write a file fails", () => {
   }
 });
 
-test("a C call fails bare, after a module prefix and mid-line; a member of the same name passes", () => {
+test("a C call fails bare, after a module prefix and mid-line", () => {
   for (const name of cCalls) {
     fails(`${name}(path)`);
     fails(`  let result = ${name}(path, 0)`);
-    fails(`if (${name} (path) == 0) {}`);
+    fails(`if (${name}(path) == 0) {}`);
     for (const module of ["Darwin", "Glibc", "Foundation"]) fails(`_ = ${module}.${name}(path)`);
-    passes(`items.${name}(at: 0)`);
-    passes(`let re${name}_x = 1`);
-    passes(`my_${name}(path)`);
-    passes(`Other.${name}(path)`);
   }
+});
+
+test("a member, a declaration or another name with the same letters passes", () => {
+  for (const name of cCalls) {
+    // `.write(` is a member rule of its own: it fails after a dot too.
+    if (name !== "write") {
+      passes(`items.${name}(at: 0)`);
+      passes(`self.${name}(path)`);
+      passes(`Other.${name}(path)`);
+    }
+    passes(`func ${name}(_ id: Int) {}`);
+    passes(`  public mutating func  ${name}(_ id: Int) {}`);
+    passes(`let re${name}_x = 1; my_${name}(path)`);
+    // The name must touch its parenthesis: prose such as "a link (see below)" is not a call.
+    passes(`let text = "the parent ${name} (a wikilink)"`);
+  }
+  // A declaration does not excuse a call after it on the same line.
+  fails("func remove(_ id: Int) { unlink(path) }");
 });
 
 test("a database fails", () => {
@@ -125,11 +151,24 @@ test("a process or a script fails in every form", () => {
     "posix_spawnp(&pid, path, nil, nil, argv, nil)",
     'let script = NSAppleScript(source: "x")',
     "let task = try NSUserAppleScriptTask(url: url)",
+    "let task = try NSUserUnixTask(url: url)",
+    "let task = try NSUserScriptTask(url: url)",
+    "let task = try NSUserAutomatorTask(url: url)",
     "let script = OSAScript(source: source)",
     "NSWorkspace.shared.open(url)",
   ]) {
     fails(line);
   }
+});
+
+test("a line that is only a comment is searched for member calls, not for names", () => {
+  passes("/// Process the snapshot in one pass.");
+  passes("  // Follows the note's parent link (a wikilink) to the artifact, then remove(it).");
+  passes("// let process = Process()");
+  fails("// try data.write(to: url)");
+  fails("/// See FileManager.default.removeItem(at: url).");
+  // A comment after code is part of a code line.
+  fails("let x = 1 // Process the rest later");
 });
 
 test("an allowed text passes in its own file only", () => {
@@ -153,29 +192,60 @@ test("an allowed file fails on any other call, also on the same line", () => {
   fails("let process = Process(); try Process.run(url, arguments: [])", bridge);
 });
 
-test("a call in a comment fails", () => {
-  fails("// try data.write(to: url)");
-});
-
-test("tests and build folders are not searched", () => {
+test("everything SwiftPM compiles under the required folders is searched; build folders are not", () => {
+  fails("try data.write(to: url)", "Adapters/Sources/SomeTests/T.swift");
+  fails("try data.write(to: url)", "Adapters/Sources/ObsidianAdapter/GoldenTests/B.swift");
+  fails("try data.write(to: url)", "MoonShineCore/Sources/MoonShineCore/Services/A.swift");
+  passes("try data.write(to: url)", "MoonShineCore/Sources/MoonShineCore/notes.md");
   const result = check({
     "Adapters/Sources/.build/checkouts/B.swift": "try data.write(to: url)\n",
-    "Adapters/Sources/SomeTests/T.swift": "try data.write(to: url)\n",
     "Adapters/Tests/ObsidianAdapterTests/T.swift": "try data.write(to: url)\n",
     "MoonShineCore/Tests/T.swift": "try data.write(to: url)\n",
   });
   assert.equal(result.status, 0, result.stdout + result.stderr);
 });
 
-test("Core is searched, and files that are not Swift are not", () => {
-  fails("try data.write(to: url)", "MoonShineCore/Sources/MoonShineCore/Services/A.swift");
-  passes("try data.write(to: url)", "MoonShineCore/Sources/MoonShineCore/notes.md");
+test("a symbolic link under a searched folder is a finding, file or folder", () => {
+  for (const [target, link] of [
+    ["Elsewhere/B.swift", "Adapters/Sources/ObsidianAdapter/B.swift"],
+    ["Elsewhere", "MoonShineCore/Sources/Linked"],
+    ["Elsewhere/B.swift", "Apps/MoonShineMac/B.swift"],
+  ]) {
+    const root = repositoryWith({ "Elsewhere/B.swift": "let x = 1\n", "Apps/MoonShineMac/A.swift": "let y = 2\n" });
+    mkdirSync(dirname(join(root, link)), { recursive: true });
+    symlinkSync(join(root, target), join(root, link));
+    const result = run(root);
+    assert.equal(result.status, 1, `${link}\n${result.stdout}${result.stderr}`);
+    assert.match(result.stdout, new RegExp(`${link.replaceAll(".", "\\.")}: symbolic link`));
+  }
 });
 
-test("Apps is searched when it exists and is not needed when it does not", () => {
-  fails("try data.write(to: url)", "Apps/MoonShineMac/Sources/A.swift");
-  passes("let x = 1", "Apps/MoonShineMac/Sources/A.swift");
+test("Apps is searched when it exists, its test folders are not, and it is not required", () => {
+  fails("try data.write(to: url)", app);
+  passes("let x = 1", app);
+  passes("try data.write(to: url)", "Apps/MoonShineMacTests/A.swift");
+  passes("try data.write(to: url)", "Apps/MoonShineMac/UITests/A.swift");
   assert.equal(check({}).status, 0);
+});
+
+test("in Apps anything that opens a URL fails; elsewhere those names are free", () => {
+  const openers = [
+    "@Environment(\\.openURL) private var openURL",
+    "openURL(url)",
+    "let action = OpenURLAction { _ in .handled }",
+    'Link("Open in Obsidian", destination: url)',
+    "Link(destination: url) { Text(title) }",
+    "UIApplication.shared.open(url)",
+    "let safari = SFSafariViewController(url: url)",
+  ];
+  for (const line of openers) {
+    fails(line, app);
+    passes(line, adapter);
+  }
+  fails("NSWorkspace.shared.open(url)", app);
+  passes("ShareLink(item: text)", app);
+  passes("NavigationLink(value: line) { Text(line.name) }", app);
+  passes("let scenes = UIApplication.shared.connectedScenes", app);
 });
 
 test("a missing required folder exits 2", () => {
@@ -189,7 +259,7 @@ test("a missing required folder exits 2", () => {
 test("the repository is clean, and not by accident", () => {
   const result = run(repository);
   assert.equal(result.status, 0, result.stdout + result.stderr);
-  // Without the allowlist the same sources fail: the search does see them.
+  // Without the allowlist the same texts fail: the search does see them.
   for (const [path, text] of [
     [store, "DatabasePool(path: path)"],
     [tool, "FileHandle.standardError.write("],

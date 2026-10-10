@@ -201,29 +201,92 @@ import Testing
     #expect(stored.artifacts.allSatisfy { !$0.isRemoved })
   }
 
-  @Test func aReadItemWinsOverACarriedOneWhenTheirPeriodsOverlap() {
-    let unread = VaultUnread(paths: [Self.year], artifactLists: [], notRecognised: [])
-    let quarter = SourceNote(
+  var quarter: SourceNote {
+    SourceNote(
       path: "Years/Q4_2026.md", title: "Q4", type: "quarter_focus", scale: .quarter,
       period: Horizon.containing(
         TestWorld.date(2026, 11, 1), scale: .quarter, calendar: TestWorld.calendar))
-    // The same id in a quarter of the unread year: had both notes been read it would be a
-    // duplicate, so the stored one does not stand next to the one that was read.
-    let (runs, stored) = importing(
-      vault([yearNote()], [artifact("a"), artifact("b")]),
-      vault([quarter], [artifact("a", period: "2026-Q4", note: quarter.path)], unread: unread))
-    #expect(
-      Set(runs[1].artifacts.map { $0.refs.map(\.externalId) }) == [["a@2026-Q4"], ["b@2026"]])
-    #expect(stored.artifacts.filter(\.isRemoved).map(\.entity.key) == ["a"])
+  }
 
-    // The same appearance read from a copy of the note: one artifact, now in the copy.
+  func quarterItem(_ key: String) -> SourceArtifact {
+    artifact(key, period: "2026-Q4", note: quarter.path)
+  }
+
+  func appearances(_ workspace: Workspace) -> [String] {
+    workspace.artifacts.flatMap { $0.refs.map(\.externalId) }
+  }
+
+  /// "The item read wins" only for the same identity, where it is an update.
+  @Test func theSameAppearanceReadFromAnotherNoteIsAnUpdate() {
+    let unread = VaultUnread(paths: [Self.year], artifactLists: [], notRecognised: [])
     let copy = "Years/Copy_2026.md"
-    let (again, _) = importing(
+    let (runs, _) = importing(
       vault([yearNote()], [artifact("a")]),
       vault([yearNote(path: copy)], [artifact("a", title: "A2", note: copy)], unread: unread))
-    #expect(again[1].artifacts.map(\.title) == ["A2"])
-    #expect(again[1].artifacts.map(\.id) == again[0].artifacts.map(\.id))
-    #expect(again[1].artifacts.first?.noteID == again[1].notes.first { $0.path == copy }?.id)
+    #expect(runs[1].artifacts.map(\.title) == ["A2"])
+    #expect(runs[1].artifacts.map(\.id) == runs[0].artifacts.map(\.id))
+    #expect(runs[1].artifacts.first?.noteID == runs[1].notes.first { $0.path == copy }?.id)
+  }
+
+  /// A duplicate id in a year note and its quarter. The duplicate check runs over read items
+  /// only, so while the duplicate is in the vault the store depends on what could be read.
+  /// Direction one: the year note is unread for one import, so the quarter's item is read.
+  @Test func aCarriedAppearanceStaysWhateverIsReadElsewhereAndBothSurviveTheDuplicate() {
+    let yearUnread = VaultUnread(paths: [Self.year], artifactLists: [], notRecognised: [])
+    // Both notes read: the reader skips both items and names both lists as incomplete.
+    let duplicate = VaultUnread(
+      paths: [], artifactLists: [Self.year, quarter.path], notRecognised: [])
+    let (runs, stored) = importing(
+      vault([yearNote()], [artifact("a"), artifact("b")]),
+      vault([quarter], [quarterItem("a")], unread: yearUnread),
+      vault([yearNote(), quarter], [artifact("b")], unread: duplicate))
+    #expect(appearances(runs[1]) == ["a@2026", "b@2026", "a@2026-Q4"])
+    #expect(appearances(runs[2]) == ["a@2026", "b@2026", "a@2026-Q4"])
+    #expect(stored.artifacts.allSatisfy { !$0.isRemoved })
+  }
+
+  /// Direction two: the same vault state without the unread import stores the year's only.
+  @Test func theSameDuplicateWithoutTheUnreadImportKeepsOnlyWhatWasStored() {
+    let duplicate = VaultUnread(
+      paths: [], artifactLists: [Self.year, quarter.path], notRecognised: [])
+    let (runs, stored) = importing(
+      vault([yearNote()], [artifact("a"), artifact("b")]),
+      vault([yearNote(), quarter], [artifact("b")], unread: duplicate))
+    #expect(appearances(runs[1]) == ["a@2026", "b@2026"])
+    #expect(stored.artifacts.allSatisfy { !$0.isRemoved })
+  }
+
+  /// Stored positions are kept only inside a note that has something carried; a note read in
+  /// full takes the order of the read, whatever happens to other notes.
+  @Test func aNoteReadInFullKeepsItsOwnOrderNextToAnUnreadNote() {
+    let unread = VaultUnread(paths: [quarter.path], artifactLists: [], notRecognised: [])
+    let (runs, stored) = importing(
+      vault([yearNote(), quarter], [artifact("a"), artifact("b"), quarterItem("q")]),
+      vault([yearNote()], [artifact("n"), artifact("b"), artifact("a")], unread: unread))
+    #expect(runs[1].artifacts.map(\.key) == ["n", "b", "a", "q"])
+    // Notes stay in path order with one carried between or after the read ones.
+    #expect(runs[1].notes.map(\.path) == [Self.year, quarter.path])
+    #expect(stored.artifacts.allSatisfy { !$0.isRemoved })
+  }
+
+  @Test func aCarriedNoteTakesItsPlaceInPathOrder() {
+    let first = SourceNote(path: "A.md", title: "A", type: "month_plan")
+    let last = SourceNote(path: "Z.md", title: "Z", type: "month_plan")
+    let unread = VaultUnread(paths: ["A.md"], artifactLists: [], notRecognised: [])
+    let (runs, _) = importing(
+      vault([first, yearNote(), last], []), vault([last, yearNote()], [], unread: unread))
+    #expect(runs[1].notes.map(\.path) == ["A.md", Self.year, "Z.md"])
+  }
+
+  /// An incomplete artifact list means the note's file exists: the note is kept even when a
+  /// reader names it nowhere else.
+  @Test func aNoteNamedOnlyByItsArtifactListIsKeptWithItsArtifacts() {
+    let lists = VaultUnread(paths: [], artifactLists: [Self.year], notRecognised: [])
+    let (runs, stored) = importing(
+      vault([yearNote()], [artifact("a")]), vault([], [], unread: lists))
+    #expect(runs[1].notes == runs[0].notes && runs[1].artifacts == runs[0].artifacts)
+    #expect(stored.notes.allSatisfy { !$0.isRemoved })
+    #expect(stored.artifacts.allSatisfy { !$0.isRemoved })
   }
 
   /// Serves the given snapshots in turn.

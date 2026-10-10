@@ -207,7 +207,8 @@ public struct VaultUnread: Equatable, Sendable {
   /// unreadable, skipped by the walk, or skipped for an invalid or missing value. A folder
   /// covers everything below it.
   public let paths: Set<String>
-  /// Paths of notes whose `artifacts:` list was not read in full.
+  /// Paths of notes whose `artifacts:` list was not read in full. Such a note exists, so it
+  /// is kept like one in `paths` even when nothing else names it.
   public let artifactLists: Set<String>
   /// Paths of the notes the read saw and did not recognise: another type, no frontmatter.
   public let notRecognised: Set<String>

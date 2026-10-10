@@ -2,11 +2,24 @@
 // No code path writes to the vault before the Write phase (ADR-0004, ADR-0014, ADR-0015).
 // Searches the Swift sources of every target that can reach the vault for calls that write
 // files, open a database or start a process or script, and fails on any outside the allowlist
-// below. From the Write phase the `VaultWriter` implementation joins the allowlist.
+// below. From the Write phase the `VaultWriter` implementation joins the allowlist. In `Apps`
+// it also fails on anything that opens a URL: the app opens external URLs through one function
+// with an allowlist of schemes (ADR-0015, amendment of 2026-10-10); that function joins the
+// allowlist here in S4.
 //
-// It is a text search: it catches a write added by accident, not one hidden on purpose (a call
-// through a variable, a selector or a C function not listed here passes). Comments count: a
-// listed call in a comment fails too. `bridge/snapshot.js` (JXA, OmniFocus only) is not searched.
+// It is a text search over the names listed below: it catches a write added by accident, not
+// one hidden on purpose. What it does not see: a call through a variable, a selector or a
+// function reference; a C or framework function not listed; anything in a dependency;
+// `bridge/snapshot.js` (JXA, OmniFocus only).
+//
+// What it reserves in the searched targets:
+// - the C names below as unqualified calls (`remove(x)`); a declaration (`func remove(`) and a
+//   member call (`items.remove(at:)`, `self.remove(x)`) pass;
+// - the type names below anywhere in code, and in a comment that follows code on its line;
+//   a line that is only a `//` comment is not searched for C names and type names, so prose
+//   passes. Member calls (`.write(`, `.removeItem(`) are searched in comments too.
+// A symbolic link under a searched folder is a finding: SwiftPM compiles what it points to, and
+// the search does not follow it.
 //
 // Usage: node scripts/check-vault-writes.mjs [repository root]
 // Exit 0 clean, 1 with `file:line: pattern` per finding, 2 when a required folder is missing.
@@ -14,6 +27,8 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 const required = ["MoonShineCore/Sources", "Adapters/Sources"];
+// Searched when it exists. Only here are folders named `*Tests` left out: under the two
+// required folders SwiftPM compiles such a folder into the product.
 const optional = ["Apps"];
 
 // File plus exact text. The text is removed from each line of that file before the search, so
@@ -27,10 +42,7 @@ const allowed = {
     "FileHandle.standardError.write(",
   ],
   // The OmniFocus bridge runs `osascript`.
-  "Adapters/Sources/OmniFocusAdapter/OmniFocusBridge.swift": [
-    "drives osascript through Process,",
-    "let process = Process()",
-  ],
+  "Adapters/Sources/OmniFocusAdapter/OmniFocusBridge.swift": ["let process = Process()"],
 };
 
 const names = (list) => list.join("|");
@@ -38,45 +50,66 @@ const names = (list) => list.join("|");
 const word = (list) => new RegExp(`(?<![A-Za-z0-9_])(?:${names(list)})(?![A-Za-z0-9_])`);
 // A member call: `.removeItem(`.
 const member = (list) => new RegExp(`\\.(?:${names(list)})\\s*\\(`);
-// A C call: the name and `(`, not after a letter, digit, `_` or `.` (so `items.remove(at:)`
-// passes), except after the module prefix `Darwin.`, `Glibc.` or `Foundation.`.
+// A C call: the name directly followed by `(`; not after a letter, digit, `_` or `.` (so
+// `items.remove(at:)` passes), except after the module prefix `Darwin.`, `Glibc.` or
+// `Foundation.`; not a declaration (`func remove(`).
 const cCall = (list) =>
-  new RegExp(`(?<![A-Za-z0-9_.])(?:(?:Darwin|Glibc|Foundation)\\.)?(?:${names(list)})\\s*\\(`);
+  new RegExp(
+    `(?<![A-Za-z0-9_.])(?<!\\bfunc\\s+)(?:(?:Darwin|Glibc|Foundation)\\.)?(?:${names(list)})\\(`,
+  );
 
+// [name, pattern, searched in a line that is only a comment, only under this folder]
 const patterns = [
   [
     "FileManager change",
     member([
       "createFile", "createDirectory", "removeItem", "moveItem", "copyItem", "replaceItem",
-      "replaceItemAt", "linkItem", "createSymbolicLink", "trashItem", "setAttributes",
+      "replaceItemAt", "linkItem", "createSymbolicLink", "trashItem", "setAttributes", "setUbiquitous",
     ]),
+    true,
   ],
-  ["write call", member(["write"])],
-  ["file handle for writing", word(["forWritingTo", "forWritingAtPath", "forUpdating", "forUpdatingAtPath"])],
+  ["write call", member(["write", "writeAll", "archiveRootObject"]), true],
+  [
+    "file handle for writing",
+    word(["forWritingTo", "forWritingAtPath", "forUpdating", "forUpdatingAtPath", "FileDescriptor"]),
+  ],
   ["writing type", word(["OutputStream", "FileWrapper", "NSFileCoordinator", "setResourceValues"])],
   [
     "C file call",
     cCall([
-      "fopen", "freopen", "open", "openat", "creat", "fwrite", "pwrite", "rename", "renamex_np",
-      "unlink", "remove", "mkdir", "rmdir", "truncate", "ftruncate", "symlink", "link", "copyfile",
-      "clonefile",
+      "fopen", "freopen", "open", "openat", "creat", "write", "writev", "pwrite", "pwritev", "fwrite",
+      "fputs", "fputc", "rename", "renameat", "renamex_np", "renameatx_np", "unlink", "unlinkat",
+      "remove", "removefile", "mkdir", "mkdirat", "rmdir", "mkstemp", "mkstemps", "mkdtemp",
+      "truncate", "ftruncate", "symlink", "symlinkat", "link", "linkat", "copyfile", "clonefile",
+      "chmod", "fchmod", "chown", "fchown", "lchown",
     ]),
   ],
   ["database", word(["DatabasePool", "DatabaseQueue", "sqlite3_open", "sqlite3_open_v2"])],
   [
     "process or script",
-    word(["Process", "NSTask", "posix_spawn", "posix_spawnp", "NSAppleScript", "NSUserAppleScriptTask", "OSAScript", "NSWorkspace"]),
+    word([
+      "Process", "NSTask", "posix_spawn", "posix_spawnp", "NSAppleScript", "NSUserAppleScriptTask",
+      "NSUserUnixTask", "NSUserScriptTask", "NSUserAutomatorTask", "OSAScript", "NSWorkspace",
+    ]),
   ],
-  ["process or script", cCall(["system", "popen"])],
+  [
+    "process or script",
+    cCall(["system", "popen", "execv", "execve", "execvp", "execvP", "execl", "execle", "execlp"]),
+  ],
+  ["URL opener", word(["openURL", "OpenURLAction", "SFSafariViewController"]), false, "Apps"],
+  ["URL opener", /(?<![A-Za-z0-9_])Link\s*\(|UIApplication\.shared\.open/, false, "Apps"],
 ];
 
-function swiftFiles(dir) {
+/// Swift files under `dir`, and every symbolic link (a finding, never followed).
+function walk(dir, skipTests) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name);
+    if (entry.isSymbolicLink()) return [{ path, link: true }];
     if (entry.isDirectory()) {
-      return entry.name === ".build" || entry.name.endsWith("Tests") ? [] : swiftFiles(path);
+      const skipped = entry.name === ".build" || (skipTests && entry.name.endsWith("Tests"));
+      return skipped ? [] : walk(path, skipTests);
     }
-    return entry.isFile() && entry.name.endsWith(".swift") ? [path] : [];
+    return entry.isFile() && entry.name.endsWith(".swift") ? [{ path }] : [];
   });
 }
 
@@ -90,11 +123,18 @@ if (missing.length > 0) {
 
 const findings = [];
 for (const dir of [...required, ...optional.filter((dir) => isFolder(join(root, dir)))]) {
-  for (const path of swiftFiles(join(root, dir))) {
+  for (const { path, link } of walk(join(root, dir), optional.includes(dir))) {
     const file = relative(root, path).split(sep).join("/");
+    if (link) {
+      findings.push(`${file}: symbolic link`);
+      continue;
+    }
     readFileSync(path, "utf8").split("\n").forEach((text, index) => {
       const line = (allowed[file] ?? []).reduce((rest, allow) => rest.split(allow).join(" "), text);
-      for (const [name, pattern] of patterns) {
+      const comment = line.trimStart().startsWith("//");
+      for (const [name, pattern, inComments, only] of patterns) {
+        if (comment && !inComments) continue;
+        if (only && !file.startsWith(`${only}/`)) continue;
         if (pattern.test(line)) findings.push(`${file}:${index + 1}: ${name}`);
       }
     });

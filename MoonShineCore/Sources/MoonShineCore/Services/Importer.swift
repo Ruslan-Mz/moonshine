@@ -42,7 +42,10 @@ public struct Importer: Sendable {
     let readNoteIDs = Set(readNotes.map(\.id))
     var carriedNotes: [NoteRef] = []
     for note in stored.notes where !readNoteIDs.contains(note.id) {
-      if !vault.isRead || vault.unread.covers(note.path) {
+      // An incomplete artifact list also says the file exists.
+      if !vault.isRead || vault.unread.covers(note.path)
+        || vault.unread.artifactLists.contains(note.path)
+      {
         carriedNotes.append(note)
       } else if vault.unread.notRecognised.contains(note.path) {
         carriedNotes.append(note)
@@ -153,41 +156,42 @@ public struct Importer: Sendable {
   }
 
   /// The artifacts read, plus the stored ones the read could not see: those of a carried note
-  /// and those of a note whose `artifacts:` list was not read in full. When any is carried,
-  /// stored positions are kept (updated in place, new ones last); a clean read keeps its own
-  /// order.
+  /// and those of a note whose `artifacts:` list was not read in full. A carried appearance
+  /// stays whatever is read elsewhere; only the same appearance read again replaces it. A note
+  /// with anything carried, or with an incomplete list, keeps its stored positions (updated in
+  /// place, new items last); every other note takes the order of the read. With anything
+  /// carried, the notes' artifacts follow each other in note path order.
   private static func artifacts(
     read: [Artifact], stored: Workspace, notes: [NoteRef], carriedNotes: [NoteRef],
     vault: VaultSnapshot
   ) -> [Artifact] {
     let readByID = Dictionary(read.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-    let noteByID = Dictionary(
-      (stored.notes + notes).map { ($0.id, $0) }, uniquingKeysWith: { _, current in current })
+    let noteByID = Dictionary(notes.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     let carriedNoteIDs = Set(carriedNotes.map(\.id))
-    func period(_ artifact: Artifact) -> Horizon? {
-      artifact.noteID.flatMap { noteByID[$0]?.period }
+    func keepsUnread(_ noteID: NoteID?) -> Bool {
+      guard let note = noteID.flatMap({ noteByID[$0] }) else { return false }
+      return carriedNoteIDs.contains(note.id) || vault.unread.artifactLists.contains(note.path)
     }
     let carried = stored.artifacts.filter { old in
-      guard readByID[old.id] == nil else { return false }
-      guard vault.isRead else { return true }
-      guard let note = old.noteID.flatMap({ noteByID[$0] }),
-        carriedNoteIDs.contains(note.id) || vault.unread.artifactLists.contains(note.path)
-      else { return false }
-      // A read item wins: the same key read in an overlapping period would be a duplicate
-      // of the stored one had both notes been read. An unknown period counts as overlapping.
-      return !read.contains { new in
-        guard new.key == old.key else { return false }
-        guard let mine = period(old), let theirs = period(new) else { return true }
-        return mine.start < theirs.end && theirs.start < mine.end
-      }
+      readByID[old.id] == nil && (!vault.isRead || keepsUnread(old.noteID))
     }
-    guard !carried.isEmpty else { return read }
+    guard !carried.isEmpty, !read.isEmpty else { return read + carried }
     let carriedIDs = Set(carried.map(\.id))
-    let storedIDs = Set(stored.artifacts.map(\.id))
-    return stored.artifacts.compactMap {
-      readByID[$0.id] ?? (carriedIDs.contains($0.id) ? $0 : nil)
+    var noteIDs: [NoteID?] = []
+    for noteID in (read + carried).map(\.noteID) where !noteIDs.contains(noteID) {
+      noteIDs.append(noteID)
     }
-      + read.filter { !storedIDs.contains($0.id) }
+    func path(_ noteID: NoteID?) -> String? { noteID.flatMap { noteByID[$0]?.path } }
+    return noteIDs.sorted { path($0) ?? "" < path($1) ?? "" }.flatMap { noteID -> [Artifact] in
+      let mine = read.filter { $0.noteID == noteID }
+      guard keepsUnread(noteID) else { return mine }
+      let kept = stored.artifacts.filter { $0.noteID == noteID }
+      let keptIDs = Set(kept.map(\.id))
+      return kept.compactMap { old in
+        readByID[old.id].flatMap { $0.noteID == noteID ? $0 : nil }
+          ?? (carriedIDs.contains(old.id) ? old : nil)
+      } + mine.filter { !keptIDs.contains($0.id) }
+    }
   }
 
   /// OmniFocus names a completed occurrence `<liveId>.<n>`; only trusted when the live task exists.
