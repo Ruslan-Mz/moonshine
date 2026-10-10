@@ -11,7 +11,7 @@ See `docs/ROADMAP.md`. **Only build what the current phase's spec asks for.** La
 ## Hard rules
 
 1. **Spec first.** Every change starts from `docs/specs/`. Missing/ambiguous spec → propose a spec change and stop.
-2. **One slice = one PR**, sized by risk (owner, 2026-10-09). Sizes are changed lines of production code after the factor ("Sizing a slice"; tests, fixtures and generated files excluded).
+2. **One slice = one PR**, sized by risk (owner, 2026-10-09). Sizes are changed lines of production code after the size factor of `docs/method/forecast.md` ("Sizing a slice"; tests, fixtures and generated files excluded).
    - **Risky slice**: it parses data from outside the repository (vault, OmniFocus, calendars, workbook), changes what is stored or deleted, adds a command, starts a process, or touches concurrency, sync, permissions or the assistant. Limit about 400; above it, split in the plan. `deep` review is proposed as before (`/review-pr` §2).
    - **Plain slice**: everything else: SwiftUI views, view models and navigation over data the store already holds, layout, localisation, settings that add no storage rule. Limit about 800; one screen, or a group of related screens, is one PR.
    - A slice with any risky part is risky. Prefer moving the risky part into its own PR first, so the rest can be plain. The plan names its class and the reason.
@@ -34,17 +34,12 @@ Start every slice with the HTTPS fetch, then `git switch main && git merge --ff-
 
 ## Plans
 
-- A slice plan is written to a file in the session scratchpad.
-- Before the owner sees it, run `plan-critic` (`.claude/agents/plan-critic.md`) on it once, with the file path and the slice name, nothing else. Fix the `author` findings in the plan.
-- Show the owner three things: the plan; the critic's "For the owner" list, word for word; one line for each author finding, fixed or declined with the reason.
-- One run per plan. A second run only after the owner asks for a redesign.
-- No critic for a docs-only change, or for a slice under about 80 estimated lines that adds no parsing of outside data, no storage or deletion rule and no command.
-- A risky slice's plan always waits for the owner's OK. A plain slice's plan does not (owner, 2026-10-09) when the critic's verdict is "ready" and its "For the owner" list is empty: the author puts the plan and the critic's author list (fixed or declined) at the top of the PR description and starts coding; the owner can stop it at any time.
-- The critic's calibration case is in `docs/method/calibration/`; run it again when the agent's text or its model changes.
+- A slice plan is written to a file in the session scratchpad. Every claim it makes about existing code names its file, and the line where it matters, so a reader can check it without searching.
+- Every plan waits for the owner's OK. Plans are reviewed by the architect: the `plan-critic` agent (`.claude/agents/plan-critic.md`) is not a step yet, because its calibration has not passed (2026-10-10; `docs/method/calibration/`). It joins this section when a later calibration passes.
 
 ## Pull requests
 
-- **Sizing a slice**: when planning a slice, multiply your own estimate of production lines by the measured factor of the last slices in `docs/method/log.md`, and say in the plan which factor you used; with no measured factor, double it. If the result exceeds the limit of the slice's class (rule 2), split the slice in the plan, before coding. Reason: estimates have run 1.5–2.6× low on every slice so far.
+- **Sizing a slice**: when planning a slice, multiply your own estimate of production lines by the size factor in `docs/method/forecast.md` (the median of actual / estimated production lines over the last five merged code slices; each code slice's PR updates it), and say so in the plan; with no factor there, double it. If the result exceeds the limit of the slice's class (rule 2), split the slice in the plan, before coding. Reason: estimates have run 1.5–2.6× low on every slice so far.
 - **Before opening a PR**, check that:
   - errors carry no raw values (no titles, ids, dates, payload text or stderr from a provider);
   - every decoded field is validated, on every path that decodes it;
@@ -75,4 +70,4 @@ Tests green · `swift format lint` clean · Prettier check clean · `node script
 
 ## Owner
 
-Senior mobile/full-stack engineer, native iOS since 2008. He directs and reviews; agents write the code. Plan before coding and wait for his OK on each slice plan, except as "Plans" allows for a plain slice. Prefer clarity over cleverness; explicit types at module boundaries; no abstraction beyond the ports in ARCHITECTURE.md without an ADR.
+Senior mobile/full-stack engineer, native iOS since 2008. He directs and reviews; agents write the code. Plan before coding and wait for his OK on each slice plan. Prefer clarity over cleverness; explicit types at module boundaries; no abstraction beyond the ports in ARCHITECTURE.md without an ADR.

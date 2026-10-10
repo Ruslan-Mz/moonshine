@@ -2,12 +2,26 @@
 
 The owner's forecast of when each stage ends (2026-10-09). It is the first point of a drift chart for MoonShine itself: the "Actual" column is left empty and filled when each stage ends.
 
+The durations below are forecasts at the measured pace, not timeboxes. A phase's timebox is re-baselined from this forecast when its spec is written, as phase 1's was on 2026-10-09 (owner, 2026-10-10); until then `docs/ROADMAP.md` keeps the old timebox.
+
+## Size factor
+
+**1.75** — the median of actual / estimated production lines over the last five merged code slices (owner, 2026-10-10). `CLAUDE.md` rule 2, "Sizing a slice" and the `plan-critic` agent use this figure; the author updates it in each code slice's PR. Actual is the final head where the method log gives it.
+
+| Slice (method log) | Estimate                     | Actual                                            | Factor |
+| ------------------ | ---------------------------- | ------------------------------------------------- | ------ |
+| P1-S3b-2b+2c       | ~225                         | 246 (final head)                                  | 1.09   |
+| P1-S3b-guards      | ~55 (parts with an estimate) | 131 (first head; the guards part had no estimate) | 2.4    |
+| P1-S3b-2a          | ~140                         | 217 (final head)                                  | 1.55   |
+| P1-S3b-1           | ~220                         | 385 (final head)                                  | 1.75   |
+| P1-S3a-1 (two PRs) | 380–440 (midpoint 410)       | 1,004 (266 + 738, final heads)                    | 2.45   |
+
 ## Basis
 
 The owner's figures, read from the method log:
 
 - **Pace:** 2026-10-05 to 2026-10-08, about 250 production lines and one merged PR a day (`docs/method/log.md`).
-- **Factor:** 1.55, actual production lines against the plan's estimate.
+- **Factor:** 1.55, actual production lines against the plan's estimate (the figure of 2026-10-09; the size factor above replaces it for sizing).
 - **Size by risk:** risky slices up to about 400 production lines after the factor, plain slices up to about 800 (`CLAUDE.md` rule 2).
 - **Slow scenario:** 0.6 of the pace from January (less owner time).
 

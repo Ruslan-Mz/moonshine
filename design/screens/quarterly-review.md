@@ -67,10 +67,13 @@ No scores, percentages, grades or streaks. "to decide", never "failed" or "misse
 - [ ] Works with no previous quarter note: section 1 shows "No quarter note for Q3", the rest still renders.
 - [ ] Checked in Russian.
 - [ ] With `active_lines` absent, no "too many active lines" row appears.
+- [ ] The rows of "Lines over the quarter" leave room for the take strip (§ My take); no code for takes in R1.
 
 ## My take (draft-4)
 
 Artboards: `QuarterReview-Take`, `QuarterReview-Take-Dark` (1440 × 1560).
+
+**Slices (owner, 2026-10-10).** R1 ships with a reserved place for the take strip, as Lines does in phase 1, and no code for takes. A plain follow-up slice after My take (phase 2) fills it; the acceptance below belongs to that follow-up.
 
 ### Layout
 
@@ -90,7 +93,7 @@ Read-only, like the rest of the review: marks and notes are shown, not edited (t
 
 Same sparkline + mark strip as Lines, with 13 or 14 slots. Opened notes: a `DisclosureGroup` row content.
 
-### Acceptance
+### Acceptance (follow-up after My take)
 
 - [ ] 🤖 AI/ML shows one spark (W37), one ▶ (W39) and a dashed ▷ (W40 draft) in an otherwise blank strip; the spark is found at a glance.
 - [ ] 📐 Math shows a dashed spark in W38, and the artifact "Linear algebra, chapters 1–2" lists it as `(draft)`.
