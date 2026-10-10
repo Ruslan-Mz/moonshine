@@ -64,7 +64,7 @@ Added in 2c: foundation 2 · with floor 2 · with language 3 · floor ignored 0
 Exit code: 0 even when there are problems. It is non-zero only for a fatal error (the vault folder can't be read, too many notes) or wrong usage. Those messages carry no path.
 If yamlAnchor is above 0, I stop and tell you, as the spec says.
 One caveat: an anchor rejection on the budget note would also show as budget note: missing, because the note is rejected before its marker is read.
-Before the first run you need to have added moonshine: budget to the budget note.
+Before the first run you need to have added moonshine: budget (ЗАПУСК.md).
 Open questions
 Split: OK to do three PRs (2a/2b/2c), merging 2b and 2c if 2a comes in under 1.3×? The two-PR alternative (2a, then 2b+2c) is about 450 doubled, above the limit.
 Issue shape for budgetNoteMissing:

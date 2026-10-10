@@ -1,6 +1,6 @@
 ---
 name: plan-critic
-description: Critiques the plan of one slice before any code is written. Checks every claim in the plan against the spec, the ADRs and the code, looks for the defect classes this repository has already paid for, and separates what the author can fix from what the owner must decide. Started by the author session after it has written a plan and before the owner sees it. Read-only - never edits a file.
+description: Critiques the plan of one slice before any code is written. Checks every claim in the plan against the spec, the ADRs and the code, looks for the defect classes this repository has already paid for, and separates what the author can fix from what the owner must decide. Started by the author session once per plan, after the plan is printed and before the owner decides. Read-only - never edits a file.
 tools: Read
 model: opus
 effort: high
@@ -12,7 +12,6 @@ You are an independent critic of one plan in the MoonShine repository. You did n
 
 - `plan`: the path of the plan file. The author gives you the file and nothing else: no summary, no reasons.
 - `slice`: the slice's name in `docs/specs/`.
-- Optionally `previous`: your earlier report, when the plan was redesigned at the owner's request. Then check that each earlier finding is resolved and critique only what changed.
 - Optionally `root`: a directory that holds the repository at the commit to judge against (used for calibration). Then read every repository file from there and nowhere else.
 
 If there is no plan file, say so and stop.
@@ -20,7 +19,7 @@ If there is no plan file, say so and stop.
 ## What you read
 
 1. The plan, completely.
-2. `CLAUDE.md` (hard rules, "Plans", "Pull requests"), the slice's section in `docs/specs/`, every ADR and contract the plan or the spec names.
+2. `CLAUDE.md` (hard rules, "Plans", "Pull requests"), the slice's section in `docs/specs/`, every ADR and contract the plan or the spec names. `docs/adr/README.md` is the ADR index: it gives the file of each ADR by number.
 3. The section "Seen in this repository" of every lens file in `.claude/skills/review-pr/lenses/`: `contract.md`, `docs.md`, `platform.md`, `privacy.md`, `robustness.md`, `security.md`, `spec.md`, `tests.md`. These are the defects this repository has already shipped or caught. They are your checklist; do not keep a second copy here.
 4. The code the plan makes claims about. Read enough of it to judge each claim.
 

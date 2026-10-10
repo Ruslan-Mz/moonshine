@@ -37,12 +37,12 @@ Start every slice with the HTTPS fetch, then `git switch main && git merge --ff-
 - A slice plan is written to a file in the session scratchpad and printed in full in chat. Every claim it makes about existing code names its file, and the line where it matters: the critic has no search, so a claim without a path is a finding (`unverifiable-claim`).
 - **Critic, on trial** (owner, 2026-10-10; criteria and results in `docs/method/calibration/plan-critic-trial.md`): after printing the plan, run `plan-critic` (`.claude/agents/plan-critic.md`) on it once, with the file path and the slice name, nothing else, and print its report verbatim, after the plan.
 - Do not change the plan in response to the critic yet. Wait for the owner's decisions, then fix the plan and continue.
-- One critic run per plan. No critic for a docs-only change, or for a plain slice (rule 2) under about 80 estimated lines.
+- One critic run per plan. No critic for a docs-only change, or for a plain slice (rule 2) under about 80 lines after the size factor (estimate × factor < 80).
 - Every plan waits for the owner's OK. The architect reviews plans during the trial; the critic's S3b-2 calibration did not pass (2026-10-10).
 
 ## Pull requests
 
-- **Sizing a slice**: when planning a slice, multiply your own estimate of production lines by the size factor in `docs/method/forecast.md` (the median of actual / estimated production lines over the last five merged code slices; each code slice's PR updates it), and say so in the plan; with no factor there, double it. If the result exceeds the limit of the slice's class (rule 2), split the slice in the plan, before coding. Reason: estimates have run 1.5–2.6× low on every slice so far.
+- **Sizing a slice**: when planning a slice, multiply your own estimate of production lines by the size factor in `docs/method/forecast.md` (the median of actual / estimated production lines over the last five merged code slices; each code slice's PR updates it), and say so in the plan; with no factor there, double it. If the result exceeds the limit of the slice's class (rule 2), split the slice in the plan, before coding. Reason: estimates have run low on every measured slice; the ratios are in the table in `docs/method/forecast.md`.
 - **Before opening a PR**, check that:
   - errors carry no raw values (no titles, ids, dates, payload text or stderr from a provider);
   - every decoded field is validated, on every path that decodes it;

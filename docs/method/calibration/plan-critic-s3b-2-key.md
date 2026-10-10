@@ -46,6 +46,7 @@ Each run: Opus, the agent text of its date, the same three inputs, graded by the
 
 - **Run 1 (2026-10-09, first agent text): below the bar.** Must find 2 of 4 (M1, M4). M2 missed: the critic covered only the whole budget note failing, not one skipped line being soft-deleted. M3 missed: it assumed a report the plan does not state. Should find 4 of 8 (S1, S2, S4, S8). 3 findings without a scenario. 158,794 tokens, 4.7 min.
 - **Run 2 (2026-10-09, agent text with "Drops and skips"): passes, at the bar.** Must find 4 of 4. Should find 4 of 8 (S1, S4, S6, S8; S2 partial, graded missed: caps asked only for `emoji` and `parent`). 3 findings without a scenario. 155,801 tokens, 5.2 min. Not independent evidence: the agent text was changed after the misses of run 1. The run reported that it had no Grep or Glob tool.
+- Runs 3 to 6 were given the plan with one line reworded: the last sentence of the live-check section said "to the budget note" in place of the document's name, after a round 1 review finding later judged a false positive. The plan file holds the original line again; no key item depends on it.
 - **Run 3 (2026-10-10): not counted.** The agent file had been changed to Read only, but the session most likely used the definition loaded at its start (Read, Grep, Glob): the run reported no `unverifiable-claim`. For the record: must find 3 of 4 (M2 missed), should find 3 of 8 (S1, S4, S8), 6 findings without a scenario. 124,147 tokens, 6.4 min.
 
 ### Calibration of 2026-10-10 (runs 4–6): does not pass, 0 of 3 runs
