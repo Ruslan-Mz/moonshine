@@ -34,8 +34,11 @@ Start every slice with the HTTPS fetch, then `git switch main && git merge --ff-
 
 ## Plans
 
-- A slice plan is written to a file in the session scratchpad. Every claim it makes about existing code names its file, and the line where it matters, so a reader can check it without searching.
-- Every plan waits for the owner's OK. Plans are reviewed by the architect: the `plan-critic` agent (`.claude/agents/plan-critic.md`) is not a step yet, because its calibration has not passed (2026-10-10; `docs/method/calibration/`). It joins this section when a later calibration passes.
+- A slice plan is written to a file in the session scratchpad and printed in full in chat. Every claim it makes about existing code names its file, and the line where it matters: the critic has no search, so a claim without a path is a finding (`unverifiable-claim`).
+- **Critic, on trial** (owner, 2026-10-10; criteria and results in `docs/method/calibration/plan-critic-trial.md`): after printing the plan, run `plan-critic` (`.claude/agents/plan-critic.md`) on it once, with the file path and the slice name, nothing else, and print its report verbatim, after the plan.
+- Do not change the plan in response to the critic yet. Wait for the owner's decisions, then fix the plan and continue.
+- One critic run per plan. No critic for a docs-only change, or for a plain slice (rule 2) under about 80 estimated lines.
+- Every plan waits for the owner's OK. The architect reviews plans during the trial; the critic's S3b-2 calibration did not pass (2026-10-10).
 
 ## Pull requests
 

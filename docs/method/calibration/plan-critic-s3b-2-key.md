@@ -65,4 +65,4 @@ Found in k of 3 runs: M1 3, M2 1, M3 3, M4 3; S1 3, S2 0, S3 0, S4 3, S5 0, S6 1
 - S2: no run asked for length caps; S3 and S7: no run came near.
 - Most findings without a scenario are owner items that answer the plan's own questions.
 
-Result: the critic is not a step in `CLAUDE.md` → "Plans". Plans are reviewed by the architect until a later calibration passes.
+Result: the calibration does not pass. The critic runs as a shadow trial on real plans instead (owner, 2026-10-10; [plan-critic-trial.md](plan-critic-trial.md)); this case stays as a regression check and is no longer tuned against.
