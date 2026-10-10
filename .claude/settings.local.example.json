@@ -1,14 +1,26 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(git worktree prune)",
+      "Bash(git update-ref -d refs/remotes/review/*)"
+    ],
+    "ask": ["Bash(dangerouslyDisableSandbox:true)"]
+  },
   "env": {
     "PATH": "/usr/bin:/bin:/usr/sbin:/sbin:/Users/<you>/.nvm/versions/node/<node-version>/bin:/opt/homebrew/bin"
   },
   "sandbox": {
     "enabled": true,
     "autoAllowBashIfSandboxed": true,
-    "excludedCommands": ["swift", "npx prettier"],
+    "excludedCommands": ["swift"],
     "filesystem": {
       "denyRead": ["~/", "/Volumes", "./data", "./deny-list.txt"],
-      "allowRead": [".", "~/.gitconfig", "~/.config/git/ignore", "~/.nvm/versions/node"]
+      "allowRead": [
+        ".",
+        "~/.gitconfig",
+        "~/.config/git/ignore",
+        "~/.nvm/versions/node"
+      ]
     }
   }
 }

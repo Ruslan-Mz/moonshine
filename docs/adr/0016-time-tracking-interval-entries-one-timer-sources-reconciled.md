@@ -130,10 +130,11 @@ Both stay. The unit of comparison is **(day, line)**.
 | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2 Plan   | `TimeEntry` gets the new fields from its first slice; the import and the quick log use them. The reconcile rule is part of the import.                  |
 | 2 Plan   | **Timer (Mac)** is the last slice: sessions, menu bar, start from a row and from ⌘K, the day rail with editing, the week table, nudges, the check mark. |
-| —        | Fallback: if the other phase-2 slices are not merged by 2026-12-07, Timer (Mac) moves to directly after R1. The R1 deadline does not move.              |
 | 3b       | The iPhone timer takes a task or a project as well as a line; buttons in widgets and controls; Siri.                                                    |
 | Ask      | Start, stop and corrections through the assistant.                                                                                                      |
 | After 3b | Watch; standalone countdown timers that belong to nothing.                                                                                              |
+
+**Amendment (2026-10-09, owner).** The fallback is removed: it said that if the other phase-2 slices were not merged by 2026-12-07, Timer (Mac) would move to directly after R1. It existed only to protect R1's deadline (2026-12-28). R1 is now built in the two-week usage period after phase 1 (`docs/ROADMAP.md`, rule of gates), so that deadline has a margin of weeks, and Timer (Mac) stays the last slice of phase 2.
 
 ### Consequences
 
@@ -145,7 +146,7 @@ Both stay. The unit of comparison is **(day, line)**.
 - Bad — one timer at a time cannot express two things done at once.
 - Bad — a forgotten session is marked, not stopped: its entry stays wrong until the owner confirms or trims it.
 - Bad — the calendar suggestion and the nudges depend on notifications the system may delay, and on the app having run.
-- Bad — phase 2 grows by a slice next to a fixed R1 date; the fallback rule limits the risk and does not remove it.
+- Bad — phase 2 grows by a slice. R1's fixed date no longer depends on it: R1 is built before phase 2 (amendment 2026-10-09).
 - Bad — the line stored on an entry can disagree with a later mapping; re-attribution is manual.
 - Neutral — the screen spec's "no streaks or goals in the log" becomes "no streaks; targets and day marks are optional, neutral facts".
 

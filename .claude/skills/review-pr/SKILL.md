@@ -21,7 +21,7 @@ The author of a change cannot review it well: it reads what it meant, not what i
 
 ## 1. Prepare
 
-`gh` and the fetch need the network, which the Claude sandbox blocks: run them as unsandboxed commands (the owner approves them) or allow `github.com` and `api.github.com` in the sandbox. SwiftPM cannot build or test inside the sandbox at all (its build service cannot write `.build`, with or without `--disable-sandbox`), so `swift build` / `swift test` run unsandboxed under the existing allow rules `Bash(swift build:*)` and `Bash(swift test:*)`, without a prompt. Reviewers and verifiers therefore never build or run the PR's code when it changes `Package.swift` dependencies, build plugins or build scripts.
+`gh` and the fetch need the network, which the Claude sandbox blocks: run them as unsandboxed commands (the owner approves them) or allow `github.com` and `api.github.com` in the sandbox. SwiftPM cannot build or test inside the sandbox at all (its build service cannot write `.build`, with or without `--disable-sandbox`), so `swift build` / `swift test` run unsandboxed under the existing allow rules `Bash(swift build:*)` and `Bash(swift test:*)`, without a prompt. Reviewers and verifiers therefore never build or run the PR's code when it changes the package's external dependencies (a package added or changed in `Package.swift` or `Package.resolved`), a build plugin or a build script. A target that gains a dependency on a local target of the same package does not count: then they run the tests as usual (PR #14's reviewers skipped `swift test` for exactly that one line).
 
 1. `gh pr view <n> --json number,title,body,url,baseRefName,headRefName,headRefOid,additions,deletions,files,reviews`. Take `<owner>/<repo>` from `url` (`https://github.com/<owner>/<repo>/pull/<n>`).
 2. Fetch over HTTPS, never through `origin` (SSH fails in Claude sessions), with `gh` as a one-off credential helper (the repository is private; a bare HTTPS fetch asks for a username):
@@ -91,13 +91,13 @@ Unless the owner said `local` or `at <sha>`, post **one** GitHub review with eve
 - comment text: `**<Severity> · <class> · decision: <author|owner>** — <summary>`, then the failure scenario, then the suggested fix, then `Verified: <verdict> — <verification>`;
 - review body: the verdict, the counts, the mode, the lenses that ran, the model, a **Notes** list of **all** `Low` findings (unverified; `path:line` and summary), and the marker `<!-- moonshine-review round=<r> head=<headRefOid> -->`.
 
-Build the request as a JSON file under `$TMPDIR` and send it with `gh api --method POST repos/{owner}/{repo}/pulls/<n>/reviews --input <file>` (`commit_id`, `event`, `body`, `comments[]` with `path`, `line`, `side`, `body`).
+Build the request as a JSON file at the fixed path `<scratchpad>/review/pr-<n>-review.json`, never under `$TMPDIR` (sandboxed and unsandboxed commands see different `$TMPDIR` values, so the posting command could not find the file), and send it with `gh api --method POST repos/{owner}/{repo}/pulls/<n>/reviews --input <file>` (`commit_id`, `event`, `body`, `comments[]` with `path`, `line`, `side`, `body`).
 
 ## 6. Clean up
 
-In the sandbox (see "Reports" in §3 for when): `git worktree remove --force <scratchpad>/review/pr-<n>` (`--force` because reviewers may leave untracked files, such as test caches), then `git worktree prune`, then delete the refs: `git update-ref -d refs/remotes/review/pr-<n>` and `git update-ref -d refs/remotes/review/<baseRefName>`. Leave nothing else behind.
+In the sandbox (see "Reports" in §3 for when): `git worktree remove --force <scratchpad>/review/pr-<n>` (`--force` because reviewers may leave untracked files, such as test caches), then `git worktree prune`, then delete the refs: `git update-ref -d refs/remotes/review/pr-<n>` and `git update-ref -d refs/remotes/review/<baseRefName>`. Run the prune and both ref deletions yourself, never hand them to the owner: the local settings allow them (`.claude/settings.local.example.json`). After PR #15 the owner had to run them by hand, and the next review could not create its worktree. Leave nothing else behind.
 
-Never delete anything unsandboxed (no `rm -rf`, no unsandboxed `git worktree remove`). If a sandboxed step fails, stop cleaning up and end the report with the exact command for the owner to run, for example `git worktree remove --force <absolute path>` followed by `git worktree prune`.
+Never delete anything unsandboxed (no `rm -rf`, no unsandboxed `git worktree remove`). If a sandboxed step fails, stop cleaning up and end the report with the exact command for the owner to run, for example `git worktree remove --force <absolute path>` followed by `git worktree prune`. Files inside this session's scratchpad (the review JSON, caches) are not leftovers: never ask the owner to delete them. List a leftover file only when it lies outside the scratchpad.
 
 ## Rounds
 
