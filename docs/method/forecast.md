@@ -6,15 +6,15 @@ The durations below are forecasts at the measured pace, not timeboxes. A phase's
 
 ## Size factor
 
-**1.75** — the median of actual / estimated production lines over the last five merged code slices (owner, 2026-10-10). `CLAUDE.md` rule 2, "Sizing a slice" and the `plan-critic` agent use this figure; the author updates it in each code slice's PR. Actual is the final head where the method log gives it.
+**1.55** — the median of actual / estimated production lines over the last five merged code slices (owner, 2026-10-10; 1.75 until S3b-3a, whose row replaced P1-S3a-1 with its 2.45). `CLAUDE.md` rule 2, "Sizing a slice" and the `plan-critic` agent use this figure; the author updates it in each code slice's PR. Actual is the final head where the method log gives it.
 
 | Slice (method log) | Estimate                     | Actual                                            | Factor |
 | ------------------ | ---------------------------- | ------------------------------------------------- | ------ |
+| P1-S3b-3a          | ~212                         | 298 (first head)                                  | 1.41   |
 | P1-S3b-2b+2c       | ~225                         | 246 (final head)                                  | 1.09   |
 | P1-S3b-guards      | ~55 (parts with an estimate) | 131 (first head; the guards part had no estimate) | 2.4    |
 | P1-S3b-2a          | ~140                         | 217 (final head)                                  | 1.55   |
 | P1-S3b-1           | ~220                         | 385 (final head)                                  | 1.75   |
-| P1-S3a-1 (two PRs) | 380–440 (midpoint 410)       | 1,004 (266 + 738, final heads)                    | 2.45   |
 
 ## Basis
 

@@ -11,7 +11,8 @@ import Testing
     let source = try SnapshotMapper.map(try fixtureDocument())
     var identities = IdentityMap()
     let workspace = Importer().makeWorkspace(
-      tasks: source, vault: try await DemoVault().vault(), storedLines: [], identities: &identities,
+      tasks: source, vault: try await DemoVault().vault(), stored: Workspace(timeZone: .gmt),
+      identities: &identities,
       now: source.generatedAt)
     return Overview(workspace: workspace, now: source.generatedAt)
   }

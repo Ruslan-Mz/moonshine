@@ -22,14 +22,15 @@ import Testing
   }
 
   func vault(_ lines: VaultLines) -> VaultSnapshot {
-    VaultSnapshot(lines: lines, artifacts: [], notes: [])
+    VaultSnapshot(lines: lines, artifacts: [], notes: [], unread: .nothing)
   }
 
   /// A store that already holds violin and piano from a clean read, and its identities.
   func storedAfterACleanRead() -> (StoredWorkspace, IdentityMap) {
     var identities = IdentityMap()
     let first = Importer().makeWorkspace(
-      tasks: source, vault: vault(.read([violin, piano], complete: true)), storedLines: [],
+      tasks: source, vault: vault(.read([violin, piano], complete: true)),
+      stored: Workspace(timeZone: .gmt),
       identities: &identities, now: earlier)
     return (StoredWorkspace(timeZone: TestWorld.timeZone).merging(first, at: earlier), identities)
   }
@@ -39,7 +40,8 @@ import Testing
     var (stored, identities) = storedAfterACleanRead()
     let before = stored.workspace.lines
     let workspace = Importer().makeWorkspace(
-      tasks: source, vault: vault(lines), storedLines: before, identities: &identities, now: now)
+      tasks: source, vault: vault(lines), stored: stored.workspace, identities: &identities,
+      now: now)
     stored = stored.merging(workspace, at: now)
     return (workspace, stored, before)
   }
@@ -100,7 +102,7 @@ import Testing
       reads += 1
       return VaultSnapshot(
         lines: reads == 1 ? .read([lines], complete: true) : .unavailable, artifacts: [],
-        notes: [])
+        notes: [], unread: .nothing)
     }
   }
 
@@ -126,7 +128,8 @@ import Testing
       foundation: true, floorHoursPerDay: 1.5, language: "pt-BR")
     var identities = IdentityMap()
     let workspace = Importer().makeWorkspace(
-      tasks: source, vault: vault(.read([core, piano], complete: true)), storedLines: [],
+      tasks: source, vault: vault(.read([core, piano], complete: true)),
+      stored: Workspace(timeZone: .gmt),
       identities: &identities, now: now)
     let line = try #require(workspace.lines.first)
     #expect(line.foundation)

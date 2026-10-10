@@ -52,6 +52,21 @@ import Testing
     #expect(task.uuid != project.uuid)
   }
 
+  /// The six names are what stores hold: changing one orphans every identity of that kind.
+  @Test func theKindNamesAreWrittenOutAndPinned() {
+    #expect(
+      EntityKind.allCases.map(\.rawValue) == ["line", "note", "artifact", "tag", "project", "task"])
+    #expect(Line.kind == .line && NoteRef.kind == .note && Artifact.kind == .artifact)
+    #expect(Tag.kind == .tag && Project.kind == .project && TaskItem.kind == .task)
+  }
+
+  @Test func theMapKeysByTheWrittenKindNotTheTypeName() {
+    var map = IdentityMap()
+    let _: TaskItemID = map.id(for: ref, now: Date())
+    let _: NoteID = map.id(for: ref, now: Date())
+    #expect(Set(map.entries.keys.map(\.kind)) == ["task", "note"])
+  }
+
   @Test func lastSeenDoesNotAffectIdentity() {
     var map = IdentityMap()
     let first: TaskItemID = map.id(for: ref, now: Date())

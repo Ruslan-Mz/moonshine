@@ -51,6 +51,11 @@ jobs:
           node --test scripts/check-core-imports.test.mjs
           scripts/check-core-imports.sh
 
+      - name: No vault writes before the Write phase (ADR-0015)
+        run: |
+          node --test scripts/check-vault-writes.test.mjs
+          node scripts/check-vault-writes.mjs
+
       - name: Markdown format check
         run: |
           npm ci

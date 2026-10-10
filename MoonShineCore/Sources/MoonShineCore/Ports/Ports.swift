@@ -6,7 +6,8 @@ public protocol TaskProvider: Sendable {
   func snapshot(modifiedSince: Date?) async throws -> TaskSourceSnapshot
 }
 
-/// A notes vault (Obsidian today): lines, artifacts and horizon notes. Read-only until the Act phase.
+/// A notes vault (Obsidian today): lines, artifacts and horizon notes. Read-only until the Write
+/// phase (ADR-0015).
 public protocol NoteProvider: Sendable {
   func vault() async throws -> VaultSnapshot
 }
@@ -159,20 +160,75 @@ public struct SourceTask: Sendable {
 
 // MARK: - Vault records
 
-public struct VaultSnapshot: Sendable {
+public struct VaultSnapshot: Equatable, Sendable {
   public let lines: VaultLines
   public let artifacts: [SourceArtifact]
   public let notes: [SourceNote]
   public let issues: [ImportIssue]
+  /// What this read did not see. No default: every caller says it.
+  public let unread: VaultUnread
+  /// False only for `notRead`: then every stored line, note and artifact is kept.
+  public let isRead: Bool
 
   public init(
     lines: VaultLines, artifacts: [SourceArtifact], notes: [SourceNote],
-    issues: [ImportIssue] = []
+    issues: [ImportIssue] = [], unread: VaultUnread
+  ) {
+    self.init(
+      lines: lines, artifacts: artifacts, notes: notes, issues: issues, unread: unread,
+      isRead: true)
+  }
+
+  private init(
+    lines: VaultLines, artifacts: [SourceArtifact], notes: [SourceNote], issues: [ImportIssue],
+    unread: VaultUnread, isRead: Bool
   ) {
     self.lines = lines
     self.artifacts = artifacts
     self.notes = notes
     self.issues = issues
+    self.unread = unread
+    self.isRead = isRead
+  }
+
+  /// The vault was not read at all. The only way to say so, and it fixes the rest: lines
+  /// unavailable, no notes, no artifacts. "Nothing was read" can never come with lines.
+  public static func notRead(issues: [ImportIssue] = []) -> VaultSnapshot {
+    VaultSnapshot(
+      lines: .unavailable, artifacts: [], notes: [], issues: issues, unread: .nothing,
+      isRead: false)
+  }
+}
+
+/// What a read of the vault saw and could not use. "Could not read" is not "is gone": a
+/// stored note or artifact that these name is kept as it was (`Importer.makeWorkspace`).
+public struct VaultUnread: Equatable, Sendable {
+  /// Vault-relative paths of notes and folders that exist and were not read: rejected,
+  /// unreadable, skipped by the walk, or skipped for an invalid or missing value. A folder
+  /// covers everything below it.
+  public let paths: Set<String>
+  /// Paths of notes whose `artifacts:` list was not read in full.
+  public let artifactLists: Set<String>
+  /// Paths of the notes the read saw and did not recognise: another type, no frontmatter.
+  public let notRecognised: Set<String>
+
+  public static let nothing = VaultUnread(paths: [], artifactLists: [], notRecognised: [])
+
+  public init(paths: Set<String>, artifactLists: Set<String>, notRecognised: Set<String>) {
+    self.paths = paths
+    self.artifactLists = artifactLists
+    self.notRecognised = notRecognised
+  }
+
+  /// Whether `path` is in `paths`, or lies under a folder that is.
+  public func covers(_ path: String) -> Bool {
+    if paths.contains(path) { return true }
+    var folder = Substring(path)
+    while let slash = folder.lastIndex(of: "/") {
+      folder = folder[..<slash]
+      if paths.contains(String(folder)) { return true }
+    }
+    return false
   }
 }
 
@@ -229,8 +285,11 @@ public struct SourceLine: Equatable, Sendable {
   }
 }
 
-public struct SourceArtifact: Sendable {
+public struct SourceArtifact: Equatable, Sendable {
   public let key: String
+  /// The period of the note that holds the item, as text (`2026`, `2026-Q4`). An artifact
+  /// carried into a later period keeps its `key`; each appearance is identified by both.
+  public let periodKey: String
   public let title: String
   public let lineKeys: [LineKey]
   public let status: ArtifactStatus
@@ -238,10 +297,11 @@ public struct SourceArtifact: Sendable {
   public let notePath: String
 
   public init(
-    key: String, title: String, lineKeys: [LineKey], status: ArtifactStatus,
+    key: String, periodKey: String, title: String, lineKeys: [LineKey], status: ArtifactStatus,
     priority: Bool = false, notePath: String
   ) {
     self.key = key
+    self.periodKey = periodKey
     self.title = title
     self.lineKeys = lineKeys
     self.status = status
@@ -250,7 +310,7 @@ public struct SourceArtifact: Sendable {
   }
 }
 
-public struct SourceNote: Sendable {
+public struct SourceNote: Equatable, Sendable {
   public let path: String
   public let title: String
   public let type: String?

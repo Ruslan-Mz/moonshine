@@ -101,6 +101,19 @@ extension SQLiteStore {
             """)
       }
     }
+    // Identity kinds were Swift type names; they are the written `EntityKind` names now, so
+    // renaming a type can no longer orphan an identity. In place: only `kind` changes, every
+    // MoonShine id stays. A row of any other kind is left as it is.
+    migrator.registerMigration("v2") { db in
+      let renamed = [
+        ("Line", "line"), ("NoteRef", "note"), ("Artifact", "artifact"), ("Tag", "tag"),
+        ("Project", "project"), ("TaskItem", "task"),
+      ]
+      for (old, new) in renamed {
+        try db.execute(
+          sql: "UPDATE external_ref SET kind = ? WHERE kind = ?", arguments: [new, old])
+      }
+    }
     return migrator
   }
 }
