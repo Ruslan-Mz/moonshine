@@ -1,7 +1,8 @@
 import Foundation
 
 /// Maps provider identities to MoonShine ids, so re-imports keep every id.
-/// Keyed by entity kind too: OmniFocus projects and their root tasks share a primary key.
+/// Keyed by entity kind too: OmniFocus projects and their root tasks share a primary key. The
+/// kind is the entity's written `EntityKind`, never its Swift type name.
 public struct IdentityMap: Sendable {
   public struct Key: Hashable, Sendable {
     public let kind: String
@@ -21,9 +22,10 @@ public struct IdentityMap: Sendable {
     self.entries = entries
   }
 
-  public mutating func id<Entity>(for ref: ExternalRef, now: Date) -> EntityID<Entity> {
+  public mutating func id<Entity: KindedEntity>(for ref: ExternalRef, now: Date) -> EntityID<Entity>
+  {
     let key = Key(
-      kind: String(describing: Entity.self), provider: ref.provider, externalId: ref.externalId)
+      kind: Entity.kind.rawValue, provider: ref.provider, externalId: ref.externalId)
     if let uuid = entries[key] {
       return EntityID(uuid: uuid)
     }

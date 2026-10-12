@@ -21,8 +21,8 @@ import SQLiteStore
   /// terminal. An agent never runs it, and its output never goes into a log, commit or PR.
   ///
   /// `full` imports into `data/import.local.sqlite` (git-ignored), recreated before the first run;
-  /// one run unless `runs` is given. The vault is left empty (its reader is S3b), so every task
-  /// maps to Life ops.
+  /// one run unless `runs` is given. The vault is not read here (`VaultSnapshot.notRead`), so every
+  /// task maps to Life ops.
   @main
   struct MoonShineImport {
     static let storePath = "data/import.local.sqlite"
@@ -101,8 +101,8 @@ import SQLiteStore
         marks.append(clock.now)
         var identities = try await store.identityMap()
         let workspace = Importer().makeWorkspace(
-          tasks: source, vault: VaultSnapshot(lines: .unavailable, artifacts: [], notes: []),
-          storedLines: try await store.workspace().lines, identities: &identities.map, now: Date())
+          tasks: source, vault: .notRead(), stored: try await store.workspace(),
+          identities: &identities.map, now: Date())
         marks.append(clock.now)
         try await store.commit(
           workspace, identities: identities.map, expectedVersion: identities.version, at: Date())

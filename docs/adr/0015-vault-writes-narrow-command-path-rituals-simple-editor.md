@@ -47,6 +47,8 @@ The owner wants to keep a journal, run his daily and weekly review templates and
 
 **This ADR amends ADR-0004** (vault writes start in the Write phase, not the Act phase), **ADR-0013** (one provider command joins the `auto` class before the Act phase; the `CommandBus` reaches the vault from the Write phase; an allowlist for note bodies; `moonshine_ai: false` also excludes a note from the standing context pack) and the roadmap (below).
 
+**Amendment (2026-10-10, owner; PR #17).** Opening a link is a way to write: in an `obsidian://` URL the `new` action creates notes and, with `append` or `overwrite`, changes an existing one; plugins can register further actions (Obsidian help, "Obsidian URI", help.obsidian.md). So only `open` is allowed: the app opens external URLs through one function with an allowlist: `http`, `https`, `moonshine://`, and `obsidian://` with the action `open` only; anything else is refused. The function is built in S4, with tests. The CI check of "Confirmation" below fails on every other way to open a URL in `Apps` (`NSWorkspace.shared.open`, SwiftUI's `openURL` and `Link(destination:)`, `UIApplication.shared.open`, and the like); the one function is on its allowlist.
+
 ### Commands
 
 Vault writes are commands of the provider `vault` and go through the `CommandBus` (ADR-0013), with the activity log and undo.

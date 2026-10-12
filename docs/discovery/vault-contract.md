@@ -10,6 +10,8 @@ v0.2 (2026-10-01, design draft-2): optional line keys `foundation`, `floor_h_day
 
 v0.3 (2026-10-08, ADR-0014, ADR-0015, ADR-0016): project notes (§4) and reserved keys and values (§5), all reserved now and read from the slice or phase named at each; line key `portion_h_day` (§1); note bodies read for links and tags (§3, from the Hub slice); Obsidian's settings files for daily and weekly notes (§3, from the Write phase).
 
+2026-10-10 (S3b-3, owner): artifact identity is `id` + period and carries keep the `id` (§2.1–2.2); the artifact `id` rule and the caps for notes and artifacts (§2, §2.1); the budget note is stored as a note (§2); what is kept when a note cannot be read or is no longer recognised (§3); several notes for one period (§2.1). The reader applies the note rules from S3b-3b and the artifact rules from S3b-3c; the importer's rules are in place since S3b-3a.
+
 Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault writes before the Write phase; ADR-0015).
 
 ## Design choices driven by the data
@@ -94,17 +96,91 @@ Recognised types and derivation of `scale` / `period` when they are absent:
 
 Weekly review notes (`YYYY-Www`, journal) currently have no frontmatter; phase 1 does not need them.
 
+Rules (owner, 2026-10-10; read from S3b-3b):
+
+- The budget note (§1) is stored as a note too, whatever its `type`. Notes of any other type are not stored.
+- `title` is optional: a note without it takes its file name without `.md`. A file name that breaks the title caps skips the note with `invalidValue` on `notes.title`, like any invalid value (owner, 2026-10-10).
+- Caps: `title` 1–200 characters and at most 1 KiB; `type` at most 60 characters; `status` 1–60 characters and at most 512 bytes; `parent` at most 1 KiB; `line` by the line `id` rule; years 1900–2199; a range of years at most 200. Characters, bytes and control characters as in §1.
+- A week must exist in its ISO year (`2025-W53` is invalid), a day in its month.
+- A source key that is present in another shape is `invalidValue`; so is an explicit `scale` that disagrees with the period. Any invalid value skips the note: the stored note stays as it was (§3).
+- No period key at all: a `month_plan`, `quarter_focus` or `year_artifacts` note is skipped with `missingKey`; a `yearly-goals` or `focus` note takes the year from its file name (table above) and is read without a period only when it has no `year` key and no year in its file name; a `horizon_corridor` without `period_start` / `period_end` and without `horizons` gets no scale and no period.
+
 ### 2.1 Artifacts inside the year note — new block
 
 ```yaml
 type: year_artifacts
 year: 2026
 artifacts:
-  - id: a26-01 # required. unique within the vault; stable
+  - id: a26-01 # required. stable; unique within its period, and kept when the artifact is carried (below)
     title: First paper draft # required
     line: research # optional line id (one); use `lines: [a, b]` for shared artifacts
     status: in_progress # planned | in_progress | done | dropped
     priority: true # optional; "priority" vs "the rest" group
+```
+
+Item rules (owner, 2026-10-10; read from S3b-3c):
+
+- `id`: `[a-z0-9-]`, 1–64 bytes, the line `id` rule. `title`: 1–200 characters, at most 1 KiB. `line` is one line id, `lines` a list of at most 20; both together are invalid, neither is allowed. `status` absent or null is read as `planned`. `priority` only `true` / `false`.
+- An item with a missing or invalid value is skipped; the stored artifact stays as it was, in its place (§3).
+- `artifacts:` absent, null or empty means the note has no artifacts. `artifacts:` that is not a list is `invalidValue`; the note's stored artifacts stay.
+
+**Identity and carries (owner, 2026-10-10).** An artifact is identified by its `id` plus the period of the note it is in (a year or a quarter). An artifact that is not finished in its period is carried: the owner copies the item into the next note with the same `id` and marks the old one with `carried_to`. Each appearance is stored separately, so the history survives: the first appearance, the number of carries, the outcome in each period. Trace and the Quarter focus card use the appearance whose period contains "now".
+
+- The same `id` in two notes whose periods do not overlap is a carry.
+- The same `id` twice in one note, or in two notes of different periods that overlap (a year and one of its quarters), is `duplicateArtifactId`: every such item is skipped, none wins.
+- Several notes for one period (two quarter notes for the same quarter, two year notes for the same year: a copy not yet changed, a sync conflict copy) are not duplicates of each other: the first by path wins and only its `artifacts:` are read. Each other note gets the problem `duplicatePeriodNote` with its path, and its stored artifacts stay as they were (§3). Read from S3b-3c (owner, 2026-10-10; moved from the Quarter focus card into the reader).
+- The duplicate check runs over the items that were read. While a duplicate is in the vault, what is stored can therefore depend on what could be read: if one of the two notes is unreadable during an import, the other note's item is read and stored, and it stays next to the first one when both notes are readable again and both items are skipped. The duplicate is reported on every import in which both notes are read, until the owner removes one of the two.
+
+One carry, from Q3 to Q4:
+
+```yaml
+# Q3_2026_focus.md — period 2026-Q3
+artifacts:
+  - id: recital-programme
+    title: Spring recital programme chosen
+    line: violin
+    status: in_progress
+    carried_to: 2026-Q4 # R1
+```
+
+```yaml
+# Q4_2026_focus.md — period 2026-Q4
+artifacts:
+  - id: recital-programme
+    title: Spring recital programme chosen
+    line: violin
+    status: done
+```
+
+Two carries with a changed title, over three years; the store holds three appearances of `b1-certificate`:
+
+```yaml
+# Artifacts_2026.md — year 2026
+artifacts:
+  - id: b1-certificate
+    title: Italian B1 certificate
+    line: italian
+    status: in_progress
+    carried_to: 2027
+```
+
+```yaml
+# Artifacts_2027.md — year 2027
+artifacts:
+  - id: b1-certificate
+    title: Italian B1 certificate, written part
+    line: italian
+    status: in_progress
+    carried_to: 2028
+```
+
+```yaml
+# Artifacts_2028.md — year 2028
+artifacts:
+  - id: b1-certificate
+    title: Italian B1 certificate, oral part retaken
+    line: italian
+    status: done
 ```
 
 The quarter note may reference them (optional, the Zoom out phase uses it; phase 1 only shows the trace):
@@ -135,10 +211,14 @@ artifacts:
     line: violin
     status: done # planned | in_progress | done | dropped
     done: 2026-10-12 # optional (R1): date the artifact was finished
-    carried_to: 2027-Q1 # optional (R1): set during the quarterly review
+  - id: q4-etudes
+    title: Six études at tempo
+    line: violin
+    status: in_progress
+    carried_to: 2027-Q1 # optional (R1): set during the quarterly review, on an artifact not finished in its period
 ```
 
-`done` and `carried_to` (and the budget note's `active_lines`) are read from R1 on (quarterly review); before that the reader ignores them like any unknown key. Several quarter notes for the same period → banner, first by path wins.
+`done` and `carried_to` (and the budget note's `active_lines`) are read from R1 on (quarterly review); before that the reader ignores them like any unknown key. Several quarter notes for the same period → the first by path wins and the others get `duplicatePeriodNote` (§2.1, from S3b-3c); the card shows the first.
 
 ### 2.3 Trace (phase 1)
 
@@ -157,6 +237,13 @@ artifacts:
     - **flow nesting** (`[`, `{`) at most 32, also before parsing; after parsing, at most 10,000 nodes and depth 32 per note (`yamlTooComplex`).
   - **owner-only paths:** `moonshine-import vault --paths` prints each problem's kind, vault-relative path and line, nothing from the note. Its help text says it is for the owner's own terminal, and the tool enforces it: it refuses to run unless standard output is a terminal, checked before anything is read. A printed path shows every control and format character and a backslash as an escape (`\u{…}`, `\\`);
   - **line breaks:** the frontmatter ends only at a `---` line after LF. A `---` after CR, NEL, LS or PS is not a delimiter for the reader but starts a second document for libyaml, so the note fails safe as `malformedYAML`.
+- **Failed is not empty (owner, 2026-10-10).** A stored note or artifact leaves the store only when the read saw that it is gone:
+  - a note that exists and could not be read (rejected, unreadable, skipped for an invalid or missing value, under a folder the walk skipped or could not enter) stays as stored, with its artifacts; its problem is the reader's;
+  - a note whose file is still there but is no longer recognised (its `type` changed or is misspelled, a line stands above the opening `---`, the file is empty) stays as stored, with its artifacts, and gets the problem `noteNotRecognised` with its path on every import until it is recognised again or its file is gone;
+  - a note whose `artifacts:` list was not read in full (an item skipped, a duplicate, not a list) is updated itself and keeps its stored artifacts that were not read, in their stored positions;
+  - a stored artifact kept this way stays while its note is unread, whatever is read elsewhere; only the same appearance (same `id`, same period) read again replaces it, as an update (owner, 2026-10-10);
+  - a note that is not the first by path for its period (`duplicatePeriodNote`, §2.1) keeps its stored artifacts as they were;
+  - a note whose file is gone is removed (soft delete), with its artifacts; a renamed note is a new note, and its artifacts keep their identity (`id` + period).
 - Hidden files and folders (`.obsidian`, `.trash`) are not read. One exception from the Write phase (ADR-0015): Obsidian's named settings files for daily and periodic notes, and from them only the folder, the file-name pattern and the template path; those folders and that path pass the same checks as the walk (inside the vault root, no symbolic links) before anything is read (ADR-0015 write rule 6). A note without frontmatter is skipped for frontmatter reading, not a problem; its body is still indexed from the Hub slice (next item).
 - **Bodies (from the Hub slice; ADR-0014):** the body of every note, with or without frontmatter, is read for links and tags only, never for values; nothing around a link is stored, not its alias or anchor either (owner, 2026-10-09). A body larger than 1 MB is not indexed and gives a typed problem; the walk limits above apply. A note is re-read only when its size or modification time changed.
 - Unknown keys are ignored and preserved (future-proof; the vault has 200+ distinct keys).

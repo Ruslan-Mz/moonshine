@@ -44,22 +44,25 @@ public struct DemoVault: NoteProvider {
       ], complete: true),
     artifacts: [
       SourceArtifact(
-        key: "a26-01", title: "First paper draft submitted", lineKeys: ["research"],
+        key: "a26-01", periodKey: "2026", title: "First paper draft submitted",
+        lineKeys: ["research"],
         status: .inProgress, priority: true, notePath: year),
       SourceArtifact(
-        key: "a26-02", title: "Partita first movement performed for friends",
+        key: "a26-02", periodKey: "2026", title: "Partita first movement performed for friends",
         lineKeys: ["violin"], status: .inProgress, priority: true, notePath: year),
       SourceArtifact(
-        key: "a26-03", title: "Italian B1 certificate", lineKeys: ["italian"], status: .planned,
+        key: "a26-03", periodKey: "2026", title: "Italian B1 certificate", lineKeys: ["italian"],
+        status: .planned,
         notePath: year),
       SourceArtifact(
-        key: "a26-04", title: "10 strict pull-ups", lineKeys: ["calisthenics"],
+        key: "a26-04", periodKey: "2026", title: "10 strict pull-ups", lineKeys: ["calisthenics"],
         status: .inProgress, notePath: year),
       SourceArtifact(
-        key: "a26-05", title: "Linear algebra course finished", lineKeys: ["math"],
+        key: "a26-05", periodKey: "2026", title: "Linear algebra course finished",
+        lineKeys: ["math"],
         status: .inProgress, notePath: year),
       SourceArtifact(
-        key: "a26-06", title: "Client North app v2 released", lineKeys: ["work"],
+        key: "a26-06", periodKey: "2026", title: "Client North app v2 released", lineKeys: ["work"],
         status: .done, notePath: year),
     ],
     notes: [
@@ -87,7 +90,7 @@ public struct DemoVault: NoteProvider {
       SourceNote(
         path: "00_Strategy/Long_horizons.md", title: "Long horizons", type: "horizon_corridor",
         parentLink: "[[_index]]", status: "draft"),
-    ])
+    ], unread: .nothing)
 
   private static func date(_ year: Int, _ month: Int) -> Date {
     calendar.date(from: DateComponents(year: year, month: month, day: 1))!

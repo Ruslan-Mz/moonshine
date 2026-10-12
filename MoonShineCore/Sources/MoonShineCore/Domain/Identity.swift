@@ -53,6 +53,24 @@ public typealias TaskItemID = EntityID<TaskItem>
 public typealias TagID = EntityID<Tag>
 public typealias NoteID = EntityID<NoteRef>
 
+/// The name of an entity's kind in the identity map and the store. Written out, never derived
+/// from a Swift type name: renaming a type must not change a stored identity.
+public enum EntityKind: String, Hashable, Sendable, CaseIterable {
+  case line, note, artifact, tag, project, task
+}
+
+/// An entity the identity map can hold.
+public protocol KindedEntity {
+  static var kind: EntityKind { get }
+}
+
+extension Line: KindedEntity { public static let kind = EntityKind.line }
+extension NoteRef: KindedEntity { public static let kind = EntityKind.note }
+extension Artifact: KindedEntity { public static let kind = EntityKind.artifact }
+extension Tag: KindedEntity { public static let kind = EntityKind.tag }
+extension Project: KindedEntity { public static let kind = EntityKind.project }
+extension TaskItem: KindedEntity { public static let kind = EntityKind.task }
+
 public struct ProviderID: RawRepresentable, Hashable, Sendable {
   public let rawValue: String
   public init(rawValue: String) { self.rawValue = rawValue }

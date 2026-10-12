@@ -138,9 +138,9 @@ public struct SQLiteStore: Store {
         DO UPDATE SET entity_id = excluded.entity_id, last_seen = excluded.last_seen
         """)
     func markSeen<Entity: Identifiable>(_ entities: [Entity], refs: (Entity) -> [ExternalRef])
-      throws where Entity.ID == EntityID<Entity>
+      throws where Entity: KindedEntity, Entity.ID == EntityID<Entity>
     {
-      let kind = String(describing: Entity.self)
+      let kind = Entity.kind.rawValue
       for entity in entities {
         for ref in refs(entity) {
           try seen.execute(arguments: [

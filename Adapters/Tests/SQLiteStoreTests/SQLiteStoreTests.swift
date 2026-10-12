@@ -68,7 +68,7 @@ import Testing
     let path = temporaryDatabasePath()
     let store = try SQLiteStore(path: path)
     try await store.writer.read { db in
-      #expect(try SQLiteStore.migrator.appliedIdentifiers(db) == ["v1"])
+      #expect(try SQLiteStore.migrator.appliedIdentifiers(db) == ["v1", "v2"])
       for table in [
         "workspace", "external_ref", "line", "artifact", "note", "tag", "project", "task",
         "changes",
@@ -89,8 +89,62 @@ import Testing
         try SQLiteStore.migrator.hasCompletedMigrations(db)
       )
     }
-    #expect(applied == ["v1"])
+    #expect(applied == ["v1", "v2"])
     #expect(completed)
+  }
+
+  /// `v2`: the identity kinds were Swift type names; they become the written `EntityKind`
+  /// names in place, and every MoonShine id stays.
+  @Test func migrationTwoRenamesTheStoredIdentityKindsAndKeepsEveryId() async throws {
+    let queue = try DatabaseQueue()
+    try SQLiteStore.migrator.migrate(queue, upTo: "v1")
+    // A project and its root task share one external id, as in OmniFocus.
+    let old = [
+      ("Line", "obsidian", "violin"), ("NoteRef", "obsidian", "Years/A.md"),
+      ("Artifact", "obsidian", "a1"), ("Tag", "omnifocus", "t1"), ("Project", "omnifocus", "p1"),
+      ("TaskItem", "omnifocus", "p1"), ("Other", "omnifocus", "p1"),
+    ]
+    let ids = old.map { _ in UUID() }
+    try await queue.write { db in
+      for ((kind, provider, externalId), id) in zip(old, ids) {
+        try db.execute(
+          sql: """
+            INSERT INTO external_ref (kind, provider, external_id, entity_id, last_seen)
+            VALUES (?, ?, ?, ?, 7)
+            """, arguments: [kind, provider, externalId, id])
+      }
+    }
+    let store = try SQLiteStore(writer: queue, timeZone: .gmt)
+    let (kinds, entityIDs, seen) = try await queue.read { db in
+      let rows = try Row.fetchAll(
+        db, sql: "SELECT kind, entity_id, last_seen FROM external_ref ORDER BY rowid")
+      return (
+        rows.map { $0["kind"] as String }, rows.map { $0["entity_id"] as UUID },
+        rows.map { $0["last_seen"] as Int }
+      )
+    }
+    #expect(kinds == ["line", "note", "artifact", "tag", "project", "task", "Other"])
+    #expect(entityIDs == ids)
+    #expect(seen.allSatisfy { $0 == 7 })
+
+    // The migrated identities are the ones an import finds.
+    var identities = try await store.identityMap()
+    let now = Date(timeIntervalSince1970: 0)
+    let ref = ExternalRef(provider: .omnifocus, externalId: "p1", lastSeen: now)
+    let project: ProjectID = identities.map.id(for: ref, now: now)
+    let task: TaskItemID = identities.map.id(for: ref, now: now)
+    #expect(project.uuid == ids[4] && task.uuid == ids[5])
+  }
+
+  @Test func anImportStoresOnlyTheWrittenKindNames() async throws {
+    let store = try SQLiteStore()
+    try await ImportService(
+      tasks: FixedTaskProvider(source: try fixtureSnapshot()), notes: DemoVault(), store: store
+    ).run(now: first)
+    let kinds = try await store.writer.read { db in
+      try String.fetchSet(db, sql: "SELECT DISTINCT kind FROM external_ref")
+    }
+    #expect(kinds == ["line", "note", "artifact", "tag", "project", "task"])
   }
 
   @Test func workspaceSurvivesClosingAndReopeningTheFile() async throws {
@@ -195,7 +249,8 @@ import Testing
     var workspace = Workspace(timeZone: .gmt)
     let build = clock.measure {
       workspace = Importer().makeWorkspace(
-        tasks: source, vault: vault, storedLines: [], identities: &identities, now: first)
+        tasks: source, vault: vault, stored: Workspace(timeZone: .gmt), identities: &identities,
+        now: first)
     }
     let commit = try await clock.measure {
       try await store.commit(workspace, identities: identities, expectedVersion: 0, at: first)

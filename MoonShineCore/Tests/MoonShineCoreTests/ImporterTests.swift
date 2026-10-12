@@ -16,17 +16,18 @@ import Testing
       ], complete: true),
     artifacts: [
       SourceArtifact(
-        key: "a26-02", title: "Partita", lineKeys: ["violin"], status: .inProgress,
+        key: "a26-02", periodKey: "2026", title: "Partita", lineKeys: ["violin"],
+        status: .inProgress,
         notePath: "Years/Artifacts_2026.md"),
       SourceArtifact(
-        key: "a26-09", title: "Orphan", lineKeys: ["cello"], status: .planned,
+        key: "a26-09", periodKey: "2026", title: "Orphan", lineKeys: ["cello"], status: .planned,
         notePath: "Years/Artifacts_2026.md"),
     ],
     notes: [
       SourceNote(
         path: "Years/Artifacts_2026.md", title: "Artifacts 2026", type: "year_artifacts",
         scale: .year)
-    ])
+    ], unread: .nothing)
 
   func snapshot(_ tasks: [SourceTask], projects: [SourceProject] = []) -> TaskSourceSnapshot {
     TaskSourceSnapshot(
@@ -45,7 +46,8 @@ import Testing
 
   func run(_ source: TaskSourceSnapshot, identities: inout IdentityMap) -> Workspace {
     Importer().makeWorkspace(
-      tasks: source, vault: vault, storedLines: [], identities: &identities, now: now)
+      tasks: source, vault: vault, stored: Workspace(timeZone: .gmt), identities: &identities,
+      now: now)
   }
 
   func run(_ source: TaskSourceSnapshot) -> Workspace {

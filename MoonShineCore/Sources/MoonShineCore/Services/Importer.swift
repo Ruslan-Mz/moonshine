@@ -14,11 +14,12 @@ public struct Importer: Sendable {
     self.metaTagGroups = metaTagGroups
   }
 
-  /// `storedLines` are the store's current lines, in stored order; they stand in for the lines
-  /// the vault could not read (`VaultLines`), so an unclean read never drops a line. No default:
-  /// leaving them out would drop every stored line on an unavailable read.
+  /// `stored` is what the store holds now, in stored order. Its lines stand in for the lines
+  /// the vault could not read (`VaultLines`), and its notes and artifacts for those the read
+  /// saw and could not use (`VaultUnread`), so an unclean read never drops anything. No
+  /// default: leaving it out would drop every stored line, note and artifact.
   public func makeWorkspace(
-    tasks source: TaskSourceSnapshot, vault: VaultSnapshot, storedLines: [Line],
+    tasks source: TaskSourceSnapshot, vault: VaultSnapshot, stored: Workspace,
     identities: inout IdentityMap, now: Date
   ) -> Workspace {
     func ref(_ provider: ProviderID, _ externalId: String) -> ExternalRef {
@@ -28,13 +29,32 @@ public struct Importer: Sendable {
     var issues = vault.issues
 
     // Vault: notes, lines, artifacts.
-    let notes = vault.notes.map { note in
+    let readNotes = vault.notes.map { note in
       NoteRef(
         id: identities.id(for: ref(.obsidian, note.path), now: now),
         refs: [ref(.obsidian, note.path)], path: note.path, title: note.title, type: note.type,
         scale: note.scale, period: note.period, parentLink: note.parentLink,
         lineKey: note.lineKey, status: note.status)
     }
+    // A stored note leaves only when its file is gone. One the read saw and could not use
+    // stays as it was: unread (the reader has reported why) or no longer recognised (reported
+    // here, since only the store knows it was a note).
+    let readNoteIDs = Set(readNotes.map(\.id))
+    var carriedNotes: [NoteRef] = []
+    for note in stored.notes where !readNoteIDs.contains(note.id) {
+      // An incomplete artifact list also says the file exists.
+      if !vault.isRead || vault.unread.covers(note.path)
+        || vault.unread.artifactLists.contains(note.path)
+      {
+        carriedNotes.append(note)
+      } else if vault.unread.notRecognised.contains(note.path) {
+        carriedNotes.append(note)
+        issues.append(
+          .vault(path: note.path, line: nil, problem: VaultProblem(.noteNotRecognised)))
+      }
+    }
+    let notes =
+      carriedNotes.isEmpty ? readNotes : (readNotes + carriedNotes).sorted { $0.path < $1.path }
     let read = vault.lines.read.map { line in
       Line(
         id: identities.id(for: ref(.obsidian, line.key.rawValue), now: now),
@@ -48,6 +68,7 @@ public struct Importer: Sendable {
     // stored line keeps its position (updated when read, as it was when not, so it still maps
     // tasks and the merge never soft-deletes it); lines new to the store follow in note order.
     let readByID = Dictionary(read.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    let storedLines = stored.lines
     let storedIDs = Set(storedLines.map(\.id))
     let lines =
       vault.lines.isComplete
@@ -57,16 +78,20 @@ public struct Importer: Sendable {
       lines.map { ($0.key, $0.id) }, uniquingKeysWith: { first, _ in first })
     let noteByPath = Dictionary(
       notes.map { ($0.path, $0.id) }, uniquingKeysWith: { first, _ in first })
-    let artifacts = vault.artifacts.map { artifact in
+    let readArtifacts = vault.artifacts.map { artifact in
       for key in artifact.lineKeys where lineByKey[key] == nil {
         issues.append(.unknownLineKey(key, in: artifact.key))
       }
+      // One identity per appearance: an artifact carried into a later period keeps its key.
+      let appearance = ref(.obsidian, "\(artifact.key)@\(artifact.periodKey)")
       return Artifact(
-        id: identities.id(for: ref(.obsidian, artifact.key), now: now),
-        refs: [ref(.obsidian, artifact.key)], key: artifact.key, title: artifact.title,
-        lineIDs: artifact.lineKeys.compactMap { lineByKey[$0] }, status: artifact.status,
-        priority: artifact.priority, noteID: noteByPath[artifact.notePath])
+        id: identities.id(for: appearance, now: now), refs: [appearance], key: artifact.key,
+        title: artifact.title, lineIDs: artifact.lineKeys.compactMap { lineByKey[$0] },
+        status: artifact.status, priority: artifact.priority,
+        noteID: noteByPath[artifact.notePath])
     }
+    let artifacts = Self.artifacts(
+      read: readArtifacts, stored: stored, notes: notes, carriedNotes: carriedNotes, vault: vault)
 
     // Tags: meta = a group from `metaTagGroups` or any tag under one.
     let sourceTags = Dictionary(
@@ -128,6 +153,45 @@ public struct Importer: Sendable {
     return Workspace(
       timeZone: source.timeZone, lines: lines, artifacts: artifacts, notes: notes,
       projects: projects, tasks: tasks, tags: tags, issues: issues)
+  }
+
+  /// The artifacts read, plus the stored ones the read could not see: those of a carried note
+  /// and those of a note whose `artifacts:` list was not read in full. A carried appearance
+  /// stays whatever is read elsewhere; only the same appearance read again replaces it. A note
+  /// with anything carried, or with an incomplete list, keeps its stored positions (updated in
+  /// place, new items last); every other note takes the order of the read. With anything
+  /// carried, the notes' artifacts follow each other in note path order.
+  private static func artifacts(
+    read: [Artifact], stored: Workspace, notes: [NoteRef], carriedNotes: [NoteRef],
+    vault: VaultSnapshot
+  ) -> [Artifact] {
+    let readByID = Dictionary(read.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    let noteByID = Dictionary(notes.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    let carriedNoteIDs = Set(carriedNotes.map(\.id))
+    func keepsUnread(_ noteID: NoteID?) -> Bool {
+      guard let note = noteID.flatMap({ noteByID[$0] }) else { return false }
+      return carriedNoteIDs.contains(note.id) || vault.unread.artifactLists.contains(note.path)
+    }
+    let carried = stored.artifacts.filter { old in
+      readByID[old.id] == nil && (!vault.isRead || keepsUnread(old.noteID))
+    }
+    guard !carried.isEmpty, !read.isEmpty else { return read + carried }
+    let carriedIDs = Set(carried.map(\.id))
+    var noteIDs: [NoteID?] = []
+    for noteID in (read + carried).map(\.noteID) where !noteIDs.contains(noteID) {
+      noteIDs.append(noteID)
+    }
+    func path(_ noteID: NoteID?) -> String? { noteID.flatMap { noteByID[$0]?.path } }
+    return noteIDs.sorted { path($0) ?? "" < path($1) ?? "" }.flatMap { noteID -> [Artifact] in
+      let mine = read.filter { $0.noteID == noteID }
+      guard keepsUnread(noteID) else { return mine }
+      let kept = stored.artifacts.filter { $0.noteID == noteID }
+      let keptIDs = Set(kept.map(\.id))
+      return kept.compactMap { old in
+        readByID[old.id].flatMap { $0.noteID == noteID ? $0 : nil }
+          ?? (carriedIDs.contains(old.id) ? old : nil)
+      } + mine.filter { !keptIDs.contains($0.id) }
+    }
   }
 
   /// OmniFocus names a completed occurrence `<liveId>.<n>`; only trusted when the live task exists.
@@ -208,10 +272,9 @@ public actor ImportService {
     if let since = source.modifiedSince { throw PartialSnapshotError(modifiedSince: since) }
     var identities = try await store.identityMap()
     // Read after the identity map: a commit in between bumps the version and this one fails.
-    let storedLines = try await store.workspace().lines
+    let stored = try await store.workspace()
     let workspace = importer.makeWorkspace(
-      tasks: source, vault: vault, storedLines: storedLines, identities: &identities.map,
-      now: now)
+      tasks: source, vault: vault, stored: stored, identities: &identities.map, now: now)
     try await store.commit(
       workspace, identities: identities.map, expectedVersion: identities.version, at: now)
     return workspace

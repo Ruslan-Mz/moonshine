@@ -308,6 +308,10 @@ public struct VaultProblem: Hashable, Sendable, CustomStringConvertible {
     case budgetNoteDuplicate
     /// The one note with `moonshine: budget` was rejected; its other problem names the kind.
     case budgetNoteRejected
+    /// A stored note's file is still in the vault but is no longer read as a note MoonShine
+    /// knows (its type changed, or its frontmatter is gone). The stored note and its artifacts
+    /// are kept until the file itself is gone.
+    case noteNotRecognised
     /// A required key is missing: `lines` in the budget note, or a required key of a line
     /// item, which is then skipped.
     case missingKey
