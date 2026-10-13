@@ -6,7 +6,7 @@ import Testing
 
 @Suite struct ObsidianVaultTests {
   @Test func findsTheFixtureBudgetNoteByItsMarker() throws {
-    let read = try ObsidianVault(root: fixtureVault).read()
+    let read = try ObsidianVault(root: fixtureVault, timeZone: moscow).read()
     #expect(read.budget == .found)
     #expect(read.notesFound == 6)
     #expect(read.frontmatterRead == 6)
@@ -20,7 +20,7 @@ import Testing
     try vault.write("c.md", note("meta:\n  moonshine: budget"))
     try vault.write("d.md", note("title: Hours budget by line"))
     try vault.write("Hours_budget_by_line.md", note("type: strategic"))
-    let read = try ObsidianVault(root: vault.root).read()
+    let read = try ObsidianVault(root: vault.root, timeZone: moscow).read()
     #expect(read.budget == .missing)
     #expect(read.issues == [.vaultWide(VaultProblem(.budgetNoteMissing))])
   }
@@ -29,7 +29,7 @@ import Testing
     let vault = try TemporaryVault()
     try vault.write("B/budget.md", note("type: x\nmoonshine: budget"))
     try vault.write("A/budget.md", note("moonshine: budget"))
-    let read = try ObsidianVault(root: vault.root).read()
+    let read = try ObsidianVault(root: vault.root, timeZone: moscow).read()
     #expect(read.budget == .ambiguous(marked: 2))
     #expect(
       problems(read.issues) == [
@@ -50,7 +50,7 @@ import Testing
     let vault = try TemporaryVault()
     try vault.write("a.md", note("type: x"))
     try vault.write("budget.md", note(yaml))
-    let read = try ObsidianVault(root: vault.root).read()
+    let read = try ObsidianVault(root: vault.root, timeZone: moscow).read()
     #expect(read.budget == .rejected(kind))
     #expect(read.lines == .unavailable)
     #expect(problems(read.issues).contains("budget.md:2:budgetNoteRejected (moonshine)"))
@@ -61,7 +61,7 @@ import Testing
     let vault = try TemporaryVault()
     try vault.write("a.md", note("moonshine: budget"))
     try vault.write("b.md", note("x: 1\n'moonshine': \"budget\" # copy\nc: [unclosed"))
-    let read = try ObsidianVault(root: vault.root).read()
+    let read = try ObsidianVault(root: vault.root, timeZone: moscow).read()
     #expect(read.budget == .ambiguous(marked: 2))
     #expect(
       problems(read.issues).filter { $0.contains("budgetNote") } == [
@@ -73,13 +73,14 @@ import Testing
     let vault = try TemporaryVault()
     try vault.write("a.md", note("moonshine: budget\na: [unclosed"))
     try vault.write("b.md", note("moonshine: budget\na: [unclosed"))
-    #expect(try ObsidianVault(root: vault.root).read().budget == .ambiguous(marked: 2))
+    #expect(
+      try ObsidianVault(root: vault.root, timeZone: moscow).read().budget == .ambiguous(marked: 2))
   }
 
   @Test func aRejectedNoteWithoutTheMarkerLeavesTheBudgetNoteMissing() throws {
     let vault = try TemporaryVault()
     try vault.write("a.md", note("meta:\n  moonshine: budget\na: [unclosed"))
-    let read = try ObsidianVault(root: vault.root).read()
+    let read = try ObsidianVault(root: vault.root, timeZone: moscow).read()
     #expect(read.budget == .missing)
     #expect(read.issues.contains(.vaultWide(VaultProblem(.budgetNoteMissing))))
   }
@@ -118,7 +119,8 @@ import Testing
   }
 
   @Test func theReportCountsEveryKindAndNamesTheAnchorRejections() throws {
-    let read = try ObsidianVault(root: try troubledVault(budget: false).root).read()
+    let read = try ObsidianVault(root: try troubledVault(budget: false).root, timeZone: moscow)
+      .read()
     #expect(
       read.report == [
         "vault: 6 notes found · 2 frontmatter read",
@@ -127,6 +129,13 @@ import Testing
         "notes rejected for an anchor: 1",
         "notes with anchor-like text and no alias, accepted: 1",
         "skipped: symlinks 1 · outside vault 0 · unreadable entries 0",
+        "notes: 0 read (month_plan 0 · quarter_focus 0 · year_artifacts 0 · horizon_corridor 0"
+          + " · yearly-goals 0 · focus 0 · lifetime 0 · budget note 0)",
+        "notes without a period: 0",
+        "note problems: missingKey 0 · invalidValue 0",
+        "note problems by key: title 0 · type 0 · parent 0 · line 0 · status 0 · scale 0"
+          + " · period 0 · month 0 · quarter 0 · year 0 · period_start 0 · period_end 0",
+        "kept as unread: 4 paths · not recognised: 3 files",
         "budget note: missing",
         "lines: unavailable",
         "line problems: missingKey 0 · invalidValue 0 · duplicateLineId 0",
@@ -135,14 +144,17 @@ import Testing
   }
 
   @Test func theReportNamesTheBudgetNoteStatus() throws {
-    let found = try ObsidianVault(root: try troubledVault(budget: true).root).read()
+    let found = try ObsidianVault(root: try troubledVault(budget: true).root, timeZone: moscow)
+      .read()
     #expect(found.report.contains("budget note: found"))
     let vault = try TemporaryVault()
     try vault.write("a.md", note("type: x"))
-    #expect(try ObsidianVault(root: vault.root).read().report.contains("budget note: missing"))
+    #expect(
+      try ObsidianVault(root: vault.root, timeZone: moscow).read().report.contains(
+        "budget note: missing"))
     try vault.write("b.md", note("moonshine: budget\na: [unclosed"))
     #expect(
-      try ObsidianVault(root: vault.root).read().report.contains(
+      try ObsidianVault(root: vault.root, timeZone: moscow).read().report.contains(
         "budget note: rejected (malformedYAML)"))
   }
 
@@ -150,7 +162,7 @@ import Testing
     let vault = try TemporaryVault()
     try vault.write("Secret A.md", note("moonshine: budget"))
     try vault.write("Secret B.md", note("moonshine: budget"))
-    let report = try ObsidianVault(root: vault.root).read().report
+    let report = try ObsidianVault(root: vault.root, timeZone: moscow).read().report
     #expect(report.contains("budget note: 2 marked notes"))
     #expect(!report.joined().contains("Secret"))
   }
@@ -161,7 +173,7 @@ import Testing
     try vault.write("Notes/b.md", note("title: \(secret)\na: [unclosed"))
     try vault.write("a.md", note("title: \(secret)\na: &x 1\nb: *x"))
     try vault.write("c.md", "---\ntitle: \(secret)\n")
-    let locations = try ObsidianVault(root: vault.root).read().problemLocations
+    let locations = try ObsidianVault(root: vault.root, timeZone: moscow).read().problemLocations
     #expect(
       locations == [
         "malformedYAML Notes/b.md:4", "yamlAnchor a.md", "malformedYAML c.md:1",
@@ -173,13 +185,14 @@ import Testing
   @Test func problemLocationsShowControlAndFormatCharactersInAPathAsEscapes() throws {
     let vault = try TemporaryVault()
     try vault.write("a\nb\u{1B}[2K\u{202E}c\\d.md", note("a: [unclosed"))
-    let locations = try ObsidianVault(root: vault.root).read().problemLocations
+    let locations = try ObsidianVault(root: vault.root, timeZone: moscow).read().problemLocations
     #expect(locations.first == "malformedYAML a\\u{A}b\\u{1B}[2K\\u{202E}c\\\\d.md:3")
     #expect(!locations.joined().unicodeScalars.contains { $0.value < 0x20 || $0 == "\u{202E}" })
   }
 
   @Test func theCountsReportCarriesNoPath() throws {
-    let report = try ObsidianVault(root: try troubledVault(budget: false).root).read().report
+    let report = try ObsidianVault(root: try troubledVault(budget: false).root, timeZone: moscow)
+      .read().report
     #expect(!report.joined().contains(".md"))
   }
 
@@ -202,8 +215,11 @@ import Testing
     let vault = folder.root.appending(path: "vault", directoryHint: .isDirectory)
     try folder.write("vault/a.md", note("moonshine: budget"))
     try folder.write("vault/b.md", note("a: &x 1"))
+    try folder.write("vault/c.md", note("type: month_plan\nmonth: 2026-10"))
+    try folder.write("vault/d.md", note("type: focus\ntitle: \"\""))
+    try folder.write("vault/e.md", "no frontmatter")
     let before = try tree(folder.root)
-    _ = try ObsidianVault(root: vault).read().report
+    _ = try ObsidianVault(root: vault, timeZone: moscow).read().report
     #expect(try tree(folder.root) == before)
   }
 }

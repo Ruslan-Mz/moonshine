@@ -170,7 +170,10 @@ import SQLiteStore
     /// path and line too. Writes nothing: no store, no files.
     static func vault(at folder: String, paths: Bool) throws {
       let start = clock.now
-      let read = try ObsidianVault(root: URL(filePath: folder, directoryHint: .isDirectory)).read()
+      // The local zone: the tool prints counts only, and no count depends on it.
+      let read = try ObsidianVault(
+        root: URL(filePath: folder, directoryHint: .isDirectory), timeZone: .current
+      ).read()
       let elapsed = clock.now - start
       for line in read.report { print(line) }
       print(line([elapsed], ["time"]))

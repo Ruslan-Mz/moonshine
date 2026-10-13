@@ -80,7 +80,7 @@ import Testing
   }
 
   @Test func theFixtureLinesEqualTheDemoVaultLines() throws {
-    let read = try ObsidianVault(root: fixtureVault).read()
+    let read = try ObsidianVault(root: fixtureVault, timeZone: moscow).read()
     #expect(read.lines == DemoVault.snapshot.lines)
     #expect(read.issues.isEmpty)
   }
@@ -228,7 +228,7 @@ import Testing
     let vault = try TemporaryVault()
     try vault.write("a.md", note("lines:\n" + other))
     try vault.write("budget.md", note("moonshine: budget\nlines:\n" + item(["state": "x"])))
-    let read = try ObsidianVault(root: vault.root).read()
+    let read = try ObsidianVault(root: vault.root, timeZone: moscow).read()
     #expect(read.lines == .read([], complete: false))
     #expect(read.linesSkipped == 1)
     #expect(read.lineProblems == [.invalidValue: 1])
@@ -236,7 +236,7 @@ import Testing
   }
 
   @Test func theReportCountsTheLines() throws {
-    let report = try ObsidianVault(root: fixtureVault).read().report
+    let report = try ObsidianVault(root: fixtureVault, timeZone: moscow).read().report
     #expect(
       Array(report.suffix(3)) == [
         "lines: 8 read · 0 skipped",
@@ -250,7 +250,7 @@ import Testing
         "moonshine: budget\nlines:\n" + item(["floor_h_day": "1"]) + "\n" + other + "\n"
           + item(["id": "x", "state": "x"])))
     #expect(
-      Array(try ObsidianVault(root: vault.root).read().report.suffix(3)) == [
+      Array(try ObsidianVault(root: vault.root, timeZone: moscow).read().report.suffix(3)) == [
         "lines: 2 read · 1 skipped",
         "line problems: missingKey 0 · invalidValue 1 · duplicateLineId 0",
         "foundation lines: 0 · with a floor: 1 · with a language: 0",
@@ -260,7 +260,9 @@ import Testing
   @Test func theReportSaysWhenTheLinesAreUnavailable() throws {
     let vault = try TemporaryVault()
     try vault.write("a.md", note("type: x"))
-    #expect(try ObsidianVault(root: vault.root).read().report.contains("lines: unavailable"))
+    #expect(
+      try ObsidianVault(root: vault.root, timeZone: moscow).read().report.contains(
+        "lines: unavailable"))
   }
 
   /// A foundation item with `key` set to `value`.

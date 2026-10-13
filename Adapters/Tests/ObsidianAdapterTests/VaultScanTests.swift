@@ -9,6 +9,9 @@ let fixtureVault = URL(filePath: #filePath)
   .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
   .deletingLastPathComponent().appending(path: "fixtures/vault")
 
+/// The zone of `DemoVault`.
+let moscow = TimeZone(identifier: "Europe/Moscow")!
+
 /// A throwaway vault in the temporary directory; every note in it is invented.
 struct TemporaryVault {
   let root: URL
@@ -55,7 +58,7 @@ func problems(_ issues: [ImportIssue]) -> [String] {
     try vault.write("A/c.md", note("type: x"))
     try vault.write("A/image.png", "not a note")
     try vault.write(".obsidian/workspace.md", note("type: x"))
-    let (files, issues) = try VaultWalk.markdownFiles(in: vault.root, limits: VaultLimits())
+    let (files, issues, _) = try VaultWalk.markdownFiles(in: vault.root, limits: VaultLimits())
     #expect(files.map(\.path) == ["A/c.md", "b.md"])
     #expect(issues.isEmpty)
   }
@@ -67,7 +70,7 @@ func problems(_ issues: [ImportIssue]) -> [String] {
     try vault.write("a.md", note("type: x"))
     try vault.link("linked.md", to: secret)
     try vault.link("Linked folder", to: outside.root)
-    let (files, issues) = try VaultWalk.markdownFiles(in: vault.root, limits: VaultLimits())
+    let (files, issues, _) = try VaultWalk.markdownFiles(in: vault.root, limits: VaultLimits())
     #expect(files.map(\.path) == ["a.md"])
     #expect(
       problems(issues).sorted() == ["Linked folder:-:symlinkSkipped", "linked.md:-:symlinkSkipped"])
@@ -100,7 +103,7 @@ func problems(_ issues: [ImportIssue]) -> [String] {
     defer {
       try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: locked)
     }
-    let (files, issues) = try VaultWalk.markdownFiles(in: vault.root, limits: VaultLimits())
+    let (files, issues, _) = try VaultWalk.markdownFiles(in: vault.root, limits: VaultLimits())
     #expect(files.map(\.path) == ["a.md"])
     #expect(problems(issues) == ["Locked:-:unreadable"])
   }
