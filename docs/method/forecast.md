@@ -6,15 +6,17 @@ The durations below are forecasts at the measured pace, not timeboxes. A phase's
 
 ## Size factor
 
-**1.62** — the median of actual / estimated production lines over the last five merged code slices (owner, 2026-10-10; 1.75 until S3b-3a, whose row replaced P1-S3a-1 with its 2.45; unchanged by S3b-3b, whose 2.4 replaced P1-S3b-1 with its 1.75). `CLAUDE.md` rule 2, "Sizing a slice" and the `plan-critic` agent use this figure; the author updates it in each code slice's PR. Actual is the final head where the method log gives it.
+**1.62** — the median of actual / estimated production lines over the last five merged code slices (owner, 2026-10-10; 1.75 until S3b-3a, whose row replaced P1-S3a-1 with its 2.45; unchanged by S3b-3b, whose 1.98 replaced P1-S3b-1 with its 1.75). `CLAUDE.md` rule 2, "Sizing a slice" and the `plan-critic` agent use this figure; the author updates it in each code slice's PR. Actual is the final head where the method log gives it.
 
-| Slice (method log)  | Estimate                     | Actual                                                                                  | Factor |
-| ------------------- | ---------------------------- | --------------------------------------------------------------------------------------- | ------ |
-| P1-S3b-3b (two PRs) | ~215                         | 517 (first head: 114 in the helper PR, a move that removes 91, and 403 in the notes PR) | 2.4    |
-| P1-S3b-3a           | ~212                         | 343 (after round 1; 298 at the first head)                                              | 1.62   |
-| P1-S3b-2b+2c        | ~225                         | 246 (final head)                                                                        | 1.09   |
-| P1-S3b-guards       | ~55 (parts with an estimate) | 131 (first head; the guards part had no estimate)                                       | 2.4    |
-| P1-S3b-2a           | ~140                         | 217 (final head)                                                                        | 1.55   |
+**A move counts net** (owner, 2026-10-13, PR #19 round 1): code moved with no behaviour change counts as added lines minus the lines it removed, in the actual as in the estimate. The moved lines are still stated in the PR and in the method-log row.
+
+| Slice (method log)  | Estimate                     | Actual                                                                                                                   | Factor |
+| ------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------ |
+| P1-S3b-3b (two PRs) | ~215                         | 426 (first head: 403 in the notes PR and 23 net in the helper PR, a move of 114 added and 91 removed; 467 after round 1) | 1.98   |
+| P1-S3b-3a           | ~212                         | 343 (after round 1; 298 at the first head)                                                                               | 1.62   |
+| P1-S3b-2b+2c        | ~225                         | 246 (final head)                                                                                                         | 1.09   |
+| P1-S3b-guards       | ~55 (parts with an estimate) | 131 (first head; the guards part had no estimate)                                                                        | 2.4    |
+| P1-S3b-2a           | ~140                         | 217 (final head)                                                                                                         | 1.55   |
 
 ## Basis
 

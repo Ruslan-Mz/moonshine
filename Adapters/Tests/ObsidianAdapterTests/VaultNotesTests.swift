@@ -103,6 +103,28 @@ import Testing
     try expectSkipped("type: lifetime\n\(yaml)", "3:invalidValue (notes.\(key))")
   }
 
+  @Test func everyValueAtItsCapIsRead() throws {
+    let title = String(repeating: "я", count: 200)
+    let parent = String(repeating: "a", count: 1024)
+    let line = String(repeating: "a", count: 64)
+    let status = String(repeating: "s", count: 60)
+    let read = try read(
+      "type: lifetime\ntitle: \(title)\nparent: \(parent)\nline: \(line)\nstatus: \(status)")
+    #expect(
+      read.notes == [
+        SourceNote(
+          path: "n.md", title: title, type: "lifetime", scale: .lifetime, parentLink: parent,
+          lineKey: LineKey(line), status: status)
+      ])
+    #expect(noteProblems(read).isEmpty)
+    // 1 KiB of title: 64 clusters of 16 bytes.
+    let heavy = String(repeating: "e\u{301}\u{302}\u{303}\u{304}\u{305}\u{306}\u{307}a", count: 64)
+    #expect(heavy.utf8.count == 1024)
+    #expect(try self.read("type: lifetime\ntitle: \"\(heavy)\"").notes.map(\.title) == [heavy])
+    let name = String(repeating: "n", count: 200)
+    #expect(try self.read("type: lifetime", at: name + ".md").notes.map(\.title) == [name])
+  }
+
   @Test func everyProblemOfANoteIsReported() throws {
     let read = try read("type: year_artifacts\ntitle: \"\"\nline: X\nyear: 26")
     #expect(
@@ -146,21 +168,55 @@ import Testing
     #expect(noteProblems(read).isEmpty)
   }
 
+  static let lineItem = "lines:\n  - id: core\n    name: Core\n    block: B\n    state: active"
+
   @Test func theBudgetNoteIsStoredWhateverItsType() throws {
-    let vault = try TemporaryVault()
-    try vault.write("a.md", note("moonshine: budget\ntype: \"strategic, x\"\nscale: year"))
-    try vault.write("b.md", note("moonshine: budget\nperiod: 2026-W53"))
-    let read = try ObsidianVault(root: vault.root, timeZone: moscow).read()
-    #expect(read.budget == .ambiguous(marked: 2))
-    #expect(read.lines == .unavailable)
+    let type = String(repeating: "t", count: 60)
+    let read = try read("moonshine: budget\ntype: \"\(type), x\"\nscale: year\n\(Self.lineItem)")
+    #expect(read.budget == .found)
+    #expect(read.notes == [SourceNote(path: "n.md", title: "n", type: type)])
+    #expect(read.notesByType == [VaultNotes.budgetName: 1])
+    #expect(read.issues.isEmpty)
+    let dated = try self.read("moonshine: budget\nperiod: 2026-W53")
     #expect(
-      read.notes == [
-        SourceNote(path: "a.md", title: "a", type: "strategic"),
+      dated.notes == [
         SourceNote(
-          path: "b.md", title: "b", scale: .week,
-          period: Horizon(scale: .week, start: day(2026, 12, 28), end: day(2027, 1, 4))),
+          path: "n.md", title: "n", scale: .week,
+          period: Horizon(scale: .week, start: day(2026, 12, 28), end: day(2027, 1, 4)))
       ])
-    #expect(read.notesByType == [VaultNotes.budgetName: 2])
+  }
+
+  /// Contract §2 (owner, 2026-10-13): none of them is the budget note, so none is stored as
+  /// one; each stays as it was stored until one marker is left.
+  @Test func whileTheBudgetMarkerIsAmbiguousEveryMarkedNoteIsKeptAsUnread() throws {
+    let vault = try TemporaryVault()
+    try vault.write("a.md", note("moonshine: budget\ntype: strategic"))
+    try vault.write("b.md", note("moonshine: budget\ntype: month_plan\nmonth: 2026-10"))
+    try vault.write("c.md", note("moonshine: budget\ntitle: \"\"\nstatus: [x]"))
+    try vault.write("d.md", note("type: lifetime"))
+    let read = try ObsidianVault(root: vault.root, timeZone: moscow).read()
+    #expect(read.budget == .ambiguous(marked: 3))
+    #expect(read.lines == .unavailable)
+    #expect(read.notes.map(\.path) == ["d.md"])
+    #expect(
+      read.unread
+        == VaultUnread(paths: ["a.md", "b.md", "c.md"], artifactLists: [], notRecognised: []))
+    #expect(
+      problems(read.issues) == [
+        "a.md:2:budgetNoteDuplicate (moonshine)", "b.md:2:budgetNoteDuplicate (moonshine)",
+        "c.md:2:budgetNoteDuplicate (moonshine)",
+      ])
+    #expect(read.notesByType == ["lifetime": 1])
+  }
+
+  @Test func anInvalidTypeSkipsTheBudgetNoteAsANoteAndItsLinesAreStillRead() throws {
+    let read = try read("moonshine: budget\ntype: [a]\n\(Self.lineItem)")
+    #expect(read.budget == .found)
+    #expect(read.lines.read.map(\.key) == ["core"])
+    #expect(read.lines.isComplete)
+    #expect(read.notes.isEmpty)
+    #expect(problems(read.issues) == ["n.md:3:invalidValue (notes.type)"])
+    #expect(read.unread.paths == ["n.md"])
   }
 
   @Test(arguments: ["type: [a]", "type: \(long)", "type: \"a\\u0001\""])
@@ -226,10 +282,40 @@ import Testing
         == Horizon(scale: .years(200), start: day(1900, 1, 1), end: day(2100, 1, 1)))
   }
 
-  @Test func aListOfTargetYearsGivesNoScaleAndNoPeriod() throws {
-    let read = try read("type: horizon_corridor\nperiod: \"2036, 2041,2051\"\nperiod_start: x")
+  static let twentyYears = (2031...2050).map(String.init).joined(separator: ",")
+
+  @Test(arguments: ["2036, 2041,2051", twentyYears, "1900,2199"])
+  func aListOfTargetYearsOnACorridorGivesNoScaleAndNoPeriod(list: String) throws {
+    let read = try read("type: horizon_corridor\nperiod: \"\(list)\"\nperiod_start: x")
     #expect(read.notes == [SourceNote(path: "n.md", title: "n", type: "horizon_corridor")])
     #expect(noteProblems(read).isEmpty)
+  }
+
+  /// Owner, 2026-10-13: target years belong to corridors only.
+  @Test(arguments: [
+    "type: month_plan\nmonth: 2026-10", "type: quarter_focus\nquarter: 2026-Q4",
+    "type: year_artifacts\nyear: 2026", "type: yearly-goals\nyear: 2026", "type: focus",
+    "type: lifetime", "moonshine: budget\ntype: strategic",
+  ])
+  func aListOfTargetYearsOnAnyOtherNoteIsInvalid(yaml: String) throws {
+    let read = try read("\(yaml)\nperiod: \"2036,2041\"")
+    #expect(read.notes.isEmpty)
+    #expect(
+      noteProblems(read) == [
+        "n.md:\(yaml.split(separator: "\n").count + 2):invalidValue (notes.period)"
+      ])
+    #expect(read.unread.paths == ["n.md"])
+  }
+
+  @Test func aPeriodHasCapsOnItsLengthAndOnItsListOfYears() throws {
+    let corridor = "type: horizon_corridor\nperiod: "
+    try expectSkipped(corridor + "\"\(Self.twentyYears),2051\"", "3:invalidValue (notes.period)")
+    let spaced = "2036," + String(repeating: " ", count: 247) + "2041"
+    #expect(spaced.utf8.count == 256)
+    #expect(try read(corridor + "\"\(spaced)\"").notes.count == 1)
+    try expectSkipped(corridor + "\"\(spaced) \"", "3:invalidValue (notes.period)")
+    try expectSkipped(
+      corridor + "\"\(String(repeating: ",", count: 60_000))\"", "3:invalidValue (notes.period)")
   }
 
   @Test(arguments: [
@@ -240,6 +326,13 @@ import Testing
   ])
   func aPeriodInAnotherShapeIsInvalid(text: String) throws {
     try expectSkipped("type: lifetime\nperiod: \"\(text)\"", "3:invalidValue (notes.period)")
+  }
+
+  @Test func theFirstAndTheLastYearInRangeAreRead() throws {
+    #expect(try period("type: year_artifacts\nyear: 1900")?.start == day(1900, 1, 1))
+    #expect(try period("type: year_artifacts\nyear: 2199")?.end == day(2200, 1, 1))
+    #expect(try period("type: focus\nperiod: 2199-Q4")?.end == day(2200, 1, 1))
+    #expect(try period("type: focus", at: "Goals 2199.md")?.start == day(2199, 1, 1))
   }
 
   @Test func theLastISOWeekMustExistInItsYear() throws {
@@ -326,6 +419,27 @@ import Testing
     try expectSkipped("type: horizon_corridor\n\(yaml)", problem)
   }
 
+  static let twentyOneHorizons = "[" + twentyYears + ", 2051]"
+
+  /// Owner, 2026-10-13: `horizons` counts only as a non-empty list of years in range.
+  @Test(arguments: [
+    "nonsense", "[]", "{a: 1}", "[1899]", "[2036, x]", "[[2036]]", twentyOneHorizons,
+  ])
+  func horizonsInAnotherShapeIsInvalid(value: String) throws {
+    try expectSkipped(
+      "type: horizon_corridor\nhorizons: \(value)", "3:invalidValue (notes.horizons)")
+    try expectSkipped(
+      "type: horizon_corridor\nhorizons: \(value)\nperiod_start: 2026\nperiod_end: 2030",
+      "3:invalidValue (notes.horizons)")
+  }
+
+  @Test func twentyHorizonsAtTheEndsOfTheRangeAreRead() throws {
+    let years = ([1900, 2199] + Array(2031...2048)).map(String.init).joined(separator: ", ")
+    let read = try read("type: horizon_corridor\nhorizons: [\(years)]")
+    #expect(read.notes == [SourceNote(path: "n.md", title: "n", type: "horizon_corridor")])
+    #expect(noteProblems(read).isEmpty)
+  }
+
   @Test func aCorridorWithOneInvalidPeriodKeyIsSkippedAndTheOtherKeyIsNamedToo() throws {
     let read = try read("type: horizon_corridor\nhorizons: [2036]\nperiod_end: 2030-02-30")
     #expect(read.notes.isEmpty)
@@ -353,6 +467,24 @@ import Testing
     #expect(read.unread == .nothing)
   }
 
+  @Test(arguments: [
+    ("type: focus\nperiod: 2026-W10", "week", Scale.week),
+    ("type: month_plan\nmonth: 2026-10", "month", .month),
+    ("type: quarter_focus\nperiod: 2026-Q4", "quarter", .quarter),
+    ("type: year_artifacts\nyear: 2026", "year", .year),
+    ("type: horizon_corridor\nperiod_start: 2026\nperiod_end: 2030", "years", .years(5)),
+    ("type: lifetime", "lifetime", .lifetime),
+  ])
+  func anExplicitScaleThatAgreesIsAccepted(yaml: String, word: String, scale: Scale) throws {
+    let read = try read("\(yaml)\nscale: \(word)")
+    #expect(read.notes.map(\.scale) == [scale])
+    #expect(noteProblems(read).isEmpty)
+    // Every other word disagrees.
+    for other in ["week", "month", "quarter", "year", "years", "lifetime"] where other != word {
+      #expect(try self.read("\(yaml)\nscale: \(other)").notes.isEmpty)
+    }
+  }
+
   @Test func anExplicitScaleMustAgreeWithThePeriod() throws {
     #expect(try period("type: month_plan\nmonth: 2026-10\nscale: month")?.scale == .month)
     #expect(try period("type: horizon_corridor\nperiod: 2026..2030\nscale: years") != nil)
@@ -376,6 +508,30 @@ import Testing
     #expect(inTokyo?.period?.start == day(2026, 1, 1).addingTimeInterval(-6 * 3600))
   }
 
+  /// Berlin changes its clocks on 29 March and 25 October 2026: a period still ends at local
+  /// midnight, so the week and the month of the change are an hour short or long.
+  @Test func aPeriodEndsAtLocalMidnightAcrossAClockChange() throws {
+    let berlin = try #require(TimeZone(identifier: "Europe/Berlin"))
+    let calendar = Calendar.iso8601(in: berlin)
+    let local = { (month: Int, day: Int) in
+      calendar.date(from: DateComponents(year: 2026, month: month, day: day))!
+    }
+    let vault = try TemporaryVault()
+    try vault.write("m.md", note("type: month_plan\nmonth: 2026-03"))
+    try vault.write("w.md", note("type: focus\nperiod: 2026-W43"))
+    try vault.write("q.md", note("type: quarter_focus\nperiod_start: 2026-10-25"))
+    let notes = try ObsidianVault(root: vault.root, timeZone: berlin).read().notes
+    let periods = Dictionary(uniqueKeysWithValues: notes.map { ($0.path, $0.period) })
+    #expect(periods["m.md"] == Horizon(scale: .month, start: local(3, 1), end: local(4, 1)))
+    #expect(periods["w.md"] == Horizon(scale: .week, start: local(10, 19), end: local(10, 26)))
+    #expect(periods["q.md"]??.start == local(10, 1))
+    let hours = { (period: Horizon??) in
+      (period??.end.timeIntervalSince(period??.start ?? .now) ?? 0) / 3600
+    }
+    #expect(hours(periods["m.md"]) == 31 * 24 - 1)
+    #expect(hours(periods["w.md"]) == 7 * 24 + 1)
+  }
+
   // MARK: Live check
 
   @Test func theReportCountsNotesByTypeAndProblemsByKindAndKey() throws {
@@ -394,7 +550,8 @@ import Testing
         "notes without a period: 0",
         "note problems: missingKey 1 · invalidValue 2",
         "note problems by key: title 1 · type 0 · parent 0 · line 0 · status 0 · scale 0"
-          + " · period 1 · month 0 · quarter 1 · year 0 · period_start 0 · period_end 0",
+          + " · period 1 · month 0 · quarter 1 · year 0 · period_start 0 · period_end 0"
+          + " · horizons 0",
         "kept as unread: 2 paths · not recognised: 2 files",
       ])
     #expect(!report.joined().contains("Secret"))

@@ -21,6 +21,7 @@ The S3b-2 calibration did not pass ([plan-critic-s3b-2-key.md](plan-critic-s3b-2
 - A slice passes if recall is at least 50 % and at most a third of the critic's findings are wrong.
 - A slice counts only if its reference set has at least 3 items (owner, 2026-10-10). With fewer, recall says too little; the slice is listed in the results as not counted.
 - The trial covers three slices, starting with S3b-3: the next three on which the critic runs and whose reference set reaches 3. A slice without a critic run (docs-only or exempt) uses none of them. The critic becomes a permanent step in "Plans" when two of the three pass.
+- **S3b-3 counts as one trial slice** (owner, 2026-10-12): the critic ran once, on revision 1 of the S3b-3 plan, before the slice was split into S3b-3a, S3b-3b and S3b-3c. The later PRs of S3b-3 get no new critic run, whatever their class, and the slice is scored once, after round 1 of S3b-3c.
 - Frozen during the trial is `.claude/agents/plan-critic.md` only; any change to it restarts the count. The lens files and the size factor may change as usual, so each results row records the commit the run was made on.
 - The S3b-2 calibration case stays as a regression check only. It is no longer tuned against.
 

@@ -12,6 +12,8 @@ v0.3 (2026-10-08, ADR-0014, ADR-0015, ADR-0016): project notes (§4) and reserve
 
 2026-10-10 (S3b-3, owner): artifact identity is `id` + period and carries keep the `id` (§2.1–2.2); the artifact `id` rule and the caps for notes and artifacts (§2, §2.1); the budget note is stored as a note (§2); what is kept when a note cannot be read or is no longer recognised (§3); several notes for one period (§2.1). The reader applies the note rules from S3b-3b and the artifact rules from S3b-3c; the importer's rules are in place since S3b-3a.
 
+2026-10-12 and 2026-10-13 (S3b-3b, owner): the shapes of dates and which key takes which; where a period starts and ends; an explicit `scale` is only checked; the year in a legacy file name; a `focus` note with no year is the current one; a list of target years only on a corridor, at most 20 years, and `period` at most 256 bytes; `horizons` is checked; while the budget marker is ambiguous every marked note is kept as unread; the paths the reader names (§2, "Made precise in S3b-3b").
+
 Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault writes before the Write phase; ADR-0015).
 
 ## Design choices driven by the data
@@ -73,15 +75,15 @@ Validation of `lines:` (owner, 2026-10-07 and 2026-10-08):
 
 Common frontmatter keys (all notes MoonShine reads as `NoteRef`):
 
-| Key       | Type     | Meaning                                                                                                                                |
-| --------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `type`    | string   | Required for recognition. Values below. A comma list (`"a, b"`) is read as its first item.                                             |
-| `scale`   | enum     | `week` · `month` · `quarter` · `year` · `years` · `lifetime`. Optional when derivable (table below).                                   |
-| `horizon` | —        | Not read by MoonShine; stays free text for the owner.                                                                                  |
-| `period`  | string   | `YYYY-Www` · `YYYY-MM` · `YYYY-Qn` · `YYYY` · `YYYY..YYYY` (range) · `YYYY,YYYY,…` (list of target years). Optional when derivable.    |
-| `parent`  | wikilink | Next note up the thread (month → quarter → year → corridor → long horizons). Path-qualified links allowed.                             |
-| `line`    | line id  | Optional. Ties a note to one line.                                                                                                     |
-| `status`  | string   | Passed through; MoonShine maps `active`/`draft`/`living` → current, `archived`/`closed`/`superseded` → past. Unknown values → current. |
+| Key       | Type     | Meaning                                                                                                                                                                              |
+| --------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `type`    | string   | Required for recognition. Values below. A comma list (`"a, b"`) is read as its first item.                                                                                           |
+| `scale`   | enum     | `week` · `month` · `quarter` · `year` · `years` · `lifetime`. Optional when derivable (table below).                                                                                 |
+| `horizon` | —        | Not read by MoonShine; stays free text for the owner.                                                                                                                                |
+| `period`  | string   | `YYYY-Www` · `YYYY-MM` · `YYYY-Qn` · `YYYY` · `YYYY..YYYY` (range) · on a `horizon_corridor` only, `YYYY,YYYY,…` (list of target years). At most 256 bytes. Optional when derivable. |
+| `parent`  | wikilink | Next note up the thread (month → quarter → year → corridor → long horizons). Path-qualified links allowed.                                                                           |
+| `line`    | line id  | Optional. Ties a note to one line.                                                                                                                                                   |
+| `status`  | string   | Passed through; MoonShine maps `active`/`draft`/`living` → current, `archived`/`closed`/`superseded` → past. Unknown values → current.                                               |
 
 Recognised types and derivation of `scale` / `period` when they are absent:
 
@@ -102,15 +104,21 @@ Rules (owner, 2026-10-10; read from S3b-3b):
 - `title` is optional: a note without it takes its file name without `.md`. A file name that breaks the title caps skips the note with `invalidValue` on `notes.title`, like any invalid value (owner, 2026-10-10).
 - Caps: `title` 1–200 characters and at most 1 KiB; `type` at most 60 characters; `status` 1–60 characters and at most 512 bytes; `parent` at most 1 KiB; `line` by the line `id` rule; years 1900–2199; a range of years at most 200. Characters, bytes and control characters as in §1.
 - A week must exist in its ISO year (`2025-W53` is invalid), a day in its month.
-- Dates are written with ASCII digits in these shapes only: `YYYY`, `YYYY-MM`, `YYYY-MM-DD`, `YYYY-Www`, `YYYY-Qn`. Each source key takes its own shapes: `month` a month; `quarter` a quarter; `year` a year; `period_start` of a month or quarter note a day or a month; `period_start` and `period_end` of a corridor a year, a month or a day. The first source key that is present decides, and a later one is not read. With an explicit `period`, no source key is read.
-- A period starts and ends at midnight in the workspace's time zone. A corridor runs from the start of `period_start` to the end of `period_end` (the day after an end date, 1 January after an end year); its scale counts calendar years, the end year minus the start year plus one. An end that is not after the start is `invalidValue` on `period_end`.
-- An explicit `scale` is only checked: the stored scale comes from the period, or from the type when there is no period. Where the reader has no scale of its own (a list of target years, `horizons` only, the budget note of another type), a valid `scale` is accepted and not stored: `years` has no count without a period.
-- In a legacy file name, the year is the first run of exactly four digits that is a year from 1900 to 2199; other runs of digits are passed over.
-- A `focus` note with no `year` key and no year in its file name is the current one, by design: it is read with scale `year`, no period and no problem, like a corridor with only `horizons` (owner, 2026-10-13; this changes the rule of 2026-10-10 for `focus` only).
-- Read with a problem, not skipped: a `yearly-goals` note with no year anywhere (scale `year`, no period, `missingKey` on `period`); a corridor with only one of `period_start` / `period_end` (no scale, no period, `missingKey` on the other key), or with neither and no `horizons` (`missingKey` on `period`).
-- The reader names the paths it saw and did not store (§3): every Markdown file of another type or without frontmatter is "not recognised"; every rejected, unreadable or skipped note, and every entry the walk skipped or could not enter, is "unread". An invalid `type` on the budget note skips it as a note only; its `lines:` are still read.
 - A source key that is present in another shape is `invalidValue`; so is an explicit `scale` that disagrees with the period. Any invalid value skips the note: the stored note stays as it was (§3).
 - No period key at all: a `month_plan`, `quarter_focus` or `year_artifacts` note is skipped with `missingKey`; a `yearly-goals` or `focus` note takes the year from its file name (table above) and is read without a period only when it has no `year` key and no year in its file name; a `horizon_corridor` without `period_start` / `period_end` and without `horizons` gets no scale and no period.
+
+Made precise in S3b-3b (owner; each rule accepted or decided on 2026-10-13 unless it names another date):
+
+- Dates are written with ASCII digits in these shapes only: `YYYY`, `YYYY-MM`, `YYYY-MM-DD`, `YYYY-Www`, `YYYY-Qn`. Each source key takes its own shapes: `month` a month; `quarter` a quarter; `year` a year; `period_start` of a month or quarter note a day or a month; `period_start` and `period_end` of a corridor a year, a month or a day. The first source key that is present decides, and a later one is not read. With an explicit `period`, no source key is read. A list of target years (`YYYY,YYYY,…`, spaces after a comma allowed) is a `period` of a `horizon_corridor` only, with at most 20 years: it gives no scale and no period until the Zoom out phase. On a note of any other type, the budget note included, it is `invalidValue` on `notes.period` and the note is skipped (owner, 2026-10-13). A `period` is at most 256 bytes (owner, 2026-10-13).
+- A period starts and ends at midnight in the workspace's time zone. A corridor runs from the start of `period_start` to the end of `period_end` (the day after an end date, 1 January after an end year); its scale counts calendar years, the end year minus the start year plus one. An end that is not after the start is `invalidValue` on `period_end`.
+- An explicit `scale` is only checked: the stored scale comes from the period, or from the type when there is no period. Where the reader has no scale of its own (a corridor with a list of target years or with `horizons` only, the budget note of another type), a valid `scale` is accepted and not stored: `years` has no count without a period.
+- In a legacy file name, the year is the first run of exactly four digits that is a year from 1900 to 2199; other runs of digits are passed over.
+- A `focus` note with no `year` key and no year in its file name is the current one, by design: it is read with scale `year`, no period and no problem, like a corridor with only `horizons` (owner, 2026-10-13; this changes the rule of 2026-10-10 for `focus` only).
+- Read with a problem, not skipped: a `yearly-goals` note with no year anywhere (scale `year`, no period, `missingKey` on `period`); a corridor with only one of `period_start` / `period_end` (no scale, no period, `missingKey` on the other key), or with neither and no `horizons` (`missingKey` on `period`). `horizons` counts only as a non-empty list of at most 20 years from 1900 to 2199; in any other shape it is `invalidValue` on `notes.horizons` and the note is skipped, with or without period keys (owner, 2026-10-13).
+- The reader names the paths it saw and did not store (§3): every Markdown file of another type or without frontmatter is "not recognised"; every rejected, unreadable or skipped note, and every entry the walk skipped or could not enter, is "unread". An invalid `type` on the budget note skips it as a note only; its `lines:` are still read.
+- While the budget marker is ambiguous (more than one marked note, §1), none of the marked notes is the budget note and none is read as a note: each is "unread", so its stored note stays as it was, nothing new is stored for it, and `budgetNoteDuplicate` is its only problem. The budget note is stored as a note only when exactly one note is marked and it parsed (owner, 2026-10-13).
+- The reader returns notes in path order, and `DemoVault.snapshot.notes` is kept in that order for the golden test (owner, 2026-10-12).
+- `moonshine-import vault` reads in the local time zone of the machine: it prints counts only, and no count depends on the zone. The app passes the workspace's time zone from S4.
 
 ### 2.1 Artifacts inside the year note — new block
 

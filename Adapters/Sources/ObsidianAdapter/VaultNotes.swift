@@ -13,8 +13,11 @@ enum VaultNotes {
   /// Every key a note problem can name, after `notes.`.
   static let keys = [
     "title", "type", "parent", "line", "status", "scale", "period", "month", "quarter", "year",
-    "period_start", "period_end",
+    "period_start", "period_end", "horizons",
   ]
+  /// Caps of an explicit `period` and of a list of target years (owner, 2026-10-13).
+  static let maxPeriodBytes = 256
+  static let maxTargetYears = 20
 
   struct Result {
     var notes: [SourceNote] = []
@@ -115,7 +118,7 @@ private struct NoteItem {
   private mutating func span(type: String?) -> Span {
     let words = ["week", "month", "quarter", "year", "years", "lifetime"]
     let written = fields.optional("scale") { words.contains($0) }
-    let span = fields.present("period").map { explicit($0) } ?? derived(type: type)
+    let span = fields.present("period").map { explicit($0, type: type) } ?? derived(type: type)
     if let written, let scale = span.scale, written != Self.word(scale) {
       fields.report(.invalidValue, "notes.scale", fields.line(of: "scale"))
     }
@@ -134,25 +137,31 @@ private struct NoteItem {
     }
   }
 
-  /// `period`: a week, month, quarter or year, a range of years (`2026..2030`), or a list of
-  /// target years (`2036,2041`), which gives no scale and no period until the Zoom out phase.
-  private mutating func explicit(_ node: FrontNode) -> Span {
-    let text = node.scalar ?? ""
-    let calendar = calendar
-    let years = { (parts: [String]) in parts.map { Self.date($0, [.year], calendar) } }
-    let range = years(text.components(separatedBy: ".."))
-    if range.count == 2, let first = range[0], let last = range[1],
-      let span = self.years(from: first, to: last)
-    {
-      return span
-    }
-    let list = years(
-      text.split(separator: ",", omittingEmptySubsequences: false).map {
-        $0.trimmingCharacters(in: .whitespaces)
-      })
-    if list.count > 1, !list.contains(nil) { return (nil, nil) }
-    if let one = Self.date(text, [.week, .month, .quarter, .year], calendar) {
-      return self.span(one)
+  /// `period`, at most 256 bytes: a week, month, quarter or year, a range of years
+  /// (`2026..2030`), or on a corridor a list of at most 20 target years (`2036,2041`), which
+  /// gives no scale and no period until the Zoom out phase. The parts are counted before any
+  /// is parsed.
+  private mutating func explicit(_ node: FrontNode, type: String?) -> Span {
+    if let text = node.scalar, text.utf8.count <= VaultNotes.maxPeriodBytes {
+      let calendar = calendar
+      let year = { (part: String) in Self.date(part, [.year], calendar) }
+      let range = text.components(separatedBy: "..")
+      let list = text.split(separator: ",", omittingEmptySubsequences: false)
+      if range.count == 2 {
+        if let first = year(range[0]), let last = year(range[1]),
+          let span = years(from: first, to: last)
+        {
+          return span
+        }
+      } else if list.count > 1 {
+        if type == "horizon_corridor", list.count <= VaultNotes.maxTargetYears,
+          list.allSatisfy({ year($0.trimmingCharacters(in: .whitespaces)) != nil })
+        {
+          return (nil, nil)
+        }
+      } else if let one = Self.date(text, [.week, .month, .quarter, .year], calendar) {
+        return span(one)
+      }
     }
     fields.report(.invalidValue, "notes.period", node.line)
     return (nil, nil)
@@ -218,6 +227,7 @@ private struct NoteItem {
   /// `period_start` and `period_end`, each a year, a month or a day. Without both the note is
   /// read with no scale and no period: no problem with `horizons`, `missingKey` without it.
   private mutating func corridor() -> Span {
+    let hasHorizons = horizons()
     let shapes: [WrittenDate.Shape] = [.year, .month, .day]
     let start = fields.present("period_start")
     let end = fields.present("period_end")
@@ -225,7 +235,7 @@ private struct NoteItem {
     let last = end.flatMap { keyed("period_end", $0, shapes) }
     switch (start, end) {
     case (nil, nil):
-      if fields.present("horizons") == nil {
+      if !hasHorizons {
         fields.report(.missingKey, "notes.period", fields.node.line, skips: false)
       }
     case (_?, nil):
@@ -238,6 +248,21 @@ private struct NoteItem {
       fields.report(.invalidValue, "notes.period_end", end.line)
     }
     return (nil, nil)
+  }
+
+  /// Whether `horizons` is present. It counts only as a non-empty list of at most 20 years
+  /// in range; anything else is `invalidValue`.
+  private mutating func horizons() -> Bool {
+    guard let node = fields.present("horizons") else { return false }
+    let calendar = calendar
+    if case .sequence(let items) = node.value,
+      (1...VaultNotes.maxTargetYears).contains(items.count),
+      items.allSatisfy({ $0.scalar.flatMap { Self.date($0, [.year], calendar) } != nil })
+    {
+      return true
+    }
+    fields.report(.invalidValue, "notes.horizons", node.line)
+    return true
   }
 
   /// From the start of `first` to the end of `last`, counted in calendar years; nil when the

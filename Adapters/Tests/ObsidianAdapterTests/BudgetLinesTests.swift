@@ -50,7 +50,8 @@ import Testing
     ("budget_h_week", "nan"), ("budget_h_week", "\"1,5\""), ("budget_h_week", "1."),
     ("budget_h_week", ".5"), ("budget_h_week", "168.01"), ("budget_h_week", "\"\""),
     ("budget_h_week", "[1]"), ("budget_h_week", "abc"), ("floor_h_day", "24.5"),
-    ("floor_h_day", "-0"), ("id", "Core"), ("id", "a_b"), ("id", "\"\""), ("id", "[a]"),
+    ("floor_h_day", "-0"), ("id", "Core"), ("id", "a_b"), ("id", "\"a\\u0332b\""), ("id", "жук"),
+    ("id", "\"\""), ("id", "[a]"),
     ("id", String(repeating: "a", count: 65)), ("name", "\"\""), ("name", "{a: 1}"),
     ("name", String(repeating: "ж", count: 121)), ("block", "\"\""),
     ("block", String(repeating: "b", count: 61)), ("emoji", "\"\""),
@@ -160,6 +161,28 @@ import Testing
       #expect(lines.lines == .read([otherLine], complete: false))
       #expect(problems(lines.issues).map(dropLine) == ["budget.md:missingKey (lines.\(key))"])
     }
+  }
+
+  @Test func aMissingRequiredKeyIsReportedOnTheLineOfItsItem() throws {
+    let lines = try read(items: other, item(["name": nil]))
+    let first = item(["name": nil]).split(separator: "\n").count
+    #expect(first > 1)
+    // `moonshine` is line 2 of the note, `lines:` line 3, the first item starts on line 4.
+    #expect(
+      problems(lines.issues) == [
+        "budget.md:\(4 + other.split(separator: "\n").count):missingKey (lines.name)"
+      ])
+  }
+
+  @Test func aProblemReportedWithoutSkippingKeepsItsItem() {
+    var fields = Fields(
+      path: "n.md", node: FrontNode(value: .mapping([]), line: 2), schema: "notes")
+    fields.report(.missingKey, "notes.period", 2, skips: false)
+    #expect(!fields.skip)
+    #expect(problems(fields.issues) == ["n.md:2:missingKey (notes.period)"])
+    fields.report(.invalidValue, "notes.title", 3)
+    #expect(fields.skip)
+    #expect(fields.issues.count == 2)
   }
 
   @Test(arguments: ["  - core", "  - [a, b]", "  - null"])

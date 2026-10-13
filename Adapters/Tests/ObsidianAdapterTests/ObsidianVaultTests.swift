@@ -134,7 +134,8 @@ import Testing
         "notes without a period: 0",
         "note problems: missingKey 0 · invalidValue 0",
         "note problems by key: title 0 · type 0 · parent 0 · line 0 · status 0 · scale 0"
-          + " · period 0 · month 0 · quarter 0 · year 0 · period_start 0 · period_end 0",
+          + " · period 0 · month 0 · quarter 0 · year 0 · period_start 0 · period_end 0"
+          + " · horizons 0",
         "kept as unread: 4 paths · not recognised: 3 files",
         "budget note: missing",
         "lines: unavailable",

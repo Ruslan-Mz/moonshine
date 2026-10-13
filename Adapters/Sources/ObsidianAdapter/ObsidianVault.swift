@@ -24,12 +24,16 @@ public struct ObsidianVault: Sendable {
       if budget == .found, let note = marked.first { BudgetLines.read(note) } else {
         BudgetLines(lines: .unavailable, issues: [], skipped: 0)
       }
+    // While the marker is ambiguous none of the marked notes is the budget note, so none is
+    // read as a note: each is kept as it was stored, and the ambiguity is its only problem.
+    let held: Set<String> = if case .ambiguous = budget { Set(marked.map(\.path)) } else { [] }
     let notes = VaultNotes.read(
-      scan.notes, budget: Set(marked.map(\.path)), calendar: .iso8601(in: timeZone))
+      scan.notes.filter { !held.contains($0.path) }, budget: Set(marked.map(\.path)),
+      calendar: .iso8601(in: timeZone))
     return VaultRead(
       lines: lines.lines, notes: notes.notes,
       unread: VaultUnread(
-        paths: scan.unread.union(notes.skipped), artifactLists: [],
+        paths: scan.unread.union(notes.skipped).union(held), artifactLists: [],
         notRecognised: scan.withoutFrontmatter.union(notes.notRecognised)),
       issues: scan.issues + BudgetNote.issues(marked: marked, rejected: scan.rejectedMarks)
         + lines.issues + notes.issues,
