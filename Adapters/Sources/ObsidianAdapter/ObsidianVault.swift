@@ -27,16 +27,23 @@ public struct ObsidianVault: Sendable {
     // While the marker is ambiguous none of the marked notes is the budget note, so none is
     // read as a note: each is kept as it was stored, and the ambiguity is its only problem.
     let held: Set<String> = if case .ambiguous = budget { Set(marked.map(\.path)) } else { [] }
+    let calendar = Calendar.iso8601(in: timeZone)
     let notes = VaultNotes.read(
       scan.notes.filter { !held.contains($0.path) }, budget: Set(marked.map(\.path)),
-      calendar: .iso8601(in: timeZone))
+      calendar: calendar)
+    let artifacts = VaultArtifacts.read(
+      notes.notes,
+      frontmatter: Dictionary(
+        scan.notes.map { ($0.path, $0.frontmatter) }, uniquingKeysWith: { first, _ in first }),
+      calendar: calendar)
     return VaultRead(
-      lines: lines.lines, notes: notes.notes,
+      lines: lines.lines, notes: notes.notes, artifacts: artifacts.artifacts,
       unread: VaultUnread(
-        paths: scan.unread.union(notes.skipped).union(held), artifactLists: [],
+        paths: scan.unread.union(notes.skipped).union(held),
+        artifactLists: artifacts.unreadLists,
         notRecognised: scan.withoutFrontmatter.union(notes.notRecognised)),
       issues: scan.issues + BudgetNote.issues(marked: marked, rejected: scan.rejectedMarks)
-        + lines.issues + notes.issues,
+        + lines.issues + notes.issues + artifacts.issues,
       notesFound: scan.noteCount, frontmatterRead: scan.notes.count,
       rejected: Self.count(scan.noteIssues), skipped: Self.count(scan.walkIssues),
       anchorLikeAccepted: scan.anchorLikeAccepted, budget: budget,
@@ -46,7 +53,9 @@ public struct ObsidianVault: Sendable {
         if case .vault(_, _, let problem) = issue, let key = problem.key {
           counts[key, default: 0] += 1
         }
-      })
+      },
+      artifactsByType: artifacts.byType, artifactsWithoutStatus: artifacts.withoutStatus,
+      artifactsSkipped: artifacts.skipped, artifactProblems: Self.count(artifacts.issues))
   }
 
   private static func count(_ issues: [ImportIssue]) -> [VaultProblem.Kind: Int] {
@@ -61,7 +70,10 @@ public struct VaultRead: Sendable {
   public let lines: VaultLines
   /// The recognised notes and the budget note (contract §2), in path order.
   public let notes: [SourceNote]
-  /// What this read saw and could not use; `artifactLists` stays empty until artifacts are read.
+  /// The items of the year and quarter notes' `artifacts:` (contract §2.1), notes by path and
+  /// items in note order.
+  public let artifacts: [SourceArtifact]
+  /// What this read saw and could not use.
   public let unread: VaultUnread
   public let issues: [ImportIssue]
   /// Markdown notes the walk found, including those later rejected or unreadable; hidden
@@ -90,6 +102,14 @@ public struct VaultRead: Sendable {
   public let noteProblems: [VaultProblem.Kind: Int]
   /// The same problems by contract key (`notes.title`).
   public let noteProblemKeys: [String: Int]
+  /// Artifacts read, by a name from `VaultArtifacts.types`.
+  public let artifactsByType: [String: Int]
+  /// Artifacts read whose item has no `status` (read as `planned`).
+  public let artifactsWithoutStatus: Int
+  /// `artifacts:` items skipped for a missing, invalid or duplicate value.
+  public let artifactsSkipped: Int
+  /// Problems in `artifacts:` lists and of several notes for one period, by kind.
+  public let artifactProblems: [VaultProblem.Kind: Int]
 
   /// Counts only: never a path, a note name or a value from a note. Every kind is listed,
   /// zeros included, so an anchor rejection can never be missed.
@@ -124,6 +144,18 @@ public struct VaultRead: Sendable {
         .joined(separator: " · "),
       "kept as unread: \(unread.paths.count) paths"
         + " · not recognised: \(unread.notRecognised.count) files",
+      "artifacts: \(artifacts.count) read ("
+        + VaultArtifacts.types.map { "\($0) \(artifactsByType[$0, default: 0])" }
+        .joined(separator: " · ") + ") · without a status: \(artifactsWithoutStatus)"
+        + " · ids in more than one period: \(idsInSeveralPeriods)",
+      "artifacts skipped: \(artifactsSkipped)"
+        + " · lists not read in full: \(unread.artifactLists.count)",
+      "artifact problems: "
+        + Self.list(
+          artifactProblems,
+          [.missingKey, .invalidValue, .duplicateArtifactId, .duplicatePeriodNote].map {
+            ($0, $0.rawValue)
+          }),
       "budget note: " + budgetLabel,
       "lines: " + linesLabel,
       "line problems: "
@@ -160,6 +192,13 @@ public struct VaultRead: Sendable {
       default: scalar == "\\" ? "\\\\" : String(scalar)
       }
     }.joined()
+  }
+
+  /// Artifact ids read in more than one period: carried at least once.
+  private var idsInSeveralPeriods: Int {
+    Dictionary(grouping: artifacts, by: \.key).values.count {
+      Set($0.map(\.periodKey)).count > 1
+    }
   }
 
   private var budgetLabel: String {

@@ -137,6 +137,11 @@ import Testing
           + " · period 0 · month 0 · quarter 0 · year 0 · period_start 0 · period_end 0"
           + " · horizons 0",
         "kept as unread: 4 paths · not recognised: 3 files",
+        "artifacts: 0 read (year_artifacts 0 · quarter_focus 0) · without a status: 0"
+          + " · ids in more than one period: 0",
+        "artifacts skipped: 0 · lists not read in full: 0",
+        "artifact problems: missingKey 0 · invalidValue 0 · duplicateArtifactId 0"
+          + " · duplicatePeriodNote 0",
         "budget note: missing",
         "lines: unavailable",
         "line problems: missingKey 0 · invalidValue 0 · duplicateLineId 0",

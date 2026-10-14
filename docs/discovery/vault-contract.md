@@ -138,6 +138,13 @@ Item rules (owner, 2026-10-10; read from S3b-3c):
 - `id`: `[a-z0-9-]`, 1–64 bytes, the line `id` rule. `title`: 1–200 characters, at most 1 KiB. `line` is one line id, `lines` a list of at most 20; both together are invalid, neither is allowed. `status` absent or null is read as `planned`. `priority` only `true` / `false`.
 - An item with a missing or invalid value is skipped; the stored artifact stays as it was, in its place (§3).
 - `artifacts:` absent, null or empty means the note has no artifacts. `artifacts:` that is not a list is `invalidValue`; the note's stored artifacts stay.
+- At most 100 items in one note's `artifacts:` (owner, 2026-10-14). More is `invalidValue` on `notes.artifacts`: no item of that note is read, and its stored artifacts stay.
+
+Made precise in S3b-3c (2026-10-14):
+
+- An item's period key is `YYYY` for a year period and `YYYY-Qn` for a quarter period. A `year_artifacts` or `quarter_focus` note whose `period` has another scale (a week, a month, a range of years) and a non-empty `artifacts:` gets `invalidValue` on `notes.artifacts`; its stored artifacts stay.
+- Problem keys: `artifacts.id`, `artifacts.title`, `artifacts.line`, `artifacts.lines`, `artifacts.status`, `artifacts.priority` for an item; `notes.artifacts` for the list and for an item that is not a mapping; `notes.period` for `duplicatePeriodNote`. `line` and `lines` together is `invalidValue` on `artifacts.lines`, and so is a `lines` list with an id twice; an empty `lines` list means no lines.
+- "One period" means the same period, among the year and quarter notes that are read. The duplicate check counts every item with a valid `id` in a list that is read, an item invalid for another reason included, so every problem is reported in one pass.
 
 **Identity and carries (owner, 2026-10-10).** An artifact is identified by its `id` plus the period of the note it is in (a year or a quarter). An artifact that is not finished in its period is carried: the owner copies the item into the next note with the same `id` and marks the old one with `carried_to`. Each appearance is stored separately, so the history survives: the first appearance, the number of carries, the outcome in each period. Trace and the Quarter focus card use the appearance whose period contains "now".
 

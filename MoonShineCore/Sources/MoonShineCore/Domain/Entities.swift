@@ -321,6 +321,13 @@ public struct VaultProblem: Hashable, Sendable, CustomStringConvertible {
     case invalidValue
     /// More than one line item has this `id`; every one of them is skipped.
     case duplicateLineId
+    /// The same artifact `id` twice in one note, or in two notes whose periods overlap (a year
+    /// and one of its quarters); every such item is skipped and each note keeps its stored
+    /// artifacts. The same `id` in periods that do not overlap is a carry, not a problem.
+    case duplicateArtifactId
+    /// A year or quarter note for a period whose first note by path was read: only that first
+    /// note's `artifacts:` are read, and this note keeps its stored artifacts.
+    case duplicatePeriodNote
   }
 
   public let kind: Kind
