@@ -50,7 +50,8 @@ import Testing
     ("budget_h_week", "nan"), ("budget_h_week", "\"1,5\""), ("budget_h_week", "1."),
     ("budget_h_week", ".5"), ("budget_h_week", "168.01"), ("budget_h_week", "\"\""),
     ("budget_h_week", "[1]"), ("budget_h_week", "abc"), ("floor_h_day", "24.5"),
-    ("floor_h_day", "-0"), ("id", "Core"), ("id", "a_b"), ("id", "\"\""), ("id", "[a]"),
+    ("floor_h_day", "-0"), ("id", "Core"), ("id", "a_b"), ("id", "\"a\\u0332b\""), ("id", "жук"),
+    ("id", "\"\""), ("id", "[a]"),
     ("id", String(repeating: "a", count: 65)), ("name", "\"\""), ("name", "{a: 1}"),
     ("name", String(repeating: "ж", count: 121)), ("block", "\"\""),
     ("block", String(repeating: "b", count: 61)), ("emoji", "\"\""),
@@ -80,7 +81,7 @@ import Testing
   }
 
   @Test func theFixtureLinesEqualTheDemoVaultLines() throws {
-    let read = try ObsidianVault(root: fixtureVault).read()
+    let read = try ObsidianVault(root: fixtureVault, timeZone: moscow).read()
     #expect(read.lines == DemoVault.snapshot.lines)
     #expect(read.issues.isEmpty)
   }
@@ -162,6 +163,28 @@ import Testing
     }
   }
 
+  @Test func aMissingRequiredKeyIsReportedOnTheLineOfItsItem() throws {
+    let lines = try read(items: other, item(["name": nil]))
+    let first = item(["name": nil]).split(separator: "\n").count
+    #expect(first > 1)
+    // `moonshine` is line 2 of the note, `lines:` line 3, the first item starts on line 4.
+    #expect(
+      problems(lines.issues) == [
+        "budget.md:\(4 + other.split(separator: "\n").count):missingKey (lines.name)"
+      ])
+  }
+
+  @Test func aProblemReportedWithoutSkippingKeepsItsItem() {
+    var fields = Fields(
+      path: "n.md", node: FrontNode(value: .mapping([]), line: 2), schema: "notes")
+    fields.report(.missingKey, "notes.period", 2, skips: false)
+    #expect(!fields.skip)
+    #expect(problems(fields.issues) == ["n.md:2:missingKey (notes.period)"])
+    fields.report(.invalidValue, "notes.title", 3)
+    #expect(fields.skip)
+    #expect(fields.issues.count == 2)
+  }
+
   @Test(arguments: ["  - core", "  - [a, b]", "  - null"])
   func anItemThatIsNotAMappingIsSkipped(yaml: String) throws {
     let lines = try read(items: yaml, other)
@@ -228,7 +251,7 @@ import Testing
     let vault = try TemporaryVault()
     try vault.write("a.md", note("lines:\n" + other))
     try vault.write("budget.md", note("moonshine: budget\nlines:\n" + item(["state": "x"])))
-    let read = try ObsidianVault(root: vault.root).read()
+    let read = try ObsidianVault(root: vault.root, timeZone: moscow).read()
     #expect(read.lines == .read([], complete: false))
     #expect(read.linesSkipped == 1)
     #expect(read.lineProblems == [.invalidValue: 1])
@@ -236,7 +259,7 @@ import Testing
   }
 
   @Test func theReportCountsTheLines() throws {
-    let report = try ObsidianVault(root: fixtureVault).read().report
+    let report = try ObsidianVault(root: fixtureVault, timeZone: moscow).read().report
     #expect(
       Array(report.suffix(3)) == [
         "lines: 8 read · 0 skipped",
@@ -250,7 +273,7 @@ import Testing
         "moonshine: budget\nlines:\n" + item(["floor_h_day": "1"]) + "\n" + other + "\n"
           + item(["id": "x", "state": "x"])))
     #expect(
-      Array(try ObsidianVault(root: vault.root).read().report.suffix(3)) == [
+      Array(try ObsidianVault(root: vault.root, timeZone: moscow).read().report.suffix(3)) == [
         "lines: 2 read · 1 skipped",
         "line problems: missingKey 0 · invalidValue 1 · duplicateLineId 0",
         "foundation lines: 0 · with a floor: 1 · with a language: 0",
@@ -260,7 +283,9 @@ import Testing
   @Test func theReportSaysWhenTheLinesAreUnavailable() throws {
     let vault = try TemporaryVault()
     try vault.write("a.md", note("type: x"))
-    #expect(try ObsidianVault(root: vault.root).read().report.contains("lines: unavailable"))
+    #expect(
+      try ObsidianVault(root: vault.root, timeZone: moscow).read().report.contains(
+        "lines: unavailable"))
   }
 
   /// A foundation item with `key` set to `value`.

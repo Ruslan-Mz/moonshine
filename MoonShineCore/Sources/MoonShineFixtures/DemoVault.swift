@@ -65,18 +65,19 @@ public struct DemoVault: NoteProvider {
         key: "a26-06", periodKey: "2026", title: "Client North app v2 released", lineKeys: ["work"],
         status: .done, notePath: year),
     ],
+    // In path order, as the vault reader returns them (its golden test compares the two).
     notes: [
       SourceNote(
         path: budget, title: "Hours budget by line", type: "strategic",
         parentLink: "[[_index]]", status: "active"),
+      // `horizons: [2036, 2041, 2051]` is a list of target years; the Zoom out phase models it.
+      SourceNote(
+        path: "00_Strategy/Long_horizons.md", title: "Long horizons", type: "horizon_corridor",
+        parentLink: "[[_index]]", status: "draft"),
       SourceNote(
         path: "00_Strategy/Months/Month_2026-10.md", title: "October 2026 — month plan",
         type: "month_plan", scale: .month, period: period(.month, 2026, 10),
         parentLink: "[[Q4_2026_focus]]", status: "active"),
-      SourceNote(
-        path: "00_Strategy/Years/Q4_2026_focus.md", title: "Q4 2026 focus",
-        type: "quarter_focus", scale: .quarter, period: period(.quarter, 2026, 10),
-        parentLink: "[[Artifacts_2026]]", status: "active"),
       SourceNote(
         path: year, title: "Artifacts 2026", type: "year_artifacts", scale: .year,
         period: period(.year, 2026, 1), parentLink: "[[Corridor_2026-2030]]", status: "active"),
@@ -86,10 +87,10 @@ public struct DemoVault: NoteProvider {
         period: Horizon(
           scale: .years(5), start: date(2026, 1), end: date(2031, 1)),
         parentLink: "[[Long_horizons]]", status: "draft"),
-      // `horizons: [2036, 2041, 2051]` is a list of target years; the Zoom out phase models it.
       SourceNote(
-        path: "00_Strategy/Long_horizons.md", title: "Long horizons", type: "horizon_corridor",
-        parentLink: "[[_index]]", status: "draft"),
+        path: "00_Strategy/Years/Q4_2026_focus.md", title: "Q4 2026 focus",
+        type: "quarter_focus", scale: .quarter, period: period(.quarter, 2026, 10),
+        parentLink: "[[Artifacts_2026]]", status: "active"),
     ], unread: .nothing)
 
   private static func date(_ year: Int, _ month: Int) -> Date {

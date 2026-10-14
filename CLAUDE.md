@@ -42,7 +42,7 @@ Start every slice with the HTTPS fetch, then `git switch main && git merge --ff-
 
 ## Pull requests
 
-- **Sizing a slice**: when planning a slice, multiply your own estimate of production lines by the size factor in `docs/method/forecast.md` (the median of actual / estimated production lines over the last five merged code slices; each code slice's PR updates it), and say so in the plan; with no factor there, double it. If the result exceeds the limit of the slice's class (rule 2), split the slice in the plan, before coding. Reason: estimates have run low on every measured slice; the ratios are in the table in `docs/method/forecast.md`.
+- **Sizing a slice**: when planning a slice, multiply your own estimate of production lines by the size factor in `docs/method/forecast.md` (the median of actual / estimated production lines over the last five merged code slices; each code slice's PR updates it), and say so in the plan; with no factor there, double it. If the result exceeds the limit of the slice's class (rule 2), split the slice in the plan, before coding. The limit applies to the head that goes to review; review fixes may take a PR over it without a split (owner, 2026-10-14). Reason: estimates have run low on every measured slice; the ratios are in the table in `docs/method/forecast.md`.
 - **Before opening a PR**, check that:
   - errors carry no raw values (no titles, ids, dates, payload text or stderr from a provider);
   - every decoded field is validated, on every path that decodes it;

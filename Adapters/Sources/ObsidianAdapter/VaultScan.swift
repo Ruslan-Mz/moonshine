@@ -21,6 +21,10 @@ enum VaultScan {
     let anchorLikeAccepted: Int
     /// Rejected notes whose frontmatter text has the budget-note marker.
     let rejectedMarks: [RejectedMark]
+    /// Paths that exist and were not read: what the walk skipped, and rejected notes.
+    let unread: Set<String>
+    /// Paths of notes without frontmatter.
+    let withoutFrontmatter: Set<String>
 
     var issues: [ImportIssue] { walkIssues + noteIssues }
   }
@@ -30,7 +34,9 @@ enum VaultScan {
   static func notes(
     in root: URL, limits: VaultLimits = VaultLimits()
   ) throws(VaultReadError) -> Result {
-    let (files, walkIssues) = try VaultWalk.markdownFiles(in: root, limits: limits)
+    let (files, walkIssues, skipped) = try VaultWalk.markdownFiles(in: root, limits: limits)
+    var unread = skipped
+    var withoutFrontmatter: Set<String> = []
     var noteIssues: [ImportIssue] = []
     var notes: [ScannedNote] = []
     var anchorLikeAccepted = 0
@@ -39,12 +45,16 @@ enum VaultScan {
       let text: String
       do {
         guard let read = try Frontmatter.text(of: file.url, limit: limits.maxFrontmatterBytes)
-        else { continue }
+        else {
+          withoutFrontmatter.insert(file.path)
+          continue
+        }
         text = read
       } catch {
         // No text to search: a budget note rejected here is reported as missing.
         noteIssues.append(
           .vault(path: file.path, line: error.line, problem: VaultProblem(error.kind)))
+        unread.insert(file.path)
         continue
       }
       do {
@@ -54,6 +64,7 @@ enum VaultScan {
       } catch {
         noteIssues.append(
           .vault(path: file.path, line: error.line, problem: VaultProblem(error.kind)))
+        unread.insert(file.path)
         if let line = BudgetNote.markerLine(in: text) {
           rejectedMarks.append(RejectedMark(path: file.path, line: line, kind: error.kind))
         }
@@ -61,6 +72,7 @@ enum VaultScan {
     }
     return Result(
       notes: notes, noteCount: files.count, walkIssues: walkIssues, noteIssues: noteIssues,
-      anchorLikeAccepted: anchorLikeAccepted, rejectedMarks: rejectedMarks)
+      anchorLikeAccepted: anchorLikeAccepted, rejectedMarks: rejectedMarks, unread: unread,
+      withoutFrontmatter: withoutFrontmatter)
   }
 }

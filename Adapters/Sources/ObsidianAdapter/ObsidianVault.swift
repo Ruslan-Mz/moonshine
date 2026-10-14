@@ -5,10 +5,13 @@ import MoonShineCore
 /// written to the vault or anywhere else.
 public struct ObsidianVault: Sendable {
   public let root: URL
+  /// The zone a note's period starts and ends in. No default: every caller says it.
+  public let timeZone: TimeZone
   public let limits: VaultLimits
 
-  public init(root: URL, limits: VaultLimits = VaultLimits()) {
+  public init(root: URL, timeZone: TimeZone, limits: VaultLimits = VaultLimits()) {
     self.root = root
+    self.timeZone = timeZone
     self.limits = limits
   }
 
@@ -21,14 +24,29 @@ public struct ObsidianVault: Sendable {
       if budget == .found, let note = marked.first { BudgetLines.read(note) } else {
         BudgetLines(lines: .unavailable, issues: [], skipped: 0)
       }
+    // While the marker is ambiguous none of the marked notes is the budget note, so none is
+    // read as a note: each is kept as it was stored, and the ambiguity is its only problem.
+    let held: Set<String> = if case .ambiguous = budget { Set(marked.map(\.path)) } else { [] }
+    let notes = VaultNotes.read(
+      scan.notes.filter { !held.contains($0.path) }, budget: Set(marked.map(\.path)),
+      calendar: .iso8601(in: timeZone))
     return VaultRead(
-      lines: lines.lines,
+      lines: lines.lines, notes: notes.notes,
+      unread: VaultUnread(
+        paths: scan.unread.union(notes.skipped).union(held), artifactLists: [],
+        notRecognised: scan.withoutFrontmatter.union(notes.notRecognised)),
       issues: scan.issues + BudgetNote.issues(marked: marked, rejected: scan.rejectedMarks)
-        + lines.issues,
+        + lines.issues + notes.issues,
       notesFound: scan.noteCount, frontmatterRead: scan.notes.count,
       rejected: Self.count(scan.noteIssues), skipped: Self.count(scan.walkIssues),
       anchorLikeAccepted: scan.anchorLikeAccepted, budget: budget,
-      linesSkipped: lines.skipped, lineProblems: Self.count(lines.issues))
+      linesSkipped: lines.skipped, lineProblems: Self.count(lines.issues),
+      notesByType: notes.byType, noteProblems: Self.count(notes.issues),
+      noteProblemKeys: notes.issues.reduce(into: [:]) { counts, issue in
+        if case .vault(_, _, let problem) = issue, let key = problem.key {
+          counts[key, default: 0] += 1
+        }
+      })
   }
 
   private static func count(_ issues: [ImportIssue]) -> [VaultProblem.Kind: Int] {
@@ -41,6 +59,10 @@ public struct ObsidianVault: Sendable {
 /// One read of the vault: what an import takes, and the counts the live check prints.
 public struct VaultRead: Sendable {
   public let lines: VaultLines
+  /// The recognised notes and the budget note (contract §2), in path order.
+  public let notes: [SourceNote]
+  /// What this read saw and could not use; `artifactLists` stays empty until artifacts are read.
+  public let unread: VaultUnread
   public let issues: [ImportIssue]
   /// Markdown notes the walk found, including those later rejected or unreadable; hidden
   /// folders, symbolic links and files outside the vault are not counted.
@@ -61,6 +83,13 @@ public struct VaultRead: Sendable {
   public let linesSkipped: Int
   /// Problems in the budget note's `lines:`, by kind.
   public let lineProblems: [VaultProblem.Kind: Int]
+  /// Notes read, by a name from `VaultNotes.types` or `VaultNotes.budgetName`: never a string
+  /// taken from a note.
+  public let notesByType: [String: Int]
+  /// Problems in recognised notes, by kind.
+  public let noteProblems: [VaultProblem.Kind: Int]
+  /// The same problems by contract key (`notes.title`).
+  public let noteProblemKeys: [String: Int]
 
   /// Counts only: never a path, a note name or a value from a note. Every kind is listed,
   /// zeros included, so an anchor rejection can never be missed.
@@ -83,6 +112,18 @@ public struct VaultRead: Sendable {
             (.symlinkSkipped, "symlinks"), (.outsideVault, "outside vault"),
             (.unreadable, "unreadable entries"),
           ]),
+      "notes: \(notes.count) read ("
+        + (VaultNotes.types + [VaultNotes.budgetName]).map {
+          "\($0) \(notesByType[$0, default: 0])"
+        }.joined(separator: " · ") + ")",
+      "notes without a period: \(notes.count { $0.period == nil })",
+      "note problems: "
+        + Self.list(noteProblems, [.missingKey, .invalidValue].map { ($0, $0.rawValue) }),
+      "note problems by key: "
+        + VaultNotes.keys.map { "\($0) \(noteProblemKeys["notes.\($0)", default: 0])" }
+        .joined(separator: " · "),
+      "kept as unread: \(unread.paths.count) paths"
+        + " · not recognised: \(unread.notRecognised.count) files",
       "budget note: " + budgetLabel,
       "lines: " + linesLabel,
       "line problems: "

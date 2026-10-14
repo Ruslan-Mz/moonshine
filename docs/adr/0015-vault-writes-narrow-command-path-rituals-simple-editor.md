@@ -47,7 +47,17 @@ The owner wants to keep a journal, run his daily and weekly review templates and
 
 **This ADR amends ADR-0004** (vault writes start in the Write phase, not the Act phase), **ADR-0013** (one provider command joins the `auto` class before the Act phase; the `CommandBus` reaches the vault from the Write phase; an allowlist for note bodies; `moonshine_ai: false` also excludes a note from the standing context pack) and the roadmap (below).
 
-**Amendment (2026-10-10, owner; PR #17).** Opening a link is a way to write: in an `obsidian://` URL the `new` action creates notes and, with `append` or `overwrite`, changes an existing one; plugins can register further actions (Obsidian help, "Obsidian URI", help.obsidian.md). So only `open` is allowed: the app opens external URLs through one function with an allowlist: `http`, `https`, `moonshine://`, and `obsidian://` with the action `open` only; anything else is refused. The function is built in S4, with tests. The CI check of "Confirmation" below fails on every other way to open a URL in `Apps` (`NSWorkspace.shared.open`, SwiftUI's `openURL` and `Link(destination:)`, `UIApplication.shared.open`, and the like); the one function is on its allowlist.
+**Amendment (2026-10-10, owner; PR #17).** Opening a link is a way to write: in an `obsidian://` URL the `new` action creates notes and, with `append` or `overwrite`, changes an existing one; plugins can register further actions (Obsidian help, "Obsidian URI", help.obsidian.md). So only `open` is allowed: the app opens external URLs through one function with an allowlist: `http`, `https`, `moonshine://`, and `obsidian://` with the action `open` only; anything else is refused (corrected on 2026-10-12, next paragraph). The function is built in S4, with tests. The CI check of "Confirmation" below fails on every other way to open a URL in `Apps` (`NSWorkspace.shared.open`, SwiftUI's `openURL` and `Link(destination:)`, `UIApplication.shared.open`, and the like); the one function is on its allowlist.
+
+**Correction (2026-10-12, owner; S3b-3b).** The amendment above named too little: the `open` action writes as well. It takes `prepend` and `append`, which add text to the note it opens; `new` and `daily` create and change notes, and `unique` creates one (Obsidian help, "Obsidian URI"). So the action alone is not a safe test, and the rule is:
+
+- MoonShine never opens an `obsidian://` URL taken from note text as it is.
+- For a note it has resolved in the vault, MoonShine builds its own URL: `obsidian://open` with only `vault`, `file` and, optionally, `paneType`. No other parameter is ever added, `path`, `prepend` and `append` included.
+- Every other `obsidian://` link is shown as text and is not opened.
+
+Before it opens such a URL, MoonShine checks that the note's file exists; if it does not, it says "note not found" and opens nothing (owner, 2026-10-13; what Obsidian does with a `file` it cannot find is not relied on).
+
+The one URL-opening function of S4 therefore allows `http`, `https`, `moonshine://` and the `obsidian://open` URLs MoonShine built itself; its tests cover a link from note text with each write parameter and each other action.
 
 ### Commands
 
@@ -100,7 +110,7 @@ Writing directly on a satellite that holds a copy of the vault is decided in the
   | 2    | callouts, footnotes, embeds                                                     | rendered when cheap, otherwise shown as source |
   | 3    | Dataview, Templater, other plugin blocks, canvas, math, diagrams                | shown as source, never run                     |
 
-- **No network in v1** (owner, 2026-10-09). Remote images are not loaded and show as links; raw HTML is shown as source and never rendered; an external link opens only on an explicit click, in the default browser, after its URL is shown. Only `http(s)`, `obsidian://` and `moonshine://` links are opened; every other scheme is not.
+- **No network in v1** (owner, 2026-10-09). Remote images are not loaded and show as links; raw HTML is shown as source and never rendered; an external link opens only on an explicit click, in the default browser, after its URL is shown. Only `http(s)`, `obsidian://` and `moonshine://` links are opened; every other scheme is not (for `obsidian://`, narrowed by the correction of 2026-10-12 under "Decision Outcome").
 - Every note has "Open in Obsidian".
 - No live preview, no attachments in v1.
 

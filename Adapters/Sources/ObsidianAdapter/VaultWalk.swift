@@ -30,9 +30,11 @@ struct VaultFile: Equatable {
 
 enum VaultWalk {
   /// Every `.md` file under `root` in path order, skipping hidden entries and symbolic links.
+  /// `unread` names every entry that was skipped or could not be entered: it exists, and
+  /// nothing under it was read.
   static func markdownFiles(
     in root: URL, limits: VaultLimits
-  ) throws(VaultReadError) -> (files: [VaultFile], issues: [ImportIssue]) {
+  ) throws(VaultReadError) -> (files: [VaultFile], issues: [ImportIssue], unread: Set<String>) {
     let root = root.resolvingSymlinksInPath().standardizedFileURL
     let keys: [URLResourceKey] = [.isSymbolicLinkKey, .isRegularFileKey]
     // A folder the walk cannot enter is an issue, not a silent hole in the vault; the root
@@ -56,18 +58,21 @@ enum VaultWalk {
 
     var files: [VaultFile] = []
     var issues: [ImportIssue] = []
+    var unread: Set<String> = []
     for case let url as URL in walker {
       guard let path = relativePath(of: url, under: root) else { continue }
       let values = try? url.resourceValues(forKeys: Set(keys))
       if values?.isSymbolicLink == true {
         walker.skipDescendants()
         issues.append(.vault(path: path, line: nil, problem: VaultProblem(.symlinkSkipped)))
+        unread.insert(path)
         continue
       }
       guard values?.isRegularFile == true, url.pathExtension.lowercased() == "md" else { continue }
       // Defence in depth behind the symlink skip (a link swapped in during the walk).
       guard relativePath(of: url.resolvingSymlinksInPath(), under: root) != nil else {
         issues.append(.vault(path: path, line: nil, problem: VaultProblem(.outsideVault)))
+        unread.insert(path)
         continue
       }
       guard files.count < limits.maxNotes else { throw .tooManyNotes(limit: limits.maxNotes) }
@@ -77,7 +82,8 @@ enum VaultWalk {
     issues += unreadable.paths.map {
       .vault(path: $0, line: nil, problem: VaultProblem(.unreadable))
     }
-    return (files.sorted { $0.path < $1.path }, issues.sorted { "\($0)" < "\($1)" })
+    unread.formUnion(unreadable.paths)
+    return (files.sorted { $0.path < $1.path }, issues.sorted { "\($0)" < "\($1)" }, unread)
   }
 
   /// Collects what the enumerator's error handler reports; the walk is synchronous.
