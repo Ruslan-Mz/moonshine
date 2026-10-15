@@ -3,7 +3,7 @@ import MoonShineCore
 
 /// Reads an Obsidian vault folder as the vault contract describes. It only reads: nothing is
 /// written to the vault or anywhere else.
-public struct ObsidianVault: Sendable {
+public struct ObsidianVault: NoteProvider {
   public let root: URL
   /// The zone a note's period starts and ends in. No default: every caller says it.
   public let timeZone: TimeZone
@@ -56,6 +56,15 @@ public struct ObsidianVault: Sendable {
       },
       artifactsByType: artifacts.byType, artifactsWithoutStatus: artifacts.withoutStatus,
       artifactsSkipped: artifacts.skipped, artifactProblems: Self.count(artifacts.issues))
+  }
+
+  /// One read, as an import takes it. A vault that cannot be read at all throws
+  /// `VaultReadError`; the caller decides what that means (S4: `VaultSnapshot.notRead`).
+  public func vault() async throws -> VaultSnapshot {
+    let read = try read()
+    return VaultSnapshot(
+      lines: read.lines, artifacts: read.artifacts, notes: read.notes, issues: read.issues,
+      unread: read.unread)
   }
 
   private static func count(_ issues: [ImportIssue]) -> [VaultProblem.Kind: Int] {
@@ -165,6 +174,8 @@ public struct VaultRead: Sendable {
       "foundation lines: \(lines.read.count { $0.foundation })"
         + " · with a floor: \(lines.read.count { $0.floorHoursPerDay != nil })"
         + " · with a language: \(lines.read.count { $0.language != nil })",
+      "line parents: \(lines.read.count { $0.parentLink != nil })"
+        + " · resolved to no note read: \(unresolvedParents)",
     ]
   }
 
@@ -192,6 +203,14 @@ public struct VaultRead: Sendable {
       default: scalar == "\\" ? "\\\\" : String(scalar)
       }
     }.joined()
+  }
+
+  /// Lines whose `parent` points to none of the notes this read returned.
+  private var unresolvedParents: Int {
+    let paths = notes.map(\.path)
+    return lines.read.count { line in
+      line.parentLink.map { WikiLink.target(of: $0, in: paths) == nil } ?? false
+    }
   }
 
   /// Artifact ids read in more than one period: carried at least once.

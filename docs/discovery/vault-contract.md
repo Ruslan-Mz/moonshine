@@ -248,6 +248,8 @@ artifacts:
 
 `task → project → line (via omnifocus mapping) → artifact (the line's artifact in the current year note, else the line's `parent` note)`. A line with no artifact shows the trace up to the line — neutral, no warning.
 
+Resolving a `parent` (S3b-3c, 2026-10-15): `[[Name]]`, `[[Name|alias]]` and `[[Name#heading]]` match a note whose file name is `Name`; a path-qualified `[[Folder/Name]]` matches a note whose path equals it or ends with `/Folder/Name` (so `A/Name` never matches `BA/Name`); `[[/Folder/Name]]` matches from the vault root only. `.md` is optional, in any case. A whole path wins over the end of one; otherwise, of several matches, the first in path order. A link that matches no note read ends the trace at the line, with no problem; the live check counts these lines.
+
 ## 3. Validation
 
 - Invalid YAML or a `lines:` item with a missing, invalid or duplicate value (§1) → one calm banner with note path and line number; the rest of the vault still loads. Never a crash.

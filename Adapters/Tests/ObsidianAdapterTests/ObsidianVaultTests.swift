@@ -146,6 +146,7 @@ import Testing
         "lines: unavailable",
         "line problems: missingKey 0 · invalidValue 0 · duplicateLineId 0",
         "foundation lines: 0 · with a floor: 0 · with a language: 0",
+        "line parents: 0 · resolved to no note read: 0",
       ])
   }
 

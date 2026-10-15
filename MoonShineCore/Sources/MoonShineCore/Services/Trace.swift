@@ -53,9 +53,11 @@ public struct Tracer: Sendable {
         targets[lineID] = .artifact(artifact)
       }
     }
+    let paths = workspace.notes.map(\.path)
     for line in workspace.lines where targets[line.id] == nil {
-      if let note = line.parentLink.flatMap({ Self.note(linkedBy: $0, in: workspace.notes) }) {
-        targets[line.id] = .note(note)
+      // An unresolved parent ends the trace at the line, with no problem.
+      if let index = line.parentLink.flatMap({ WikiLink.target(of: $0, in: paths) }) {
+        targets[line.id] = .note(workspace.notes[index])
       }
     }
     self.targets = targets
@@ -69,16 +71,4 @@ public struct Tracer: Sendable {
       lineEntity: lineEntity, target: lineEntity.flatMap { targets[$0.id] })
   }
 
-  /// `[[Name]]`, `[[Name|alias]]` or `[[Name#heading]]` → the note whose file name is `Name`.
-  static func note(linkedBy link: String, in notes: [NoteRef]) -> NoteRef? {
-    var name = Substring(link.trimmingCharacters(in: .whitespaces))
-    if name.hasPrefix("[["), name.hasSuffix("]]") { name = name.dropFirst(2).dropLast(2) }
-    name = name.prefix { $0 != "|" && $0 != "#" }
-    let target = name.trimmingCharacters(in: .whitespaces)
-    guard !target.isEmpty else { return nil }
-    return notes.first { note in
-      let file = note.path.split(separator: "/").last.map(String.init) ?? note.path
-      return file == target || file == target + ".md"
-    }
-  }
 }
