@@ -187,6 +187,21 @@ import Testing
     #expect(read.notes.count == 3)
   }
 
+  @Test func twoNotesForOneWeekAreRefusedEachNotReportedAsDuplicates() throws {
+    let read = try read([
+      "a.md": "type: quarter_focus\nperiod: 2026-W41\nartifacts: [{id: a, title: T}]",
+      "b.md": "type: quarter_focus\nperiod: 2026-W41\nartifacts: [{id: b, title: T}]",
+      "c.md": "type: quarter_focus\nperiod: 2026-W41\nartifacts: []",
+    ])
+    #expect(read.artifacts.isEmpty)
+    #expect(
+      artifactProblems(read) == [
+        "a.md:4:invalidValue (notes.artifacts)", "b.md:4:invalidValue (notes.artifacts)",
+      ])
+    #expect(
+      read.unread == VaultUnread(paths: [], artifactLists: ["a.md", "b.md"], notRecognised: []))
+  }
+
   @Test func aSkippedNoteHasNoArtifactProblems() throws {
     let read = try read([
       "y.md": "type: year_artifacts\nyear: 26\nartifacts: [{id: a, title: T}, {id: A}]"
@@ -275,6 +290,22 @@ import Testing
         "c.md:5:duplicateArtifactId (artifacts.id)",
       ])
     #expect(read.unread.artifactLists == ["a.md", "b.md", "c.md"])
+  }
+
+  /// Starts all differ, so the order is fixed: Q3 overlaps the year only through the latest
+  /// end so far, not through Q2 just before it.
+  @Test func aQuarterAfterAnotherStillClashesWithTheYearAroundBoth() throws {
+    let read = try read([
+      "a.md": year(2026, "  - {id: x, title: Year}"),
+      "b.md": quarter("2026-Q2", "  - {id: x, title: Q2}"),
+      "c.md": quarter("2026-Q3", "  - {id: x, title: Q3}"),
+    ])
+    #expect(read.artifacts.isEmpty)
+    #expect(
+      artifactProblems(read) == [
+        "a.md:5:duplicateArtifactId (artifacts.id)", "b.md:5:duplicateArtifactId (artifacts.id)",
+        "c.md:5:duplicateArtifactId (artifacts.id)",
+      ])
   }
 
   @Test func theSameIdInPeriodsThatDoNotOverlapIsACarry() throws {

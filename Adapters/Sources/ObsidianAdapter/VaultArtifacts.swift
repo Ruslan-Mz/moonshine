@@ -35,9 +35,11 @@ enum VaultArtifacts {
         let node = frontmatter[note.path]
       else { continue }
       var list = List(path: note.path, type: type, period: period)
-      // Several notes for one period: the first by path wins (contract §2.1).
-      if periods.insert(period).inserted {
-        list.read(node, periodKey: periodKey(period, calendar))
+      // Several notes for one period: the first by path wins (contract §2.1). Only a year or
+      // a quarter is a period for artifacts; a list under another one is refused on its own.
+      let key = periodKey(period, calendar)
+      if key == nil || periods.insert(period).inserted {
+        list.read(node, periodKey: key)
       } else {
         list.problem(.duplicatePeriodNote, "notes.period", node.line)
       }

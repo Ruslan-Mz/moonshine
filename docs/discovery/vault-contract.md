@@ -14,6 +14,8 @@ v0.3 (2026-10-08, ADR-0014, ADR-0015, ADR-0016): project notes (§4) and reserve
 
 2026-10-12 and 2026-10-13 (S3b-3b, owner): the shapes of dates and which key takes which; where a period starts and ends; an explicit `scale` is only checked; the year in a legacy file name; a `focus` note with no year is the current one; a list of target years only on a corridor, at most 20 years, and `period` at most 256 bytes; `horizons` is checked; while the budget marker is ambiguous every marked note is kept as unread; the paths the reader names (§2, "Made precise in S3b-3b").
 
+2026-10-14 (S3b-3c-1, owner): at most 100 `artifacts:` items per note (§2.1); the rules made precise for artifacts: the period key of a year and of a quarter, the problem keys, what "one period" means and which items the duplicate check counts (§2.1, "Made precise in S3b-3c").
+
 Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault writes before the Write phase; ADR-0015).
 
 ## Design choices driven by the data
@@ -140,18 +142,18 @@ Item rules (owner, 2026-10-10; read from S3b-3c):
 - `artifacts:` absent, null or empty means the note has no artifacts. `artifacts:` that is not a list is `invalidValue`; the note's stored artifacts stay.
 - At most 100 items in one note's `artifacts:` (owner, 2026-10-14). More is `invalidValue` on `notes.artifacts`: no item of that note is read, and its stored artifacts stay.
 
-Made precise in S3b-3c (2026-10-14):
+Made precise in S3b-3c (owner, 2026-10-14):
 
-- An item's period key is `YYYY` for a year period and `YYYY-Qn` for a quarter period. A `year_artifacts` or `quarter_focus` note whose `period` has another scale (a week, a month, a range of years) and a non-empty `artifacts:` gets `invalidValue` on `notes.artifacts`; its stored artifacts stay.
+- An item's period key is `YYYY` for a year period and `YYYY-Qn` for a quarter period. A `year_artifacts` or `quarter_focus` note whose `period` has another scale (a week, a month, a range of years) and a non-empty `artifacts:` gets `invalidValue` on `notes.artifacts`; its stored artifacts stay. Such a note takes no part in "several notes for one period": two of them for the same week are each refused, neither is `duplicatePeriodNote`.
 - Problem keys: `artifacts.id`, `artifacts.title`, `artifacts.line`, `artifacts.lines`, `artifacts.status`, `artifacts.priority` for an item; `notes.artifacts` for the list and for an item that is not a mapping; `notes.period` for `duplicatePeriodNote`. `line` and `lines` together is `invalidValue` on `artifacts.lines`, and so is a `lines` list with an id twice; an empty `lines` list means no lines.
-- "One period" means the same period, among the year and quarter notes that are read. The duplicate check counts every item with a valid `id` in a list that is read, an item invalid for another reason included, so every problem is reported in one pass.
+- "One period" means the same year or quarter, among the year and quarter notes that are read. The duplicate check counts every item with a valid `id` in a list that is read, an item invalid for another reason included, so every problem is reported in one pass.
 
 **Identity and carries (owner, 2026-10-10).** An artifact is identified by its `id` plus the period of the note it is in (a year or a quarter). An artifact that is not finished in its period is carried: the owner copies the item into the next note with the same `id` and marks the old one with `carried_to`. Each appearance is stored separately, so the history survives: the first appearance, the number of carries, the outcome in each period. Trace and the Quarter focus card use the appearance whose period contains "now".
 
 - The same `id` in two notes whose periods do not overlap is a carry.
 - The same `id` twice in one note, or in two notes of different periods that overlap (a year and one of its quarters), is `duplicateArtifactId`: every such item is skipped, none wins.
 - Several notes for one period (two quarter notes for the same quarter, two year notes for the same year: a copy not yet changed, a sync conflict copy) are not duplicates of each other: the first by path wins and only its `artifacts:` are read. Each other note gets the problem `duplicatePeriodNote` with its path, and its stored artifacts stay as they were (§3). Read from S3b-3c (owner, 2026-10-10; moved from the Quarter focus card into the reader).
-- The duplicate check runs over the items that were read. While a duplicate is in the vault, what is stored can therefore depend on what could be read: if one of the two notes is unreadable during an import, the other note's item is read and stored, and it stays next to the first one when both notes are readable again and both items are skipped. The duplicate is reported on every import in which both notes are read, until the owner removes one of the two.
+- The duplicate check runs over the lists that were read: every item in them with a valid `id` counts, an item invalid for another reason included, as for `lines:` (owner, 2026-10-15). While a duplicate is in the vault, what is stored can therefore depend on what could be read: if one of the two notes is unreadable during an import, the other note's item is read and stored, and it stays next to the first one when both notes are readable again and both items are skipped. The duplicate is reported on every import in which both notes are read, until the owner removes one of the two.
 
 One carry, from Q3 to Q4:
 
