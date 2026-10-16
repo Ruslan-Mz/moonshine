@@ -54,7 +54,7 @@ struct RigaDay {
 }
 
 @Suite struct DemoDayLoadTests {
-  func load(_ month: Int, _ day: Int, now: Date? = nil, tasks: [TaskItem] = []) -> DayLoad {
+  func demoLoad(_ month: Int, _ day: Int, now: Date? = nil, tasks: [TaskItem] = []) -> DayLoad {
     DayLoad.compute(
       day: DemoCalendar.at(month, day, 12, 0), now: now ?? DemoCalendar.at(month, day, 7, 0),
       window: .standard, events: .read(DemoCalendar.events, skipped: 0),
@@ -64,7 +64,7 @@ struct RigaDay {
 
   @Test func thursdayAtSixTwentyMatchesTheDesign() {
     // `4 events · 4 h in calendar · 1 h 15 min planned · ≈ 2 h 25 min free until 22:00`.
-    let load = load(10, 1, now: DemoCalendar.now, tasks: DemoDay.tasks)
+    let load = demoLoad(10, 1, now: DemoCalendar.now, tasks: DemoDay.tasks)
     #expect(load.eventCount == 4)
     #expect(load.inCalendarMinutes == 240)
     #expect(load.plannedMinutes == 75)
@@ -78,20 +78,20 @@ struct RigaDay {
     let dueOnly = DemoDay.tasks.filter { $0.effectiveDueAt != nil }
     #expect(dueOnly.count == 2)
     #expect(dueOnly.allSatisfy { ($0.estimateMinutes ?? 0) > 0 })
-    #expect(load(10, 1, tasks: dueOnly).plannedMinutes == 0)
+    #expect(demoLoad(10, 1, tasks: dueOnly).plannedMinutes == 0)
   }
 
   @Test func theOtherDaysOfWeekForty() {
-    let days = [(9, 28), (9, 29), (9, 30), (10, 2)].map { load($0.0, $0.1) }
+    let days = [(9, 28), (9, 29), (9, 30), (10, 2)].map { demoLoad($0.0, $0.1) }
     #expect(days.map(\.eventCount) == [2, 3, 2, 3])
     // Tue: the 16:00–16:30 overlap counts once; Fri: the tentative Sprint demo is not busy.
     #expect(days.map(\.inCalendarMinutes) == [120, 150, 90, 150])
     #expect(days.map(\.freeWholeWindowMinutes) == [720, 690, 750, 690])
     #expect(days.allSatisfy { $0.freeFromNowMinutes == $0.freeWholeWindowMinutes })
     // The weekend's all-day event is shown and not busy.
-    #expect(load(10, 3).eventCount == 2)
-    #expect(load(10, 3).inCalendarMinutes == 90)
-    #expect(load(10, 4).inCalendarMinutes == 60)
+    #expect(demoLoad(10, 3).eventCount == 2)
+    #expect(demoLoad(10, 3).inCalendarMinutes == 90)
+    #expect(demoLoad(10, 4).inCalendarMinutes == 60)
   }
 }
 
