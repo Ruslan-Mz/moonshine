@@ -50,15 +50,15 @@ import Testing
   }
 
   @Test func descriptionsShowNoTitleNameOrId() throws {
-    let event = try #require(event(date(1, 10), date(1, 11)))
+    let sample = try #require(event(date(1, 10), date(1, 11)))
     let info = CalendarInfo(
       id: CalendarID("secret-calendar"), title: "Secret calendar", account: "Secret account",
       colorHex: "#123456", kind: .other)
     var dumped = ""
-    dump(event, to: &dumped)
+    dump(sample, to: &dumped)
     dump(info, to: &dumped)
     let texts = [
-      String(describing: event), String(reflecting: event), String(describing: info),
+      String(describing: sample), String(reflecting: sample), String(describing: info),
       String(reflecting: info), String(describing: info.id), String(reflecting: info.id), dumped,
     ]
     for text in texts {
@@ -66,7 +66,7 @@ import Testing
         #expect(!text.contains(secret), "\(text)")
       }
     }
-    #expect(String(describing: event).contains("occupiesTime: true"))
+    #expect(String(describing: sample).contains("occupiesTime: true"))
   }
 }
 
