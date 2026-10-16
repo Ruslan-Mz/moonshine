@@ -16,6 +16,8 @@ v0.3 (2026-10-08, ADR-0014, ADR-0015, ADR-0016): project notes (§4) and reserve
 
 2026-10-14 (S3b-3c-1, owner): at most 100 `artifacts:` items per note (§2.1); the rules made precise for artifacts: the period key of a year and of a quarter, the problem keys, what "one period" means and which items the duplicate check counts (§2.1, "Made precise in S3b-3c").
 
+2026-10-15 (S3b-3c-2, owner): a line's `parent` is resolved as ADR-0014 says: case ignored, the shortest matching path, an ambiguous link reported as `ambiguousLink` (§2.3).
+
 Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault writes before the Write phase; ADR-0015).
 
 ## Design choices driven by the data
@@ -248,7 +250,7 @@ artifacts:
 
 `task → project → line (via omnifocus mapping) → artifact (the line's artifact in the current year note, else the line's `parent` note)`. A line with no artifact shows the trace up to the line — neutral, no warning.
 
-Resolving a `parent` (S3b-3c, 2026-10-15): `[[Name]]`, `[[Name|alias]]` and `[[Name#heading]]` match a note whose file name is `Name`; a path-qualified `[[Folder/Name]]` matches a note whose path equals it or ends with `/Folder/Name` (so `A/Name` never matches `BA/Name`); `[[/Folder/Name]]` matches from the vault root only. `.md` is optional, in any case. A whole path wins over the end of one; otherwise, of several matches, the first in path order. A link that matches no note read ends the trace at the line, with no problem; the live check counts these lines.
+Resolving a `parent` follows ADR-0014 (owner, 2026-10-15): `[[Name]]`, `[[Name|alias]]` and `[[Name#heading]]` match a note whose file name is `Name`; a path-qualified `[[Folder/Name]]` matches a note whose path equals it or ends with `/Folder/Name` (so `A/Name` never matches `BA/Name`); `[[/Folder/Name]]` matches from the vault root only. Case is ignored in every script (Cyrillic included), and `.md` is optional. Of several matching notes the shortest path wins (then the first by path), and the link is ambiguous: the reader reports `ambiguousLink` on `lines.parent` and still reads the line. The trace resolves a parent against the stored notes (read, or kept while unread, §3); a parent that matches none ends the trace at the line, with no problem. The live check, which has no store, counts the line parents that match no note read, and the ambiguous ones.
 
 ## 3. Validation
 

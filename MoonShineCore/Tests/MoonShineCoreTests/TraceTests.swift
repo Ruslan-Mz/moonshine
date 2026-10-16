@@ -54,6 +54,17 @@ import Testing
       Tracer(workspace: world.workspace, now: now).trace(task).target == .note(corridor))
   }
 
+  /// Resolved by `WikiLink`, not by file name only: a qualified link, the shortest path.
+  @Test func aPathQualifiedParentEndsAtTheShortestMatchingNote() {
+    var world = W()
+    let research = world.line("research", parent: "[[Years/Plan]]")
+    world.note("Archive/Years/Plan.md")
+    let plan = world.note("Years/Plan.md")
+    world.note("Plan.md")
+    let task = world.task("Read paper", line: .line(research.id))
+    #expect(Tracer(workspace: world.workspace, now: now).trace(task).target == .note(plan))
+  }
+
   @Test func withNeitherTheTraceEndsAtTheLine() {
     var world = W()
     let math = world.line("math", parent: "[[Missing note]]")

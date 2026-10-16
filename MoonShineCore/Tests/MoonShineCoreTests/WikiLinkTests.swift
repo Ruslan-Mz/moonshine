@@ -2,15 +2,23 @@ import Testing
 
 @testable import MoonShineCore
 
-/// Invented note paths.
+/// Invented note paths. Resolution follows ADR-0014 (owner, 2026-10-15).
 @Suite struct WikiLinkTests {
   let paths = [
     "Years/Artifacts_2026.md", "Archive/Years/Plan.md", "Years/Plan.md", "BA/Name.md",
-    "Notes/Whole life.MD", "Top.md",
+    "Notes/Whole life.MD", "Top.md", "Z/Top.md", "Old/Notes/Draft.md", "Планы/Год.md",
   ]
 
-  func target(_ link: String) -> String? {
-    WikiLink.target(of: link, in: paths).map { paths[$0] }
+  /// The path a link resolves to, and whether it was ambiguous.
+  func target(_ link: String, in paths: [String]? = nil) -> (String, Bool)? {
+    let paths = paths ?? self.paths
+    return WikiLink.target(of: link, in: paths).map { (paths[$0.index], $0.isAmbiguous) }
+  }
+
+  func expect(_ link: String, _ path: String, ambiguous: Bool = false, in paths: [String]? = nil) {
+    let found = target(link, in: paths)
+    #expect(found?.0 == path, "\(link)")
+    #expect(found?.1 == ambiguous, "\(link)")
   }
 
   @Test func aNameMatchesAFileNameWithAnAliasOrAHeading() {
@@ -18,42 +26,50 @@ import Testing
       "[[Artifacts_2026]]", "[[Artifacts_2026|This year]]", "[[Artifacts_2026#Q4]]",
       " [[ Artifacts_2026 ]] ", "Artifacts_2026", "[[Artifacts_2026.md]]",
     ] {
-      #expect(target(link) == "Years/Artifacts_2026.md", "\(link)")
+      expect(link, "Years/Artifacts_2026.md")
     }
-    #expect(target("[[Whole life]]") == "Notes/Whole life.MD")
+    expect("[[Whole life]]", "Notes/Whole life.MD")
+  }
+
+  @Test func caseIsIgnoredInEveryScript() {
+    expect("[[artifacts_2026]]", "Years/Artifacts_2026.md")
+    expect("[[ARTIFACTS_2026.MD]]", "Years/Artifacts_2026.md")
+    expect("[[год]]", "Планы/Год.md")
+    expect("[[планы/ГОД]]", "Планы/Год.md")
+    expect("[[years/plan]]", "Years/Plan.md", ambiguous: true)
   }
 
   @Test func aPathQualifiedLinkMatchesTheWholePathOrItsEnd() {
-    #expect(target("[[Years/Artifacts_2026]]") == "Years/Artifacts_2026.md")
-    #expect(target("[[Years/Artifacts_2026.md|A]]") == "Years/Artifacts_2026.md")
-    // `Archive/Years/Plan` ends with `/Years/Plan` and comes first by path, but a whole
-    // path wins over the end of one.
-    #expect(target("[[Years/Plan]]") == "Years/Plan.md")
-    #expect(target("[[Archive/Years/Plan]]") == "Archive/Years/Plan.md")
-    #expect(target("[[Notes/Whole life]]") == "Notes/Whole life.MD")
-    // Only by its folder: no note is at `Archive/Plan` or `Years/Artifacts_2026` alone.
-    #expect(target("[[Years/Artifacts_2026]]") == "Years/Artifacts_2026.md")
-    #expect(WikiLink.target(of: "[[Years/Plan]]", in: ["Z/Years/Plan.md"]) == 0)
+    expect("[[Years/Artifacts_2026]]", "Years/Artifacts_2026.md")
+    expect("[[Years/Artifacts_2026.md|A]]", "Years/Artifacts_2026.md")
+    expect("[[Archive/Years/Plan]]", "Archive/Years/Plan.md")
+    // Only by the end of a path: no note is at `Notes/Draft`.
+    expect("[[Notes/Draft]]", "Old/Notes/Draft.md")
+    expect("[[Years/Plan]]", "Z/Years/Plan.md", in: ["Z/Years/Plan.md"])
   }
 
-  @Test func aNameSharedByTwoFoldersTakesTheFirstByPath() {
-    #expect(target("[[Plan]]") == "Archive/Years/Plan.md")
-    let reversed = Array(paths.reversed())
-    #expect(
-      WikiLink.target(of: "[[Plan]]", in: reversed).map { reversed[$0] } == "Archive/Years/Plan.md")
+  @Test func ofSeveralCandidatesTheShortestPathWinsAndTheLinkIsAmbiguous() {
+    // `Years/Plan` is a whole path and the end of `Archive/Years/Plan`: the shorter wins.
+    expect("[[Years/Plan]]", "Years/Plan.md", ambiguous: true)
+    expect("[[Plan]]", "Years/Plan.md", ambiguous: true)
+    // A note at the root is the shortest path for its name.
+    expect("[[Top]]", "Top.md", ambiguous: true)
+    expect("[[Plan]]", "Plan.md", ambiguous: true, in: ["A/Plan.md", "Plan.md"])
+    // Paths of one length: the first by path.
+    expect("[[Plan]]", "A/Plan.md", ambiguous: true, in: ["B/Plan.md", "A/Plan.md"])
   }
 
   @Test func aFolderMatchesOnlyAtASlash() {
     #expect(target("[[A/Name]]") == nil)
-    #expect(target("[[BA/Name]]") == "BA/Name.md")
+    expect("[[BA/Name]]", "BA/Name.md")
     #expect(target("[[ears/Plan]]") == nil)
-    #expect(target("[[Name]]") == "BA/Name.md")
+    expect("[[Name]]", "BA/Name.md")
   }
 
   @Test func aLinkFromTheVaultRootMatchesTheWholePathOnly() {
-    #expect(target("[[/Years/Plan]]") == "Years/Plan.md")
+    expect("[[/Years/Plan]]", "Years/Plan.md")
     #expect(target("[[/Plan]]") == nil)
-    #expect(target("[[/Top]]") == "Top.md")
+    expect("[[/top]]", "Top.md")
   }
 
   @Test func anEmptyOrUnknownLinkResolvesToNothing() {

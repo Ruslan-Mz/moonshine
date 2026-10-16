@@ -81,13 +81,18 @@ import Testing
           + [
             line("a", "[[Years/Artifacts_2026]]"), line("b", "[[Artifacts_2026|This year]]"),
             line("c", "[[Missing]]"), line("d", "[[Other/Artifacts_2026]]"),
-            line("e", "[[Not a note]]"),
+            line("e", "[[Not a note]]"), line("g", "[[plan]]"),
           ].joined(separator: "\n")
           + "\n  - {id: f, name: N, block: B, state: active}"))
     try vault.write("Years/Artifacts_2026.md", note(Self.year(2026)))
     try vault.write("Not a note.md", note("type: journal"))
-    let report = try ObsidianVault(root: vault.root, timeZone: moscow).read().report
-    #expect(report.last == "line parents: 5 · resolved to no note read: 3")
+    try vault.write("Plan.md", note("type: quarter_focus\nquarter: 2026-Q3"))
+    try vault.write("Old/Plan.md", note("type: quarter_focus\nquarter: 2026-Q4"))
+    let read = try ObsidianVault(root: vault.root, timeZone: moscow).read()
+    #expect(read.report.last == "line parents: 6 · resolved to no note read: 3 · ambiguous: 1")
+    // Resolved to the shortest path, and reported; the line itself is read.
+    #expect(problems(read.issues) == ["budget.md:9:ambiguousLink (lines.parent)"])
+    #expect(read.lines.read.count == 7)
   }
 
   // MARK: Through ImportService

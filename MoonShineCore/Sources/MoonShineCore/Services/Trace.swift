@@ -56,7 +56,7 @@ public struct Tracer: Sendable {
     let paths = workspace.notes.map(\.path)
     for line in workspace.lines where targets[line.id] == nil {
       // An unresolved parent ends the trace at the line, with no problem.
-      if let index = line.parentLink.flatMap({ WikiLink.target(of: $0, in: paths) }) {
+      if let index = line.parentLink.flatMap({ WikiLink.target(of: $0, in: paths)?.index }) {
         targets[line.id] = .note(workspace.notes[index])
       }
     }

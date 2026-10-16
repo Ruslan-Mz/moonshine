@@ -257,9 +257,9 @@ import Testing
     #expect(
       Array(report.suffix(4)) == [
         "lines: 8 read · 0 skipped",
-        "line problems: missingKey 0 · invalidValue 0 · duplicateLineId 0",
+        "line problems: missingKey 0 · invalidValue 0 · duplicateLineId 0 · ambiguousLink 0",
         "foundation lines: 1 · with a floor: 1 · with a language: 1",
-        "line parents: 2 · resolved to no note read: 0",
+        "line parents: 2 · resolved to no note read: 0 · ambiguous: 0",
       ])
     let vault = try TemporaryVault()
     try vault.write(
@@ -271,7 +271,7 @@ import Testing
       Array(try ObsidianVault(root: vault.root, timeZone: moscow).read().report.suffix(4).prefix(3))
         == [
           "lines: 2 read · 1 skipped",
-          "line problems: missingKey 0 · invalidValue 1 · duplicateLineId 0",
+          "line problems: missingKey 0 · invalidValue 1 · duplicateLineId 0 · ambiguousLink 0",
           "foundation lines: 0 · with a floor: 1 · with a language: 0",
         ])
   }

@@ -328,6 +328,9 @@ public struct VaultProblem: Hashable, Sendable, CustomStringConvertible {
     /// A year or quarter note for a period whose first note by path was read: only that first
     /// note's `artifacts:` are read, and this note keeps its stored artifacts.
     case duplicatePeriodNote
+    /// A line's `parent` matches more than one note read; the shortest path was taken
+    /// (ADR-0014). The line is read as usual.
+    case ambiguousLink
   }
 
   public let kind: Kind
