@@ -86,6 +86,8 @@ The classes are fixed defaults now. A per-class setting in Settings comes later 
 
 **Amendment (2026-10-07, ADR-0016).** `StartTimer`, `PauseTimer`, `ResumeTimer` and `StopTimer` are native `auto` commands; the subject and any time offset are spans of the utterance and the app resolves the subject itself. `EditTimeEntry` is `auto` only for the entry just stopped; any other edit is a proposal.
 
+**Amendment (2026-10-16, ADR-0017).** `CreateReminder`, `EditReminder`, `MarkReminderSeen`, `SnoozeReminder`, `ArchiveReminder` and `ConvertTaskToReminder` are native `auto` commands. By voice, `CreateReminder` is `auto` only when the text and the whole schedule are spans of the utterance and parse to exactly one schedule; otherwise it is a proposal.
+
 ### Where the assistant runs
 
 On each device, against that device's replicated store, through the typed read tools of ADR-0005. The provider key is stored in that device's Keychain. Without a network the capture stays `new` and is interpreted when a connection returns.

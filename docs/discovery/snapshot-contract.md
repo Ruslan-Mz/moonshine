@@ -159,6 +159,10 @@ Mapping rules live in the vault (`lines[*].omnifocus`, see `vault-contract.md`),
 In the real data lines follow folders and projects far more than tags: line tags exist for only a few lines (e.g. one instrument), and 6 of 15 used top-level folders hold several lines each, so project-name mapping (rule 3) carries most of the weight.
 No match → the task belongs to **Life ops**: a fixed bucket for household, admin, system routines and the inbox. It is not a line (no budget, no artifact, never "quiet") and is shown separately with neutral wording (decision 2026-09-30).
 
+## Reminder tag (ADR-0017, 2026-10-16)
+
+One tag name is read as "reminder": a task carrying it (a setting, default `напоминание`, matched by leaf name like the deadline tag) is a reminder, not a task. MoonShine shows it in Today's Reminders strip and leaves it out of every task count, statistic, forecast and load, Rhythm and Progress below included (from S4). The snapshot itself does not change: the tag arrives in `tags` and `tagIds` like any other.
+
 ## Line metrics (decision O1, 2026-09-30)
 
 Completions are never weighted or mixed. Per line, per ISO week:

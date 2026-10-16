@@ -30,6 +30,8 @@ Inspector 360:
 
 Line detail model (moved to S4 in the phase-1 spec): parent artifact (NoteRef), projects, next actions, last 10 completions, weekly rhythm and progress for 8 weeks plus the 4-week means.
 
+Tasks with the reminder tag (ADR-0017, S4 bridge) are in none of these: not in next actions, completions, rhythm or progress (`today.md` § Reminders).
+
 ## Acceptance
 
 - [ ] Two separate charts; the average is a dashed rule, not a third series.

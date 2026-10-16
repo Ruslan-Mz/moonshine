@@ -12,7 +12,7 @@ artboards: [mockups/Today.dc.html, mockups/Today-Dark.dc.html]
 
 Sidebar (Today selected) · toolbar: title "Today", subtitle `Thursday, 1 October · Week 40 · 23 open · 6 done · ≈ 11 h 15 min est.` · main table · right rail 300 · status bar.
 
-Main, top to bottom: 0. **Draft-2 — Anchors strip** (40): `Anchors · 3 of 5 done`, then up to 5 compact chips (checkbox + short title + line emoji) for today's tasks tagged `anchor`, first 5 in source order. The count covers **all** of today's anchors (`3 of 6 done` when there are 6). Done chips are checked and dimmed, not hidden. Absent if no anchors. Only anchors **shown in the strip** are left out of their line sections; further anchor tasks stay there.
+Main, top to bottom: 00. **Reminders strip** (ADR-0017, S4; § Reminders below): above everything else; absent when there are no reminders. 0. **Draft-2 — Anchors strip** (40): `Anchors · 3 of 5 done`, then up to 5 compact chips (checkbox + short title + line emoji) for today's tasks tagged `anchor`, first 5 in source order. The count covers **all** of today's anchors (`3 of 6 done` when there are 6). Done chips are checked and dimmed, not hidden. Absent if no anchors. Only anchors **shown in the strip** are left out of their line sections; further anchor tasks stay there.
 0b. **Draft-2 — Top 3 today**: flagged tasks, max 3 rows, as normal `TaskRow`s under a section header `Top 3 today`. If more than 3 are flagged: caption `5 flagged — 3 shown` and a "Show all" link. These tasks are **not repeated** in their line sections.
 
 1. Column header (26): blank · Task · Project → Line → Artifact · Estimate · When.
@@ -46,7 +46,7 @@ Right rail:
 
 ## Acceptance
 
-- [ ] The list scrolls; at 1440×900 the Anchors strip, Top 3 and the first line section are visible without scrolling.
+- [ ] The list scrolls; at 1440×900 the Reminders strip (when present), the Anchors strip, Top 3 and the first line section are visible without scrolling.
 - [ ] Only the 2 deadlines show amber (both demo due dates today carry the `deadline` tag, so the count is the same under either deadline rule).
 - [ ] "From earlier" rows show the planned age and no urgency colour.
 - [ ] Italian is listed as quiet; Piano (maintenance) is not; Calligraphy appears only under "Paused on purpose".
@@ -99,6 +99,23 @@ Artboards: `Today-CalB` (chosen), `Today-CalB-RU`, `Today-CalB-Mixed`, `Today-Ca
 - [ ] `4 events · 4 h in calendar · 1 h 15 min planned · ≈ 2 h 25 min free until 22:00` for the demo day at 16:20; every number derives from `demo-data.md`.
 - [ ] Without access the layout does not shift; the Day section shows timed tasks and one quiet line.
 - [ ] Titles keep their script and direction (RU, IT, JA, HE in `Today-CalB-Mixed`); the rail is checked in Russian.
+
+## Reminders (ADR-0017)
+
+Position and states only; the visual comes in the next design round (`design/README.md` § Pending design rounds, Before S4). S4 builds the OmniFocus tag bridge; the whole bridge (the tag setting, the exclusion and the strip) is the first thing cut from S4 if the timebox is at risk (`docs/specs/phase-1-see.md` → S4).
+
+- **Position:** the first row of the main area, above the Anchors strip. Absent when no task carries the reminder tag (`settings.md` § Reminders).
+- **Content:** OmniFocus tasks with the reminder tag that are not completed, not dropped and available now (defer date absent or ≤ now), in source order; a repeating task shows only its current copy; text and line emoji only. No checkbox, no estimate, no due styling and no urgent colour: a reminder is seen, never done or overdue.
+- **States:** none (absent) · one or more (shown in full up to the strip's height) · more than fit (the rest behind a `+N more` disclosure; the visual decides the height) · Demo mode (from the demo fixtures once they have reminders; absent until then).
+- **Behaviour:** read-only; ↵ or double-click opens the task in OmniFocus, as task rows do. Notifications stay with OmniFocus until the native Reminders slice.
+- **Counts:** these tasks are in no count on Today (the subtitle's open, done and estimate, Touched today, quiet lines) and in no line section, Top 3, Anchors strip or From earlier; they are hidden from every other task list too (Line detail, Week, Month) and shown only here. ⌘K finds them labelled "reminder". The trace still shows them under their project.
+
+**Acceptance** (unless the bridge is cut).
+
+- [ ] A task with the reminder tag is in the strip and in no line section, total or rail count.
+- [ ] A completed, dropped or deferred tagged task, or a completed copy of a repeating one, is not in the strip.
+- [ ] Renaming the tag in Settings moves the set at the next refresh.
+- [ ] No checkbox, no amber, no "missed" or "overdue" wording; checked in Russian.
 
 ## My take (draft-4)
 

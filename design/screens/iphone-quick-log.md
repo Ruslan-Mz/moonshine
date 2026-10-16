@@ -42,7 +42,7 @@ The quick log and the timer write **time entries** (MoonShine-native data, `plat
 ## Behaviour
 
 - One-hand: all controls in the lower two thirds; Save is reachable with the thumb.
-- One timer at a time (ADR-0016): starting a timer stops the running one at that instant and shows a one-line notice with Undo (`Violin stopped · 25 min · Undo`).
+- Up to three timers at once (ADR-0016, amended 2026-10-16): a plain start switches and never blocks: every running timer stops at that instant and a quiet one-line notice shows for about eight seconds (`🎻 stopped · Keep running`); `Keep running` resumes them from the instant they stopped, with no gap, within the cap. Starting alongside stops nothing while fewer than three run. With three running, an alongside start stops the oldest and a plain start stops all three; the notice reads `🎻 stopped (three at most)` with no button.
 - No streaks. Targets and day marks are optional and shown as neutral facts (ADR-0016). The line's rhythm updates after save.
 
 ## SwiftUI
