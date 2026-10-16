@@ -8,6 +8,7 @@ let package = Package(
     .library(name: "OmniFocusAdapter", targets: ["OmniFocusAdapter"]),
     .library(name: "ObsidianAdapter", targets: ["ObsidianAdapter"]),
     .library(name: "SQLiteStore", targets: ["SQLiteStore"]),
+    .library(name: "CalendarAdapter", targets: ["CalendarAdapter"]),
   ],
   dependencies: [
     .package(path: "../MoonShineCore"),
@@ -30,6 +31,10 @@ let package = Package(
         .product(name: "MoonShineCore", package: "MoonShineCore"),
         .product(name: "GRDB", package: "GRDB.swift"),
       ]),
+    // EventKit, read-only (ADR-0012); only `SystemEventStore.swift` imports it.
+    .target(
+      name: "CalendarAdapter",
+      dependencies: [.product(name: "MoonShineCore", package: "MoonShineCore")]),
     // Measures the live import and checks the vault; prints counts and timings only.
     .executableTarget(
       name: "moonshine-import",
@@ -51,6 +56,9 @@ let package = Package(
         .product(name: "MoonShineCore", package: "MoonShineCore"),
         .product(name: "MoonShineFixtures", package: "MoonShineCore"),
       ]),
+    .testTarget(
+      name: "CalendarAdapterTests",
+      dependencies: ["CalendarAdapter", .product(name: "MoonShineCore", package: "MoonShineCore")]),
     .testTarget(name: "MoonShineImportTests", dependencies: ["moonshine-import"]),
     .testTarget(
       name: "SQLiteStoreTests",
