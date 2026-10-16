@@ -7,6 +7,11 @@
 // with an allowlist of schemes (ADR-0015, amendment of 2026-10-10); that function joins the
 // allowlist here in S4.
 //
+// Calendars are read-only until the Act phase (ADR-0012): EventKit and EventKitUI may be
+// imported only by `CalendarAdapter/SystemEventStore.swift`, in any import spelling; no other
+// file names an EventKit type (`EK…`), so no second file reaches the store; and that file calls
+// none of EventKit's write or reminder names. `Array.remove` and the like elsewhere pass.
+//
 // It is a text search over the names listed below: it catches a write added by accident, not
 // one hidden on purpose. What it does not see: a call through a variable, a selector or a
 // function reference; a C or framework function not listed; anything in a dependency;
@@ -44,6 +49,9 @@ const allowed = {
   // The OmniFocus bridge runs `osascript`.
   "Adapters/Sources/OmniFocusAdapter/OmniFocusBridge.swift": ["let process = Process()"],
 };
+
+// The one file that may use EventKit, read-only.
+const eventStore = "Adapters/Sources/CalendarAdapter/SystemEventStore.swift";
 
 const names = (list) => list.join("|");
 // A whole word: `Process`, not `ProcessInfo`.
@@ -100,6 +108,34 @@ const patterns = [
   ["URL opener", /(?<![A-Za-z0-9_])Link\s*\(|UIApplication\.shared\.open/, false, "Apps"],
 ];
 
+// Every import spelling `scripts/check-core-imports.sh` accepts: attributes (`@preconcurrency`),
+// access modifiers, a symbol kind (`import class EventKit.EKEventStore`), block comments,
+// backticks.
+const eventKitImport = new RegExp(
+  "(^|;)\\s*((@[A-Za-z_]+(\\s*\\([^)]*\\))?|public|package|internal|fileprivate|private)\\s+)*" +
+    "import\\s+(/\\*[^*]*\\*/\\s*)*((typealias|struct|class|enum|protocol|let|var|func)\\s+)?" +
+    "(/\\*[^*]*\\*/\\s*)*`?(EventKit|EventKitUI)`?([^A-Za-z0-9_]|$)",
+);
+// EventKit's writes and reminder access, as member calls (`store.save(`) and bare calls (`save(`
+// inside an extension).
+const calendarWrites = [
+  "save", "remove", "commit", "saveCalendar", "removeCalendar", "saveReminder", "removeReminder",
+  "requestWriteOnlyAccessToEvents", "requestFullAccessToReminders",
+];
+// [name, pattern, searched in a line that is only a comment, applies to this file]
+const calendarPatterns = [
+  ["EventKit import", eventKitImport, false, (file) => file !== eventStore],
+  ["EventKit name", word(["EK[A-Z][A-Za-z0-9_]*"]), false, (file) => file !== eventStore],
+  [
+    "calendar write",
+    new RegExp(
+      `${member(calendarWrites).source}|${cCall(calendarWrites).source}|requestAccess\\s*\\(\\s*to:`,
+    ),
+    true,
+    (file) => file === eventStore,
+  ],
+];
+
 /// Swift files under `dir`, and every symbolic link (a finding, never followed).
 function walk(dir, skipTests) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -137,12 +173,18 @@ for (const dir of [...required, ...optional.filter((dir) => isFolder(join(root, 
         if (only && !file.startsWith(`${only}/`)) continue;
         if (pattern.test(line)) findings.push(`${file}:${index + 1}: ${name}`);
       }
+      for (const [name, pattern, inComments, applies] of calendarPatterns) {
+        if ((comment && !inComments) || !applies(file)) continue;
+        if (pattern.test(line)) findings.push(`${file}:${index + 1}: ${name}`);
+      }
     });
   }
 }
 
 if (findings.length > 0) {
-  console.log("Calls that can write outside MoonShine's own data (no vault writes before the Write phase):");
+  console.log(
+    "Calls that can write outside MoonShine's own data (no vault writes before the Write phase, no calendar writes before the Act phase):",
+  );
   console.log(findings.join("\n"));
   process.exit(1);
 }

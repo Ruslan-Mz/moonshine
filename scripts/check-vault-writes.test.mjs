@@ -248,6 +248,70 @@ test("in Apps anything that opens a URL fails; elsewhere those names are free", 
   passes("let scenes = UIApplication.shared.connectedScenes", app);
 });
 
+const eventStore = "Adapters/Sources/CalendarAdapter/SystemEventStore.swift";
+const calendarFile = "Adapters/Sources/CalendarAdapter/Provider.swift";
+
+test("EventKit is imported only by the event store, in any spelling", () => {
+  const spellings = [
+    "import EventKit",
+    "@preconcurrency import EventKit",
+    "public import EventKit",
+    "@_spi(X) internal import EventKit",
+    "import class EventKit.EKEventStore",
+    "import /* read only */ EventKit",
+    "import `EventKit`",
+    "let x = 1; import EventKit",
+    "import EventKitUI",
+  ];
+  for (const where of [calendarFile, adapter, app, "MoonShineCore/Sources/MoonShineCore/A.swift"]) {
+    for (const spelling of spellings) fails(spelling, where);
+  }
+  for (const spelling of spellings) passes(spelling, eventStore);
+  passes("import EventKitty");
+  passes("// import EventKit");
+});
+
+test("no other file names an EventKit type", () => {
+  for (const where of [calendarFile, app, adapter]) {
+    for (const line of ["let store: EKEventStore", "let view = EKEventEditViewController()", "_ = EKEvent.self"]) {
+      fails(line, where);
+    }
+  }
+  passes("let store = EKEventStore()", eventStore);
+  passes("/// Wraps EKEventStore.", calendarFile);
+  passes("let speaker = SPEAKer()", calendarFile);
+});
+
+test("the event store calls no EventKit write and asks for no reminders", () => {
+  for (const line of [
+    "try store.save(event, span: .thisEvent)",
+    "try store.remove(event, span: .thisEvent, commit: true)",
+    "try store.commit()",
+    "try store.saveCalendar(calendar, commit: true)",
+    "try store.removeCalendar(calendar, commit: true)",
+    "try store.saveReminder(reminder, commit: true)",
+    "try store.removeReminder(reminder, commit: true)",
+    "try await store.requestWriteOnlyAccessToEvents()",
+    "try await store.requestFullAccessToReminders()",
+    "store.requestAccess(to: .event) { _, _ in }",
+    "try save(event, span: .thisEvent)",
+    "// store.save(event, span: .thisEvent)",
+  ]) {
+    fails(line, eventStore);
+  }
+  for (const line of [
+    "try await store.requestFullAccessToEvents()",
+    "store.reset()",
+    "func remove(_ x: Int) {}",
+    "let saved = store.calendars(for: .event)",
+  ]) {
+    passes(line, eventStore);
+  }
+  // Elsewhere these names are free: `Array.remove` is not a calendar write.
+  passes("items.remove(at: 0)", calendarFile);
+  passes("try context.save()", calendarFile);
+});
+
 test("a missing required folder exits 2", () => {
   for (const folders of [["MoonShineCore/Sources"], ["Adapters/Sources"], []]) {
     const result = check({}, folders);
