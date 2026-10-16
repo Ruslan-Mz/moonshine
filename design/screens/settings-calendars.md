@@ -42,7 +42,15 @@ Not connected / denied: the list is replaced by one neutral placeholder line (`C
 
 - `EKEventStore`, full read access to events (`requestFullAccessToEvents`), no reminders. Per calendar (by `calendarIdentifier`) the app stores **locally**: `show`, `countsAsBusy`, `lineID?`. Day window: two local settings.
 - The per-calendar settings and the events are **per device** and never enter the MoonShine store that syncs (ADR-0010), in any phase. Each device asks for its own access. The day window is the only setting here that syncs, from 3b (a preference, not calendar data; ADR-0012).
-- Event → view model: start, end, isAllDay, title (empty or private → `Busy`), calendar (name, colour), participation status (tentative → hatched, declined → hidden), time zone.
+- **A calendar with no stored setting** (owner, 2026-10-16): Show on; Counts as busy on, except subscribed and birthday calendars (off). A calendar with Show off contributes nothing, even with Counts as busy on.
+- Event → view model: start, end, isAllDay, title (empty or private → `Busy`), calendar (name, colour), display, whether it occupies time, time zone. Display and occupying are separate (owner, 2026-10-16), read by the adapter from the owner's participation, the event's status and its availability:
+
+  | Event                                                                                                      | Display             | Occupies time |
+  | ---------------------------------------------------------------------------------------------------------- | ------------------- | ------------- |
+  | declined, delegated, or event status cancelled                                                             | hidden (not read)   | —             |
+  | invitation not answered (pending), tentative, in process, or event status tentative (set by the organiser) | tentative (hatched) | no            |
+  | accepted, unknown, no attendees, the owner is the organiser, the owner is not among the attendees          | normal              | yes           |
+  | availability free                                                                                          | as in its row above | no            |
 
 ## Behaviour
 

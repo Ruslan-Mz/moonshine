@@ -20,8 +20,9 @@ Ports & adapters (hexagonal). The domain and the UI never know which tool the da
 │            Stats · CommandBus (+ change/undo log) ·                   │
 │            NotificationPlanner                                        │
 │  Assistant: ToolRegistry (typed tools over Services) · Conversation   │
-│  Ports:    TaskProvider · NoteProvider · AIProvider · TimeSource ·    │
-│            Importer · Store · VaultWriter · Notifier                  │
+│  Ports:    TaskProvider · NoteProvider · CalendarProvider ·           │
+│            AIProvider · TimeSource · Importer · Store ·               │
+│            VaultWriter · Notifier                                     │
 └──────┬──────────────┬──────────────┬──────────────┬──────────────────┘
        │              │              │              │
  OmniFocusAdapter ObsidianAdapter  ClaudeAdapter   ExcelImporter   SQLiteStore (GRDB)
