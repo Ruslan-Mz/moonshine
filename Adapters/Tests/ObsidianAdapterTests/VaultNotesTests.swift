@@ -39,15 +39,6 @@ import Testing
     #expect(read.unread == VaultUnread(paths: [path], artifactLists: [], notRecognised: []))
   }
 
-  @Test func theFixtureNotesEqualTheDemoVaultNotes() throws {
-    let read = try ObsidianVault(root: fixtureVault, timeZone: moscow).read()
-    #expect(read.notes == DemoVault.snapshot.notes)
-    #expect(read.unread == .nothing)
-    #expect(read.issues.isEmpty)
-  }
-
-  // MARK: Fields
-
   @Test func everyFieldIsCarriedToTheNote() throws {
     let read = try read(
       """

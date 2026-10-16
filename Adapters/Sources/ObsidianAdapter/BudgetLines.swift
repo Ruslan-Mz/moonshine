@@ -8,6 +8,8 @@ struct BudgetLines: Equatable {
   let issues: [ImportIssue]
   /// Line items skipped; each duplicate counts.
   let skipped: Int
+  /// The line of each read line's `parent`, for problems found once the notes are read.
+  var parentLines: [LineKey: Int] = [:]
 
   static func read(_ note: ScannedNote) -> BudgetLines {
     let root = note.frontmatter
@@ -22,14 +24,19 @@ struct BudgetLines: Equatable {
     let duplicates = Set(ids.filter { $0.value > 1 }.keys)
     var lines: [SourceLine] = []
     var issues: [ImportIssue] = []
+    var parentLines: [LineKey: Int] = [:]
     for node in items {
       var item = Item(path: note.path, node: node)
-      if let line = item.line(duplicates: duplicates) { lines.append(line) }
+      if let line = item.line(duplicates: duplicates) {
+        lines.append(line)
+        if line.parentLink != nil { parentLines[line.key] = item.fields.line(of: "parent") }
+      }
       issues += item.issues
     }
     let skipped = items.count - lines.count
     return BudgetLines(
-      lines: .read(lines, complete: skipped == 0), issues: issues, skipped: skipped)
+      lines: .read(lines, complete: skipped == 0), issues: issues, skipped: skipped,
+      parentLines: parentLines)
   }
 
   private static func unavailable(

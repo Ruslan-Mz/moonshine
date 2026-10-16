@@ -3,7 +3,7 @@ import MoonShineCore
 
 /// Reads an Obsidian vault folder as the vault contract describes. It only reads: nothing is
 /// written to the vault or anywhere else.
-public struct ObsidianVault: Sendable {
+public struct ObsidianVault: NoteProvider {
   public let root: URL
   /// The zone a note's period starts and ends in. No default: every caller says it.
   public let timeZone: TimeZone
@@ -36,6 +36,9 @@ public struct ObsidianVault: Sendable {
       frontmatter: Dictionary(
         scan.notes.map { ($0.path, $0.frontmatter) }, uniquingKeysWith: { first, _ in first }),
       calendar: calendar)
+    let lineIssues =
+      lines.issues
+      + Self.ambiguousParents(lines, in: marked.first?.path ?? "", notes: notes.notes)
     return VaultRead(
       lines: lines.lines, notes: notes.notes, artifacts: artifacts.artifacts,
       unread: VaultUnread(
@@ -43,11 +46,11 @@ public struct ObsidianVault: Sendable {
         artifactLists: artifacts.unreadLists,
         notRecognised: scan.withoutFrontmatter.union(notes.notRecognised)),
       issues: scan.issues + BudgetNote.issues(marked: marked, rejected: scan.rejectedMarks)
-        + lines.issues + notes.issues + artifacts.issues,
+        + lineIssues + notes.issues + artifacts.issues,
       notesFound: scan.noteCount, frontmatterRead: scan.notes.count,
       rejected: Self.count(scan.noteIssues), skipped: Self.count(scan.walkIssues),
       anchorLikeAccepted: scan.anchorLikeAccepted, budget: budget,
-      linesSkipped: lines.skipped, lineProblems: Self.count(lines.issues),
+      linesSkipped: lines.skipped, lineProblems: Self.count(lineIssues),
       notesByType: notes.byType, noteProblems: Self.count(notes.issues),
       noteProblemKeys: notes.issues.reduce(into: [:]) { counts, issue in
         if case .vault(_, _, let problem) = issue, let key = problem.key {
@@ -56,6 +59,29 @@ public struct ObsidianVault: Sendable {
       },
       artifactsByType: artifacts.byType, artifactsWithoutStatus: artifacts.withoutStatus,
       artifactsSkipped: artifacts.skipped, artifactProblems: Self.count(artifacts.issues))
+  }
+
+  /// One read, as an import takes it. A vault that cannot be read at all throws
+  /// `VaultReadError`; the caller decides what that means (S4: `VaultSnapshot.notRead`).
+  public func vault() async throws -> VaultSnapshot {
+    let read = try read()
+    return VaultSnapshot(
+      lines: read.lines, artifacts: read.artifacts, notes: read.notes, issues: read.issues,
+      unread: read.unread)
+  }
+
+  /// `ambiguousLink` on each read line whose `parent` matches more than one note read.
+  private static func ambiguousParents(
+    _ lines: BudgetLines, in path: String, notes: [SourceNote]
+  ) -> [ImportIssue] {
+    let paths = notes.map(\.path)
+    return lines.lines.read.compactMap { line in
+      guard let link = line.parentLink, WikiLink.target(of: link, in: paths)?.isAmbiguous == true
+      else { return nil }
+      return .vault(
+        path: path, line: lines.parentLines[line.key],
+        problem: VaultProblem(.ambiguousLink, key: "lines.parent"))
+    }
   }
 
   private static func count(_ issues: [ImportIssue]) -> [VaultProblem.Kind: Int] {
@@ -161,10 +187,15 @@ public struct VaultRead: Sendable {
       "line problems: "
         + Self.list(
           lineProblems,
-          [.missingKey, .invalidValue, .duplicateLineId].map { ($0, $0.rawValue) }),
+          [.missingKey, .invalidValue, .duplicateLineId, .ambiguousLink].map {
+            ($0, $0.rawValue)
+          }),
       "foundation lines: \(lines.read.count { $0.foundation })"
         + " · with a floor: \(lines.read.count { $0.floorHoursPerDay != nil })"
         + " · with a language: \(lines.read.count { $0.language != nil })",
+      "line parents: \(lines.read.count { $0.parentLink != nil })"
+        + " · resolved to no note read: \(unresolvedParents)"
+        + " · ambiguous: \(lineProblems[.ambiguousLink, default: 0])",
     ]
   }
 
@@ -192,6 +223,14 @@ public struct VaultRead: Sendable {
       default: scalar == "\\" ? "\\\\" : String(scalar)
       }
     }.joined()
+  }
+
+  /// Lines whose `parent` points to none of the notes this read returned.
+  private var unresolvedParents: Int {
+    let paths = notes.map(\.path)
+    return lines.read.count { line in
+      line.parentLink.map { WikiLink.target(of: $0, in: paths) == nil } ?? false
+    }
   }
 
   /// Artifact ids read in more than one period: carried at least once.

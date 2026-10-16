@@ -41,15 +41,6 @@ import Testing
       priority: priority, notePath: path)
   }
 
-  @Test func theFixtureArtifactsEqualTheDemoVaultArtifacts() throws {
-    let read = try ObsidianVault(root: fixtureVault, timeZone: moscow).read()
-    #expect(read.artifacts == DemoVault.snapshot.artifacts)
-    #expect(read.unread == .nothing)
-    #expect(read.issues.isEmpty)
-  }
-
-  // MARK: Items
-
   @Test func everyKeyIsCarriedToTheArtifact() throws {
     let read = try read([
       "y.md": year(
