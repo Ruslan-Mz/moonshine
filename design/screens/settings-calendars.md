@@ -45,13 +45,13 @@ Not connected / denied: the list is replaced by one neutral placeholder line (`C
 - **A calendar with no stored setting** (owner, 2026-10-16): Show on; Counts as busy on, except subscribed and birthday calendars (off). A calendar with Show off contributes nothing, even with Counts as busy on.
 - Event → view model: start, end, isAllDay, title (empty or private → `Busy`), calendar (name, colour), display, whether it occupies time, time zone. Display and occupying are separate (owner, 2026-10-16), read by the adapter from the owner's participation, the event's status and its availability; out of office has no rule of its own:
 
-  | Event                                                                                                                              | Display             | Occupies time       |
-  | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ------------------- |
-  | declined, delegated, or event status cancelled                                                                                     | hidden (not read)   | —                   |
-  | invitation not answered (pending), tentative, in process, event status tentative (set by the organiser), or availability tentative | tentative (hatched) | no                  |
-  | accepted, unknown, no attendees, the owner is the organiser, the owner is not among the attendees                                  | normal              | yes                 |
-  | availability free                                                                                                                  | as in its row above | no                  |
-  | availability unavailable (out of office)                                                                                           | as in its row above | as in its row above |
+  | Event                                                                                                                                                 | Display             | Occupies time       |
+  | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ------------------- |
+  | declined, delegated, or event status cancelled                                                                                                        | hidden (not read)   | —                   |
+  | invitation not answered (pending), tentative, in process, event status tentative (set by the organiser), or availability tentative                    | tentative (hatched) | no                  |
+  | accepted, completed (treated as accepted; owner, 2026-10-17), unknown, no attendees, the owner is the organiser, the owner is not among the attendees | normal              | yes                 |
+  | availability free                                                                                                                                     | as in its row above | no                  |
+  | availability unavailable (out of office)                                                                                                              | as in its row above | as in its row above |
 
 ## Behaviour
 
