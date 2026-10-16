@@ -43,7 +43,7 @@ Artboards: `iPhoneWidgets-Cal`, `iPhoneWidgets-Cal-Dark`.
 
 ## Privacy on the Lock Screen (owner decision, 2026-10-05)
 
-Event and task titles are privacy-sensitive: events often carry other people's names. On the Lock Screen (and in StandBy and on a locked device) every event or task title is **redacted by default** (`.privacySensitive()`): the widget shows the time, the line emoji and the counts, never a title — e.g. `17:00 · 🎻` / `Anchor: 👨‍👩‍👧`. A setting **Show titles on the Lock Screen** (off by default) shows them. The same rule applies to the Live Activity (`iphone-quick-log.md`).
+Event and task titles are privacy-sensitive: events often carry other people's names. Reminder text (ADR-0017, 3b) follows the same rule as task titles (owner, 2026-10-17). On the Lock Screen (and in StandBy and on a locked device) every event or task title is **redacted by default** (`.privacySensitive()`): the widget shows the time, the line emoji and the counts, never a title — e.g. `17:00 · 🎻` / `Anchor: 👨‍👩‍👧`. A setting **Show titles on the Lock Screen** (off by default) shows them. The same rule applies to the Live Activity (`iphone-quick-log.md`).
 
-- [ ] With the setting off, no event or task title is readable on a locked phone (widgets and Live Activity).
+- [ ] With the setting off, no event or task title and no reminder text is readable on a locked phone (widgets and Live Activity).
 - [ ] Turning the setting on shows the titles; turning it off redacts them again at the next render.

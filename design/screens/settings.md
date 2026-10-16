@@ -40,9 +40,9 @@ Refresh follows ADR-0011: imports are always full and start when OmniFocus resig
 - Caption: "Only deadlines get the amber due badge. Other due dates are shown as plain text."
 - The rule is a Core value (`DeadlineRule`) that the Overview service uses for urgency on Today and Week; the view only displays the result.
 
-**Reminders** group (S4, ADR-0017)
+**Reminders** group (S4, ADR-0017; cut with the whole bridge if the timebox is at risk)
 
-- Reminder tag: text field, default `напоминание`, matched by leaf name like `deadline`; trimmed, an empty value reverts to the default, compared case-insensitively. Tasks with this tag are shown in Today's Reminders strip and left out of every task count, statistic, forecast and load.
+- Reminder tag: text field, default `напоминание`, matched by leaf name like `deadline`; trimmed, an empty value reverts to the default, compared case-insensitively. Tasks with this tag are shown in Today's Reminders strip and hidden from every task list, count, statistic, forecast and load.
 - Caption: "Tasks with this tag are reminders: you see them on Today; they are not counted as tasks. Notifications stay with OmniFocus for now."
 
 Buttons (sheet variant only): Cancel, Done (default, accent). The Settings scene applies changes immediately.
@@ -58,7 +58,7 @@ Buttons (sheet variant only): Cancel, Done (default, accent). The Settings scene
 - [ ] No write APIs anywhere (phase 1).
 - [ ] The timer offers no interval under 15 min; there is no "incremental" label.
 - [ ] Switching the deadline rule changes which due dates are amber on Today and Week, and nothing else.
-- [ ] Changing the reminder tag moves the set of reminders on Today and changes no other count than theirs.
+- [ ] Changing the reminder tag moves those tasks between the Reminders strip and the task lists and counts; nothing else changes (unless the bridge is cut).
 - [ ] Language picker switches the whole UI; user data stays untranslated; dates and plurals follow the chosen language.
 
 ## Calendar (draft-3)

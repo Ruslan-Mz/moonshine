@@ -60,21 +60,24 @@ The owner records his hours in an Excel workbook, mostly from memory at the end 
 **Amendment (2026-10-16, owner).** This section was "One running timer": _"Starting a timer stops the one that is running, at that instant. The same rule merges sessions started on two devices without a network: ordered by start time, a session still running when a later one starts ends at that later start. Every device computes the same result."_ The owner does two things at once and both are real: violin scales during the part of a meeting where he only listens, Anki vocabulary on a commute. Splitting the time would say he did half of each, which is false; refusing it would lose one of them. The data model already allows it: every interval has clock times, so overlap is computed, not stored.
 
 - **Up to three sessions may run at the same time.** Each is its own `TimerSession` with its own intervals, pauses and nudges.
-- **Starting a timer while one runs switches by default and never blocks.** The running session stops at that instant and the new one starts; a quiet, non-modal notice shows for about eight seconds: "🎻 stopped · Keep both". `Keep both` resumes the stopped session from the instant it stopped, so there is no gap (it undoes the stop). Starting alongside directly: ⌥-click, `Start alongside` in ⌘K, and the word "alongside" / «параллельно» by voice.
-- **A fourth start** stops the oldest running session at that instant, with the same notice.
+- **A plain start switches and never blocks** (owner, 2026-10-17). It stops **every** running session at that instant and starts the new one; a quiet, non-modal notice shows for about eight seconds: "🎻 stopped · Keep running". `Keep running` resumes the stopped sessions from the instant they stopped, so there is no gap (it undoes the stops), within the cap of three.
+- **Starting alongside**: ⌥-click, `Start alongside` in ⌘K, and the word "alongside" / «параллельно» by voice. It stops nothing while fewer than three run.
+- **At three running sessions** (owner, 2026-10-17) a start cannot keep them all: an alongside start stops the oldest, a plain start stops all three, and the notice reads "🎻 stopped (three at most)" with no button.
 - **Offline merge across devices:** sessions are kept as they are while at most three overlap; when a fourth overlaps, the one that started first ends at the later start. Every device computes the same result.
 - A running session survives the app being closed (the start time is stored).
 
 How time is counted:
 
-| What                                                                   | Counted as                                                                                              |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| A line's, project's or task's hours (week table, reviews, forecast)    | The full duration of its own entries                                                                    |
-| The day's clock time (Today rail, free time, day load, Board capacity) | The union of all intervals: overlapping time counts once; a day never exceeds 24 h                      |
-| Shown                                                                  | "Tracked 26 h · by the clock 23 h · in parallel 3 h"; in reviews each line carries "in parallel 30 min" |
-| Break nudge, check mark of a forgotten timer                           | Continuous activity of the union, not each session separately; one nudge at a time                      |
-| Reconcile with the workbook (unit: day and line)                       | Unchanged: per line                                                                                     |
-| Forecast evidence                                                      | Weight 1 for now; overlap is derivable, so a weight can be added later without a migration              |
+| What                                                                   | Counted as                                                                                                                                                                                                                        |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A line's, project's or task's hours (week table, reviews, forecast)    | The full duration of its own entries                                                                                                                                                                                              |
+| The day's clock time (Today rail, free time, day load, Board capacity) | The union of all intervals: overlapping time counts once; a day never exceeds 24 h                                                                                                                                                |
+| Shown                                                                  | "Tracked 26 h · by the clock 23 h · in parallel 3 h"; in reviews each line carries "in parallel 30 min"                                                                                                                           |
+| "In parallel" (owner, 2026-10-17)                                      | For the day: tracked minus by the clock. For a line: the part of its own time during which at least one other session ran                                                                                                         |
+| Break nudge                                                            | Continuous activity of the union, not each session separately: fires once per mark, after N minutes, where N is the smallest among the running sessions' lines; on the device of the earliest running session (owner, 2026-10-17) |
+| Check mark of a forgotten timer                                        | Per session, by its own line's limit (owner, 2026-10-17)                                                                                                                                                                          |
+| Reconcile with the workbook (unit: day and line)                       | Unchanged: per line                                                                                                                                                                                                               |
+| Forecast evidence                                                      | Weight 1 for now; overlap is derivable, so a weight can be added later without a migration                                                                                                                                        |
 
 ### Commands
 
@@ -107,26 +110,26 @@ Buttons in widgets are allowed before the Act phase because a timer is native da
 
 ### Nudges
 
-A nudge is a local notification on the device where the session was started, and a quiet state everywhere else. Each kind can be switched off; none is repeated for the same mark.
+A nudge is a local notification on the device where the session was started (for the break nudge, while sessions overlap, the device of the earliest running session; § Up to three running timers), and a quiet state everywhere else. Each kind can be switched off; none is repeated for the same mark.
 
-| Kind                | Fires when                                                                                                                            | Wording, as a fact         |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| Break nudge         | every N minutes of a running session (N per line, default 50; on by default)                                                          | `🎻 50 min · short break?` |
-| Session target      | the target set at start is reached                                                                                                    | `🎻 2 h reached`           |
-| Day mark            | today's tracked time on a line reaches its floor or its portion                                                                       | `Today's 4 h are in`       |
-| Calendar suggestion | five minutes before an event in a line-mapped calendar: an offer to start a timer on that line, with the event's length as the target | `🏃 17:00 · Start timer?`  |
+| Kind                | Fires when                                                                                                                                   | Wording, as a fact         |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| Break nudge         | every N minutes of continuous activity (N per line, default 50; with several sessions running, the smallest N of their lines; on by default) | `🎻 50 min · short break?` |
+| Session target      | the target set at start is reached                                                                                                           | `🎻 2 h reached`           |
+| Day mark            | today's tracked time on a line reaches its floor or its portion                                                                              | `Today's 4 h are in`       |
+| Calendar suggestion | five minutes before an event in a line-mapped calendar: an offer to start a timer on that line, with the event's length as the target        | `🏃 17:00 · Start timer?`  |
 
 - **Day mark.** The _floor_ is the line's `floor_h_day`. The _portion_ is the sum of today's events in the line's calendar, else the line's optional `portion_h_day` in the budget note. A line with neither has no day mark. From the Board phase a project's portion comes from the plan. Hours may be shown next to the portion: CLAUDE.md rule 8 names `portion_h_day` and the length of events in a line's calendar (owner, 2026-10-08).
 - The calendar suggestion reads events on the device, as every calendar feature does (ADR-0012); nothing about the event is stored except, once the owner starts the timer, the target's duration (§ Records). It needs the app to have run that day, so it is best effort.
-- Titles of tasks and events are not shown on a locked screen unless the existing setting allows it.
+- On a locked screen, notification text follows the system's preview setting for MoonShine on every platform; MoonShine has no setting of its own for notifications (owner, 2026-10-17).
 - **Break nudge.** Its two actions are `Break` and `Keep going`. `Break` pauses every running session, so the break is not counted, and one nudge to resume follows after the break length (default 5 minutes); resuming resumes all of them (amendment 2026-10-16). Without an answer the timers keep running.
 - No streaks. A day mark is never shown as missed.
-- **Amendment (2026-10-16, ADR-0017).** Nudges are scheduled by the one notification planner in Core that also schedules reminders; a running timer's nudges rank first within the 64 pending notifications iOS allows. The break nudge was called "Break reminder" until then; it is renamed so that "reminder" names only ADR-0017's entity.
+- **Amendment (2026-10-16, ADR-0017).** Nudges are scheduled by the one notification planner in Core that also schedules reminders; a running timer's nudges rank first within the 64 pending notifications iOS allows. The planner and the `Notifier` arrive with whichever of the Timer slice or the Reminders slice ships first. The break nudge was called "Break reminder" until then; it is renamed so that "reminder" names only ADR-0017's entity.
 
 ### A forgotten timer is visible (owner decision, 2026-10-07)
 
 - A running session is always in sight: elapsed time in the Mac menu bar, a growing block on the Today rail, the Live Activity and widgets on the phone.
-- A session gets a **check** mark when it has run longer than the line's limit without a pause (default 4 hours), or when the Mac slept while it ran. The mark shows on the menu bar item and on the resulting entry.
+- A session gets a **check** mark when it has run longer than its own line's limit without a pause (default 4 hours; each running session separately), or when the Mac slept while it ran. The mark shows on the menu bar item and on the resulting entry.
 - Nothing is stopped or trimmed silently. When a marked session is stopped, the owner is offered "end at the time the Mac went to sleep" next to "keep as it is". The entry stays marked until he confirms or edits it.
 - Detecting idle time while the Mac is awake is not in the first version.
 
@@ -144,13 +147,13 @@ Both stay. The unit of comparison is **(day, line)**.
 
 ### Roadmap
 
-| Phase    | Change                                                                                                                                                                        |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2 Plan   | `TimeEntry` gets the new fields from its first slice; the import and the quick log use them. The reconcile rule is part of the import.                                        |
-| 2 Plan   | **Timer (Mac)** is the last slice: sessions (up to three at once), menu bar, start from a row and from ⌘K, the day rail with editing, the week table, nudges, the check mark. |
-| 3b       | The iPhone timer takes a task or a project as well as a line; buttons in widgets and controls; Siri.                                                                          |
-| Ask      | Start, stop and corrections through the assistant.                                                                                                                            |
-| After 3b | Watch; standalone countdown timers that belong to nothing.                                                                                                                    |
+| Phase    | Change                                                                                                                                                                                                                                                                       |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2 Plan   | `TimeEntry` gets the new fields from its first slice; the import and the quick log use them. The reconcile rule is part of the import.                                                                                                                                       |
+| 2 Plan   | **Timer (Mac)** is the last slice: sessions (up to three at once), the notification planner and the `Notifier` if it ships before the Reminders slice (ADR-0017), menu bar, start from a row and from ⌘K, the day rail with editing, the week table, nudges, the check mark. |
+| 3b       | The iPhone timer takes a task or a project as well as a line; buttons in widgets and controls; Siri.                                                                                                                                                                         |
+| Ask      | Start, stop and corrections through the assistant.                                                                                                                                                                                                                           |
+| After 3b | Watch; standalone countdown timers that belong to nothing.                                                                                                                                                                                                                   |
 
 **Amendment (2026-10-09, owner).** The fallback is removed: it said that if the other phase-2 slices were not merged by 2026-12-07, Timer (Mac) would move to directly after R1. It existed only to protect R1's deadline (2026-12-28). R1 is now built in the two-week usage period after phase 1 (`docs/ROADMAP.md`, rule of gates), so that deadline has a margin of weeks, and Timer (Mac) stays the last slice of phase 2.
 
@@ -170,12 +173,12 @@ Both stay. The unit of comparison is **(day, line)**.
 
 ### Confirmation
 
-- Core tests: a start while one runs switches, and `Keep both` restores the stopped session without a gap; ⌥-start runs both; a fourth start stops the oldest; offline sessions with four overlaps merge to the same result on every device; a day's clock time never exceeds 24 h while its tracked time may; each line's hours count its own entries in full (amendment 2026-10-16); pause and resume give separate intervals; an interval across midnight is split; a daylight-saving change and a time-zone change keep the minutes right; an edit that would overlap a neighbour is refused until the owner chooses; every command can be undone.
+- Core tests: a plain start stops every running session, and `Keep running` restores them without a gap; ⌥-start runs both; with three running, an alongside start stops the oldest, a plain start stops all three, and neither offers `Keep running`; offline sessions with four overlaps merge to the same result on every device; a day's clock time never exceeds 24 h while its tracked time may; each line's hours count its own entries in full; three sessions each running 10:00–11:00 give tracked 3 h, by the clock 1 h, in parallel 2 h for the day and 1 h for each line (amendment 2026-10-16); pause and resume give separate intervals; an interval across midnight is split; a daylight-saving change and a time-zone change keep the minutes right; an edit that would overlap a neighbour is refused until the owner chooses; every command can be undone.
 - Reconcile tests: totals within the tolerance list nothing and resolve as "the same session", and reopening that pair from the day view offers all four choices; a smaller workbook total offers only keep MoonShine and keep the workbook, and keeping the workbook marks the native entries as not counted without deleting any; no choice creates a negative entry; beyond it the pair is listed, the native entries are counted and the two are never summed; each choice gives the stated result; a re-import does not reopen a decided pair unless the workbook's value changed; a derived entry is not counted next to a measured or stated one.
 - Assistant tests (the Ask phase): a subject with two matches never starts a timer; a time offset that is not in the utterance is never applied.
-- Nudge tests with a fake clock: each kind fires once per mark; none fires on a device that did not start the session; a line without a floor or a portion has no day mark; `Break` pauses the session and the resume nudge fires once.
+- Nudge tests with a fake clock: each kind fires once per mark; none fires on a device that did not start the session; with overlapping sessions the break nudge uses the smallest N and fires once, on the device of the earliest running session; a line without a floor or a portion has no day mark; `Break` pauses every running session, resuming resumes all of them, and the resume nudge fires once.
 - Calendar tests: an entry confirmed from an event stores its start, end and line and no title, attendee, id or calendar name; a timer target from an event stores only a duration.
-- Check-mark tests: a session past its limit, or one that spans Mac sleep, is marked; nothing is trimmed without the owner's choice; a marked entry stays marked until it is confirmed or edited.
+- Check-mark tests: a session past its own line's limit (each overlapping session checked separately), or one that spans Mac sleep, is marked; nothing is trimmed without the owner's choice; a marked entry stays marked until it is confirmed or edited.
 - Timer-slice acceptance: one working week tracked on the Mac, compared by the owner with his workbook for the same week.
 
 ## Pros and Cons of the Options
@@ -205,4 +208,4 @@ Chosen together with option 1 since 2026-10-16 (§ Up to three running timers).
 ## More Information
 
 - Not checked yet: whether a Live Activity started on the iPhone gives usable stop and pause controls on the watch without a watch app; how reliably iOS delivers a local notification scheduled from a calendar event when the app has not been opened that day.
-- Follow-ups: idle detection while the Mac is awake; exporting a month in the workbook's layout; a login item so the Mac menu bar timer is always available; per-task actual against estimate in the forecast view.
+- Follow-ups: idle detection while the Mac is awake; exporting a month in the workbook's layout; per-task actual against estimate in the forecast view. The login item that was a follow-up here is decided by ADR-0017 (owner, 2026-10-17): MoonShine runs as a login item from whichever of the Timer slice or the Reminders slice ships first.

@@ -22,6 +22,7 @@ Toolbar: `Week 40`, subtitle `28 September – 4 October 2026 · ISO week`; ‹ 
 - Past days show completed tasks (checked, **dimmed**) and tasks still open from that day (resolved open question, draft-2).
 - No plan: available tasks in **active** lines with no planned, defer or due date (mirrors the "Без плана" perspective).
 - Strip: per line, this week's rhythm and progress vs the mean of the previous 4 ISO weeks (Stats service).
+- Tasks with the reminder tag (ADR-0017, S4 bridge) are in no day column, no tray and no strip count (`today.md` § Reminders).
 
 ## Weekly review mode (draft-2, S5, first to cut)
 

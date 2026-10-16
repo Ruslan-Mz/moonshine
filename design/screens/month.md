@@ -30,6 +30,7 @@ Toolbar: month name, subtitle, ‹ Today ›. **Opens on the current month**; �
 ## Data
 
 - Counts per day per line from the store (completed tasks; a completed repeating group counts one session per line it touches, as in S1b).
+- Tasks with the reminder tag (ADR-0017, S4 bridge) are in no day list and no count.
 - Note lookup: `type: month_plan` in frontmatter, or name `Месяц_YYYY-MM`. Absent → inspector shows "No month plan note for September" with no action.
 
 ## SwiftUI

@@ -276,11 +276,11 @@ The mockups are generated files and are not edited by hand; where a mockup and a
 1. **Rise and Dip marks**: redraw as terrain shapes that are not arrows (a rising slope, a falling slope). Until then the triangles stay. My take is phase 2's first native slice.
 2. **Project take**: how a project take is confirmed in the weekly review.
 3. **Project page** (the Hub slice, ADR-0014): tasks, plan, with places reserved for the rendered project note and for the mentions.
-4. **Time tracking on the Mac** (the Timer slice, ADR-0016): the menu bar timer; starting from a row and from ⌘K; tracked intervals on the Today rail with editing; the week table; the reconcile list; the four nudges with the `Break` action; the check mark of a forgotten timer. Up to three timers (amendment 2026-10-16): two and three running timers in the menu bar and on the Today rail, the "Keep both" notice, tracked time against the clock total (`Tracked 26 h · by the clock 23 h · in parallel 3 h`).
+4. **Time tracking on the Mac** (the Timer slice, ADR-0016): the menu bar timer; starting from a row and from ⌘K; tracked intervals on the Today rail with editing; the week table; the reconcile list; the four nudges with the `Break` action; the check mark of a forgotten timer. Up to three timers (amendment 2026-10-16): two and three running timers in the menu bar and on the Today rail, the "Keep running" notice and the "stopped (three at most)" notice, tracked time against the clock total (`Tracked 26 h · by the clock 23 h · in parallel 3 h`).
 
 #### Before the Reminders slice
 
-1. **Reminder editor** (ADR-0017): text, line or project, pinned or scheduled, notify, quiet window.
+1. **Reminder editor** (ADR-0017): text, line or project, pinned or scheduled, notify, quiet window, snooze; the "notifications limited on this device" mark for the iPad and iPhone.
 2. **Schedule picker**: once; daily, weekdays or chosen weekdays at a time; every N hours (1–12) inside a window.
 3. **Mac desktop widget**: reminders now and the next tasks.
 
