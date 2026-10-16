@@ -100,6 +100,22 @@ Artboards: `Today-CalB` (chosen), `Today-CalB-RU`, `Today-CalB-Mixed`, `Today-Ca
 - [ ] Without access the layout does not shift; the Day section shows timed tasks and one quiet line.
 - [ ] Titles keep their script and direction (RU, IT, JA, HE in `Today-CalB-Mixed`); the rail is checked in Russian.
 
+## Reminders (ADR-0017)
+
+Position and states only; the visual comes in the next design round (`design/README.md` § Pending design rounds, Before S4). S4 builds the OmniFocus tag bridge; it is the first thing cut from S4 if the timebox is at risk (`docs/specs/phase-1-see.md` → S4).
+
+- **Position:** the first row of the main area, above the Anchors strip. Absent when no task carries the reminder tag (`settings.md` § Reminders).
+- **Content:** OmniFocus tasks with the reminder tag, in source order; text and line emoji only. No checkbox, no estimate, no due styling and no urgent colour: a reminder is seen, never done or overdue.
+- **States:** none (absent) · one or more (shown in full up to the strip's height) · more than fit (the rest behind a `+N more` disclosure; the visual decides the height) · Demo mode (from the demo fixtures once they have reminders; absent until then).
+- **Behaviour:** read-only; ↵ or double-click opens the task in OmniFocus, as task rows do. Notifications stay with OmniFocus until the native Reminders slice.
+- **Counts:** these tasks are in no count on Today (the subtitle's open, done and estimate, Touched today, quiet lines) and in no line section, Top 3 or Anchors strip; the trace still shows them under their project.
+
+**Acceptance.**
+
+- [ ] A task with the reminder tag is in the strip and in no line section, total or rail count.
+- [ ] Renaming the tag in Settings moves the set at the next refresh.
+- [ ] No checkbox, no amber, no "missed" or "overdue" wording; checked in Russian.
+
 ## My take (draft-4)
 
 Not drawn on Today. One rule changes here (owner decision, 3 Oct 2026): any take or note **resets the quiet count** from its date (the date the note was written or the take was set, never a future date). A line with a take or a note in the last 14 days is therefore **not** listed under "Quiet lines" in the right rail, even with no task done. The take on the Today rail is drawn in the 3b round.

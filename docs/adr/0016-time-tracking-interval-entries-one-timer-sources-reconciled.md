@@ -1,5 +1,5 @@
 ---
-title: "0016 — Time tracking: one running timer, interval entries, nudges as facts, Excel reconciled by day and line"
+title: "0016 — Time tracking: one running timer, interval entries, nudges as facts, Excel reconciled by day and line (amended 2026-10-16: up to three timers)"
 status: proposed
 date: 2026-10-07
 deciders: Ruslan Mozhaev
@@ -16,7 +16,7 @@ related:
   - "[[0015-vault-writes-narrow-command-path-rituals-simple-editor]]"
 ---
 
-# 0016 — Time tracking: one running timer, interval entries, nudges as facts, Excel reconciled by day and line
+# 0016 — Time tracking: one running timer, interval entries, nudges as facts, Excel reconciled by day and line (amended 2026-10-16: up to three timers)
 
 ## Context and Problem Statement
 
@@ -42,7 +42,7 @@ The owner records his hours in an Excel workbook, mostly from memory at the end 
 
 ## Decision Outcome
 
-**Chosen option: "1"**, because intervals on the clock give the forecast exact evidence, put actual time on the same day axis as the calendar and the plan, make corrections simple, and let two sources be compared instead of summed.
+**Chosen option: "1"**, together with option 3 since 2026-10-16 (§ Up to three running timers), because intervals on the clock give the forecast exact evidence, put actual time on the same day axis as the calendar and the plan, make corrections simple, and let two sources be compared instead of summed.
 
 **This ADR amends ADR-0013** (timer commands join the `auto` class), **ADR-0012** (what a confirmed calendar entry and a timer target keep of an event, below) and the Excel import contract (the workbook is no longer "the source of truth until the quick log exists").
 
@@ -55,9 +55,26 @@ The owner records his hours in an Excel workbook, mostly from memory at the end 
 - **Calendar entries** (owner, 2026-10-09; amends ADR-0012). A time entry the owner confirms from an event keeps the event's start, end and line, never its title, attendees, id or calendar name. A timer target taken from an event is only a duration. These are the only event-derived values besides ADR-0012's busy minutes that leave the device.
 - **Intervals are the atoms.** Pause closes an interval and resume opens the next one in the same session; each interval is one entry. An interval that crosses local midnight is split in two at stop. A workbook entry has a day and minutes and no clock times.
 
-### One running timer
+### Up to three running timers
 
-Starting a timer stops the one that is running, at that instant. The same rule merges sessions started on two devices without a network: ordered by start time, a session still running when a later one starts ends at that later start. Every device computes the same result. A running session survives the app being closed (the start time is stored).
+**Amendment (2026-10-16, owner).** This section was "One running timer": _"Starting a timer stops the one that is running, at that instant. The same rule merges sessions started on two devices without a network: ordered by start time, a session still running when a later one starts ends at that later start. Every device computes the same result."_ The owner does two things at once and both are real: violin scales during the part of a meeting where he only listens, Anki vocabulary on a commute. Splitting the time would say he did half of each, which is false; refusing it would lose one of them. The data model already allows it: every interval has clock times, so overlap is computed, not stored.
+
+- **Up to three sessions may run at the same time.** Each is its own `TimerSession` with its own intervals, pauses and nudges.
+- **Starting a timer while one runs switches by default and never blocks.** The running session stops at that instant and the new one starts; a quiet, non-modal notice shows for about eight seconds: "🎻 stopped · Keep both". `Keep both` resumes the stopped session from the instant it stopped, so there is no gap (it undoes the stop). Starting alongside directly: ⌥-click, `Start alongside` in ⌘K, and the word "alongside" / «параллельно» by voice.
+- **A fourth start** stops the oldest running session at that instant, with the same notice.
+- **Offline merge across devices:** sessions are kept as they are while at most three overlap; when a fourth overlaps, the one that started first ends at the later start. Every device computes the same result.
+- A running session survives the app being closed (the start time is stored).
+
+How time is counted:
+
+| What                                                                   | Counted as                                                                                              |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| A line's, project's or task's hours (week table, reviews, forecast)    | The full duration of its own entries                                                                    |
+| The day's clock time (Today rail, free time, day load, Board capacity) | The union of all intervals: overlapping time counts once; a day never exceeds 24 h                      |
+| Shown                                                                  | "Tracked 26 h · by the clock 23 h · in parallel 3 h"; in reviews each line carries "in parallel 30 min" |
+| Break nudge, check mark of a forgotten timer                           | Continuous activity of the union, not each session separately; one nudge at a time                      |
+| Reconcile with the workbook (unit: day and line)                       | Unchanged: per line                                                                                     |
+| Forecast evidence                                                      | Weight 1 for now; overlap is derivable, so a weight can be added later without a migration              |
 
 ### Commands
 
@@ -94,7 +111,7 @@ A nudge is a local notification on the device where the session was started, and
 
 | Kind                | Fires when                                                                                                                            | Wording, as a fact         |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| Break reminder      | every N minutes of a running session (N per line, default 50; on by default)                                                          | `🎻 50 min · short break?` |
+| Break nudge         | every N minutes of a running session (N per line, default 50; on by default)                                                          | `🎻 50 min · short break?` |
 | Session target      | the target set at start is reached                                                                                                    | `🎻 2 h reached`           |
 | Day mark            | today's tracked time on a line reaches its floor or its portion                                                                       | `Today's 4 h are in`       |
 | Calendar suggestion | five minutes before an event in a line-mapped calendar: an offer to start a timer on that line, with the event's length as the target | `🏃 17:00 · Start timer?`  |
@@ -102,8 +119,9 @@ A nudge is a local notification on the device where the session was started, and
 - **Day mark.** The _floor_ is the line's `floor_h_day`. The _portion_ is the sum of today's events in the line's calendar, else the line's optional `portion_h_day` in the budget note. A line with neither has no day mark. From the Board phase a project's portion comes from the plan. Hours may be shown next to the portion: CLAUDE.md rule 8 names `portion_h_day` and the length of events in a line's calendar (owner, 2026-10-08).
 - The calendar suggestion reads events on the device, as every calendar feature does (ADR-0012); nothing about the event is stored except, once the owner starts the timer, the target's duration (§ Records). It needs the app to have run that day, so it is best effort.
 - Titles of tasks and events are not shown on a locked screen unless the existing setting allows it.
-- **Break reminder.** Its two actions are `Break` and `Keep going`. `Break` pauses the timer, so the break is not counted, and one reminder to resume follows after the break length (default 5 minutes). Without an answer the timer keeps running.
+- **Break nudge.** Its two actions are `Break` and `Keep going`. `Break` pauses every running session, so the break is not counted, and one nudge to resume follows after the break length (default 5 minutes); resuming resumes all of them (amendment 2026-10-16). Without an answer the timers keep running.
 - No streaks. A day mark is never shown as missed.
+- **Amendment (2026-10-16, ADR-0017).** Nudges are scheduled by the one notification planner in Core that also schedules reminders; a running timer's nudges rank first within the 64 pending notifications iOS allows. The break nudge was called "Break reminder" until then; it is renamed so that "reminder" names only ADR-0017's entity.
 
 ### A forgotten timer is visible (owner decision, 2026-10-07)
 
@@ -126,13 +144,13 @@ Both stay. The unit of comparison is **(day, line)**.
 
 ### Roadmap
 
-| Phase    | Change                                                                                                                                                  |
-| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2 Plan   | `TimeEntry` gets the new fields from its first slice; the import and the quick log use them. The reconcile rule is part of the import.                  |
-| 2 Plan   | **Timer (Mac)** is the last slice: sessions, menu bar, start from a row and from ⌘K, the day rail with editing, the week table, nudges, the check mark. |
-| 3b       | The iPhone timer takes a task or a project as well as a line; buttons in widgets and controls; Siri.                                                    |
-| Ask      | Start, stop and corrections through the assistant.                                                                                                      |
-| After 3b | Watch; standalone countdown timers that belong to nothing.                                                                                              |
+| Phase    | Change                                                                                                                                                                        |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2 Plan   | `TimeEntry` gets the new fields from its first slice; the import and the quick log use them. The reconcile rule is part of the import.                                        |
+| 2 Plan   | **Timer (Mac)** is the last slice: sessions (up to three at once), menu bar, start from a row and from ⌘K, the day rail with editing, the week table, nudges, the check mark. |
+| 3b       | The iPhone timer takes a task or a project as well as a line; buttons in widgets and controls; Siri.                                                                          |
+| Ask      | Start, stop and corrections through the assistant.                                                                                                                            |
+| After 3b | Watch; standalone countdown timers that belong to nothing.                                                                                                                    |
 
 **Amendment (2026-10-09, owner).** The fallback is removed: it said that if the other phase-2 slices were not merged by 2026-12-07, Timer (Mac) would move to directly after R1. It existed only to protect R1's deadline (2026-12-28). R1 is now built in the two-week usage period after phase 1 (`docs/ROADMAP.md`, rule of gates), so that deadline has a margin of weeks, and Timer (Mac) stays the last slice of phase 2.
 
@@ -143,7 +161,7 @@ Both stay. The unit of comparison is **(day, line)**.
 - Good — start on one device and stop on another; no AI needed for voice through Siri.
 - Good — the workbook keeps working, and no hour is counted twice.
 - Bad — keeping both sources means a reconcile list to work through; while a day is undecided its total may be too low.
-- Bad — one timer at a time cannot express two things done at once.
+- Bad — two kinds of daily total (tracked and by the clock) must both be labelled wherever a day total appears (amendment 2026-10-16).
 - Bad — a forgotten session is marked, not stopped: its entry stays wrong until the owner confirms or trims it.
 - Bad — the calendar suggestion and the nudges depend on notifications the system may delay, and on the app having run.
 - Bad — phase 2 grows by a slice. R1's fixed date no longer depends on it: R1 is built before phase 2 (amendment 2026-10-09).
@@ -152,10 +170,10 @@ Both stay. The unit of comparison is **(day, line)**.
 
 ### Confirmation
 
-- Core tests: starting a timer stops the running one at the same instant; two offline sessions merge to the same entries on both devices; pause and resume give separate intervals; an interval across midnight is split; a daylight-saving change and a time-zone change keep the minutes right; an edit that would overlap a neighbour is refused until the owner chooses; every command can be undone.
+- Core tests: a start while one runs switches, and `Keep both` restores the stopped session without a gap; ⌥-start runs both; a fourth start stops the oldest; offline sessions with four overlaps merge to the same result on every device; a day's clock time never exceeds 24 h while its tracked time may; each line's hours count its own entries in full (amendment 2026-10-16); pause and resume give separate intervals; an interval across midnight is split; a daylight-saving change and a time-zone change keep the minutes right; an edit that would overlap a neighbour is refused until the owner chooses; every command can be undone.
 - Reconcile tests: totals within the tolerance list nothing and resolve as "the same session", and reopening that pair from the day view offers all four choices; a smaller workbook total offers only keep MoonShine and keep the workbook, and keeping the workbook marks the native entries as not counted without deleting any; no choice creates a negative entry; beyond it the pair is listed, the native entries are counted and the two are never summed; each choice gives the stated result; a re-import does not reopen a decided pair unless the workbook's value changed; a derived entry is not counted next to a measured or stated one.
 - Assistant tests (the Ask phase): a subject with two matches never starts a timer; a time offset that is not in the utterance is never applied.
-- Nudge tests with a fake clock: each kind fires once per mark; none fires on a device that did not start the session; a line without a floor or a portion has no day mark; `Break` pauses the session and the resume reminder fires once.
+- Nudge tests with a fake clock: each kind fires once per mark; none fires on a device that did not start the session; a line without a floor or a portion has no day mark; `Break` pauses the session and the resume nudge fires once.
 - Calendar tests: an entry confirmed from an event stores its start, end and line and no title, attendee, id or calendar name; a timer target from an event stores only a duration.
 - Check-mark tests: a session past its limit, or one that spans Mac sleep, is marked; nothing is trimmed without the owner's choice; a marked entry stays marked until it is confirmed or edited.
 - Timer-slice acceptance: one working week tracked on the Mac, compared by the owner with his workbook for the same week.
@@ -169,8 +187,10 @@ Both stay. The unit of comparison is **(day, line)**.
 
 ### 3. Parallel timers
 
+Chosen together with option 1 since 2026-10-16 (§ Up to three running timers).
+
 - Good — can express two things at once.
-- Bad — a day can add up to more than 24 hours; every total needs a rule for overlaps; the owner's workbook already assumes one activity at a time.
+- Bad — every day total needs the union rule of § Up to three running timers.
 
 ### 4. Automatic tracking from app activity
 

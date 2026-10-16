@@ -265,14 +265,24 @@ Phase 1: the Lines (S4) and weekly review (S5) layouts leave room for the third 
 
 ### Pending design rounds
 
-The mockups are generated files and are not edited by hand; where a mockup and a spec differ, the spec wins. Each item is listed under the earliest phase or slice whose spec needs it (owner, 2026-10-08). No S4 screen needs a redraw: S4 follows the screen specs, which win over the mockups, so there is no "Before S4" list. Items for the designer:
+The mockups are generated files and are not edited by hand; where a mockup and a spec differ, the spec wins. Each item is listed under the earliest phase or slice whose spec needs it (owner, 2026-10-08). S4 follows the screen specs, which win over the mockups; its one new element is the Reminders strip (owner, 2026-10-16). Items for the designer:
+
+#### Before S4
+
+1. **Reminders strip on Today** (ADR-0017): the strip above the Anchors strip, its states (one, several, more than fit) and its height; position and states are in `screens/today.md` § Reminders. If it is not drawn in time, S4 builds it from the screen spec or cuts it.
 
 #### Before phase 2
 
 1. **Rise and Dip marks**: redraw as terrain shapes that are not arrows (a rising slope, a falling slope). Until then the triangles stay. My take is phase 2's first native slice.
 2. **Project take**: how a project take is confirmed in the weekly review.
 3. **Project page** (the Hub slice, ADR-0014): tasks, plan, with places reserved for the rendered project note and for the mentions.
-4. **Time tracking on the Mac** (the Timer slice, ADR-0016): the menu bar timer; starting from a row and from ⌘K; tracked intervals on the Today rail with editing; the week table; the reconcile list; the four nudges with the `Break` action; the check mark of a forgotten timer.
+4. **Time tracking on the Mac** (the Timer slice, ADR-0016): the menu bar timer; starting from a row and from ⌘K; tracked intervals on the Today rail with editing; the week table; the reconcile list; the four nudges with the `Break` action; the check mark of a forgotten timer. Up to three timers (amendment 2026-10-16): two and three running timers in the menu bar and on the Today rail, the "Keep both" notice, tracked time against the clock total (`Tracked 26 h · by the clock 23 h · in parallel 3 h`).
+
+#### Before the Reminders slice
+
+1. **Reminder editor** (ADR-0017): text, line or project, pinned or scheduled, notify, quiet window.
+2. **Schedule picker**: once; daily, weekdays or chosen weekdays at a time; every N hours (1–12) inside a window.
+3. **Mac desktop widget**: reminders now and the next tasks.
 
 #### Before the Write phase
 
@@ -288,3 +298,4 @@ The mockups are generated files and are not edited by hand; where a mockup and a
 2. **Names in the mockups**: Forward / Back → Rise / Dip (EN, RU, LV, IT, DE); hours `2 h of 6 h budget`.
 3. **Draft-4 items not drawn**: Split View for the take section, the take on the Today rail, RTL marks, the Mac note popover.
 4. **Draft-3 items**: the day rail on iPad and iPhone (open question 14 above); free time on Today as the rest of the window (`≈ 2 h 25 min free until 22:00` at 16:20); the deadline rule (`screens/settings.md` § Deadlines: the setting, and plain `due 20:35` text and neutral day-rail marks for due dates that are not deadlines); read-only checkboxes on the day rail.
+5. **iPad home screen widget** (ADR-0017): reminders now and the next tasks.
