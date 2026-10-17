@@ -7,10 +7,14 @@
 // with an allowlist of schemes (ADR-0015, amendment of 2026-10-10); that function joins the
 // allowlist here in S4.
 //
-// Calendars are read-only until the Act phase (ADR-0012): EventKit and EventKitUI may be
-// imported only by `CalendarAdapter/SystemEventStore.swift`, in any import spelling; no other
-// file names an EventKit type (`EK…`), so no second file reaches the store; and that file calls
-// none of EventKit's write or reminder names. `Array.remove` and the like elsewhere pass.
+// Calendars are read-only until the Act phase (ADR-0012): EventKit may be imported only by
+// `CalendarAdapter/SystemEventStore.swift`, in any import spelling; EventKitUI nowhere (its
+// event editor saves by itself); no other file names an EventKit type (`EK…`); and that file
+// calls none of EventKit's write or reminder names. `Array.remove` and the like elsewhere pass.
+// The import and name rules also search the test folders (`MoonShineCore/Tests`,
+// `Adapters/Tests`, the `*Tests` folders of `Apps`), so no test can reach a live store. A file
+// that reaches the store through members without importing EventKit is stopped by the compiler
+// (`MemberImportVisibility` on the CalendarAdapter target, and the store property is private).
 //
 // It is a text search over the names listed below: it catches a write added by accident, not
 // one hidden on purpose. What it does not see: a call through a variable, a selector or a
@@ -108,24 +112,27 @@ const patterns = [
   ["URL opener", /(?<![A-Za-z0-9_])Link\s*\(|UIApplication\.shared\.open/, false, "Apps"],
 ];
 
-// Every import spelling `scripts/check-core-imports.sh` accepts: attributes (`@preconcurrency`),
-// access modifiers, a symbol kind (`import class EventKit.EKEventStore`), block comments,
-// backticks.
-const eventKitImport = new RegExp(
-  "(^|;)\\s*((@[A-Za-z_]+(\\s*\\([^)]*\\))?|public|package|internal|fileprivate|private)\\s+)*" +
-    "import\\s+(/\\*[^*]*\\*/\\s*)*((typealias|struct|class|enum|protocol|let|var|func)\\s+)?" +
-    "(/\\*[^*]*\\*/\\s*)*`?(EventKit|EventKitUI)`?([^A-Za-z0-9_]|$)",
-);
+// Every import spelling `scripts/check-core-imports.sh` accepts: block comments before the
+// import and before the name, attributes (`@preconcurrency`), access modifiers, a symbol kind
+// (`import class EventKit.EKEventStore`), backticks.
+const importOf = (module) =>
+  new RegExp(
+    "(^|;)\\s*(/\\*[^*]*\\*/\\s*)*" +
+      "((@[A-Za-z_]+(\\s*\\([^)]*\\))?|public|package|internal|fileprivate|private)\\s+)*" +
+      "import\\s+(/\\*[^*]*\\*/\\s*)*((typealias|struct|class|enum|protocol|let|var|func)\\s+)?" +
+      `(/\\*[^*]*\\*/\\s*)*\`?${module}\`?([^A-Za-z0-9_]|$)`,
+  );
 // EventKit's writes and reminder access, as member calls (`store.save(`) and bare calls (`save(`
 // inside an extension).
 const calendarWrites = [
   "save", "remove", "commit", "saveCalendar", "removeCalendar", "saveReminder", "removeReminder",
   "requestWriteOnlyAccessToEvents", "requestFullAccessToReminders",
 ];
-// [name, pattern, searched in a line that is only a comment, applies to this file]
+// [name, pattern, searched in a line that is only a comment, applies to this file, also in tests]
 const calendarPatterns = [
-  ["EventKit import", eventKitImport, false, (file) => file !== eventStore],
-  ["EventKit name", word(["EK[A-Z][A-Za-z0-9_]*"]), false, (file) => file !== eventStore],
+  ["EventKit import", importOf("EventKit"), false, (file) => file !== eventStore, true],
+  ["EventKitUI import", importOf("EventKitUI"), false, () => true, true],
+  ["EventKit name", word(["EK[A-Z][A-Za-z0-9_]*"]), false, (file) => file !== eventStore, true],
   [
     "calendar write",
     new RegExp(
@@ -133,8 +140,11 @@ const calendarPatterns = [
     ),
     true,
     (file) => file === eventStore,
+    false,
   ],
 ];
+// Test folders: searched for the calendar import and name rules only.
+const testRoots = ["MoonShineCore/Tests", "Adapters/Tests"];
 
 /// Swift files under `dir`, and every symbolic link (a finding, never followed).
 function walk(dir, skipTests) {
@@ -173,12 +183,34 @@ for (const dir of [...required, ...optional.filter((dir) => isFolder(join(root, 
         if (only && !file.startsWith(`${only}/`)) continue;
         if (pattern.test(line)) findings.push(`${file}:${index + 1}: ${name}`);
       }
-      for (const [name, pattern, inComments, applies] of calendarPatterns) {
-        if ((comment && !inComments) || !applies(file)) continue;
-        if (pattern.test(line)) findings.push(`${file}:${index + 1}: ${name}`);
-      }
+      searchCalendar(file, line, index, false);
     });
   }
+}
+
+function searchCalendar(file, line, index, inTest) {
+  const comment = line.trimStart().startsWith("//");
+  for (const [name, pattern, inComments, applies, inTests] of calendarPatterns) {
+    if ((comment && !inComments) || !applies(file) || (inTest && !inTests)) continue;
+    if (pattern.test(line)) findings.push(`${file}:${index + 1}: ${name}`);
+  }
+}
+
+const testFiles = [
+  ...testRoots.filter((dir) => isFolder(join(root, dir))).flatMap((dir) => walk(join(root, dir), false)),
+  ...(isFolder(join(root, "Apps"))
+    ? walk(join(root, "Apps"), false).filter(({ path }) =>
+        relative(join(root, "Apps"), path).split(sep).slice(0, -1).some((part) => part.endsWith("Tests")),
+      )
+    : []),
+];
+for (const { path, link } of testFiles) {
+  const file = relative(root, path).split(sep).join("/");
+  if (link) {
+    findings.push(`${file}: symbolic link`);
+    continue;
+  }
+  readFileSync(path, "utf8").split("\n").forEach((line, index) => searchCalendar(file, line, index, true));
 }
 
 if (findings.length > 0) {

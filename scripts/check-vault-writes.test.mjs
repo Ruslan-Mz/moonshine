@@ -34,10 +34,10 @@ function check(files, folders) {
   return run(repositoryWith(files, folders));
 }
 
-function fails(line, where = adapter) {
+function fails(line, where = adapter, rule = "") {
   const result = check({ [where]: `import Foundation\n${line}\n` });
   assert.equal(result.status, 1, `${line}\n${result.stdout}${result.stderr}`);
-  assert.match(result.stdout, new RegExp(`${where.replaceAll(".", "\\.")}:2: `), line);
+  assert.match(result.stdout, new RegExp(`${where.replaceAll(".", "\\.")}:2: ${rule}`), line);
 }
 
 function passes(line, where = adapter) {
@@ -259,27 +259,52 @@ test("EventKit is imported only by the event store, in any spelling", () => {
     "@_spi(X) internal import EventKit",
     "import class EventKit.EKEventStore",
     "import /* read only */ EventKit",
+    "/* read only */ import EventKit",
     "import `EventKit`",
     "let x = 1; import EventKit",
-    "import EventKitUI",
   ];
   for (const where of [calendarFile, adapter, app, "MoonShineCore/Sources/MoonShineCore/A.swift"]) {
-    for (const spelling of spellings) fails(spelling, where);
+    for (const spelling of spellings) fails(spelling, where, "EventKit import");
   }
   for (const spelling of spellings) passes(spelling, eventStore);
   passes("import EventKitty");
   passes("// import EventKit");
+  passes("let x = 1 // import EventKit");
+});
+
+test("EventKitUI is imported nowhere, the event store included", () => {
+  for (const where of [eventStore, calendarFile, app]) {
+    for (const spelling of ["import EventKitUI", "@preconcurrency import EventKitUI", "/* ui */ import EventKitUI"]) {
+      fails(spelling, where, "EventKitUI import");
+    }
+  }
 });
 
 test("no other file names an EventKit type", () => {
   for (const where of [calendarFile, app, adapter]) {
     for (const line of ["let store: EKEventStore", "let view = EKEventEditViewController()", "_ = EKEvent.self"]) {
-      fails(line, where);
+      fails(line, where, "EventKit name");
     }
   }
   passes("let store = EKEventStore()", eventStore);
   passes("/// Wraps EKEventStore.", calendarFile);
   passes("let speaker = SPEAKer()", calendarFile);
+});
+
+test("the test folders are searched for EventKit imports and names, not for vault writes", () => {
+  const tests = [
+    "Adapters/Tests/CalendarAdapterTests/LiveTests.swift",
+    "MoonShineCore/Tests/MoonShineCoreTests/A.swift",
+    "Apps/MoonShineMac/MoonShineMacTests/A.swift",
+    "Apps/MoonShineMacTests/A.swift",
+  ];
+  for (const where of tests) {
+    fails("import EventKit", where, "EventKit import");
+    fails("import EventKitUI", where, "EventKitUI import");
+    fails("let store = EKEventStore()", where, "EventKit name");
+    passes("try FileManager.default.removeItem(at: url)", where);
+    passes("try store.save(event)", where);
+  }
 });
 
 test("the event store calls no EventKit write and asks for no reminders", () => {
@@ -297,7 +322,7 @@ test("the event store calls no EventKit write and asks for no reminders", () => 
     "try save(event, span: .thisEvent)",
     "// store.save(event, span: .thisEvent)",
   ]) {
-    fails(line, eventStore);
+    fails(line, eventStore, "calendar write");
   }
   for (const line of [
     "try await store.requestFullAccessToEvents()",
