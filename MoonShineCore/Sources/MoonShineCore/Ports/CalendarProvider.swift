@@ -114,13 +114,14 @@ public struct CalendarEvent: Hashable, Sendable, Identifiable, CustomStringConve
   /// In-memory identity for lists; never stored or logged.
   public let id: String
   public let calendarID: CalendarID
-  /// Nil when empty or private; the UI shows `Busy`.
+  /// Nil when empty or blank; the UI shows `Busy`. EventKit exposes no private flag, so a
+  /// private event keeps whatever title the store gives.
   public let title: String?
   public let start: Date
   public let end: Date
   public let isAllDay: Bool
   public let display: EventDisplay
-  /// False for tentative events and for events marked free.
+  /// False for tentative events, events marked free and every all-day event.
   public let occupiesTime: Bool
   public let timeZone: TimeZone?
 
@@ -139,13 +140,15 @@ public struct CalendarEvent: Hashable, Sendable, Identifiable, CustomStringConve
     self.end = end
     self.isAllDay = isAllDay
     self.display = display
-    self.occupiesTime = occupiesTime
+    self.occupiesTime = occupiesTime && !isAllDay
     self.timeZone = timeZone
   }
 
   /// `[start, end)` against `[interval.start, interval.end)`; a zero-length event belongs to
-  /// the interval that holds its start.
+  /// the interval that holds its start. A zero-length query at T is the instant T: it holds
+  /// the events with `start ≤ T < end` (owner, 2026-10-17), so not a zero-length event at T.
   public func overlaps(_ interval: DateInterval) -> Bool {
+    if interval.duration == 0 { return start <= interval.start && interval.start < end }
     if start == end { return start >= interval.start && start < interval.end }
     return start < interval.end && end > interval.start
   }

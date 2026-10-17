@@ -23,7 +23,8 @@ public struct DemoCalendar: CalendarProvider {
 
   public func changes() -> AsyncStream<Void> { AsyncStream { $0.finish() } }
 
-  // MARK: Calendars (Settings, Demo)
+  // MARK: Calendars (Settings, Demo); light-mode colours of `design/components.md` § CalendarDot
+  // and the Settings → Calendars mockup (Birthdays, Holidays)
 
   static let family = CalendarID("demo-family")
   static let music = CalendarID("demo-music-lessons")
@@ -33,17 +34,17 @@ public struct DemoCalendar: CalendarProvider {
   static let holidays = CalendarID("demo-holidays")
 
   public static let calendars: [CalendarInfo] = [
-    CalendarInfo(id: family, title: "Family", account: "iCloud", colorHex: "#E8A33D", kind: .other),
+    CalendarInfo(id: family, title: "Family", account: "iCloud", colorHex: "#6E9A80", kind: .other),
     CalendarInfo(
-      id: music, title: "Music lessons", account: "iCloud", colorHex: "#9B6BD6", kind: .other),
+      id: music, title: "Music lessons", account: "iCloud", colorHex: "#9282B4", kind: .other),
     CalendarInfo(
-      id: personal, title: "Personal", account: "iCloud", colorHex: "#3D8FE8", kind: .other),
+      id: personal, title: "Personal", account: "iCloud", colorHex: "#B0946A", kind: .other),
     CalendarInfo(
-      id: birthdays, title: "Birthdays", account: "iCloud", colorHex: "#8E8E93", kind: .birthdays),
+      id: birthdays, title: "Birthdays", account: "iCloud", colorHex: "#A0A0A8", kind: .birthdays),
     CalendarInfo(
-      id: work, title: "Work", account: "Work · Exchange", colorHex: "#4CAF7A", kind: .other),
+      id: work, title: "Work", account: "Work · Exchange", colorHex: "#6C84AE", kind: .other),
     CalendarInfo(
-      id: holidays, title: "Holidays in Latvia", account: "Subscribed", colorHex: "#C75C5C",
+      id: holidays, title: "Holidays in Latvia", account: "Subscribed", colorHex: "#B08484",
       kind: .subscribed),
   ]
 

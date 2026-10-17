@@ -35,7 +35,30 @@ import Testing
   @Test func nothingOutsideWeekForty() async throws {
     #expect(try await events(day(9, 27)).isEmpty)
     #expect(try await events(day(10, 5)).isEmpty)
-    #expect(try await events(DateInterval(start: DemoCalendar.now, duration: 0)).isEmpty)
+  }
+
+  @Test func aZeroLengthQueryReturnsTheEventsInProgress() async throws {
+    func at(_ hour: Int, _ minute: Int) async throws -> [String?] {
+      try await events(DateInterval(start: DemoCalendar.at(10, 1, hour, minute), duration: 0))
+        .map(\.title)
+    }
+    #expect(try await at(17, 30) == ["Violin lesson"])
+    #expect(try await at(17, 0) == ["Violin lesson"])
+    #expect(try await at(18, 0) == [])
+    #expect(try await at(16, 20) == [])
+  }
+
+  @Test func theWeekendIsAllDayAndTakesNoTime() async throws {
+    let saturday = try await events(day(10, 3))
+    #expect(saturday.filter(\.isAllDay).allSatisfy { !$0.occupiesTime })
+  }
+
+  @Test func coloursAreTheDocumentedDemoValues() {
+    // `design/components.md` § CalendarDot (light) and the Settings → Calendars mockup.
+    #expect(
+      DemoCalendar.calendars.map(\.colorHex) == [
+        "#6E9A80", "#9282B4", "#B0946A", "#A0A0A8", "#6C84AE", "#B08484",
+      ])
   }
 
   @Test func theSprintDemoIsTentativeAndTakesNoTime() async throws {

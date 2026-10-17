@@ -111,7 +111,7 @@ Invented events for **week 40** (Mon 28 Sep – Sun 4 Oct 2026). "Today" is Thu 
 
 **Week 40 total:** 16 timed events + 1 two-day all-day event = `17 events · 15 h in calendar`.
 
-**Rules behind the numbers:** busy time = union of timed events (overlaps count once), clipped to the day window, from calendars that count as busy; tentative and all-day events are shown but not counted; declined events are hidden; free = 14 h − busy for a whole day (the other days of the table); on Today, free counts from now to the end of the window (Thursday row).
+**Rules behind the numbers:** busy time = union of timed events (overlaps count once), clipped to the day window, from calendars that count as busy; tentative, all-day and free events are shown but not counted; declined, delegated and cancelled events are hidden (`settings-calendars.md` § Data); free = 14 h − busy for a whole day (the other days of the table); on Today, free counts from now to the end of the window (Thursday row).
 
 **Next week (W41), for the weekly review — 5 events:** Mon 5 Oct 06:40–08:55 Flight to Munich (Work) · Tue 6 Oct 10:00–17:00 Workshop, day 1 (Work) · Wed 7 Oct 21:10–23:25 Flight home (Work) · Thu 8 Oct 17:00–18:00 Violin lesson (Music lessons) · Sat 10 Oct 12:00–15:00 Grandmother's birthday (Family).
 

@@ -49,6 +49,28 @@ import Testing
     #expect(!atMidnight.overlaps(DateInterval(start: date(2, 0), duration: 0)))
   }
 
+  @Test func aZeroLengthQueryIsAnInstant() throws {
+    let lesson = try #require(event(date(1, 17), date(1, 18)))
+    func at(_ h: Int, _ m: Int = 0) -> DateInterval {
+      DateInterval(start: date(1, h, m), duration: 0)
+    }
+    #expect(lesson.overlaps(at(17)))
+    #expect(lesson.overlaps(at(17, 30)))
+    #expect(!lesson.overlaps(at(18)))
+    #expect(!lesson.overlaps(at(16, 59)))
+    let instant = try #require(event(date(1, 17, 30), date(1, 17, 30)))
+    #expect(!instant.overlaps(at(17, 30)))
+  }
+
+  @Test func anAllDayEventNeverOccupiesTime() throws {
+    let allDay = try #require(
+      CalendarEvent(
+        id: "a", calendarID: cal, title: nil, start: date(3, 0), end: date(5, 0), isAllDay: true,
+        occupiesTime: true))
+    #expect(!allDay.occupiesTime)
+    #expect(try #require(event(date(1, 10), date(1, 11))).occupiesTime)
+  }
+
   @Test func descriptionsShowNoTitleNameOrId() throws {
     let sample = try #require(event(date(1, 10), date(1, 11)))
     let info = CalendarInfo(

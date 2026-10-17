@@ -33,7 +33,7 @@ A tab in the native `Settings` scene (General · Data · **Calendars** · Refres
    Demo mode shows invented calendars and a `Demo data` badge next to the label.
 
 2. **Calendars** (only when connected), grouped by account (`iCloud`, `Work · Exchange`, `Subscribed`). Columns: Calendar (`CalendarDot` + name) · **Show** (switch) · **Counts as busy** (switch) · **Line** (`Picker(.menu)`: None or one line, e.g. `Music lessons` → `🎻 Violin`). A calendar with Show off is greyed; Counts as busy can be off while Show is on (e.g. public holidays).
-3. **Day window** (configurable — decided 2 Oct 2026): two time pickers, default `08:00`–`22:00`, end after start, 15-minute steps. It defines the span of the day rail on Today, which items are pinned above or below it, and the free-time fact. Caption: `Free time = day window − time in calendars that count as busy − tasks with a planned time and an estimate. Today counts from now to the end of the window. Overlaps count once. Tentative and all-day events are shown but not counted; declined events are hidden.`
+3. **Day window** (configurable — decided 2 Oct 2026): two time pickers, default `08:00`–`22:00`, end after start, 15-minute steps. It defines the span of the day rail on Today, which items are pinned above or below it, and the free-time fact. Caption: `Free time = day window − time in calendars that count as busy − tasks with a planned time and an estimate. Today counts from now to the end of the window. Overlaps count once. Tentative, all-day and free events are shown but not counted; declined, delegated and cancelled events are hidden.`
 4. Footer note: `Events stay on this device. They are not synced by MoonShine.`
 
 Not connected / denied: the list is replaced by one neutral placeholder line (`Calendars appear here after you connect.`).
@@ -43,15 +43,16 @@ Not connected / denied: the list is replaced by one neutral placeholder line (`C
 - `EKEventStore`, full read access to events (`requestFullAccessToEvents`), no reminders. Per calendar (by `calendarIdentifier`) the app stores **locally**: `show`, `countsAsBusy`, `lineID?`. Day window: two local settings.
 - The per-calendar settings and the events are **per device** and never enter the MoonShine store that syncs (ADR-0010), in any phase. Each device asks for its own access. The day window is the only setting here that syncs, from 3b (a preference, not calendar data; ADR-0012).
 - **A calendar with no stored setting** (owner, 2026-10-16): Show on; Counts as busy on, except subscribed and birthday calendars (off). A calendar with Show off contributes nothing, even with Counts as busy on.
-- Event → view model: start, end, isAllDay, title (empty or private → `Busy`), calendar (name, colour), display, whether it occupies time, time zone. Display and occupying are separate (owner, 2026-10-16), read by the adapter from the owner's participation, the event's status and its availability; out of office has no rule of its own:
+- Event → view model: start, end, isAllDay, title (empty or blank → `Busy`; EventKit exposes no private flag), calendar (name, colour), display, whether it occupies time, time zone. Display and occupying are separate (owner, 2026-10-16), read by the adapter from the owner's participation, the event's status and its availability. The adapter applies these rules **in this order**, the first that decides wins (owner, 2026-10-17):
 
-  | Event                                                                                                                                                 | Display             | Occupies time       |
-  | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ------------------- |
-  | declined, delegated, or event status cancelled                                                                                                        | hidden (not read)   | —                   |
-  | invitation not answered (pending), tentative, in process, event status tentative (set by the organiser), or availability tentative                    | tentative (hatched) | no                  |
-  | accepted, completed (treated as accepted; owner, 2026-10-17), unknown, no attendees, the owner is the organiser, the owner is not among the attendees | normal              | yes                 |
-  | availability free                                                                                                                                     | as in its row above | no                  |
-  | availability unavailable (out of office)                                                                                                              | as in its row above | as in its row above |
+  1. Event status cancelled → hidden (not read).
+  2. The owner is the organiser → his own answer as an attendee is ignored.
+  3. The owner's answer is declined or delegated → hidden (not read).
+  4. Any tentative signal → display tentative (hatched), occupies no time: his answer is pending (not answered), tentative or in process; or the event status is tentative (set by the organiser); or the availability is tentative.
+  5. Otherwise → display normal, occupies time: accepted, completed (treated as accepted; owner, 2026-10-17), unknown, no attendees, the owner is the organiser, the owner is not among the attendees.
+  6. Last: availability free → occupies no time, display unchanged. Out of office (availability unavailable) has no rule of its own.
+
+  An all-day event never occupies time, whatever the rules above say.
 
 ## Behaviour
 
