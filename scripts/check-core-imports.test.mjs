@@ -49,6 +49,7 @@ test("every forbidden module fails in every import form", () => {
     `import \`${name}\``,
     `import /* x */ ${name}`,
     `import struct /* x */ \`${name}\`.X`,
+    `/* x */ import ${name}`,
   ];
   for (const name of forbidden) {
     for (const line of forms(name)) {

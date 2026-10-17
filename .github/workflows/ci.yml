@@ -51,7 +51,7 @@ jobs:
           node --test scripts/check-core-imports.test.mjs
           scripts/check-core-imports.sh
 
-      - name: No vault writes before the Write phase (ADR-0015)
+      - name: No vault writes before the Write phase, no calendar writes before the Act phase (ADR-0015, ADR-0012)
         run: |
           node --test scripts/check-vault-writes.test.mjs
           node scripts/check-vault-writes.mjs

@@ -34,10 +34,10 @@ function check(files, folders) {
   return run(repositoryWith(files, folders));
 }
 
-function fails(line, where = adapter) {
+function fails(line, where = adapter, rule = "") {
   const result = check({ [where]: `import Foundation\n${line}\n` });
   assert.equal(result.status, 1, `${line}\n${result.stdout}${result.stderr}`);
-  assert.match(result.stdout, new RegExp(`${where.replaceAll(".", "\\.")}:2: `), line);
+  assert.match(result.stdout, new RegExp(`${where.replaceAll(".", "\\.")}:2: ${rule}`), line);
 }
 
 function passes(line, where = adapter) {
@@ -246,6 +246,95 @@ test("in Apps anything that opens a URL fails; elsewhere those names are free", 
   passes("ShareLink(item: text)", app);
   passes("NavigationLink(value: line) { Text(line.name) }", app);
   passes("let scenes = UIApplication.shared.connectedScenes", app);
+});
+
+const eventStore = "Adapters/Sources/CalendarAdapter/SystemEventStore.swift";
+const calendarFile = "Adapters/Sources/CalendarAdapter/Provider.swift";
+
+test("EventKit is imported only by the event store, in any spelling", () => {
+  const spellings = [
+    "import EventKit",
+    "@preconcurrency import EventKit",
+    "public import EventKit",
+    "@_spi(X) internal import EventKit",
+    "import class EventKit.EKEventStore",
+    "import /* read only */ EventKit",
+    "/* read only */ import EventKit",
+    "import `EventKit`",
+    "let x = 1; import EventKit",
+  ];
+  for (const where of [calendarFile, adapter, app, "MoonShineCore/Sources/MoonShineCore/A.swift"]) {
+    for (const spelling of spellings) fails(spelling, where, "EventKit import");
+  }
+  for (const spelling of spellings) passes(spelling, eventStore);
+  passes("import EventKitty");
+  passes("// import EventKit");
+  passes("let x = 1 // import EventKit");
+});
+
+test("EventKitUI is imported nowhere, the event store included", () => {
+  for (const where of [eventStore, calendarFile, app]) {
+    for (const spelling of ["import EventKitUI", "@preconcurrency import EventKitUI", "/* ui */ import EventKitUI"]) {
+      fails(spelling, where, "EventKitUI import");
+    }
+  }
+});
+
+test("no other file names an EventKit type", () => {
+  for (const where of [calendarFile, app, adapter]) {
+    for (const line of ["let store: EKEventStore", "let view = EKEventEditViewController()", "_ = EKEvent.self"]) {
+      fails(line, where, "EventKit name");
+    }
+  }
+  passes("let store = EKEventStore()", eventStore);
+  passes("/// Wraps EKEventStore.", calendarFile);
+  passes("let speaker = SPEAKer()", calendarFile);
+});
+
+test("the test folders are searched for EventKit imports and names, not for vault writes", () => {
+  const tests = [
+    "Adapters/Tests/CalendarAdapterTests/LiveTests.swift",
+    "MoonShineCore/Tests/MoonShineCoreTests/A.swift",
+    "Apps/MoonShineMac/MoonShineMacTests/A.swift",
+    "Apps/MoonShineMacTests/A.swift",
+  ];
+  for (const where of tests) {
+    fails("import EventKit", where, "EventKit import");
+    fails("import EventKitUI", where, "EventKitUI import");
+    fails("let store = EKEventStore()", where, "EventKit name");
+    passes("try FileManager.default.removeItem(at: url)", where);
+    passes("try store.save(event)", where);
+  }
+});
+
+test("the event store calls no EventKit write and asks for no reminders", () => {
+  for (const line of [
+    "try store.save(event, span: .thisEvent)",
+    "try store.remove(event, span: .thisEvent, commit: true)",
+    "try store.commit()",
+    "try store.saveCalendar(calendar, commit: true)",
+    "try store.removeCalendar(calendar, commit: true)",
+    "try store.saveReminder(reminder, commit: true)",
+    "try store.removeReminder(reminder, commit: true)",
+    "try await store.requestWriteOnlyAccessToEvents()",
+    "try await store.requestFullAccessToReminders()",
+    "store.requestAccess(to: .event) { _, _ in }",
+    "try save(event, span: .thisEvent)",
+    "// store.save(event, span: .thisEvent)",
+  ]) {
+    fails(line, eventStore, "calendar write");
+  }
+  for (const line of [
+    "try await store.requestFullAccessToEvents()",
+    "store.reset()",
+    "func remove(_ x: Int) {}",
+    "let saved = store.calendars(for: .event)",
+  ]) {
+    passes(line, eventStore);
+  }
+  // Elsewhere these names are free: `Array.remove` is not a calendar write.
+  passes("items.remove(at: 0)", calendarFile);
+  passes("try context.save()", calendarFile);
 });
 
 test("a missing required folder exits 2", () => {
