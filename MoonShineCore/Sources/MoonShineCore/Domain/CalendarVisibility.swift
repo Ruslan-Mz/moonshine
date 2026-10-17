@@ -26,6 +26,10 @@ public struct CalendarVisibility: Hashable, Sendable {
   /// The stored setting, else Show on and Counts as busy on, except subscribed and birthday
   /// calendars (off) (owner, 2026-10-16).
   public func setting(for calendar: CalendarInfo) -> CalendarSetting {
-    stored[calendar.id] ?? CalendarSetting(show: true, countsAsBusy: calendar.kind == .other)
+    setting(for: calendar.id, kind: calendar.kind)
+  }
+
+  public func setting(for id: CalendarID, kind: CalendarKind) -> CalendarSetting {
+    stored[id] ?? CalendarSetting(show: true, countsAsBusy: kind == .other)
   }
 }

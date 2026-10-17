@@ -42,7 +42,7 @@ Not connected / denied: the list is replaced by one neutral placeholder line (`C
 
 - `EKEventStore`, full read access to events (`requestFullAccessToEvents`), no reminders. Per calendar (by `calendarIdentifier`) the app stores **locally**: `show`, `countsAsBusy`, `lineID?`. Day window: two local settings.
 - The per-calendar settings and the events are **per device** and never enter the MoonShine store that syncs (ADR-0010), in any phase. Each device asks for its own access. The day window is the only setting here that syncs, from 3b (a preference, not calendar data; ADR-0012).
-- **A calendar with no stored setting** (owner, 2026-10-16): Show on; Counts as busy on, except subscribed and birthday calendars (off). A calendar with Show off contributes nothing, even with Counts as busy on.
+- **A calendar with no stored setting** (owner, 2026-10-16): Show on; Counts as busy on, except subscribed and birthday calendars (off). A calendar with Show off contributes nothing, even with Counts as busy on. Each event carries its calendar's kind, so these defaults apply by kind even before the calendar list is read again (owner, 2026-10-17).
 - Event → view model: start, end, isAllDay, title (empty or blank → `Busy`; EventKit exposes no private flag), calendar (name, colour), display, whether it occupies time, time zone. Display and occupying are separate (owner, 2026-10-16), read by the adapter from the owner's participation, the event's status and its availability. The adapter applies these rules **in this order**, the first that decides wins (owner, 2026-10-17):
 
   1. Event status cancelled → hidden (not read).

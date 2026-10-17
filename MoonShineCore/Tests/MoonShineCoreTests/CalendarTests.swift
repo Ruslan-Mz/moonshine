@@ -14,7 +14,8 @@ import Testing
   }
 
   func event(_ start: Date, _ end: Date, title: String? = "Secret title") -> CalendarEvent? {
-    CalendarEvent(id: "secret-id", calendarID: cal, title: title, start: start, end: end)
+    CalendarEvent(
+      id: "secret-id", calendarID: cal, calendarKind: .other, title: title, start: start, end: end)
   }
 
   @Test func refusesAnEndBeforeTheStartAndAllowsZeroLength() {
@@ -65,7 +66,8 @@ import Testing
   @Test func anAllDayEventNeverOccupiesTime() throws {
     let allDay = try #require(
       CalendarEvent(
-        id: "a", calendarID: cal, title: nil, start: date(3, 0), end: date(5, 0), isAllDay: true,
+        id: "a", calendarID: cal, calendarKind: .other, title: nil, start: date(3, 0),
+        end: date(5, 0), isAllDay: true,
         occupiesTime: true))
     #expect(!allDay.occupiesTime)
     #expect(try #require(event(date(1, 10), date(1, 11))).occupiesTime)

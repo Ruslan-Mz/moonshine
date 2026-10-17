@@ -95,7 +95,7 @@ Artboards: `Today-CalB` (chosen), `Today-CalB-RU`, `Today-CalB-Mixed`, `Today-Ca
 - [ ] Amber only on a deadline `DueMark`; a due time that is not a deadline is a neutral mark; an open task past its planned time looks the same as before that time.
 - [ ] Clicking a task checkbox on the rail opens the task in OmniFocus and changes nothing in MoonShine.
 - [ ] Completing a planned task leaves `planned` and `free` unchanged; removing its estimate removes it from both; a task without an estimate never changes them.
-- [ ] Changing the day window in Settings changes the rail span, the pinned rows and the free-time fact, and nothing else.
+- [ ] Changing the day window in Settings changes the rail span, the pinned rows, the totals clipped to the window (`in calendar`, `planned`) and the free-time fact; no event or task appears or disappears (owner, 2026-10-17).
 - [ ] `4 events · 4 h in calendar · 1 h 15 min planned · ≈ 2 h 25 min free until 22:00` for the demo day at 16:20; every number derives from `demo-data.md`.
 - [ ] Without access the layout does not shift; the Day section shows timed tasks and one quiet line.
 - [ ] Titles keep their script and direction (RU, IT, JA, HE in `Today-CalB-Mixed`); the rail is checked in Russian.
