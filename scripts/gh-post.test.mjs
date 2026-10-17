@@ -24,14 +24,17 @@ function setUp({ configure = true, withGh = true } = {}) {
   const log = join(root, "gh.log");
   if (withGh) {
     writeFileSync(join(bin, "gh"), `#!/bin/sh\nprintf '%s\\n' "$@" > '${log}'\ncat >> '${log}'\n`, { mode: 0o755 });
+  } else {
+    const git = spawnSync("/bin/sh", ["-c", "command -v git"], { encoding: "utf8" }).stdout.trim();
+    symlinkSync(process.execPath, join(bin, "node"));
+    symlinkSync(git, join(bin, "git"));
   }
   const env = {
     ...process.env,
     HOME: home,
     GIT_CONFIG_GLOBAL: "/dev/null",
     GIT_CONFIG_NOSYSTEM: "1",
-    // Without the fake gh, PATH holds only node and the system tools: the real gh is never reachable.
-    PATH: withGh ? `${bin}:${process.env.PATH}` : `${bin}:${dirname(process.execPath)}:/usr/bin:/bin`,
+    PATH: `${bin}:${process.env.PATH}`,
     MOONSHINE_SCRATCH_ROOT: scratchRoot,
   };
   delete env.MOONSHINE_GUARD_DIR; // would send the install outside the temporary HOME
@@ -44,7 +47,12 @@ function setUp({ configure = true, withGh = true } = {}) {
     git("config", "moonshine.denyList", join(root, "deny-list.txt"));
   }
   const post = (...args) =>
-    spawnSync(join(home, ".config", "moonshine", "bin", "gh-post"), args, { cwd: work, env, encoding: "utf8" });
+    spawnSync(join(home, ".config", "moonshine", "bin", "gh-post"), args, {
+      cwd: work,
+      // Without the fake gh, PATH holds only links to node and git: a real gh is never reachable.
+      env: withGh ? env : { ...env, PATH: bin },
+      encoding: "utf8",
+    });
   const file = (name, text) => {
     const path = join(scratchpad, name);
     writeFileSync(path, text);
