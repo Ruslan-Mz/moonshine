@@ -42,6 +42,7 @@ struct EventRecord: Sendable {
   /// Nil when the store gives none; the provider then builds an in-memory one.
   var id: String?
   var calendarID: String
+  var calendarKind: CalendarKind
   var title: String?
   var start: Date
   var end: Date

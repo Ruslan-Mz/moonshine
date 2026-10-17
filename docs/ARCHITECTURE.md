@@ -30,6 +30,7 @@ Ports & adapters (hexagonal). The domain and the UI never know which tool the da
   export for       frontmatter,    tool use)       TimeEntry)      native data)
   sandbox later)   links; writes   FoundationModels
                    from Write)     Adapter (later)
+ CalendarAdapter (EventKit, read-only; events live in memory only, ADR-0012)
  NativeTaskProvider — the Own phase, same ports; notes stay Markdown files in the vault (ADR-0015)
  UserNotificationsAdapter — the Notifier on each device (local notifications), from whichever of the Timer or Reminders slice ships first (ADR-0017)
 ```
@@ -80,7 +81,7 @@ Ports & adapters (hexagonal). The domain and the UI never know which tool the da
 
 ```
 MoonShineCore/        SwiftPM: Domain, Services, Assistant, Ports, Fixtures
-Adapters/             SwiftPM targets per adapter (OmniFocus, Obsidian, Claude, Excel, SQLite)
+Adapters/             SwiftPM targets per adapter (OmniFocus, Obsidian, Calendar, Claude, Excel, SQLite)
 Apps/Mac/             SwiftUI app (XcodeGen project.yml)
 Apps/MCP/             swift executable exposing ToolRegistry as MCP server
 bridge/               Omni Automation JS for the OmniFocus adapter

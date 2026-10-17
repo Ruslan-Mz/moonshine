@@ -25,13 +25,25 @@ actor FakeStore: EventStoreReading {
 
   func authorization() -> StoreAuthorization { status }
 
+  /// Set when access turns to full: like EventKit, the store then reads nothing until reset.
+  private var stale = false
+
   func requestFullAccess() -> Bool {
     prompts += 1
-    status = grants ? .fullAccess : .denied
+    setStatus(grants ? .fullAccess : .denied)
     return grants
   }
 
-  func reset() { resets += 1 }
+  /// A change of access outside MoonShine, as in System Settings.
+  func setStatus(_ new: StoreAuthorization) {
+    if new == .fullAccess && status != .fullAccess { stale = true }
+    status = new
+  }
+
+  func reset() {
+    resets += 1
+    stale = false
+  }
 
   func calendars() -> [CalendarRecord] {
     reads += 1
@@ -40,8 +52,7 @@ actor FakeStore: EventStoreReading {
 
   func events(from start: Date, to end: Date) -> [EventRecord] {
     reads += 1
-    // Like EventKit before a reset: what was read without access stays empty.
-    return resets == 0 && prompts > 0 ? [] : records
+    return stale ? [] : records
   }
 
   nonisolated func changes() -> AsyncStream<Void> { stream }
@@ -56,7 +67,7 @@ func record(
 ) -> EventRecord {
   let start = day.start.addingTimeInterval(hour * 3_600)
   return EventRecord(
-    id: id, calendarID: "c", title: title, start: start,
+    id: id, calendarID: "c", calendarKind: .other, title: title, start: start,
     end: start.addingTimeInterval(hours * 3_600), isAllDay: false, timeZone: nil, status: status,
     myStatus: me, iAmOrganizer: organizer, availability: availability)
 }
@@ -81,6 +92,43 @@ func record(
       #expect(await provider.calendars() == .unavailable(access))
       #expect(await store.reads == 0)
     }
+  }
+
+  @Test func aGrantInSystemSettingsResetsTheStore() async throws {
+    let store = FakeStore(.denied, records: [record()])
+    let provider = EventKitCalendarProvider(store: store)
+    #expect(await provider.access() == .denied)
+    await store.setStatus(.fullAccess)
+    #expect(try await provider.events(in: day).value?.count == 1)
+    #expect(await store.resets == 1)
+    #expect(await store.prompts == 0)
+    _ = await provider.access()
+    #expect(await store.resets == 1)
+  }
+
+  @Test func aZeroLengthQueryReturnsTheEventsInProgress() async throws {
+    let store = FakeStore(
+      .fullAccess,
+      records: [
+        record(9, hours: 2, id: "spans"), record(10, id: "starts"), record(8, hours: 2, id: "ends"),
+      ])
+    let at = DateInterval(start: day.start.addingTimeInterval(10 * 3_600), duration: 0)
+    let events = try #require(try await EventKitCalendarProvider(store: store).events(in: at).value)
+    #expect(
+      events.map(\.id).sorted()
+        == [
+          "spans#\(Int(day.start.timeIntervalSinceReferenceDate) + 9 * 3_600)",
+          "starts#\(Int(day.start.timeIntervalSinceReferenceDate) + 10 * 3_600)",
+        ].sorted())
+  }
+
+  @Test func eventsCarryTheirCalendarsKind() async throws {
+    var subscribed = record()
+    subscribed.calendarKind = .subscribed
+    let store = FakeStore(.fullAccess, records: [subscribed])
+    let events = try #require(
+      try await EventKitCalendarProvider(store: store).events(in: day).value)
+    #expect(events.map(\.calendarKind) == [.subscribed])
   }
 
   @Test func refusesTooLongBeforeReading() async {
@@ -163,6 +211,7 @@ func record(
     #expect(events.count == 4)
     #expect(events[0].title == nil)
     #expect(Set(events.map(\.id)).count == 4)
+    // At the day's start only the event ending there is near, and it is not in progress.
     let zero = DateInterval(start: day.start, duration: 0)
     #expect(
       try await EventKitCalendarProvider(store: store).events(in: zero) == .read([], skipped: 0))
@@ -187,7 +236,7 @@ func record(
     #expect(count == 1)
   }
 
-  @Test func theNotificationRelayStopsWithItsStream() async {
+  @Test(.timeLimit(.minutes(1))) func theNotificationRelayStopsWithItsStream() async {
     let center = NotificationCenter()
     let name = Notification.Name("test.calendar.changed")
     let (stopped, stop) = AsyncStream.makeStream(of: Void.self)

@@ -34,7 +34,10 @@ let package = Package(
     // EventKit, read-only (ADR-0012); only `SystemEventStore.swift` imports it.
     .target(
       name: "CalendarAdapter",
-      dependencies: [.product(name: "MoonShineCore", package: "MoonShineCore")]),
+      dependencies: [.product(name: "MoonShineCore", package: "MoonShineCore")],
+      // A file that does not import EventKit cannot call its members (the second-file case of
+      // `scripts/check-calendar-isolation.test.mjs`).
+      swiftSettings: [.enableUpcomingFeature("MemberImportVisibility")]),
     // Measures the live import and checks the vault; prints counts and timings only.
     .executableTarget(
       name: "moonshine-import",

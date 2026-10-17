@@ -4,19 +4,13 @@ import Foundation
 import MoonShineCore
 
 /// The live calendar store, read-only (ADR-0012): full access to events only, never reminders,
-/// never a write (`scripts/check-vault-writes.mjs`). The only file that imports EventKit.
+/// never a write (`scripts/check-vault-writes.mjs`). The only file that imports EventKit; it
+/// unwraps raw values and leaves every mapping to `EventKitMapping.swift`, which is tested.
 actor SystemEventStore: EventStoreReading {
   private let store = EKEventStore()
 
   func authorization() -> StoreAuthorization {
-    switch EKEventStore.authorizationStatus(for: .event) {
-    case .notDetermined: .notDetermined
-    case .restricted: .restricted
-    case .denied: .denied
-    case .fullAccess: .fullAccess
-    case .writeOnly: .writeOnly
-    @unknown default: .restricted
-    }
+    StoreAuthorization(raw: EKEventStore.authorizationStatus(for: .event).rawValue)
   }
 
   func requestFullAccess() async -> Bool {
@@ -30,8 +24,10 @@ actor SystemEventStore: EventStoreReading {
   func calendars() -> [CalendarRecord] {
     store.calendars(for: .event).map { calendar in
       CalendarRecord(
-        id: calendar.calendarIdentifier, title: calendar.title, account: calendar.source?.title,
-        colorHex: Self.hex(calendar.cgColor), kind: Self.kind(calendar.type))
+        RawCalendar(
+          id: calendar.calendarIdentifier, title: calendar.title, account: calendar.source?.title,
+          rgb: Self.rgb(calendar.cgColor), typeRaw: calendar.type.rawValue,
+          isSubscribed: calendar.isSubscribed))
     }
   }
 
@@ -39,14 +35,17 @@ actor SystemEventStore: EventStoreReading {
     let predicate = store.predicateForEvents(withStart: start, end: end, calendars: nil)
     return store.events(matching: predicate).map { event in
       EventRecord(
-        id: event.eventIdentifier, calendarID: event.calendar.calendarIdentifier,
-        title: event.title, start: event.startDate, end: event.endDate, isAllDay: event.isAllDay,
-        timeZone: event.timeZone, status: Self.status(event.status),
-        myStatus: event.attendees?.first(where: \.isCurrentUser).map {
-          Self.participant($0.participantStatus)
-        },
-        iAmOrganizer: event.organizer?.isCurrentUser ?? false,
-        availability: Self.availability(event.availability))
+        RawEvent(
+          id: event.eventIdentifier, calendarID: event.calendar.calendarIdentifier,
+          calendarTypeRaw: event.calendar.type.rawValue,
+          calendarIsSubscribed: event.calendar.isSubscribed, title: event.title,
+          start: event.startDate, end: event.endDate, isAllDay: event.isAllDay,
+          timeZone: event.timeZone, statusRaw: event.status.rawValue,
+          attendees: event.attendees?.map {
+            RawAttendee(isCurrentUser: $0.isCurrentUser, statusRaw: $0.participantStatus.rawValue)
+          },
+          organizerIsCurrentUser: event.organizer?.isCurrentUser ?? false,
+          availabilityRaw: event.availability.rawValue))
     }
   }
 
@@ -54,52 +53,10 @@ actor SystemEventStore: EventStoreReading {
     notificationStream(.EKEventStoreChanged, center: .default)
   }
 
-  private static func kind(_ type: EKCalendarType) -> CalendarKind {
-    switch type {
-    case .subscription: .subscribed
-    case .birthday: .birthdays
-    default: .other
-    }
-  }
-
-  private static func status(_ status: EKEventStatus) -> EventStatus {
-    switch status {
-    case .confirmed: .confirmed
-    case .tentative: .tentative
-    case .canceled: .canceled
-    default: .none
-    }
-  }
-
-  private static func participant(_ status: EKParticipantStatus) -> ParticipantStatus {
-    switch status {
-    case .pending: .pending
-    case .accepted: .accepted
-    case .declined: .declined
-    case .tentative: .tentative
-    case .delegated: .delegated
-    case .completed: .completed
-    case .inProcess: .inProcess
-    default: .unknown
-    }
-  }
-
-  private static func availability(_ availability: EKEventAvailability) -> Availability {
-    switch availability {
-    case .busy: .busy
-    case .free: .free
-    case .tentative: .tentative
-    case .unavailable: .unavailable
-    default: .notSupported
-    }
-  }
-
-  private static func hex(_ color: CGColor?) -> String? {
+  private static func rgb(_ color: CGColor?) -> [Double]? {
     guard let color, let srgb = CGColorSpace(name: CGColorSpace.sRGB),
-      let components = color.converted(to: srgb, intent: .defaultIntent, options: nil)?.components,
-      components.count >= 3
+      let components = color.converted(to: srgb, intent: .defaultIntent, options: nil)?.components
     else { return nil }
-    let bytes = components.prefix(3).map { Int((min(max($0, 0), 1) * 255).rounded()) }
-    return String(format: "#%02X%02X%02X", bytes[0], bytes[1], bytes[2])
+    return components.map { Double($0) }
   }
 }
