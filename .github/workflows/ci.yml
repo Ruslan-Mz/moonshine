@@ -8,9 +8,9 @@ on:
 permissions:
   contents: read
 
-# The Swift version CI builds with; the local toolchain uses the same one (CLAUDE.md → Commands).
+# The oldest Swift the code must build with; local toolchains may be newer (CLAUDE.md → Commands).
 env:
-  SWIFT_VERSION: "6.4"
+  SWIFT_VERSION: "6.3"
 
 concurrency:
   group: ci-${{ github.ref }}

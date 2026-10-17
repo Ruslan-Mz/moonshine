@@ -72,7 +72,7 @@ Tests green · `swift format lint` clean · Prettier check clean · `node script
 
 ## Commands
 
-- Swift version: **6.4** (Xcode 27.0), locally and in CI; `.github/workflows/ci.yml` (`SWIFT_VERSION`) selects an Xcode with that Swift and fails without one. Change both together.
+- Swift version: CI pins the oldest supported compiler, **Swift 6.3** (the newest Xcode on the `macos-latest` image; `SWIFT_VERSION` in `.github/workflows/ci.yml`, which fails without a matching Xcode). The local toolchain may be newer (owner, 2026-10-17). The code must build with the Swift version CI pins; do not use features of a newer version; CI decides. `swift-tools-version` in every `Package.swift` stays at or below the pin. Raise the pin when GitHub ships an image with Xcode 27.
 - Core tests (any OS): `swift test --package-path MoonShineCore`
 - Adapter tests: `swift test --package-path Adapters`
 - Generate Xcode project: `xcodegen generate`
