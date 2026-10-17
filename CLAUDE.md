@@ -28,17 +28,29 @@ See `docs/ROADMAP.md`. **Only build what the current phase's spec asks for.** La
 9. **UX bar:** keyboard-first on Mac (every view reachable by shortcut, ⌘K command palette from phase 1), dense but calm layout, instant view switching (reads come from the local store).
 10. **Log the method:** append a row to `docs/method/log.md` at the end of each PR. Honest numbers; `n/a` if unknown. The Tokens / cost column takes the subagents' reported token totals (when any ran); the session's cost is what the owner pastes from `/cost`, otherwise `n/a`.
 
+## Asking the owner
+
+Owner, 2026-10-17: fewer approval prompts, nothing less safe. Ask the owner only for:
+
+- (a) **owner decisions** as this file defines them: the spec, a contract, the scope, behaviour (the `owner` class of a review finding);
+- (b) anything **irreversible or outside the repository** beyond the list below: merging, closing, deleting a remote branch, pushing to `main`, repository settings, writes to external tools (rule 6), new dependencies (rule 7);
+- (c) **live runs on real data** (the vault, OmniFocus, calendars, `data/`).
+
+Everything else: do it and report it. Pushing a slice branch, opening or editing its PR, posting a review and posting the one answer comment to a review no longer need the owner; the local settings allow them, and deny the rest of (b) (`.claude/settings.local.example.json`). This replaces the rule of 2026-10-08 that everything sent to GitHub asks the owner. What may be sent is unchanged: rule 5 holds for every push, PR text and comment, and the pre-push hook blocks a push whose commits carry a deny-list line or a path inside the vault (Commands → "Pre-push hook").
+
 ## Git
 
-Start every slice with the HTTPS fetch, then `git switch main && git merge --ff-only origin/main`, then branch. The fetch uses `gh` as a one-off credential helper and is allowed without a prompt: `git -c credential.helper= -c credential.helper='!gh auth git-credential' fetch https://github.com/Ruslan-Mz/moonshine.git '+refs/heads/*:refs/remotes/origin/*'`. Plain `git fetch` goes over SSH, which fails from sessions.
+Start every slice with the HTTPS fetch, then `git switch main && git merge --ff-only origin/main`, then branch. The fetch uses `gh` as a one-off credential helper and is allowed without a prompt: `git -c credential.helper= -c credential.helper='!gh auth git-credential' fetch https://github.com/Ruslan-Mz/moonshine.git '+refs/heads/*:refs/remotes/origin/*'`. Plain `git fetch` goes over SSH, which fails from sessions. Push the same way, always naming the branch: `git -c credential.helper= -c credential.helper='!gh auth git-credential' push https://github.com/Ruslan-Mz/moonshine.git HEAD:refs/heads/<branch>`. A branch name containing `main` is denied by the local settings; choose another name.
 
 ## Plans
 
 - A slice plan is written to a file in the session scratchpad and printed in full in chat. Every claim it makes about existing code names its file, and the line where it matters: the critic has no search, so a claim without a path is a finding (`unverifiable-claim`).
-- **Critic, on trial** (owner, 2026-10-10; criteria and results in `docs/method/calibration/plan-critic-trial.md`): after printing the plan, run `plan-critic` (`.claude/agents/plan-critic.md`) on it once, with the file path and the slice name, nothing else, and print its report verbatim, after the plan.
-- Do not change the plan in response to the critic yet. Wait for the owner's decisions, then fix the plan and continue.
+- **Critic** (permanent step since the owner's decision of 2026-10-17: the trial passed 2 of 2; `docs/method/calibration/plan-critic-trial.md`): after printing the plan, run `plan-critic` (`.claude/agents/plan-critic.md`) on it once, with the file path and the slice name, nothing else, and print its report verbatim, after the plan.
 - One critic run per plan. No critic for a docs-only change, or for a plain slice (rule 2) under about 80 lines after the size factor (estimate × factor < 80).
-- Every plan waits for the owner's OK. The architect reviews plans during the trial; the critic's S3b-2 calibration did not pass (2026-10-10).
+- **What waits.** The owner sees the plan and the critic's "For the owner" list; the architect no longer reviews every plan.
+  - A **risky** plan waits only for the owner's answers to the "For the owner" list (and to the plan's own questions). Then fix the plan, including the critic's "For the author" findings, and start.
+  - A **plain** plan whose critic verdict is `ready` and which has no question for the owner starts at once; fix the "For the author" findings first. Any other verdict, or any owner question, waits for the owner's answers.
+  - A plan with no critic run (docs-only, or plain under 80) waits for the owner's OK, as before.
 
 ## Pull requests
 
@@ -51,7 +63,7 @@ Start every slice with the HTTPS fetch, then `git switch main && git merge --ff-
   - every link and ADR reference resolves;
   - a size overrun is stated in the PR and in the method-log row.
 - **Review**: the owner runs `/review-pr <n>` in a **new** session (`.claude/skills/review-pr/`). The session that wrote the PR never reviews it.
-- **After a review is posted**, the author session reads it from the PR itself (`gh pr view <n> --comments`), fixes the `author` findings, answers with **one** PR comment that lists every finding and what was done with it, and asks the owner only about the `owner` findings. No reply per thread: everything that sends data to GitHub asks the owner, so one comment is one prompt instead of one per thread (owner, 2026-10-08). The owner does not copy review text between sessions.
+- **After a review is posted**, the author session reads it from the PR itself (`gh pr view <n> --comments`), fixes the `author` findings, answers with **one** PR comment that lists every finding and what was done with it, and asks the owner only about the `owner` findings. It pushes the fixes and posts the comment without asking ("Asking the owner"). No reply per thread: one comment keeps the answer in one place (owner, 2026-10-08). The owner does not copy review text between sessions.
 - **Rounds** — one rule for every PR, docs-only included: round 1 is a full `/review-pr`. If round N had a confirmed High, run round N+1 after the fixes, on the changes since round N. Otherwise no further round. From round 2 on only High findings must be fixed, the rest are listed in the PR as deferred; at most three rounds, then the owner decides.
 
 ## Definition of done
@@ -60,6 +72,7 @@ Tests green · `swift format lint` clean · Prettier check clean · `node script
 
 ## Commands
 
+- Swift version: **6.4** (Xcode 27.0), locally and in CI; `.github/workflows/ci.yml` (`SWIFT_VERSION`) selects an Xcode with that Swift and fails without one. Change both together.
 - Core tests (any OS): `swift test --package-path MoonShineCore`
 - Adapter tests: `swift test --package-path Adapters`
 - Generate Xcode project: `xcodegen generate`
@@ -70,8 +83,9 @@ Tests green · `swift format lint` clean · Prettier check clean · `node script
 - Vault- and calendar-write check (no vault writes before the Write phase, no calendar writes before the Act phase): `node scripts/check-vault-writes.mjs` · its tests: `node --test scripts/check-vault-writes.test.mjs`
 - Core import check: `scripts/check-core-imports.sh` · its tests: `node --test scripts/check-core-imports.test.mjs`
 - Read-boundary hook tests: `python3 -m unittest discover -s .claude/hooks -p 'test_*.py'`
+- Pre-push hook (install once per clone, from the repository root; the owner runs it, with the deny-list's real location): `git config core.hooksPath scripts/git-hooks && git config moonshine.denyList "$PWD/deny-list.txt"`. It blocks a push that adds, in any pushed commit (lines, file names, messages), a line of the deny-list (substring, case ignored, blank lines skipped) or a path inside the vault folder, and any push to `main`. It names commit, file and line, never the matched text. A missing setting, an unreadable or empty deny-list, or no `node` blocks the push. The deny-list is read outside the sandbox, so pushes run outside it (`sandbox.excludedCommands`). When S4 moves the deny-list out of the repository, only `moonshine.denyList` changes. Tests: `node --test scripts/pre-push.test.mjs`.
 - Local sandbox (read barrier, git-ignored): copy `.claude/settings.local.example.json` to `settings.local.json` next to it and fill in the placeholders; `/review-pr` stops without it. `~/.gitconfig` and `~/.config/git/ignore` are allowed for git, `~/.nvm/versions/node` for node; `env.PATH` puts the system folders first and lists only folders the sandbox can read (node stops at the first unreadable one and cannot start git or bash). Probes and throwaway files go under the session scratchpad and are read there; the read-boundary hook (`.claude/hooks/read-boundary.py`) denies the Read tool everything outside this session's folders, including the shared `$TMPDIR`. It does not guard names inside the repository: real data in the repository is protected from the built-in tools by rule 5 and `.gitignore` only, until S4 moves it out (`docs/specs/phase-1-see.md` → S4).
 
 ## Owner
 
-Senior mobile/full-stack engineer, native iOS since 2008. He directs and reviews; agents write the code. Plan before coding and wait for his OK on each slice plan. Prefer clarity over cleverness; explicit types at module boundaries; no abstraction beyond the ports in ARCHITECTURE.md without an ADR.
+Senior mobile/full-stack engineer, native iOS since 2008. He directs and reviews; agents write the code. Plan before coding; which plans wait for his OK is in "Plans". Prefer clarity over cleverness; explicit types at module boundaries; no abstraction beyond the ports in ARCHITECTURE.md without an ADR.
