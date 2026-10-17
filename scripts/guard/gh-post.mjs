@@ -12,7 +12,7 @@
 // refuses the post and prints kinds and line numbers only. gh gets the bytes that were scanned, on
 // stdin, so the file cannot change in between.
 import { spawnSync } from "node:child_process";
-import { readFileSync, realpathSync, statSync } from "node:fs";
+import { closeSync, constants, fstatSync, openSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { denyList, match } from "./matcher.mjs";
@@ -73,10 +73,23 @@ function scratchpadText(file) {
   if (parts[0] === ".." || parts.length < 3 || parts[0] === "" || parts[1] !== "scratchpad") {
     refuse("The file is not inside a session scratchpad of this project.");
   }
-  const info = statSync(real);
-  if (!info.isFile()) refuse("The path is not a regular file.");
-  if (info.size > maxBytes) refuse("The file is larger than 1 MB.");
-  return readFileSync(real, "utf8");
+  // Read through one descriptor, opened without following a link: a hard link has no path of its
+  // own to check, so a file with more than one link is refused.
+  let fd;
+  try {
+    fd = openSync(real, constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch {
+    refuse("The file cannot be opened.");
+  }
+  try {
+    const info = fstatSync(fd);
+    if (!info.isFile()) refuse("The path is not a regular file.");
+    if (info.nlink !== 1) refuse("The file has more than one hard link.");
+    if (info.size > maxBytes) refuse("The file is larger than 1 MB.");
+    return readFileSync(fd, "utf8");
+  } finally {
+    closeSync(fd);
+  }
 }
 
 function scanText(text, label, entries, findings) {
@@ -169,4 +182,8 @@ scanText(text, "body", entries, findings);
 if (findings.length > 0) refuse(`${findings.length} match(es):\n${findings.map((f) => `  ${f}`).join("\n")}`);
 
 const sent = spawnSync("gh", args, { input: text, stdio: ["pipe", "inherit", "inherit"] });
+if (sent.error) {
+  process.stderr.write(`gh-post: gh could not be started (${sent.error.code ?? "unknown error"}); nothing was sent.\n`);
+  process.exit(1);
+}
 process.exit(sent.status ?? 1);

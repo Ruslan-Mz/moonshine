@@ -15,7 +15,10 @@ const secret = "Zephyrine Quolltail";
 const vault = "Obsidian" + "V"; // spelled in two parts so this file passes the guard itself
 
 function environment(home) {
-  return { ...process.env, HOME: home, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" };
+  const env = { ...process.env, HOME: home, GIT_CONFIG_GLOBAL: "/dev/null", GIT_CONFIG_NOSYSTEM: "1" };
+  delete env.MOONSHINE_GUARD_DIR; // would send the install outside the temporary HOME
+  delete env.MOONSHINE_SCRATCH_ROOT;
+  return env;
 }
 
 function git(work, ...args) {
@@ -163,6 +166,26 @@ test("the vault's default location and link templates pass", () => {
   passes(push(work));
 });
 
+test("a root commit is scanned", () => {
+  const work = setUp();
+  ok(work, "switch", "-q", "--orphan", "fresh");
+  commit(work, "a.md", `${secret}\n`, "root");
+  blocked(push(work, "fresh"), '"a.md":1');
+});
+
+test("a line added by a merge commit is scanned", () => {
+  const work = setUp();
+  ok(work, "switch", "-q", "-c", "side");
+  commit(work, "b.md", "side\n", "side");
+  ok(work, "switch", "-q", "feature");
+  commit(work, "c.md", "feature\n", "feature");
+  ok(work, "merge", "-q", "--no-ff", "--no-commit", "side");
+  writeFileSync(join(work.cwd, "d.md"), `${secret}\n`);
+  ok(work, "add", "d.md");
+  ok(work, "commit", "-q", "-m", "merge");
+  blocked(push(work), '"d.md":1');
+});
+
 test("commits already on the remote are not scanned again", () => {
   const work = setUp();
   commit(work, "a.md", `${secret}\n`, "old");
@@ -255,7 +278,7 @@ test("an installed guard that differs from the checkout's warns but does not blo
   commit(work, "b.md", "clean\n", "clean");
   const stale = push(work);
   passes(stale);
-  assert.match(stale.stderr, /installed guard differs .* scripts\/install-guard\.sh/);
+  assert.match(stale.stderr, /installed guard differs .* after the change is merged, from an up-to-date main .* never install from a branch/);
 });
 
 test("a missing setting blocks", () => {

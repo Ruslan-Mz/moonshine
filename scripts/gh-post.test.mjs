@@ -3,7 +3,7 @@
 // no global or system config; the fake gh records its arguments and stdin. Every entry is invented.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
@@ -13,7 +13,7 @@ const install = join(dirname(fileURLToPath(import.meta.url)), "install-guard.sh"
 const secret = "Zephyrine Quolltail";
 const vault = "Obsidian" + "V"; // spelled in two parts so this file passes the guard itself
 
-function setUp({ configure = true } = {}) {
+function setUp({ configure = true, withGh = true } = {}) {
   const root = mkdtempSync(join(tmpdir(), "gh-post-"));
   const home = join(root, "home");
   const bin = join(root, "bin");
@@ -22,21 +22,25 @@ function setUp({ configure = true } = {}) {
   const scratchpad = join(scratchRoot, "session-1", "scratchpad");
   for (const dir of [home, bin, work, scratchpad]) mkdirSync(dir, { recursive: true });
   const log = join(root, "gh.log");
-  writeFileSync(join(bin, "gh"), `#!/bin/sh\nprintf '%s\\n' "$@" > '${log}'\ncat >> '${log}'\n`, { mode: 0o755 });
+  if (withGh) {
+    writeFileSync(join(bin, "gh"), `#!/bin/sh\nprintf '%s\\n' "$@" > '${log}'\ncat >> '${log}'\n`, { mode: 0o755 });
+  }
   const env = {
     ...process.env,
     HOME: home,
     GIT_CONFIG_GLOBAL: "/dev/null",
     GIT_CONFIG_NOSYSTEM: "1",
-    PATH: `${bin}:${process.env.PATH}`,
+    // Without the fake gh, PATH holds only node and the system tools: the real gh is never reachable.
+    PATH: withGh ? `${bin}:${process.env.PATH}` : `${bin}:${dirname(process.execPath)}:/usr/bin:/bin`,
     MOONSHINE_SCRATCH_ROOT: scratchRoot,
   };
+  delete env.MOONSHINE_GUARD_DIR; // would send the install outside the temporary HOME
   const git = (...args) => assert.equal(spawnSync("git", args, { cwd: work, env }).status, 0, args.join(" "));
   git("init", "-q", "-b", "slice/one");
   const installed = spawnSync("/bin/sh", [install], { cwd: work, env, encoding: "utf8" });
   assert.equal(installed.status, 0, installed.stderr);
   if (configure) {
-    writeFileSync(join(root, "deny-list.txt"), `${secret}\n`);
+    writeFileSync(join(root, "deny-list.txt"), `${secret}\nmirelbrook\n`);
     git("config", "moonshine.denyList", join(root, "deny-list.txt"));
   }
   const post = (...args) =>
@@ -47,14 +51,16 @@ function setUp({ configure = true } = {}) {
     return path;
   };
   const sent = () => (existsSync(log) ? readFileSync(log, "utf8") : null);
-  return { root, post, file, sent };
+  return { root, post, file, sent, git };
 }
 
 function refused(context, result, ...expected) {
   assert.equal(result.status, 1, result.stderr);
   assert.match(result.stderr, /gh-post: refused/);
   for (const text of expected) assert.ok(result.stderr.includes(text), `missing "${text}" in:\n${result.stderr}`);
-  assert.ok(!result.stderr.toLowerCase().includes("quolltail"), `the matched text must not be printed:\n${result.stderr}`);
+  for (const leak of ["quolltail", "mirelbrook"]) {
+    assert.ok(!result.stderr.toLowerCase().includes(leak), `the matched text must not be printed:\n${result.stderr}`);
+  }
   assert.equal(context.sent(), null, "nothing may reach gh");
 }
 
@@ -150,4 +156,31 @@ test("an unknown command prints usage", () => {
   const result = context.post("merge", "27");
   assert.equal(result.status, 2);
   assert.equal(context.sent(), null);
+});
+
+test("a hard link in the scratchpad to a file outside is refused", () => {
+  const context = setUp();
+  const outside = join(context.root, "outside.md");
+  writeFileSync(outside, "clean\n");
+  const link = join(dirname(context.file("x", "")), "hard.md");
+  linkSync(outside, link);
+  refused(context, context.post("comment", "27", link), "more than one hard link");
+});
+
+test("pr-create on a branch whose name matches is refused", () => {
+  const context = setUp();
+  context.git("switch", "-q", "-c", "feat/mirelbrook-notes");
+  refused(context, context.post("pr-create", "a title", context.file("body.md", "clean\n")), "the branch name: a deny-list entry");
+});
+
+test("pr-edit with a matching title is refused", () => {
+  const context = setUp();
+  refused(context, context.post("pr-edit", "27", context.file("body.md", "clean\n"), `about ${secret}`), "the title: a deny-list entry");
+});
+
+test("a gh that cannot be started is reported, and nothing is sent", () => {
+  const context = setUp({ withGh: false });
+  const result = context.post("comment", "27", context.file("body.md", "clean\n"));
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /gh could not be started \(ENOENT\); nothing was sent/);
 });

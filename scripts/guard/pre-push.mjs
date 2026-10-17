@@ -57,8 +57,9 @@ function warnIfStale() {
   });
   if (differs) {
     process.stderr.write(
-      "pre-push: warning: the installed guard differs from this checkout's scripts/guard; " +
-        "run scripts/install-guard.sh from the repository root to update it.\n",
+      "pre-push: warning: the installed guard differs from this checkout's scripts/guard. " +
+        "Reinstall only after the change is merged, from an up-to-date main (scripts/install-guard.sh); " +
+        "never install from a branch.\n",
     );
   }
 }
