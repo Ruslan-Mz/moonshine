@@ -1,7 +1,8 @@
 import Foundation
 import MoonShineCore
 
-/// The tasks with a time on Thu 1 Oct 2026 (`design/demo-data.md` § Draft-3, invented). The
+/// The tasks with a time on Thu 1 Oct 2026 (`design/demo-data.md` § Draft-3, invented). Only
+/// their times, estimates and status are canonical; flags, lines and repeats are not set. The
 /// Demo data slice folds them into `fixtures/omnifocus.snapshot.json` with a golden test.
 public enum DemoDay {
   /// The snapshot's defaults after the Demo data slice: planned 09:00, due 17:00.

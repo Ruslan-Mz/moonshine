@@ -68,12 +68,13 @@ public struct DayWindow: Hashable, Sendable {
   }
 
   /// The window on the day that holds `day`, by wall clock: 08:00–22:00 is 14 h on a
-  /// daylight-saving day too; 24:00 is the next midnight.
+  /// daylight-saving day too; 24:00 is the end of the day, also where the next day starts at
+  /// 01:00 (daylight saving at midnight).
   public func interval(on day: Date, calendar: Calendar) -> DateInterval {
     let midnight = calendar.startOfDay(for: day)
     func time(_ minute: Int) -> Date {
       if minute == 24 * 60 {
-        return calendar.date(byAdding: .day, value: 1, to: midnight)
+        return calendar.dateInterval(of: .day, for: day)?.end
           ?? midnight.addingTimeInterval(86_400)
       }
       return calendar.date(
@@ -102,11 +103,12 @@ public struct DayLoad: Hashable, Sendable {
 
   /// `tasks` are the counted tasks only: the Today list's tasks plus completed ones, without
   /// reminders (S4, ADR-0017). A task occupies `[planned, planned + estimate)` when its
-  /// `effectivePlannedAt` is on the day and not date only and its estimate is above zero;
+  /// `effectivePlannedAt` is on the day (a task planned the day before that runs past midnight
+  /// counts nothing; owner, 2026-10-17) and not date only and its estimate is above zero;
   /// children that inherit a timed parent overlap and count once.
   public static func compute(
     day: Date, now: Date, window: DayWindow, events: CalendarRead<[CalendarEvent]>,
-    calendars: [CalendarInfo], visibility: CalendarVisibility, tasks: [TaskItem],
+    visibility: CalendarVisibility, tasks: [TaskItem],
     defaultTimes: DefaultTimes, calendar: Calendar
   ) -> DayLoad {
     let dayInterval =
@@ -130,10 +132,8 @@ public struct DayLoad: Hashable, Sendable {
         freeFromNowMinutes: nil)
     }
 
-    let kinds = Dictionary(
-      calendars.map { ($0.id, $0.kind) }, uniquingKeysWith: { first, _ in first })
     func setting(_ event: CalendarEvent) -> CalendarSetting {
-      visibility.setting(for: event.calendarID, kind: kinds[event.calendarID] ?? .other)
+      visibility.setting(for: event.calendarID, kind: event.calendarKind)
     }
     let shown = read.filter { $0.overlaps(dayInterval) && setting($0).show }
     let busy: [DateInterval] = shown.compactMap { event in

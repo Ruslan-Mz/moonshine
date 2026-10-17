@@ -89,7 +89,9 @@ public struct DemoCalendar: CalendarProvider {
   ) -> CalendarEvent {
     CalendarEvent(
       id: "demo-\(calendarID.rawValue)-\(Int(start.timeIntervalSince1970))",
-      calendarID: calendarID, title: title, start: start, end: end, isAllDay: isAllDay,
+      calendarID: calendarID,
+      calendarKind: calendars.first { $0.id == calendarID }?.kind ?? .other, title: title,
+      start: start, end: end, isAllDay: isAllDay,
       display: display, occupiesTime: occupiesTime, timeZone: calendar.timeZone)!
   }
 }

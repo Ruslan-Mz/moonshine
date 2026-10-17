@@ -20,11 +20,13 @@ struct RigaDay {
   }
 
   static func event(
-    _ start: Date, _ end: Date, calendar: CalendarID = work, allDay: Bool = false,
+    _ start: Date, _ end: Date, calendar: CalendarID = work, kind: CalendarKind = .other,
+    allDay: Bool = false,
     display: EventDisplay = .normal, occupies: Bool = true
   ) -> CalendarEvent {
     CalendarEvent(
-      id: UUID().uuidString, calendarID: calendar, title: nil, start: start, end: end,
+      id: UUID().uuidString, calendarID: calendar, calendarKind: kind, title: nil, start: start,
+      end: end,
       isAllDay: allDay, display: display, occupiesTime: occupies)!
   }
 
@@ -42,13 +44,13 @@ struct RigaDay {
   static func load(
     _ events: [CalendarEvent] = [], tasks: [TaskItem] = [], now: Date = at(7),
     day: Date = at(12), window: DayWindow = .standard,
-    calendars: [CalendarInfo] = [], visibility: CalendarVisibility = CalendarVisibility(),
+    visibility: CalendarVisibility = CalendarVisibility(),
     defaults: DefaultTimes = DefaultTimes(timeZone: zone, planned: TimeOfDay(hour: 9, minute: 0)),
     read: CalendarRead<[CalendarEvent]>? = nil, calendar: Calendar = calendar
   ) -> DayLoad {
     DayLoad.compute(
       day: day, now: now, window: window, events: read ?? .read(events, skipped: 0),
-      calendars: calendars, visibility: visibility, tasks: tasks, defaultTimes: defaults,
+      visibility: visibility, tasks: tasks, defaultTimes: defaults,
       calendar: calendar)
   }
 }
@@ -58,7 +60,7 @@ struct RigaDay {
     DayLoad.compute(
       day: DemoCalendar.at(month, day, 12, 0), now: now ?? DemoCalendar.at(month, day, 7, 0),
       window: .standard, events: .read(DemoCalendar.events, skipped: 0),
-      calendars: DemoCalendar.calendars, visibility: DemoCalendar.visibility, tasks: tasks,
+      visibility: DemoCalendar.visibility, tasks: tasks,
       defaultTimes: DemoDay.defaultTimes, calendar: DemoCalendar.calendar)
   }
 
@@ -157,19 +159,18 @@ struct RigaDay {
       [
         R.event(R.at(9), R.at(10), calendar: hidden),
         R.event(R.at(10), R.at(11), calendar: quiet),
-        R.event(R.at(11), R.at(12), calendar: holidays),
+        R.event(R.at(11), R.at(12), calendar: holidays, kind: .subscribed),
         R.event(R.at(12), R.at(13), display: .tentative, occupies: false),
         R.event(R.at(0), R.at(0, day: 2), allDay: true),
-        R.event(R.at(14), R.at(15), calendar: CalendarID("not in the list")),
-      ],
-      calendars: [
-        CalendarInfo(id: holidays, title: "h", account: nil, colorHex: nil, kind: .subscribed)
+        R.event(R.at(14), R.at(15), calendar: CalendarID("new, not yet listed")),
+        // A birthday calendar read before the calendar list: its kind still gives the default.
+        R.event(R.at(15), R.at(16), calendar: CalendarID("birthdays"), kind: .birthdays),
       ],
       visibility: CalendarVisibility([
         hidden: CalendarSetting(show: false, countsAsBusy: true),
         quiet: CalendarSetting(show: true, countsAsBusy: false),
       ]))
-    #expect(load.eventCount == 5)
+    #expect(load.eventCount == 6)
     #expect(load.inCalendarMinutes == 60)
   }
 
@@ -206,6 +207,33 @@ struct RigaDay {
         R.load(now: R.at(0, day: day, month: month), day: noon, window: full)
           .freeWholeWindowMinutes == fullMinutes)
     }
+  }
+
+  @Test func onlyTasksPlannedOnTheDayCount() {
+    let full = DayWindow(startMinute: 0, endMinute: 24 * 60)!
+    let yesterday = R.task(R.at(23, 30, day: 30, month: 9), estimate: 60)
+    let load = R.load(
+      [R.event(R.at(23, 30, day: 30, month: 9), R.at(0, 30))], tasks: [yesterday], window: full)
+    #expect(load.plannedMinutes == 0)
+    #expect(load.inCalendarMinutes == 30)
+  }
+
+  @Test func nowAndTaskStartsAreFlooredToTheMinute() {
+    let fromNow = R.load([R.event(R.at(17), R.at(18))], now: R.at(16, 20, 30))
+    #expect(fromNow.freeFromNowMinutes == 340 - 60)
+    let touching = R.load(
+      [R.event(R.at(10, 30), R.at(11))], tasks: [R.task(R.at(10, 0, 20), estimate: 30)])
+    #expect(touching.plannedMinutes == 30)
+  }
+
+  @Test func midnightIsTheEndOfTheDayWhereDaylightSavingStartsAtMidnight() {
+    var santiago = Calendar(identifier: .gregorian)
+    santiago.timeZone = TimeZone(identifier: "America/Santiago")!
+    let noon = santiago.date(from: DateComponents(year: 2026, month: 9, day: 6, hour: 12))!
+    let full = DayWindow(startMinute: 0, endMinute: 24 * 60)!
+    let load = R.load(now: noon, day: noon, window: full, calendar: santiago)
+    #expect(load.freeWholeWindowMinutes == 1_380)
+    #expect(load.window == santiago.dateInterval(of: .day, for: noon))
   }
 
   @Test func dayWindowBounds() {

@@ -114,6 +114,9 @@ public struct CalendarEvent: Hashable, Sendable, Identifiable, CustomStringConve
   /// In-memory identity for lists; never stored or logged.
   public let id: String
   public let calendarID: CalendarID
+  /// The kind of the event's calendar, so its default setting applies even before the calendar
+  /// list is read again (owner, 2026-10-17).
+  public let calendarKind: CalendarKind
   /// Nil when empty or blank; the UI shows `Busy`. EventKit exposes no private flag, so a
   /// private event keeps whatever title the store gives.
   public let title: String?
@@ -127,13 +130,14 @@ public struct CalendarEvent: Hashable, Sendable, Identifiable, CustomStringConve
 
   /// Nil when `end` is before `start`; a zero-length event is allowed.
   public init?(
-    id: String, calendarID: CalendarID, title: String?, start: Date, end: Date,
-    isAllDay: Bool = false, display: EventDisplay = .normal, occupiesTime: Bool = true,
+    id: String, calendarID: CalendarID, calendarKind: CalendarKind, title: String?, start: Date,
+    end: Date, isAllDay: Bool = false, display: EventDisplay = .normal, occupiesTime: Bool = true,
     timeZone: TimeZone? = nil
   ) {
     guard end >= start else { return nil }
     self.id = id
     self.calendarID = calendarID
+    self.calendarKind = calendarKind
     let trimmed = title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     self.title = trimmed.isEmpty ? nil : title
     self.start = start
