@@ -31,7 +31,11 @@ Owner, 2026-10-16, decided after S3b-3 and before any later slice is scored. The
 
 - **Reference set:** the union of the architect's true items, the critic's true items and the plan-detectable confirmed Medium and High review items, with overlaps counted once.
 - **Pass:** recall of at least 50 % on that set, and at most a third of the critic's findings wrong. The other rules above (at least 3 items, three slices, the frozen agent file) stay.
-- **Status:** 2 of 2 passed (S3b-3 by owner decision, S3c by the rule). The critic becomes a permanent step in "Plans" (2 of 3 required; owner, 2026-10-17); the `CLAUDE.md` change comes in a chore PR.
+- **Status:** 2 of 2 passed (S3b-3 by owner decision, S3c by the rule). The critic becomes a permanent step in "Plans" (2 of 3 required; owner, 2026-10-17).
+
+## Closed
+
+Owner, 2026-10-17. The trial ended after two slices, both passed; the third slice was not needed. The chore PR `CHORE-FEWER-PROMPTS` made the critic a permanent step in `CLAUDE.md` → "Plans": the owner sees the plan and the critic's "For the owner" list, and the architect no longer reviews every plan. A risky plan waits only for the owner's decisions; a plain plan with verdict `ready` and no owner question starts at once. `.claude/agents/plan-critic.md` is no longer frozen; a change to it is reviewed like any other.
 
 ## Results
 

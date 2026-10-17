@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+# The oldest Swift the code must build with; local toolchains may be newer (CLAUDE.md → Commands).
+env:
+  SWIFT_VERSION: "6.3"
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -56,6 +60,9 @@ jobs:
           node --test scripts/check-vault-writes.test.mjs
           node scripts/check-vault-writes.mjs
 
+      - name: Push and post guard (pre-push hook, gh-post, install script)
+        run: node --test scripts/pre-push.test.mjs scripts/gh-post.test.mjs
+
       - name: Markdown format check
         run: |
           npm ci
@@ -74,14 +81,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select newest stable Xcode
+      - name: Select the newest stable Xcode with Swift ${{ env.SWIFT_VERSION }}
         id: xcode
         run: |
-          xcode=$(ls -d /Applications/Xcode_*.app | grep -viE 'beta|_rc|release_candidate' | sort -V | tail -1)
-          sudo xcode-select -s "$xcode"
-          xcodebuild -version
-          swift --version
-          echo "version=$(xcodebuild -version | tr '\n' ' ' | tr -s ' ' '-')" >> "$GITHUB_OUTPUT"
+          # Newest first; the first stable Xcode whose Swift is the pinned version wins. None: fail.
+          for xcode in $(ls -d /Applications/Xcode_*.app | grep -viE 'beta|_rc|release_candidate' | sort -rV); do
+            swift="$xcode/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift"
+            if [ -x "$swift" ] && "$swift" --version 2>/dev/null | grep -qE "Swift version ${SWIFT_VERSION//./\\.}([.[:space:]]|$)"; then
+              sudo xcode-select -s "$xcode"
+              xcodebuild -version
+              swift --version
+              echo "version=$(xcodebuild -version | tr '\n' ' ' | tr -s ' ' '-')" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "No stable Xcode on this runner has Swift $SWIFT_VERSION. Installed:" >&2
+          for xcode in /Applications/Xcode_*.app; do
+            echo "  $xcode: $("$xcode/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift" --version 2>&1 | head -1)" >&2
+          done
+          exit 1
 
       - name: Cache .build
         uses: actions/cache@v4

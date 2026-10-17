@@ -28,17 +28,32 @@ See `docs/ROADMAP.md`. **Only build what the current phase's spec asks for.** La
 9. **UX bar:** keyboard-first on Mac (every view reachable by shortcut, ⌘K command palette from phase 1), dense but calm layout, instant view switching (reads come from the local store).
 10. **Log the method:** append a row to `docs/method/log.md` at the end of each PR. Honest numbers; `n/a` if unknown. The Tokens / cost column takes the subagents' reported token totals (when any ran); the session's cost is what the owner pastes from `/cost`, otherwise `n/a`.
 
+## Asking the owner
+
+Owner, 2026-10-17: fewer approval prompts, nothing less safe. Ask the owner only for:
+
+- (a) **owner decisions** as this file defines them: the spec, a contract, the scope, behaviour (the `owner` class of a review finding);
+- (b) anything **irreversible or outside the repository** beyond the list below: merging, closing, deleting a remote branch, pushing to `main`, repository settings, writes to external tools (rule 6), new dependencies (rule 7);
+- (c) **live runs on real data** (the vault, OmniFocus, calendars, `data/`).
+
+Everything else: do it and report it. Pushing a slice branch, opening or editing its PR, posting a review and posting the one answer comment to a review no longer need the owner. This replaces the rule of 2026-10-08 that everything sent to GitHub asks the owner. What may be sent is unchanged: rule 5 holds for every push, PR text and comment. Both ways out are guarded by an owner-installed copy outside the checkout (Commands → "Guard"):
+
+- **Pushes** go through the pre-push hook: one branch per push, never `main`, no tags, no deletion, no rewrite of a branch other than the one HEAD is on, and no deny-list line or vault path in ref names or pushed commits.
+- **Posts** (PR create and edit, a PR comment, a review) go through `gh-post` only, called by its absolute path (`/Users/<you>/.config/moonshine/bin/gh-post`; it is not on `PATH`, and the settings match only that form): it sends a file from the session scratchpad after scanning it, and the title and branch name, the same way. The local settings allow `gh-post` and deny every other way to write to GitHub with `gh` (`gh pr create|edit|comment|review|new|ready|reopen`, `gh issue`, `gh gist`, `gh release`, `gh api` with a body, a field or a file), and the rest of (b) (`.claude/settings.local.example.json`).
+
 ## Git
 
-Start every slice with the HTTPS fetch, then `git switch main && git merge --ff-only origin/main`, then branch. The fetch uses `gh` as a one-off credential helper and is allowed without a prompt: `git -c credential.helper= -c credential.helper='!gh auth git-credential' fetch https://github.com/Ruslan-Mz/moonshine.git '+refs/heads/*:refs/remotes/origin/*'`. Plain `git fetch` goes over SSH, which fails from sessions.
+Start every slice with the HTTPS fetch, then `git switch main && git merge --ff-only origin/main`, then branch. The fetch uses `gh` as a one-off credential helper and is allowed without a prompt: `git -c credential.helper= -c credential.helper='!gh auth git-credential' fetch https://github.com/Ruslan-Mz/moonshine.git '+refs/heads/*:refs/remotes/origin/*'`. Plain `git fetch` goes over SSH, which fails from sessions. Push the same way, always naming the branch: `git -c credential.helper= -c credential.helper='!gh auth git-credential' push https://github.com/Ruslan-Mz/moonshine.git HEAD:refs/heads/<branch>`. A branch name containing `main` is denied by the local settings; choose another name.
 
 ## Plans
 
 - A slice plan is written to a file in the session scratchpad and printed in full in chat. Every claim it makes about existing code names its file, and the line where it matters: the critic has no search, so a claim without a path is a finding (`unverifiable-claim`).
-- **Critic, on trial** (owner, 2026-10-10; criteria and results in `docs/method/calibration/plan-critic-trial.md`): after printing the plan, run `plan-critic` (`.claude/agents/plan-critic.md`) on it once, with the file path and the slice name, nothing else, and print its report verbatim, after the plan.
-- Do not change the plan in response to the critic yet. Wait for the owner's decisions, then fix the plan and continue.
+- **Critic** (permanent step since the owner's decision of 2026-10-17: the trial passed 2 of 2; `docs/method/calibration/plan-critic-trial.md`): after printing the plan, run `plan-critic` (`.claude/agents/plan-critic.md`) on it once, with the file path and the slice name, nothing else, and print its report verbatim, after the plan.
 - One critic run per plan. No critic for a docs-only change, or for a plain slice (rule 2) under about 80 lines after the size factor (estimate × factor < 80).
-- Every plan waits for the owner's OK. The architect reviews plans during the trial; the critic's S3b-2 calibration did not pass (2026-10-10).
+- **What waits.** The owner sees the plan and the critic's "For the owner" list; the architect no longer reviews every plan.
+  - A **risky** plan always waits for the owner's OK (owner, 2026-10-09; confirmed 2026-10-17), whatever the verdict and even with an empty "For the owner" list. Then fix the plan, including the critic's "For the author" findings, and start.
+  - A **plain** plan whose critic verdict is `ready` and which has no question for the owner (an empty "For the owner" list and none of its own) starts at once; fix the "For the author" findings first. Any other verdict, or any owner question, waits for the owner's answers.
+  - A plan with no critic run (docs-only, or plain under 80) waits for the owner's OK, as before.
 
 ## Pull requests
 
@@ -51,7 +66,7 @@ Start every slice with the HTTPS fetch, then `git switch main && git merge --ff-
   - every link and ADR reference resolves;
   - a size overrun is stated in the PR and in the method-log row.
 - **Review**: the owner runs `/review-pr <n>` in a **new** session (`.claude/skills/review-pr/`). The session that wrote the PR never reviews it.
-- **After a review is posted**, the author session reads it from the PR itself (`gh pr view <n> --comments`), fixes the `author` findings, answers with **one** PR comment that lists every finding and what was done with it, and asks the owner only about the `owner` findings. No reply per thread: everything that sends data to GitHub asks the owner, so one comment is one prompt instead of one per thread (owner, 2026-10-08). The owner does not copy review text between sessions.
+- **After a review is posted**, the author session reads it from the PR itself (`gh pr view <n> --comments`), fixes the `author` findings, answers with **one** PR comment that lists every finding and what was done with it, and asks the owner only about the `owner` findings. It pushes the fixes and posts the comment with `gh-post comment`, by its absolute path, without asking ("Asking the owner"). No reply per thread: one comment keeps the answer in one place (owner, 2026-10-08). The owner does not copy review text between sessions.
 - **Rounds** — one rule for every PR, docs-only included: round 1 is a full `/review-pr`. If round N had a confirmed High, run round N+1 after the fixes, on the changes since round N. Otherwise no further round. From round 2 on only High findings must be fixed, the rest are listed in the PR as deferred; at most three rounds, then the owner decides.
 
 ## Definition of done
@@ -60,6 +75,7 @@ Tests green · `swift format lint` clean · Prettier check clean · `node script
 
 ## Commands
 
+- Swift version: CI pins the oldest supported compiler, **Swift 6.3** (the newest Xcode on the `macos-latest` image; `SWIFT_VERSION` in `.github/workflows/ci.yml`, which fails without a matching Xcode). The local toolchain may be newer (owner, 2026-10-17). The code must build with the Swift version CI pins; do not use features of a newer version; CI decides. `swift-tools-version` in every `Package.swift` stays at or below the pin. Raise the pin when GitHub ships an image with Xcode 27.
 - Core tests (any OS): `swift test --package-path MoonShineCore`
 - Adapter tests: `swift test --package-path Adapters`
 - Generate Xcode project: `xcodegen generate`
@@ -70,8 +86,12 @@ Tests green · `swift format lint` clean · Prettier check clean · `node script
 - Vault- and calendar-write check (no vault writes before the Write phase, no calendar writes before the Act phase): `node scripts/check-vault-writes.mjs` · its tests: `node --test scripts/check-vault-writes.test.mjs`
 - Core import check: `scripts/check-core-imports.sh` · its tests: `node --test scripts/check-core-imports.test.mjs`
 - Read-boundary hook tests: `python3 -m unittest discover -s .claude/hooks -p 'test_*.py'`
+- **Guard** (pre-push hook and `gh-post`; `scripts/guard/`). The owner installs it from the repository root, once per clone, and again after a change to `scripts/guard/` is merged, from an up-to-date `main`, never from a branch (a branch's guard is unreviewed): `scripts/install-guard.sh`, plus once `git config moonshine.denyList <absolute path of the deny-list>`. The script copies the three guard scripts (`matcher.mjs`, `pre-push.mjs`, `gh-post.mjs`) to `~/.config/moonshine/guard/`, with a `config.json` naming the scratchpad root, writes `~/.config/moonshine/hooks/pre-push` and `~/.config/moonshine/bin/gh-post`, and sets `core.hooksPath` to the absolute hook folder, so a checkout without the guard, or with an edited one, runs the installed copy. When the checkout's copy differs, the hook warns (reinstall after the merge, from `main`); it does not block. One install serves one clone: a second clone's install replaces the first's scratchpad root.
+  - The hook blocks a push that updates more than one ref, targets anything outside `refs/heads/`, targets `main`, deletes a ref, or is a non-fast-forward update of a branch other than the one HEAD is on; and one whose ref names or pushed commits (messages, file names, added lines) carry a deny-list line (substring, case ignored, blank lines skipped) or a vault path (case ignored; `\/` and `%2F` count as `/`; `obsidian://` links that name a file).
+  - `gh-post comment <pr> <file>`, `review <pr> <file>`, `pr-create <title> <file>`, `pr-edit <pr> <file> [<title>]`: the file must resolve, after symlinks, inside a session scratchpad of this project (`/private/tmp/claude-<uid>/<project>/<session>/scratchpad/`); its text (every decoded string of a review JSON too), the title and the branch name are scanned like the hook's lines; gh gets the scanned bytes on stdin.
+  - Both name what matched by kind, and by commit, file and line, never the matched text. A missing setting, an unreadable or empty deny-list, or no `node` blocks. Both read the deny-list outside the sandbox (`sandbox.excludedCommands`). Still open: removing `core.hooksPath` or pushing with `--no-verify` skips the hook; the settings deny every push option starting `--no` (git accepts abbreviations such as `--no-veri`) and every git command naming `hooksPath`, but nothing outside the permission rules guards the config. When S4 moves the deny-list out of the repository, only `moonshine.denyList` changes. Tests: `node --test scripts/pre-push.test.mjs scripts/gh-post.test.mjs`.
 - Local sandbox (read barrier, git-ignored): copy `.claude/settings.local.example.json` to `settings.local.json` next to it and fill in the placeholders; `/review-pr` stops without it. `~/.gitconfig` and `~/.config/git/ignore` are allowed for git, `~/.nvm/versions/node` for node; `env.PATH` puts the system folders first and lists only folders the sandbox can read (node stops at the first unreadable one and cannot start git or bash). Probes and throwaway files go under the session scratchpad and are read there; the read-boundary hook (`.claude/hooks/read-boundary.py`) denies the Read tool everything outside this session's folders, including the shared `$TMPDIR`. It does not guard names inside the repository: real data in the repository is protected from the built-in tools by rule 5 and `.gitignore` only, until S4 moves it out (`docs/specs/phase-1-see.md` → S4).
 
 ## Owner
 
-Senior mobile/full-stack engineer, native iOS since 2008. He directs and reviews; agents write the code. Plan before coding and wait for his OK on each slice plan. Prefer clarity over cleverness; explicit types at module boundaries; no abstraction beyond the ports in ARCHITECTURE.md without an ADR.
+Senior mobile/full-stack engineer, native iOS since 2008. He directs and reviews; agents write the code. Plan before coding; which plans wait for his OK is in "Plans". Prefer clarity over cleverness; explicit types at module boundaries; no abstraction beyond the ports in ARCHITECTURE.md without an ADR.
