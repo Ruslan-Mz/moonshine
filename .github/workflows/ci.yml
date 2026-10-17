@@ -98,5 +98,8 @@ jobs:
       - name: Adapter tests
         run: swift test --package-path Adapters
 
+      - name: A file without `import EventKit` cannot reach the event store (ADR-0012)
+        run: node --test scripts/check-calendar-isolation.test.mjs
+
       - name: Swift format lint
         run: swift format lint --strict --recursive MoonShineCore Adapters
