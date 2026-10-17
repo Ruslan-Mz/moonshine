@@ -2,13 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(git -c credential.helper= -c credential.helper='!gh auth git-credential' push https://github.com/Ruslan-Mz/moonshine.git HEAD:refs/heads/*)",
-      "Bash(gh pr create *)",
-      "Bash(gh pr edit *)",
-      "Bash(gh pr comment *)",
+      "Bash(/Users/<you>/.config/moonshine/bin/gh-post *)",
       "Bash(gh pr view *)",
       "Bash(gh pr diff *)",
       "Bash(gh pr checks *)",
-      "Bash(gh api --method POST repos/{owner}/{repo}/pulls/*/reviews --input *)",
       "Bash(git branch -d *)",
       "Bash(git worktree prune)",
       "Bash(git update-ref -d refs/remotes/review/*)",
@@ -26,6 +23,8 @@
       "Bash(git * push * -d *)",
       "Bash(git push * :*)",
       "Bash(git * push * :*)",
+      "Bash(git push *+:*)",
+      "Bash(git * push *+:*)",
       "Bash(git push *--mirror*)",
       "Bash(git * push *--mirror*)",
       "Bash(git push *--prune*)",
@@ -41,7 +40,7 @@
       "Bash(gh api *--method put*)",
       "Bash(gh api *--method patch*)",
       "Bash(gh api *--method=*)",
-      "Bash(gh api *-X *)",
+      "Bash(gh api *-X*)",
       "Bash(gh repo *)",
       "Bash(git branch -D *)",
       "Bash(git branch * -D *)",
@@ -49,7 +48,16 @@
       "Bash(git branch -f *)",
       "Bash(git branch * -f *)"
     ],
-    "ask": ["Bash(dangerouslyDisableSandbox:true)"]
+    "ask": [
+      "Bash(dangerouslyDisableSandbox:true)",
+      "Bash(gh pr create *)",
+      "Bash(gh pr edit *)",
+      "Bash(gh pr comment *)",
+      "Bash(gh api *--method POST*)",
+      "Bash(gh api *-f *)",
+      "Bash(gh api *-F *)",
+      "Bash(gh api *--input*)"
+    ]
   },
   "env": {
     "PATH": "/usr/bin:/bin:/usr/sbin:/sbin:/Users/<you>/.nvm/versions/node/<node-version>/bin:/opt/homebrew/bin"
@@ -63,6 +71,7 @@
       "swift build *",
       "gh pr *",
       "gh api *",
+      "/Users/<you>/.config/moonshine/bin/gh-post *",
       "git -c credential.helper= -c credential.helper='!gh auth git-credential' fetch https://github.com/Ruslan-Mz/moonshine.git *",
       "git -c credential.helper= -c credential.helper='!gh auth git-credential' push https://github.com/Ruslan-Mz/moonshine.git *"
     ],

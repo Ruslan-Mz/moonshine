@@ -1,3 +1,0 @@
-#!/bin/sh
-# Git pre-push hook: runs scripts/pre-push.mjs (CLAUDE.md → Commands). Without node, the push is blocked.
-exec node "$(dirname "$0")/../pre-push.mjs" "$@"
