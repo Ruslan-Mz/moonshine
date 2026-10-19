@@ -72,6 +72,8 @@ All go through the `CommandBus`, land in the activity log and can be undone: `Cr
 - A reminder marked seen or archived on one device removes its pending notifications on the others when the change arrives. Until then the other device may still show it once; this is best effort and stated in Settings.
 - Wording is a fact (`🎻 Scales · 10:00`), never "missed". On a locked screen, notification text follows the system's preview setting for MoonShine on every platform; MoonShine has no setting of its own for it (owner, 2026-10-17).
 
+- **Amendment (2026-10-19, owner; ADR-0018).** The notification planner also schedules memo moments: the moments of a memo note before, at and after an event or a task, with the memo's text, or only the item's title when the memo is private.
+
 ### Where reminders are shown
 
 | Place                                         | From                                       |

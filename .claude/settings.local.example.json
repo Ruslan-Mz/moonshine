@@ -1,15 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git -c credential.helper= -c credential.helper='!gh auth git-credential' fetch https://github.com/Ruslan-Mz/moonshine.git *)",
-      "Bash(git -c credential.helper= -c credential.helper='!gh auth git-credential' push https://github.com/Ruslan-Mz/moonshine.git HEAD:refs/heads/*)",
+      "Bash(git fetch origin)",
+      "Bash(git push origin HEAD:refs/heads/*)",
       "Bash(/Users/<you>/.config/moonshine/bin/gh-post *)",
       "Bash(gh pr view *)",
       "Bash(gh pr diff *)",
       "Bash(gh pr checks *)",
       "Bash(git branch -d *)",
       "Bash(git worktree prune)",
-      "Bash(git update-ref -d refs/remotes/review/*)",
       "Bash(swift test *)",
       "Bash(swift build *)"
     ],
@@ -88,8 +87,8 @@
       "gh pr checks *",
       "gh api *",
       "/Users/<you>/.config/moonshine/bin/gh-post *",
-      "git -c credential.helper= -c credential.helper='!gh auth git-credential' fetch https://github.com/Ruslan-Mz/moonshine.git *",
-      "git -c credential.helper= -c credential.helper='!gh auth git-credential' push https://github.com/Ruslan-Mz/moonshine.git *"
+      "git fetch origin",
+      "git push origin *"
     ],
     "filesystem": {
       "denyRead": ["~/", "/Volumes", "./data", "./deny-list.txt"],

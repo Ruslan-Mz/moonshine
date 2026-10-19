@@ -1,4 +1,4 @@
-# Vault contract (Obsidian → MoonShine), v0.3
+# Vault contract (Obsidian → MoonShine), v0.4
 
 Status: **draft from phase-0 discovery** (see `data-report.md`). Implements ADR-0004: YAML frontmatter is the machine-readable truth; markdown bodies stay human text and are read for links and tags only, never for values (from the Hub slice; ADR-0014).
 
@@ -17,6 +17,8 @@ v0.3 (2026-10-08, ADR-0014, ADR-0015, ADR-0016): project notes (§4) and reserve
 2026-10-14 (S3b-3c-1, owner): at most 100 `artifacts:` items per note (§2.1); the rules made precise for artifacts: the period key of a year and of a quarter, the problem keys, what "one period" means and which items the duplicate check counts (§2.1, "Made precise in S3b-3c").
 
 2026-10-15 (S3b-3c-2, owner): a line's `parent` is resolved as ADR-0014 says: case ignored, the shortest matching path, an ambiguous link reported as `ambiguousLink` (§2.3).
+
+v0.4 (2026-10-19, ADR-0018, ADR-0019, owner): note kinds by the `moonshine` key and one scanner for them (§6); memo notes (§6.1, read from P1), programme notes (§6.2, kind reserved), entry notes (§6.3, read from Practice lines); the optional line keys `within`, `measure` and `targets` (§1, "Practice lines", read from Practice lines); entry bodies are never read (§3).
 
 Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault writes before the Write phase; ADR-0015).
 
@@ -74,6 +76,52 @@ Validation of `lines:` (owner, 2026-10-07 and 2026-10-08):
 - `null` is the same as an absent key.
 - Any missing, invalid or duplicate value skips its item: the stored line stays exactly as it was and the read is incomplete (no stored line is removed). Problems: `missingKey`, `invalidValue`, `duplicateLineId` (every item with that `id`; none wins), each with its key path (`lines.state`, `lines.omnifocus.tags`) and line; every problem of an item is reported.
 - `lines:` absent or `null` → `missingKey`; not a list, or an empty list (`lines: []`) → `invalidValue`. Each leaves the lines unavailable: an empty list is more often a broken edit than "no lines", and as a clean read it would remove every stored line.
+
+### Practice lines (v0.4, reserved now; read from the Practice lines slice, ADR-0019)
+
+Three optional keys on a `lines:` item. A budget note without them reads as before.
+
+| Key       | Values                                                         | Meaning                                                  |
+| --------- | -------------------------------------------------------------- | -------------------------------------------------------- |
+| `within`  | the `id` of another line                                       | The line is nested; its time belongs to that parent      |
+| `measure` | `hours` (default) · `entries`                                  | What the line is measured by                             |
+| `targets` | list of `{kind, count, per}`, `per` ∈ `day` · `week` · `month` | Entry targets, e.g. diary 5 per week, report 1 per month |
+
+```yaml
+lines:
+  - id: core-study
+    name: Core study
+    block: Study
+    state: active
+    budget_h_week: 10
+  - id: reflection
+    name: Reflection
+    block: Study
+    state: active
+    within: core-study # nested: its time is recorded on core-study
+    measure: entries # counted from entry notes (§6.3)
+    targets:
+      - { kind: diary, count: 5, per: week }
+      - { kind: report, count: 1, per: month }
+```
+
+Rules
+
+- **One level of nesting.** A parent has no `within`.
+- **The parent is measured by hours.**
+- **A nested line has no budget.** A budget above 0 is ignored, and the problem says so. The line is never part of shortfall, forecast or the budget total.
+- **Time goes to the parent, always.** A timer, a task or a calendar block attributed to a nested line is recorded on its parent (ADR-0016). The timer's line picker does not offer nested lines.
+- `measure: entries` without `within` is allowed: a practice with no parent spends no planned time.
+- A line with `measure: entries` shows entries and regularity, never hours (rule 8 of `CLAUDE.md`).
+
+Problems (the other lines still read when one line has a problem):
+
+| Kind                      | When                               | Effect                         |
+| ------------------------- | ---------------------------------- | ------------------------------ |
+| `lineParentMissing`       | `within` names no line             | The line is read as not nested |
+| `lineNestedTooDeep`       | the parent has its own `within`    | The line is read as not nested |
+| `lineParentNotHours`      | the parent has `measure: entries`  | The line is read as not nested |
+| `lineNestedBudgetIgnored` | a nested line has a budget above 0 | The budget is ignored          |
 
 ## 2. Horizon and artifact notes
 
@@ -273,7 +321,7 @@ Resolving a `parent` follows ADR-0014 (owner, 2026-10-15): `[[Name]]`, `[[Name|a
   - a note that is not the first by path for its period (`duplicatePeriodNote`, §2.1) keeps its stored artifacts as they were;
   - a note whose file is gone is removed (soft delete), with its artifacts; a renamed note is a new note, and its artifacts keep their identity (`id` + period).
 - Hidden files and folders (`.obsidian`, `.trash`) are not read. One exception from the Write phase (ADR-0015): Obsidian's named settings files for daily and periodic notes, and from them only the folder, the file-name pattern and the template path; those folders and that path pass the same checks as the walk (inside the vault root, no symbolic links) before anything is read (ADR-0015 write rule 6). A note without frontmatter is skipped for frontmatter reading, not a problem; its body is still indexed from the Hub slice (next item).
-- **Bodies (from the Hub slice; ADR-0014):** the body of every note, with or without frontmatter, is read for links and tags only, never for values; nothing around a link is stored, not its alias or anchor either (owner, 2026-10-09). A body larger than 1 MB is not indexed and gives a typed problem; the walk limits above apply. A note is re-read only when its size or modification time changed.
+- **Bodies (from the Hub slice; ADR-0014):** the body of every note, with or without frontmatter, except entry notes (§6.3; ADR-0019), is read for links and tags only, never for values; nothing around a link is stored, not its alias or anchor either (owner, 2026-10-09). A body larger than 1 MB is not indexed and gives a typed problem; the walk limits above apply. A note is re-read only when its size or modification time changed.
 - Unknown keys are ignored and preserved (future-proof; the vault has 200+ distinct keys).
 - `review_cadence` and `review-cadence` both exist in the vault (19 vs 8 notes); MoonShine reads either.
 
@@ -304,10 +352,77 @@ Rules
 
 ## 5. Reserved keys and values
 
-- **`moonshine:`** — reserved values `budget` (§1) and `project` (§4). A note with any other value is not a problem and gives no banner.
+- **`moonshine:`** — values `budget` (§1), `project` (§4), `memo`, `programme` and `entry` (§6). Until the scanner of §6 ships (P1), a note with any other value is not a problem and gives no banner; from then on it is `noteKindUnknown` (§6).
+- **`within`, `measure`, `targets`** on a line (§1, "Practice lines"; read from the Practice lines slice, ADR-0019).
 - **`portion_h_day`** on a line (§1; read from the Timer slice, ADR-0016).
 - **`moonshine_ai: false`** on any note (read from the Ask phase, ADR-0015): the assistant never reads the note's body, even inside a folder on its allowlist, and the note is never sent in the standing context pack: it appears in the pack's list as excluded (owner, 2026-10-09).
 - **Keys MoonShine owns and may write** (from the Write phase, ADR-0015, through `SetNoteProperty`, one line at a time): `omnifocus_id` (§4). On an existing note no other key is written; a note made by `CreateNote` may carry §4's project-note keys and its template's own frontmatter.
+
+## 6. Note kinds by the `moonshine` key (v0.4; ADR-0018, ADR-0019)
+
+- One frontmatter key marks every note kind that MoonShine reads by kind rather than by folder: `moonshine: memo` (§6.1), `moonshine: programme` (§6.2) and `moonshine: entry` (§6.3). The owner's own keys, such as `type`, are never used for this.
+- **One scanner** finds them across the vault under the rules of §3 (hidden folders, symbolic links, limits). It reads only the frontmatter: at most the first 8 KB, stopping at the closing `---`. Bytes after it are discarded unparsed.
+- An unknown value (a typo such as `memmo`) yields the problem `noteKindUnknown` with the path.
+- The scanner arrives with P1 (phase 2); entry notes are read from the Practice lines slice, programmes from P4.
+
+### 6.1 Memo notes (read from P1; ADR-0018)
+
+A note with `moonshine: memo` is a memo. Its body is read only to extract its two sections, named in frontmatter, with defaults `До` and `После`. Text outside them is ignored. The exact key shapes are fixed in P1's spec, with fixtures.
+
+| Key       | Meaning                                                                                                                                                                                                                                                                                          |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `match`   | One or more matchers; the memo applies when any matches. **Event matcher:** `calendar`, `title` (exact, or `prefix:` / `contains:`, case-insensitive), `weekdays`, `starts_between` (a local time window), `date` (a one-off event). **Task matcher:** `omnifocus_tag`, `project`.               |
+| `moments` | A list of anchors with offsets. Events: `before_start` (e.g. `15m`, `1d`), `at_start`, `after_end`. Tasks: `timer_start`, `timer_stop` (ADR-0016), `defer`, `due`, `completed` (seen at the next import).                                                                                        |
+| `private` | `true` keeps the text out of notification banners; they show only the event's or task's title.                                                                                                                                                                                                   |
+| `after`   | Optional. `status: true` asks for an outcome; `items: true` turns the checklist of the `После` section into checkboxes; `ritual: <name>` names the ritual to start (ADR-0015); `entry: {line: <id>, kind: <kind>}` names the practice entry (§6.3) that counts as "written" for this occurrence. |
+
+Examples (illustrative; the shapes are P1's): a memo whose matcher has `title: "prefix:Session"` and `weekdays`, with the moments `before_start: 15m` and `after_end`, and `after.entry` naming `{line: reflection, kind: diary}`; a one-off memo whose matcher has `title: Trip` and a `date`, with the moment `before_start: 1d`.
+
+- **Implicit task binding:** an OmniFocus task whose note links to a vault note shows that note as its "before" text, even without frontmatter.
+- **Several memos on one item:** all are shown, ordered by path; no memo hides another. At most 5 are shown; above that, a problem names the item.
+
+Problems:
+
+- a memo note that cannot be read as a memo → `memoNotRecognised` with its path;
+- a bad matcher or moment is dropped with its own problem, never silently; the memo itself is kept;
+- a memo with no valid matcher matches nothing and says so;
+- more than 5 memos on one item → a problem naming the item.
+
+Problem texts never carry memo text (§3).
+
+### 6.2 Programme notes (kind reserved; format fixed in P4's spec)
+
+`moonshine: programme` is reserved for a note that describes slots × weekdays → exercises, with variant sets (ADR-0018). Its format is fixed in the P4 spec, with fixtures. Until then the scanner recognises the kind and reads nothing from it.
+
+### 6.3 Entry notes (read from the Practice lines slice; ADR-0019)
+
+```yaml
+---
+moonshine: entry
+line: reflection # a line with measure: entries (§1)
+date: 2026-10-19 # optional when the file name starts with YYYY-MM-DD
+kind: diary # free text, at most 40 characters; compared with the line's targets
+covers: 2026-10 # optional: an ISO week (2026-W43) or a month (2026-10)
+---
+```
+
+- The note can be anywhere in the vault. It is found by the `moonshine` key, never by folder.
+- **Only the frontmatter is read.** The reader stops at the closing `---`. The body is not parsed, indexed, shown or sent anywhere, and the link index (ADR-0014) skips entry notes. UI, notifications and logs carry counts only.
+- **Date:** `date` when present; otherwise the leading `YYYY-MM-DD` of the file name; otherwise the entry has no date, is reported and is not counted.
+- **Period:** for a target, an entry counts in the period its `covers` names when present, otherwise in the period of its `date`. A report for October written on 2 November counts for October. Weeks are ISO weeks starting on Monday; all dates are local.
+- **Several entries on one day** all count as entries; the day counts once as a day with an entry.
+- **Window:** entries are counted for the current month and the 12 before it (13 months). Older notes are skipped without a problem.
+- **Read state:** the counts are **read**, **partly read** (some entries were rejected or unreadable; the counts are a lower bound, shown as "at least") or **unavailable** (the vault could not be read; the last known counts are shown with their date, never as 0, and no streak is broken).
+
+Problems:
+
+| Kind                    | When                                                   | Effect                                 |
+| ----------------------- | ------------------------------------------------------ | -------------------------------------- |
+| `entryWithoutDate`      | no `date` and no date in the file name                 | The entry is not counted               |
+| `entryLineUnknown`      | `line` names no line                                   | The entry is not counted               |
+| `entryLineNotEntries`   | the line is measured by hours                          | The entry is not counted               |
+| `entryInvalid`          | a bad `covers`, `kind` too long, frontmatter over 8 KB | The entry is not counted               |
+| `entryKindNotInTargets` | `kind` is in none of the line's targets (info)         | Counted for the line, not for a target |
 
 ## Open questions
 

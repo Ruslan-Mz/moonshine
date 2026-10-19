@@ -19,5 +19,7 @@
 | [0015](0015-vault-writes-narrow-command-path-rituals-simple-editor.md)        | Writing to the vault: a narrow command path, rituals over Obsidian templates, a simple editor                                                  | proposed |
 | [0016](0016-time-tracking-interval-entries-one-timer-sources-reconciled.md)   | Time tracking: one running timer, interval entries, nudges as facts, Excel reconciled by day and line (amended 2026-10-16: up to three timers) | proposed |
 | [0017](0017-reminders-native-entity-omnifocus-tag-bridge.md)                  | Reminders: a native entity that is seen, not done; an OmniFocus tag as the bridge                                                              | proposed |
+| [0018](0018-memos-rule-bound-notes-on-events-and-tasks.md)                    | Memos: notes bound by rules to events and tasks, shown before and after                                                                        | accepted |
+| [0019](0019-practice-lines-nested-lines-measured-by-entries.md)               | Practice lines: nested lines measured by entries in the vault                                                                                  | accepted |
 
 Accepted ADRs are immutable; changes go into a new ADR that supersedes the old one.
