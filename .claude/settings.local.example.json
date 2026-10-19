@@ -14,6 +14,10 @@
       "Bash(swift build *)"
     ],
     "deny": [
+      "Bash(git *fetch*--prune*)",
+      "Bash(git *fetch* -p*)",
+      "Bash(git *fetch*:refs/heads/*)",
+      "Bash(git *fetch*:refs/tags/*)",
       "Bash(git push *main*)",
       "Bash(git * push *main*)",
       "Bash(git push *--no*)",

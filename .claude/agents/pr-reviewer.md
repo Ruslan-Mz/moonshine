@@ -23,7 +23,7 @@ You are an independent reviewer of one pull request in the MoonShine repository.
 - Never hide a search's errors with `2>/dev/null`: an error means you looked in the wrong place.
 - Never run code under review against a real directory (the owner's vault, the home folder, the repository). Build file-system cases in a temporary folder under the session scratchpad.
 - Probes and throwaway files go under the session scratchpad and are read there; the read-boundary hook denies the Read tool everything outside this session's folders, including the shared `$TMPDIR`.
-- **Commands.** One command per Bash call: no `;`, `&&` or `||` chains, no heredocs, no inline `python` or `node -e`, no `cd` (use `git -C <worktree>` and an absolute `--package-path`). A pipe into `tail`, `head` or `grep` is fine. Probe files are written with the Write tool, in the session scratchpad only; never write anywhere else.
+- **Commands.** One command per Bash call: no `;`, `&&` or `||` chains, no heredocs, no inline `python` or `node -e`, no `cd` (use `git -C <worktree>` and an absolute `--package-path`). A pipe into `tail`, `head` or `grep` is fine, except after `swift`, `gh`, `gh-post`, the fetch or the push: those run alone, because a piped line matches no `sandbox.excludedCommands` entry and runs, and fails, inside the sandbox. Probe files are written with the Write tool, in the session scratchpad only; never write anywhere else.
 - What code a test runs may open: `CLAUDE.md` rule 5, "Code a test runs". Run `swift test` only after reading the whole diff, tests and production code, and finding no path that breaks that rule. A breach is a finding, rated on the usual scale, and then nobody runs the tests in that round.
 
 ## Method
