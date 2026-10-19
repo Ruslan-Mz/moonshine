@@ -79,6 +79,7 @@ Tests green · `swift format lint` clean · Prettier check clean · `node script
 ## Commands
 
 - Swift version: CI pins the oldest supported compiler, **Swift 6.3** (the newest Xcode on the `macos-latest` image; `SWIFT_VERSION` in `.github/workflows/ci.yml`, which fails without a matching Xcode). The local toolchain may be newer (owner, 2026-10-17). The code must build with the Swift version CI pins; do not use features of a newer version; CI decides. `swift-tools-version` in every `Package.swift` stays at or below the pin. Raise the pin when GitHub ships an image with Xcode 27.
+- **Clone setup** (the owner, once per clone, from the repository root; CLAUDE.md § Git and `/review-pr` depend on it): `git remote set-url origin https://github.com/Ruslan-Mz/moonshine.git` · `git config --local --add credential.https://github.com.helper ''` · `git config --local --add credential.https://github.com.helper '!gh auth git-credential'` (the empty value clears helpers from the global config, such as the keychain) · `git config --local --add remote.origin.fetch '+refs/pull/*/head:refs/remotes/origin/pr/*'`. Then `git fetch origin` brings `origin/main` and every PR head as `origin/pr/<n>`.
 - Core tests (any OS): `swift test --package-path MoonShineCore`
 - Adapter tests: `swift test --package-path Adapters`
 - Generate Xcode project: `xcodegen generate`

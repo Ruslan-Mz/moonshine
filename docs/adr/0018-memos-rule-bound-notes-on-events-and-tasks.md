@@ -52,12 +52,12 @@ The text changes often and must not be copied into each event. **How does MoonSh
 
 **Chosen option: "1"** (owner, 2026-10-19), because the rule sits next to the text it governs, the owner edits both in Obsidian, and the reader already parses frontmatter with typed problems (ADR-0014).
 
-**This ADR amends ADR-0017** (its notification planner also schedules memo moments) and **ADR-0015** (a ritual can be started from a memo).
+**This ADR amends ADR-0017** (its notification planner also schedules memo moments), **ADR-0015** (a ritual can be started from a memo), **ADR-0013** (the memo commands join the native `auto` class) and **ADR-0010** (memo sections are synced in encrypted fields). ADR-0012 is not amended: no calendar identifier is stored or synced (owner, 2026-10-19).
 
 ### The `moonshine` key
 
 - One frontmatter key marks every note kind that MoonShine reads by kind rather than by folder: `moonshine: memo`, `moonshine: programme` (here) and `moonshine: entry` (ADR-0019). The owner's own keys, such as `type`, are never used for this.
-- One scanner finds them across the vault under the vault contract's rules (hidden folders, links, limits). It reads only the frontmatter: at most the first 8 KB, stopping at the closing `---`. Bytes after it are discarded unparsed.
+- One scanner finds them across the vault under the vault contract's rules (hidden folders, links, limits). It reads only the frontmatter: at most the first 8 KiB, stopping at the closing `---`. Bytes after it are discarded unparsed.
 - An unknown value (a typo such as `memmo`) yields the problem `noteKindUnknown` with the path.
 
 ### Memo notes
@@ -66,7 +66,7 @@ The text changes often and must not be copied into each event. **How does MoonSh
 - `match` holds one or more matchers. A memo applies when any matcher matches.
   - **Event matcher:** `calendar`, `title` (exact, or `prefix:` / `contains:`, case-insensitive), `weekdays`, `starts_between` (a local time window, for slots such as "morning"), `date` (a one-off event, such as a trip).
   - **Task matcher:** `omnifocus_tag`, `project`.
-  - **Implicit task binding:** an OmniFocus task whose note links to a vault note shows that note as its "before" text, even without frontmatter. This covers "read the old plan before starting".
+  - Tasks match by `omnifocus_tag` or `project` only. There is no implicit binding through links in a task's note: the snapshot never carries task-note text (owner, 2026-10-19).
 - `moments`: a list of anchors with offsets:
   - for events: `before_start` (e.g. `15m`, `1d`), `at_start`, `after_end`;
   - for tasks: `timer_start`, `timer_stop` (ADR-0016), `defer`, `due`, `completed` (seen at the next import).
@@ -78,24 +78,30 @@ The text changes often and must not be copied into each event. **How does MoonSh
   - `entry: {line: <id>, kind: <kind>}` names the practice entry (ADR-0019) that counts as "written" for this occurrence.
 - A memo note that cannot be read as a memo yields the typed problem `memoNotRecognised` with its path. A bad matcher or moment is dropped with its own problem, never silently. A memo with no valid matcher matches nothing and says so.
 - **Several memos on one item:** all are shown, ordered by path. There is no winner, so no memo can hide another. At most 5 are shown; above that, a problem names the item.
+- **A memo never shows a note with `moonshine: entry`** (ADR-0019), however it is named, for example by `programme:` (owner, 2026-10-19).
+
+### Storing memo sections (owner, 2026-10-19)
+
+- Each section is at most 2 KiB; a longer section is not shown, and the memo gets a problem naming the section.
+- The Mac stores the two sections of each memo locally, so that Today and the planner read them from the store like any other data.
+- With sync on, they are synced in CloudKit encrypted fields, as the command text of ADR-0015 is (ADR-0010 is amended to name them on the consent screen).
+- **A memo with `private: true` is never synced.** It is stored on the Mac only, and is shown and notified only there.
 
 ### Programmes
 
-- A note with `moonshine: programme` describes slots × weekdays → exercises. Each exercise may have variant sets: the move variants, and the counting modes (languages, "a different language per number", backwards, by N). The owner converts his current Excel plan into such a note; there is no Excel import.
-- **Today's choice is computed, not stored.** Each set rotates by the local day number modulo its length. When the lengths are coprime (for example 7 move variants × 5 counting modes), every combination appears once in 35 days. Every device computes the same choice; a skipped day does not break the cycle.
+- A note with `moonshine: programme` describes slots × weekdays → exercises, from its `start` date. Each exercise may have variant sets: the move variants, and the counting modes (languages, "a different language per number", backwards, by N). The owner converts his current Excel plan into such a note; there is no Excel import.
+- **Today's choice is computed, not stored.** Each set rotates by the number of occurrences of the slot since the programme's `start` date, modulo its length, not by the day number: a slot on fixed weekdays would otherwise see only some of its variants (owner, 2026-10-19). When the lengths are coprime (for example 7 move variants × 5 counting modes), every combination appears once in 35 occurrences of the slot. Every device computes the same choice; an occurrence the owner skips still counts, so the cycle does not break.
 - `ChooseOtherVariant` stores an override for that occurrence only.
 - A programme is the content of a memo: the memo's `До` section may embed `programme: <note>` and `slot: <name>`. Today shows it as a card (exercise · variant · counting mode), not as raw text.
 - The exact note format is fixed in the slice spec (P4), with fixtures.
 
 ### Occurrences and outcomes (native, synced under ADR-0010)
 
-- An **occurrence** is a matched item on a day:
-  - for an event: the external identifier plus the start of that occurrence (a spike checks that it is stable across devices);
-  - for a task: the OmniFocus id plus the local date.
+- An **occurrence** is keyed by the memo note's path, the occurrence's start as a local date-time (an event's start; for a task, the start of its local date) and an ordinal when several matched items share that start, counted in the order Today lists them (owner, 2026-10-19). No calendar identifier is used anywhere, so ADR-0012 stays as it is.
 - **`MemoOutcome`**:
-  - the occurrence and the memo note's path;
+  - the occurrence key;
   - a status (`done` · `partly` · `not done`);
-  - the checked items, by text hash;
+  - the checked items, each by the SHA-256 of its text after Unicode NFC normalisation (stable across launches and devices);
   - an optional variant override;
   - the device and the time.
 - Commands, all native `auto` (ADR-0013), logged and undoable: `RecordMemoOutcome`, `ChooseOtherVariant`, `DismissMemo`.
@@ -117,18 +123,18 @@ The text changes often and must not be copied into each event. **How does MoonSh
 | Exercise card                               | today's programme for the slot                                                                    | P4                        |
 | iPad and iPhone                             | all of the above                                                                                  | 3b                        |
 
-**Notifications ring on the iPhone** (the watch mirrors it). Once the iPhone app exists, the Mac shows memos on Today without sound. Until then the Mac notifies.
+**Notifications ring on the iPhone** (the watch mirrors it). Once the iPhone app exists, the Mac shows memos on Today without sound. Until then the Mac notifies. A private memo is never synced, so it is shown and notified on the Mac only.
 
 ### Roadmap
 
-| Phase / slice   | Change                                                                                                                                                            |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Phase 2         | **P1** (risky: parses vault notes): memo notes, matchers, problems, display on Today for events and tasks, implicit task binding. Re-baseline phase 2's forecast. |
-| After phase 2   | **P4** (risky: parses vault notes): programmes, the rotation, the exercise card, `ChooseOtherVariant`.                                                            |
-| Reminders (Mac) | **P2**: memo moments in the notification planner of ADR-0017. Task anchors `timer_start` and `timer_stop` need Timer (Mac).                                       |
-| After P2        | **P3** (risky: commands and storage): outcomes, report detection, "open in Obsidian".                                                                             |
-| Write           | "Start report" runs the ritual inside MoonShine.                                                                                                                  |
-| 3b              | Memos, notifications and outcomes on the iPad and iPhone.                                                                                                         |
+| Phase / slice   | Change                                                                                                                                                          |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Phase 2         | **P1** (risky: parses vault notes): memo notes, matchers, problems, the stored sections, display on Today for events and tasks. Re-baseline phase 2's forecast. |
+| After phase 2   | **P4** (risky: parses vault notes): programmes, the rotation, the exercise card, `ChooseOtherVariant`.                                                          |
+| Reminders (Mac) | **P2**: memo moments in the notification planner of ADR-0017. Task anchors `timer_start` and `timer_stop` need Timer (Mac).                                     |
+| After P2        | **P3** (risky: commands and storage): outcomes, report detection, "open in Obsidian".                                                                           |
+| Write           | "Start report" runs the ritual inside MoonShine.                                                                                                                |
+| 3b              | Memos, notifications and outcomes on the iPad and iPhone; private memos stay on the Mac.                                                                        |
 
 ### Consequences
 
@@ -141,7 +147,7 @@ The text changes often and must not be copied into each event. **How does MoonSh
   - rules in frontmatter are typed by hand. A typo shows up as a problem, but only in MoonShine.
   - notifications reflect the calendar as of the last refill (ADR-0017). An event moved while the app was not running may be announced at its old time.
   - before the Write phase, "start report" only opens Obsidian.
-  - an event's identity across devices depends on the calendar provider, which is not checked yet.
+  - an occurrence is known by its start: an event moved to another time is a new occurrence, and items that share a start are told apart only by their order.
 - Neutral:
   - a `MemoReader` in the `ObsidianAdapter`;
   - matching and rotation in Core, with no platform types.
@@ -153,17 +159,21 @@ The text changes often and must not be copied into each event. **How does MoonSh
   - a bad matcher or moment gives its own problem and does not drop the memo;
   - a non-memo note is ignored;
   - text outside the two sections is not shown;
-  - the caps hold: more than 5 memos on one item gives a problem.
-- **Matching tests:** weekdays, a time window across midnight, a one-off date, case-insensitive titles, a task tag, a task note link. Two memos on one item are both shown.
+  - the caps hold: more than 5 memos on one item gives a problem, a section over 2 KiB gives a problem;
+  - a memo never shows a note with `moonshine: entry`.
+- **Matching tests:** weekdays, a time window across midnight, a one-off date, case-insensitive titles, a task tag, a task project. Two memos on one item are both shown.
 - **Rotation tests:**
-  - with coprime lengths, every combination appears once per product of lengths;
+  - with coprime lengths, every combination appears once per product of lengths, counted in occurrences of the slot;
+  - a Mon/Wed/Fri slot with 7 variants shows all 7 in 7 occurrences;
   - the same date gives the same choice regardless of device or time zone of computation (local day);
   - an override affects one occurrence only.
 - **Outcome tests:**
   - every command can be undone;
+  - the occurrence key holds no calendar identifier; two items with the same start get different ordinals;
+  - a checked item's hash is the same after a relaunch and on another device;
   - a matching entry for the day marks "written", while an entry for another line, kind or day does not;
   - nothing is written to the vault.
-- **Privacy tests:** a private memo's notification carries no body text; no memo text appears in logs or problem messages.
+- **Privacy tests:** a private memo's notification carries no body text; a private memo is never in the sync payload; synced sections are in encrypted fields only; no memo text appears in logs or problem messages.
 
 ## Pros and Cons of the Options
 
@@ -186,8 +196,7 @@ The text changes often and must not be copied into each event. **How does MoonSh
 
 Spikes before P1's spec:
 
-1. Is an EventKit event's external identifier with its occurrence start the same on the Mac, iPad and iPhone for the owner's calendars (iCloud, Google)?
-2. How many lines of a notification body do the Mac, iPhone and watch show?
-3. The current Excel programme converted by the owner into a note: its constructs only, no content, to size the format.
+1. How many lines of a notification body do the Mac, iPhone and watch show?
+2. The current Excel programme converted by the owner into a note: its constructs only, no content, to size the format.
 
-Follow-ups: matchers on the event's location or attendees; a memo moment relative to travel time; memos for reminders (ADR-0017).
+Follow-ups: export the vault links of a task's note (links only, never its text) from OmniFocus, so that a task can show the notes it links to; matchers on the event's location or attendees; a memo moment relative to travel time; memos for reminders (ADR-0017).

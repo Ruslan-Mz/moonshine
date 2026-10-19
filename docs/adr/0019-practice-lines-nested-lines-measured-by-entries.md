@@ -41,23 +41,24 @@ Some of the owner's lines have no time and no tasks of their own: a journal, a r
 
 **Chosen option: "1"** (owner, 2026-10-19), because the entry note is the fact itself, the line's time stays with the line that actually spends it, and nothing new has to be typed into MoonShine.
 
-**This ADR amends the vault contract** (budget note fields, the entry note), **ADR-0014** (entry bodies are never read for the link index) and **ADR-0016** (time logged on a nested line goes to its parent).
+**This ADR amends the vault contract** (budget note fields, the entry note), **ADR-0014** (entry bodies are never read for the link index) and **ADR-0016** (time logged on a nested line goes to its parent, from every source).
 
 ### Budget note: three optional fields on a line
 
-| Field     | Values                                                         | Meaning                                                  |
-| --------- | -------------------------------------------------------------- | -------------------------------------------------------- |
-| `within`  | the id of another line                                         | The line is nested; its time belongs to that parent      |
-| `measure` | `hours` (default) · `entries`                                  | What the line is measured by                             |
-| `targets` | list of `{kind, count, per}`, `per` ∈ `day` · `week` · `month` | Entry targets, e.g. diary 5 per week, report 1 per month |
+| Field     | Values                                                 | Meaning                                                  |
+| --------- | ------------------------------------------------------ | -------------------------------------------------------- |
+| `within`  | the id of another line                                 | The line is nested; its time belongs to that parent      |
+| `measure` | `hours` (default) · `entries`                          | What the line is measured by                             |
+| `targets` | list of `{kind, count, per}`, `per` ∈ `week` · `month` | Entry targets, e.g. diary 5 per week, report 1 per month |
 
 Rules:
 
 - **One level of nesting.** A parent has no `within`.
 - **The parent is measured by hours.**
-- **A nested line has no budget.** A budget above 0 is ignored, and the problem says so. The line is never part of shortfall, forecast or the budget total.
-- **Time goes to the parent, always.** A timer, a task or a calendar block attributed to a nested line is recorded on its parent (ADR-0016). The timer's line picker does not offer nested lines.
+- **A nested line, and every `measure: entries` line, has no budget.** A budget above 0 is ignored, and the problem `lineBudgetIgnored` says so, nested or not (owner, 2026-10-19). Such a line is never part of shortfall, forecast or the budget total. A line read as not nested because of a nesting problem keeps the rule of its measure: an entries line's budget is still ignored; an hours line's budget counts.
+- **Time goes to the parent, always, from every source of ADR-0016** (owner, 2026-10-19): timer, task, calendar, manual and workbook. The timer's line picker, the quick log and voice `LogTime` do not offer nested lines. A workbook row mapped to a nested line is recorded on its parent, with the info problem `excelRowMovedToParent`.
 - `measure: entries` without `within` is allowed: a practice with no parent spends no planned time.
+- **Targets are per week or per month.** There is no daily target (owner, 2026-10-19).
 
 ### Entry notes
 
@@ -72,7 +73,8 @@ covers: 2026-10 # optional: an ISO week (2026-W43) or a month (2026-10)
 ```
 
 - The note can be anywhere in the vault. It is found by the `moonshine` key (ADR-0018), never by folder.
-- **Only the frontmatter is read.** The reader stops at the closing `---`. The body is not parsed, indexed, shown or sent anywhere, and the link index (ADR-0014) skips entry notes. UI, notifications and logs carry counts only.
+- **Only the frontmatter is read.** The reader stops at the closing `---`. The body is not parsed, indexed, shown or sent anywhere, and the link index (ADR-0014) skips entry notes. No memo shows an entry note (ADR-0018). UI, notifications and logs carry counts only.
+- **A rejected entry is still an entry for the index.** When the first 8 KiB of a note hold a top-level `moonshine: entry` line (the lexical rule of the budget marker in the vault contract §1), the link index skips the note even if its frontmatter failed to parse or is not closed within 8 KiB. A file that cannot be read or is not UTF-8 has no readable body to index.
 - **Date:** `date` when present; otherwise the leading `YYYY-MM-DD` of the file name; otherwise the entry has no date, is reported and is not counted.
 - **Period:** for a target, an entry counts in the period its `covers` names when present, otherwise in the period of its `date`. A report for October written on 2 November counts for October. Weeks are ISO weeks starting on Monday; all dates are local.
 - **Several entries on one day** all count as entries; the day counts once as a day with an entry.
@@ -85,17 +87,19 @@ covers: 2026-10 # optional: an ISO week (2026-W43) or a month (2026-10)
 
 ### Problems
 
-| Kind                      | When                                                   | Effect                                 |
-| ------------------------- | ------------------------------------------------------ | -------------------------------------- |
-| `lineParentMissing`       | `within` names no line                                 | The line is read as not nested         |
-| `lineNestedTooDeep`       | the parent has its own `within`                        | The line is read as not nested         |
-| `lineParentNotHours`      | the parent has `measure: entries`                      | The line is read as not nested         |
-| `lineNestedBudgetIgnored` | a nested line has a budget above 0                     | The budget is ignored                  |
-| `entryWithoutDate`        | no `date` and no date in the file name                 | The entry is not counted               |
-| `entryLineUnknown`        | `line` names no line                                   | The entry is not counted               |
-| `entryLineNotEntries`     | the line is measured by hours                          | The entry is not counted               |
-| `entryInvalid`            | a bad `covers`, `kind` too long, frontmatter over 8 KB | The entry is not counted               |
-| `entryKindNotInTargets`   | `kind` is in none of the line's targets (info)         | Counted for the line, not for a target |
+| Kind                    | When                                                                   | Effect                                 |
+| ----------------------- | ---------------------------------------------------------------------- | -------------------------------------- |
+| `lineParentMissing`     | `within` names no line                                                 | The line is read as not nested         |
+| `lineNestedTooDeep`     | the parent has its own `within`                                        | The line is read as not nested         |
+| `lineParentNotHours`    | the parent has `measure: entries`                                      | The line is read as not nested         |
+| `lineBudgetIgnored`     | a nested line, or a line with `measure: entries`, has a budget above 0 | The budget is ignored                  |
+| `excelRowMovedToParent` | a workbook row is mapped to a nested line (info)                       | The time is recorded on the parent     |
+| `entryWithoutDate`      | no `date` and no date in the file name                                 | The entry is not counted               |
+| `entryLineUnknown`      | `line` names no line                                                   | The entry is not counted               |
+| `entryLineNotEntries`   | the line is measured by hours                                          | The entry is not counted               |
+| `entryInvalid`          | a bad `covers`, `kind` too long                                        | The entry is not counted               |
+| `frontmatterTooLarge`   | the closing `---` is not within 8 KiB (vault contract §6)              | The entry is not counted               |
+| `entryKindNotInTargets` | `kind` is in none of the line's targets (info)                         | Counted for the line, not for a target |
 
 ### Display
 
@@ -103,7 +107,7 @@ covers: 2026-10 # optional: an ISO week (2026-W43) or a month (2026-10)
   - entries this week and this month, and the last entry's date;
   - progress to each target ("diary 4 of 5 this week");
   - the streak of consecutive **periods** that met their target (weeks for a weekly target, months for a monthly one). The current period is never counted as missed while it is still running.
-  - No hours, no budget, no daily streak.
+  - No hours and no budget. There is no daily target, so no daily streak.
 - **Parent line card:** the nested line as a chip. The parent's hours are not split.
 - **Weekly and quarterly review:** practices as regularity ("5 of 7 days", "4 of 4 weeks met"), not as hours.
 
@@ -135,17 +139,20 @@ A memo's `after.entry` (ADR-0018) names a line and a kind. The memo shows "writt
   - a nested entries line with budget 0 gives no shortfall;
   - each problem in the table, on a fixture;
   - the other lines still read when one line has a problem;
-  - a nested line with a budget above 0 is excluded from the budget total.
+  - a nested line with a budget above 0 is excluded from the budget total;
+  - an entries line that is not nested, or is un-nested by a problem, has its budget ignored with `lineBudgetIgnored`;
+  - `per: day` is invalid.
 - **Entry tests:**
   - three entries on one date count three entries and one day;
   - the date is taken from the file name when `date` is absent;
   - `covers` moves a report into its month;
   - the ISO week boundary is Sunday to Monday;
   - an entry on an hours line is not counted;
-  - an entry outside the window is skipped.
+  - an entry outside the window is skipped;
+  - an entry whose frontmatter is rejected is not indexed.
 - **Privacy tests:** an entry's body (with wikilinks and a sentinel string) appears in no index, no model, no log, no problem text, no export.
 - **Read-state tests:** an unreadable vault gives "unavailable" with the last counts, never 0; a rejected entry gives "partly read"; a streak is unchanged by a failed read.
-- **Time tests:** a timer, a task and a calendar block on a nested line are recorded on the parent; the timer picker lists no nested line.
+- **Time tests:** a timer, a task, a calendar block, a manual entry and a workbook row on a nested line are recorded on the parent, the workbook row with `excelRowMovedToParent`; neither the timer picker nor the quick log lists a nested line.
 
 ## Pros and Cons of the Options
 

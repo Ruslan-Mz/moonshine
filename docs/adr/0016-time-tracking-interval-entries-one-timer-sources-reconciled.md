@@ -98,7 +98,7 @@ All go through the `CommandBus`, land in the activity log and can be undone: `St
 
 Buttons in widgets are allowed before the Act phase because a timer is native data, not a provider write.
 
-**Amendment (2026-10-19, owner; ADR-0019).** Time attributed to a nested line (a line with `within`) is recorded on its parent, whether it comes from a timer, a task or a calendar block. The timer's line picker does not offer nested lines.
+**Amendment (2026-10-19, owner; ADR-0019).** Time attributed to a nested line (a line with `within`) is recorded on its parent, from every source: timer, task, calendar, manual and workbook. The timer's line picker, the quick log and voice `LogTime` do not offer nested lines; a workbook row mapped to a nested line is recorded on its parent with the info problem `excelRowMovedToParent`, so the reconcile by (day, line) pairs it with the parent's entries.
 
 ### Voice
 

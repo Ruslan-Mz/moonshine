@@ -71,7 +71,7 @@
 - [ ] **S5 — Week + Month + ⌘K palette.** Follows `design/screens/` (week, month, command-palette); where a screen spec and its mockup differ, the screen spec wins. S5 gets calendar events in Week (and Month, first to cut).
 - [ ] **S6 — README (English):** vision in 3 lines, Demo-mode GIF, architecture diagram, "How this was built" → `docs/method/`, ADR index, licence.
   - **Publication prep** (owner decision 2026-10-05), before the repository is made public:
-    1. audit the whole git history and all PR discussions for personal data (known case: the first version of the Excel contract with the real month range, quoted in a PR #6 review comment);
+    1. audit the whole git history and all PR discussions for personal data (known cases are listed in `docs/method/before-going-public.md`, among them the first version of the Excel contract with the real month range, quoted in a PR #6 review comment);
     2. run a secret scan over the full history;
     3. decide whether `ЗАПУСК.md` stays in the repository;
     4. move the ADRs the owner agrees with from proposed to accepted;
