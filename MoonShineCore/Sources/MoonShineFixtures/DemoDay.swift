@@ -2,10 +2,11 @@ import Foundation
 import MoonShineCore
 
 /// The tasks with a time on Thu 1 Oct 2026 (`design/demo-data.md` § Draft-3, invented). Only
-/// their times, estimates and status are canonical; flags, lines and repeats are not set. The
-/// Demo data slice folds them into `fixtures/omnifocus.snapshot.json` with a golden test.
+/// their times, estimates and status are canonical; flags, lines and repeats are not set. They are
+/// the timed tasks of `fixtures/omnifocus.snapshot.json`; `DemoDayGoldenTests` checks that the two
+/// agree.
 public enum DemoDay {
-  /// The snapshot's defaults after the Demo data slice: planned 09:00, due 17:00.
+  /// The snapshot's defaults: planned 09:00, due 17:00.
   public static let defaultTimes = DefaultTimes(
     timeZone: DemoCalendar.calendar.timeZone, due: TimeOfDay(hour: 17, minute: 0),
     defer: TimeOfDay(hour: 6, minute: 0), planned: TimeOfDay(hour: 9, minute: 0))

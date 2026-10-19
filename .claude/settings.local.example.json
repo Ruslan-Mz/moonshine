@@ -1,6 +1,7 @@
 {
   "permissions": {
     "allow": [
+      "Bash(git -c credential.helper= -c credential.helper='!gh auth git-credential' fetch https://github.com/Ruslan-Mz/moonshine.git *)",
       "Bash(git -c credential.helper= -c credential.helper='!gh auth git-credential' push https://github.com/Ruslan-Mz/moonshine.git HEAD:refs/heads/*)",
       "Bash(/Users/<you>/.config/moonshine/bin/gh-post *)",
       "Bash(gh pr view *)",

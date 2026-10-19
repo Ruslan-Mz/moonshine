@@ -23,7 +23,7 @@ func fixtureDocument() throws -> SnapshotDocument {
     #expect(document.folders.count == 12)
     #expect(document.tags.count == 23)
     #expect(document.projects.count == 13)
-    #expect(document.tasks.count == 163)
+    #expect(document.tasks.count == 169)
   }
 
   @Test func fixtureSatisfiesEveryContractInvariant() throws {
@@ -255,7 +255,7 @@ func fixtureDocument() throws -> SnapshotDocument {
 
   @Test func datesKeepTheirInstant() throws {
     let task = try #require(source.tasks.first { $0.externalId == "tsk-0167" })
-    #expect(task.dueAt == Date(timeIntervalSince1970: 1_790_780_400))  // 2026-09-30T18:00+03:00
+    #expect(task.dueAt == Date(timeIntervalSince1970: 1_790_776_800))  // 2026-09-30T17:00+03:00
     #expect(task.effectiveDueAt == task.dueAt)
     #expect(task.flagged)
     #expect(source.timeZone.identifier == "Europe/Moscow")
@@ -263,10 +263,10 @@ func fixtureDocument() throws -> SnapshotDocument {
   }
 
   @Test func ownAndEffectiveDatesStaySeparate() throws {
-    // Inherits its project's due date, 2026-10-16T18:00+03:00.
+    // Inherits its project's due date, 2026-10-16T17:00+03:00.
     let inheritsDue = try #require(source.tasks.first { $0.externalId == "tsk-0097" })
     #expect(inheritsDue.dueAt == nil)
-    #expect(inheritsDue.effectiveDueAt == Date(timeIntervalSince1970: 1_792_162_800))
+    #expect(inheritsDue.effectiveDueAt == Date(timeIntervalSince1970: 1_792_159_200))
     // Inherits its group's planned date, 2026-10-01T09:00+03:00.
     let inheritsPlanned = try #require(source.tasks.first { $0.externalId == "tsk-0172" })
     #expect(inheritsPlanned.plannedAt == nil)
@@ -330,7 +330,7 @@ func fixtureDocument() throws -> SnapshotDocument {
   @Test func rhythmAndProgressAreSeparable() async throws {
     let workspace = try await importFixture()
     let completed = workspace.tasks.filter { $0.status == .completed }
-    #expect(completed.count == 98)
+    #expect(completed.count == 100)
     #expect(completed.filter(\.isOccurrence).count == 32)
   }
 }
