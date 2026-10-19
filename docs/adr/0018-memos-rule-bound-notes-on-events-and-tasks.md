@@ -24,8 +24,8 @@ related:
 
 Some of the owner's activities need a short text at the right moment rather than a task. Some examples:
 
-- **Daily sessions of the fundamental line** live in the calendar, not in OmniFocus. Before a session the owner wants a list of how to prepare. At its end he wants a nudge to do the closing steps and to record whether he did them.
-- **Exercise slots** (main slot Mon/Wed/Fri, a morning slot) follow a programme that depends on the weekday and the slot. Some exercises have variants that should rotate: cross-lateral moves with eyes closed, counting backwards, counting by 7 or by 3, counting in another language or in a different language for each number.
+- **Daily sessions of one study line** live in the calendar, not in OmniFocus. Before a session the owner wants a list of how to prepare. At its end he wants a nudge to do the closing steps and to record whether he did them.
+- **Exercise slots** (a main slot on fixed weekdays, a morning slot) follow a programme that depends on the weekday and the slot. Some exercises have variants that should rotate: cross-lateral moves with eyes closed, counting backwards, counting by 7 or by 3, counting in another language or in a different language for each number.
 - **Trips** have a preparation note that is useful a day before, not 15 minutes before.
 - **Tasks** built on an old plan need that plan read before starting, and some need a report filled in after finishing.
 
