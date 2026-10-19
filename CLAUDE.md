@@ -45,6 +45,8 @@ Everything else: do it and report it. Pushing a slice branch, opening or editing
 
 Start every slice with the HTTPS fetch, then `git switch main && git merge --ff-only origin/main`, then branch. The fetch uses `gh` as a one-off credential helper and is allowed without a prompt: `git -c credential.helper= -c credential.helper='!gh auth git-credential' fetch https://github.com/Ruslan-Mz/moonshine.git '+refs/heads/*:refs/remotes/origin/*'`. Plain `git fetch` goes over SSH, which fails from sessions. Push the same way, always naming the branch: `git -c credential.helper= -c credential.helper='!gh auth git-credential' push https://github.com/Ruslan-Mz/moonshine.git HEAD:refs/heads/<branch>`. A branch name containing `main` is denied by the local settings; choose another name.
 
+Never chain an unsandboxed command (the fetch, the push, `gh`, `gh-post`, `swift`) with anything via `;`, `|` or `&&`: run it alone in its own call, then the rest separately. A chained line leaves the sandbox as a whole and prompts (owner, 2026-10-17). Never set `dangerouslyDisableSandbox` for `swift test` / `swift build`: they are in `sandbox.excludedCommands` and already run outside the sandbox, and the flag hits the owner's ask rule and prompts every time. If a `swift` command fails in the sandbox without it, stop and report the error instead of retrying with the flag (owner, 2026-10-19).
+
 ## Plans
 
 - A slice plan is written to a file in the session scratchpad and printed in full in chat. Every claim it makes about existing code names its file, and the line where it matters: the critic has no search, so a claim without a path is a finding (`unverifiable-claim`).
@@ -53,6 +55,7 @@ Start every slice with the HTTPS fetch, then `git switch main && git merge --ff-
 - **What waits.** The owner sees the plan and the critic's "For the owner" list; the architect no longer reviews every plan.
   - A **risky** plan always waits for the owner's OK (owner, 2026-10-09; confirmed 2026-10-17), whatever the verdict and even with an empty "For the owner" list. Then fix the plan, including the critic's "For the author" findings, and start.
   - A **plain** plan whose critic verdict is `ready` and which has no question for the owner (an empty "For the owner" list and none of its own) starts at once; fix the "For the author" findings first. Any other verdict, or any owner question, waits for the owner's answers.
+  - A **plain** plan whose verdict is `fix the plan first` with author findings only counts as `ready` once every finding is taken into the plan (fixed, or declined with a reason in the PR description); with an empty "For the owner" list it starts without waiting (owner, 2026-10-19). A risky plan still always waits.
   - A plan with no critic run (docs-only, or plain under 80) waits for the owner's OK, as before.
 
 ## Pull requests
