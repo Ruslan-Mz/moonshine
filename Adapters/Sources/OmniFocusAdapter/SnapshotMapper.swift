@@ -62,6 +62,9 @@ public struct SnapshotViolation: Equatable, Sendable, CustomStringConvertible {
 
 /// Checks the contract invariants (snapshot-contract §Invariants).
 public enum SnapshotValidator {
+  /// A task estimate in minutes: none below zero, at most a year, so sums never overflow.
+  public static let estimateRange = 0...525_600
+
   public static func violations(in document: SnapshotDocument) -> [SnapshotViolation] {
     let folders = Set(document.folders.map(\.id))
     let tags = Set(document.tags.map(\.id))
@@ -120,6 +123,9 @@ public enum SnapshotValidator {
         }
       }
       for (j, tag) in task.tagIds.enumerated() { check("\(path).tagIds[\(j)]", tag, in: tags) }
+      if let minutes = task.estimatedMinutes, !estimateRange.contains(minutes) {
+        found.append(.init("\(path).estimatedMinutes", "is outside 0…\(estimateRange.upperBound)"))
+      }
       for (field, date) in task.dates { checkOffset("\(path).\(field)", date) }
       if (task.status == "completed") != (task.completionDate != nil) {
         found.append(

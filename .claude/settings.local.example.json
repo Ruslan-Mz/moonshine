@@ -10,7 +10,10 @@
       "Bash(git branch -d *)",
       "Bash(git worktree prune)",
       "Bash(swift test *)",
-      "Bash(swift build *)"
+      "Bash(swift build *)",
+      "Bash(xcodegen generate)",
+      "Bash(xcodebuild -scheme MoonShineMac -destination platform=macOS,arch=arm64 -derivedDataPath DerivedData -onlyUsePackageVersionsFromResolvedFile test)",
+      "Bash(xcodebuild -scheme MoonShineMac -destination platform=macOS,arch=arm64 -derivedDataPath DerivedData -onlyUsePackageVersionsFromResolvedFile build)"
     ],
     "deny": [
       "Edit(./.git/config)",
@@ -69,7 +72,10 @@
       "Bash(git branch * -D *)",
       "Bash(git branch *--force*)",
       "Bash(git branch -f *)",
-      "Bash(git branch * -f *)"
+      "Bash(git branch * -f *)",
+      "Bash(xcodebuild *-allowProvisioning*)",
+      "Bash(xcodebuild *rchive*)",
+      "Bash(xcodebuild *otariz*)"
     ],
     "ask": ["Bash(dangerouslyDisableSandbox:true)"]
   },
@@ -83,6 +89,8 @@
       "swift",
       "swift test *",
       "swift build *",
+      "xcodegen generate",
+      "xcodebuild *",
       "gh pr view *",
       "gh pr diff *",
       "gh pr checks *",
