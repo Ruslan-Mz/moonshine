@@ -26,6 +26,7 @@ The owner's figures, read from the method log:
 - **Factor:** 1.55, actual production lines against the plan's estimate (the figure of 2026-10-09; the size factor above replaces it for sizing).
 - **Size by risk:** risky slices up to about 400 production lines after the factor, plain slices up to about 800 (`CLAUDE.md` rule 2).
 - **Slow scenario:** 0.6 of the pace from January (less owner time).
+- **Memos and practice lines (2026-10-19, ADR-0018, ADR-0019):** P1 ~400 and Practice lines ~350 production lines estimated, ~750 × 1.62 ≈ 1,215, at about 250 a day ≈ 5 days; phase 2 and every stage after it move 5 days later. The slow column keeps its months: 5 days do not change them.
 
 ## Stages
 
@@ -33,11 +34,11 @@ The owner's figures, read from the method log:
 | -------------------------------------- | --------------------------- | ------------------------ | ------ |
 | Phase 1 See                            | 2026-11-03 (10-30 to 11-12) | same                     |        |
 | Usage period: R1, README, design, spec | 11-03 to 11-17              | same                     |        |
-| Phase 2 Plan, Timer (Mac) last         | 11-17 to 12-15              | same                     |        |
-| Hub (in phase 2's usage period)        | 12-15 to 12-22              | same                     |        |
-| Phase 3 Board                          | 2027-01-05 to 01-18         | January to February      |        |
-| Write                                  | 02-01 to 02-21              | March                    |        |
-| 3b iPad and iPhone                     | 03-07 to end of April       | April to June            |        |
-| Phase 4 Ask                            | mid-May to early June       | July                     |        |
-| Phase 5 Act                            | mid-June to early July      | August to September      |        |
-| Phase 6 Zoom out                       | August                      | autumn 2027              |        |
+| Phase 2 Plan, Timer (Mac) last         | 11-17 to 12-20              | same                     |        |
+| Hub (in phase 2's usage period)        | 12-20 to 12-27              | same                     |        |
+| Phase 3 Board                          | 2027-01-10 to 01-23         | January to February      |        |
+| Write                                  | 02-06 to 02-26              | March                    |        |
+| 3b iPad and iPhone                     | 03-12 to early May          | April to June            |        |
+| Phase 4 Ask                            | about 05-20 to 06-10        | July                     |        |
+| Phase 5 Act                            | about 06-20 to 07-10        | August to September      |        |
+| Phase 6 Zoom out                       | August to early September   | autumn 2027              |        |

@@ -42,6 +42,8 @@ Phase 3b brings an iPad "planning studio" (and an iPhone capture app). OmniFocus
 
 **Sync is opt-in and off by default.** Nothing is uploaded until the owner turns it on in Settings → Sync, after a consent screen that states what is synced (the MoonShine store: imported OmniFocus and vault data, including the link index of ADR-0014; plans, time entries; and, from the Write phase, the text of pending vault commands, in an encrypted field, pruned 30 days after the command finished, ADR-0015) and where (the owner's private iCloud database). Turning it off stops sync; a separate, confirmed action deletes the CloudKit data. Without sync, the iPad and iPhone apps have no data (Demo mode only). VISION principle 5 is amended to match.
 
+**Amendment (2026-10-19, owner; ADR-0018).** The consent screen also names memo sections: the two sections of each memo note, the stored copy at most 2 KiB each, synced in encrypted fields as the command text of ADR-0015 is. A memo with `private: true` is never synced.
+
 Option 3 is revisited if real conflicts on plans appear in the conflict log.
 
 **Conflict rules for specific native records** (added 2026-10-03, owner decision on design draft-4):

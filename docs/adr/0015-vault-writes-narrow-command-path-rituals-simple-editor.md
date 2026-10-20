@@ -99,6 +99,8 @@ Writing directly on a satellite that holds a copy of the vault is decided in the
 - **Entry points:** cards on Today at the ritual's moment; the weekly review; a line or project page for `manual` rituals (a practice review, for example).
 - A ritual screen may show the take control; the take follows its own rules and is still never written to the vault.
 
+**Amendment (2026-10-19, owner; ADR-0018).** A ritual can also be started from a memo, whose `after.ritual` names it; the draft is pre-filled with the occurrence's facts. Its template may carry an entry's frontmatter (`moonshine: entry`, `line`, `kind`, `date`; ADR-0019), so that the created note counts as a practice entry. The write path and its rules are unchanged.
+
 ### Reading and editing
 
 - The Hub slice (ADR-0014) brings a rendered, read-only view of a note. The Write phase adds a plain-text Markdown editor with a preview.

@@ -98,6 +98,8 @@ All go through the `CommandBus`, land in the activity log and can be undone: `St
 
 Buttons in widgets are allowed before the Act phase because a timer is native data, not a provider write.
 
+**Amendment (2026-10-19, owner; ADR-0019).** Time attributed to a nested line (a line with `within`) is recorded on its parent, from every source: timer, task, calendar, manual and workbook. The timer's line picker, the quick log and voice `LogTime` do not offer nested lines; a workbook row mapped to a nested line is recorded on its parent with the info problem `excelRowMovedToParent`, so the reconcile by (day, line) pairs it with the parent's entries.
+
 ### Voice
 
 `StartTimer`, `PauseTimer`, `ResumeTimer` and `StopTimer` are `auto` commands (ADR-0013): native, undoable, answered in one line. The conditions of ADR-0013 hold: the subject and any time offset are spans of the utterance, and the app resolves the subject itself (exactly one line, project or open task). No match or several matches → one question, never a guess. `EditTimeEntry` by voice is `auto` only for the entry just stopped; anything else is a proposal.

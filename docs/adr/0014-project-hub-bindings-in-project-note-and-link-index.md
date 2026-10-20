@@ -89,6 +89,8 @@ Rules:
 
 The `ObsidianAdapter` reads note bodies for links and tags only. Bodies are indexed for every note, with or without frontmatter: most journal notes have none.
 
+**Amendment (2026-10-19, owner; ADR-0019).** The link index skips notes with `moonshine: entry` in frontmatter: their bodies are never read, so they yield no links, tags or backlinks. A note whose first 8 KiB hold a top-level `moonshine: entry` line is skipped too when its frontmatter was rejected (the lexical rule of the budget marker).
+
 - Extracted: `[[target]]`, `[[target|alias]]`, `[[target#heading]]`, `![[embed]]`, Markdown links to notes in the vault, `moonshine://` links, inline `#tags`, and wikilinks in any frontmatter value (`parent`, `related`, …).
 - Not extracted: anything inside code fences, inline code or `%% comments %%`.
 - Stored per link: source note path, target as written (without its anchor and alias), resolved note path or none, kind (`wikilink` · `embed` · `markdown` · `frontmatter` · `moonshine`), line number. **Nothing around the link is stored**: no alias, no anchor, no snippet, no heading, no sentence (owner, 2026-10-09).
