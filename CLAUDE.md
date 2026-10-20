@@ -82,8 +82,8 @@ Tests green · `swift format lint` clean · Prettier check clean · `node script
 - **Clone setup** (the owner, once per clone, from the repository root; CLAUDE.md § Git and `/review-pr` depend on it): `git remote set-url origin https://github.com/Ruslan-Mz/moonshine.git` · `git config --local --add credential.https://github.com.helper ''` · `git config --local --add credential.https://github.com.helper '!gh auth git-credential'` (the empty value clears helpers from the global config, such as the keychain) · `git config --local --add remote.origin.fetch '+refs/pull/*/head:refs/remotes/origin/pr/*'`. Then `git fetch origin` brings `origin/main` and every PR head as `origin/pr/<n>`.
 - Core tests (any OS): `swift test --package-path MoonShineCore`
 - Adapter tests: `swift test --package-path Adapters`
-- Generate Xcode project: `xcodegen generate`
-- Build app: `xcodebuild -scheme MoonShineMac -destination 'platform=macOS' build`
+- Generate Xcode project: `xcodegen generate`, then `scripts/pin-app-packages.sh` (copies `Adapters/Package.resolved` into the generated project, which is not committed). XcodeGen: `brew install xcodegen` locally; CI downloads the pinned release and checks its SHA-256 (owner, 2026-10-20).
+- Build and test app: `xcodebuild -scheme MoonShineMac -destination 'platform=macOS,arch=arm64' -derivedDataPath DerivedData -onlyUsePackageVersionsFromResolvedFile test` (`build` to build only). `xcodegen generate` and `xcodebuild *` run outside the sandbox (`sandbox.excludedCommands`); each runs alone, never chained or piped (owner, 2026-10-20).
 - Lint: `swift format lint --recursive MoonShineCore Adapters Apps`
 - Markdown: `npm install` once, then `git ls-files -z '*.md' | xargs -0 node_modules/.bin/prettier --write` · check: `git ls-files -z '*.md' | xargs -0 node_modules/.bin/prettier --check`. Never `npx`: it can download a package when `node_modules` is missing. The local binary runs inside the sandbox, and `git ls-files` skips the unreadable `data/` folder (owner, 2026-10-08). CI keeps `npx`, after `npm ci`.
 - References: `node scripts/check-refs.mjs` · its tests: `node --test scripts/check-refs.test.mjs`

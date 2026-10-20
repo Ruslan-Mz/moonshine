@@ -1,0 +1,72 @@
+# XcodeGen spec for the Mac app (ADR-0007). `xcodegen generate` writes `MoonShine.xcodeproj`,
+# which is not committed; `scripts/pin-app-packages.sh` then copies the pinned package versions.
+name: MoonShine
+options:
+  bundleIdPrefix: dev.moonshine
+  deploymentTarget:
+    macOS: "15.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+packages:
+  MoonShineCore:
+    path: MoonShineCore
+  Adapters:
+    path: Adapters
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    # Ad-hoc signing; no App Sandbox and no hardened runtime yet: the JXA bridge needs an
+    # unsandboxed app (ADR-0003).
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    ENABLE_HARDENED_RUNTIME: NO
+    SWIFT_EMIT_LOC_STRINGS: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+targets:
+  MoonShineMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: Apps/Mac/Sources
+      - path: Apps/Mac/Resources
+      # Demo mode reads the invented snapshot; the tests read the tracked file instead.
+      - path: fixtures/omnifocus.snapshot.json
+        buildPhase: resources
+    dependencies:
+      - package: MoonShineCore
+        product: MoonShineCore
+      - package: MoonShineCore
+        product: MoonShineFixtures
+      - package: Adapters
+        product: SQLiteStore
+      - package: Adapters
+        product: OmniFocusAdapter
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.moonshine.mac
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: MoonShine
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+        MARKETING_VERSION: "0.1"
+        CURRENT_PROJECT_VERSION: "1"
+  MoonShineMacTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Apps/Mac/Tests
+    dependencies:
+      - target: MoonShineMac
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.moonshine.mac.tests
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  MoonShineMac:
+    build:
+      targets:
+        MoonShineMac: all
+        MoonShineMacTests: [test]
+    test:
+      targets:
+        - MoonShineMacTests

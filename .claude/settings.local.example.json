@@ -10,7 +10,9 @@
       "Bash(git branch -d *)",
       "Bash(git worktree prune)",
       "Bash(swift test *)",
-      "Bash(swift build *)"
+      "Bash(swift build *)",
+      "Bash(xcodegen generate)",
+      "Bash(xcodebuild *)"
     ],
     "deny": [
       "Edit(./.git/config)",
@@ -83,6 +85,8 @@
       "swift",
       "swift test *",
       "swift build *",
+      "xcodegen generate",
+      "xcodebuild *",
       "gh pr view *",
       "gh pr diff *",
       "gh pr checks *",
