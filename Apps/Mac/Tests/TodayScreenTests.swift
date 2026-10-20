@@ -72,21 +72,58 @@ private func demo() async throws -> (Overview, TodayScreen) {
     }
   }
 
-  /// Auckland is 10 hours ahead of Moscow: there, Demo's 16:20 is already Friday.
-  @Test func dayWeekAndDueDatesFollowTheWorkspaceZone() async throws {
+  @Test func dayAndWeekComeFromTheWorkspace() async throws {
     let (_, screen) = try await demo()
-    let moscow = try #require(TimeZone(identifier: "Europe/Moscow"))
-    #expect(screen.timeZone == moscow)
+    #expect(screen.timeZone == TimeZone(identifier: "Europe/Moscow"))
+    #expect(screen.day == DemoEnvironment.now)
     #expect(screen.week == 40)
-    let saved = NSTimeZone.default
-    NSTimeZone.default = try #require(TimeZone(identifier: "Pacific/Auckland"))
-    defer { NSTimeZone.default = saved }
+  }
+
+  /// Auckland is 10 hours ahead of Moscow: there, Demo's 16:20 is already Friday. The
+  /// formatter must follow the zone it is given, whatever the Mac's zone is.
+  @Test func formattingFollowsTheZoneItIsGiven() throws {
+    let moscow = try #require(TimeZone(identifier: "Europe/Moscow"))
+    let auckland = try #require(TimeZone(identifier: "Pacific/Auckland"))
     let english = Locale(identifier: "en_GB")
-    let day = TodayFormat.day(screen.day, timeZone: screen.timeZone, locale: english)
-    #expect(day == "Thursday 1 October")
+    let now = DemoEnvironment.now
+    #expect(TodayFormat.day(now, timeZone: moscow, locale: english) == "Thursday 1 October")
+    #expect(TodayFormat.day(now, timeZone: auckland, locale: english) == "Friday 2 October")
     let due = DemoVault.calendar.date(
       from: DateComponents(year: 2026, month: 10, day: 1, hour: 17))!
-    #expect(TodayFormat.dueDate(due, timeZone: screen.timeZone, locale: english) == "1 Oct")
+    #expect(TodayFormat.dueDate(due, timeZone: moscow, locale: english) == "1 Oct")
+    #expect(TodayFormat.dueDate(due, timeZone: auckland, locale: english) == "2 Oct")
+  }
+
+  @Test func estimatesAndDueStyles() {
+    #expect(TodayFormat.estimate(nil) == nil)
+    #expect(TodayFormat.estimate(0) == nil)
+    #expect(TodayFormat.estimate(-30) == nil)
+    #expect(TodayFormat.estimate(45) == .minutes(45))
+    #expect(TodayFormat.estimate(60) == .hours(1))
+    #expect(TodayFormat.estimate(75) == .hoursAndMinutes(1, 15))
+    #expect(TodayFormat.dueStyle(isUrgent: true) == .deadline)
+    #expect(TodayFormat.dueStyle(isUrgent: false) == .plain)
+  }
+
+  /// Invented Life ops estimates: a negative one is left out and a huge sum never traps.
+  @Test func theLifeOpsSumSkipsNegativeEstimatesAndNeverTraps() throws {
+    let zone = try #require(TimeZone(identifier: "Europe/Moscow"))
+    let calendar = Calendar.iso8601(in: zone)
+    let now = calendar.date(from: DateComponents(year: 2026, month: 10, day: 1, hour: 12))!
+    func screen(_ estimates: [Int]) -> TodayScreen {
+      let tasks = estimates.map { minutes in
+        TaskItem(
+          id: .generate(), refs: [], title: "Errand", projectID: nil, parentTaskID: nil,
+          tagIDs: [], status: .available, flagged: true, plannedAt: nil, deferUntil: nil,
+          dueAt: nil, effectivePlannedAt: nil, effectiveDeferUntil: nil, effectiveDueAt: nil,
+          estimateMinutes: minutes, completedAt: nil, modifiedAt: nil, occurrenceOf: nil,
+          line: .lifeOps)
+      }
+      return TodayScreen(Overview(workspace: Workspace(timeZone: zone, tasks: tasks), now: now))
+    }
+    #expect(screen([-30, 45]).lifeOps.count == 2)
+    #expect(screen([-30, 45]).lifeOpsEstimateMinutes == 45)
+    #expect(screen([.max, 1]).lifeOpsEstimateMinutes == .max)
   }
 
   /// Invented: a line whose trace ends at its parent note, one at a current-year artifact.
@@ -142,6 +179,31 @@ private func demo() async throws -> (Overview, TodayScreen) {
 
   @Test func theBundleCarriesTheSnapshot() {
     #expect(DemoEnvironment.bundledSnapshot != nil)
+  }
+
+  @MainActor @Test func loadingTheDemoShowsToday() async throws {
+    let model = AppModel(snapshot: trackedSnapshot)
+    await model.load()
+    guard case .loaded(let loaded) = model.state else {
+      Issue.record("Today is not loaded")
+      return
+    }
+    let (_, expected) = try await demo()
+    try #require(!expected.sections.isEmpty)
+    #expect(
+      loaded.sections.map { $0.rows.map(\.title) }
+        == expected.sections.map { $0.rows.map(\.title) })
+    #expect(loaded.fromEarlier.map(\.title) == expected.fromEarlier.map(\.title))
+    #expect(loaded.lifeOps.map(\.title) == expected.lifeOps.map(\.title))
+    #expect(loaded.day == expected.day)
+    #expect(loaded.week == expected.week)
+  }
+
+  /// The tests run inside the app; there the app reads Demo data only, never a live source.
+  @MainActor @Test func aTestHostReadsDemoOnly() {
+    #expect(AppModel.isTestHost)
+    #expect(AppModel.source(isTestHost: true) == .demo)
+    #expect(AppModel().source == .demo)
   }
 
   @MainActor @Test func aMissingSnapshotLeavesTodayUnavailable() async {

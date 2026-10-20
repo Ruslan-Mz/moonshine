@@ -40,7 +40,7 @@ jobs:
             echo "swift=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          pattern='\.swift$|(^|/)Package\.resolved$|^bridge/|^fixtures/|^project\.yml$|^Apps/|^scripts/pin-app-packages\.sh$|^\.github/workflows/ci\.yml$'
+          pattern='\.swift$|(^|/)Package\.resolved$|^bridge/|^fixtures/|^project\.yml$|^Apps/|^scripts/(pin-app-packages\.sh|require-tests\.mjs|check-project-scripts\.mjs)$|^\.github/workflows/ci\.yml$'
           if git diff --name-only "$BASE" "$HEAD" | grep -qE "$pattern"; then
             echo "swift=true" >> "$GITHUB_OUTPUT"
           else
@@ -59,6 +59,19 @@ jobs:
         run: |
           node --test scripts/check-vault-writes.test.mjs
           node scripts/check-vault-writes.mjs
+
+      - name: String Catalogs (banned words, plural categories; ADR-0009)
+        run: |
+          node --test scripts/check-catalog.test.mjs
+          node scripts/check-catalog.mjs
+
+      - name: project.yml runs no command (XcodeGen and xcodebuild run outside the sandbox)
+        run: |
+          node --test scripts/check-project-scripts.test.mjs
+          node scripts/check-project-scripts.mjs
+
+      - name: Test steps fail when no test ran
+        run: node --test scripts/require-tests.test.mjs
 
       - name: Push and post guard (pre-push hook, gh-post, install script)
         run: node --test scripts/pre-push.test.mjs scripts/gh-post.test.mjs
@@ -110,11 +123,18 @@ jobs:
           key: spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('**/Package.swift', '**/Package.resolved') }}
           restore-keys: spm-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
 
+      # Each test step fails when it ran no test (`scripts/require-tests.mjs`).
       - name: Core tests
-        run: swift test --package-path MoonShineCore
+        shell: bash
+        run: |
+          swift test --package-path MoonShineCore 2>&1 | tee "$RUNNER_TEMP/core-tests.log"
+          node scripts/require-tests.mjs "$RUNNER_TEMP/core-tests.log" Core
 
       - name: Adapter tests
-        run: swift test --package-path Adapters
+        shell: bash
+        run: |
+          swift test --package-path Adapters 2>&1 | tee "$RUNNER_TEMP/adapter-tests.log"
+          node scripts/require-tests.mjs "$RUNNER_TEMP/adapter-tests.log" Adapters
 
       - name: A file without `import EventKit` cannot reach the event store (ADR-0012)
         run: node --test scripts/check-calendar-isolation.test.mjs
@@ -131,11 +151,15 @@ jobs:
           echo "$RUNNER_TEMP/xcodegen/bin" >> "$GITHUB_PATH"
 
       - name: Mac app tests (Demo mode)
+        shell: bash
         run: |
+          node scripts/check-project-scripts.mjs
           xcodegen generate
           scripts/pin-app-packages.sh
           xcodebuild -scheme MoonShineMac -destination 'platform=macOS,arch=arm64' \
-            -derivedDataPath DerivedData -onlyUsePackageVersionsFromResolvedFile test
+            -derivedDataPath DerivedData -onlyUsePackageVersionsFromResolvedFile test \
+            2>&1 | tee "$RUNNER_TEMP/app-tests.log"
+          node scripts/require-tests.mjs "$RUNNER_TEMP/app-tests.log" App
 
       - name: Swift format lint
         run: swift format lint --strict --recursive MoonShineCore Adapters Apps

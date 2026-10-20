@@ -172,6 +172,20 @@ func fixtureDocument() throws -> SnapshotDocument {
     #expect(SnapshotValidator.violations(in: document) == [])
   }
 
+  @Test func anEstimateIsBetweenZeroAndAYear() throws {
+    var document = try fixtureDocument()
+    let path = "tasks[0].estimatedMinutes"
+    for minutes in [-1, 525_601, Int.max] {
+      document.tasks[0].estimatedMinutes = minutes
+      #expect(
+        SnapshotValidator.violations(in: document) == [.init(path, "is outside 0…525600")])
+    }
+    for minutes in [0, 45, 525_600] {
+      document.tasks[0].estimatedMinutes = minutes
+      #expect(SnapshotValidator.violations(in: document) == [])
+    }
+  }
+
   func probe() throws -> ChangeProbe {
     let json =
       #"{"schemaVersion":1,"source":"omnifocus","mode":"probe","generatedAt":"2026-09-30T21:00:00+03:00","taskCount":163,"latestModified":"2026-09-30T20:58:00+03:00"}"#

@@ -100,21 +100,17 @@ struct TodayView: View {
   }
 }
 
-/// `≈ 45 min`, `≈ 1 h 15 min` (`design/copy.md`); empty without an estimate.
+/// `TodayFormat.estimate`, in the catalog's words; empty without an estimate.
 struct EstimateText: View {
   let minutes: Int?
 
   var body: some View {
-    if let minutes, minutes > 0 {
-      let hours = minutes / 60
-      let rest = minutes % 60
+    if let estimate = TodayFormat.estimate(minutes) {
       Group {
-        if hours == 0 {
-          Text("≈ \(rest) min")
-        } else if rest == 0 {
-          Text("≈ \(hours) h")
-        } else {
-          Text("≈ \(hours) h \(rest) min")
+        switch estimate {
+        case .minutes(let minutes): Text("≈ \(minutes) min")
+        case .hours(let hours): Text("≈ \(hours) h")
+        case .hoursAndMinutes(let hours, let minutes): Text("≈ \(hours) h \(minutes) min")
         }
       }
       .foregroundStyle(.secondary)
@@ -136,13 +132,14 @@ struct WhenText: View {
       }
       if let due = row.due {
         let date = TodayFormat.dueDate(due, timeZone: timeZone, locale: locale)
-        if row.isUrgent {
+        switch TodayFormat.dueStyle(isUrgent: row.isUrgent) {
+        case .deadline:
           Text("Due \(date)")
             .fontWeight(.semibold)
             .foregroundStyle(Tokens.dueText)
             .padding(.horizontal, 5)
             .background(Tokens.dueFill, in: RoundedRectangle(cornerRadius: 4))
-        } else {
+        case .plain:
           Text("due \(date)").foregroundStyle(.secondary)
         }
       }

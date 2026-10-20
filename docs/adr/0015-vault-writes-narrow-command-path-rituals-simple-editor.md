@@ -59,6 +59,13 @@ Before it opens such a URL, MoonShine checks that the note's file exists; if it 
 
 The one URL-opening function of S4 therefore allows `http`, `https`, `moonshine://` and the `obsidian://open` URLs MoonShine built itself; its tests cover a link from note text with each write parameter and each other action.
 
+**Amendment (2026-10-21, owner; PR #30 round 1).** OmniFocus's URL scheme writes too: `omnifocus:///add` creates items, `omnifocus:///paste` pastes TaskPaper into the database, and its other actions change data. The rule for `obsidian://` therefore holds for `omnifocus://`:
+
+- MoonShine never opens an `omnifocus://` URL taken from note or task text as it is; such a link is shown as text and is not opened.
+- For a task or project it has stored, MoonShine builds its own URL: `omnifocus:///task/<id>` or `omnifocus:///project/<id>`, with the stored OmniFocus id and nothing else (no query, no fragment); an id with any character outside OmniFocus's id alphabet opens nothing.
+
+The opener of S4 (S4-5) adds these two forms to its allowlist; its tests cover `add`, `paste` and another action taken from text, and an id that would add a path, a query or a fragment.
+
 ### Commands
 
 Vault writes are commands of the provider `vault` and go through the `CommandBus` (ADR-0013), with the activity log and undo.

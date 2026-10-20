@@ -31,8 +31,14 @@ struct TodayScreen: Equatable {
   let fromEarlier: [Row]
   let lifeOps: [Row]
 
-  /// Sum of the Life ops estimates; an estimate, over the tasks that have one.
-  var lifeOpsEstimateMinutes: Int { lifeOps.compactMap(\.estimateMinutes).reduce(0, +) }
+  /// Sum of the Life ops estimates; an estimate, over the tasks that have a positive one.
+  /// The snapshot validator bounds each estimate; the sum still never traps.
+  var lifeOpsEstimateMinutes: Int {
+    lifeOps.compactMap(\.estimateMinutes).filter { $0 > 0 }.reduce(0) { sum, minutes in
+      let (total, overflow) = sum.addingReportingOverflow(minutes)
+      return overflow ? .max : total
+    }
+  }
 
   init(_ overview: Overview) {
     let today = overview.today()

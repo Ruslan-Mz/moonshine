@@ -54,6 +54,7 @@ Chosen because it costs almost nothing when started with the first view (S4), gi
 - CI: a check that fails on string literals in SwiftUI `Text`/`Label`/`Button` initialisers outside previews (simple grep/lint rule), and a banned-words grep over the catalog in EN and RU.
 - S4/S5 acceptance includes Russian at 1440×900 and 1100×700, the double-length and right-to-left pseudolanguages, and a fixture with mixed-script task titles (RU, IT, ZH, HE).
 - CI: plural categories present for every shipped language; banned-word grep per language (`design/tone-glossary.md`).
+- Status (2026-10-21, owner; PR #30 round 1): the banned-word grep and the plural categories run in CI from S4-1a (`scripts/check-catalog.mjs`, the `docs` job); the literal-string check comes with S4-3c.
 
 ## Pros and Cons of the Options
 
