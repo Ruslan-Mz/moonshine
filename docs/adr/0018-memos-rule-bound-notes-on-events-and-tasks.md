@@ -82,7 +82,7 @@ The text changes often and must not be copied into each event. **How does MoonSh
 
 ### Storing memo sections (owner, 2026-10-19)
 
-- Each section is at most 2 KiB; a longer section is not shown, and the memo gets a problem naming the section.
+- The stored and synced copy of each section is at most 2 KiB. A longer section is cut at the last line break before the limit and ends with "…", and the memo gets the problem `memoSectionTruncated`. On the Mac the full section opens from the vault (owner, 2026-10-20).
 - The Mac stores the two sections of each memo locally, so that Today and the planner read them from the store like any other data.
 - With sync on, they are synced in CloudKit encrypted fields, as the command text of ADR-0015 is (ADR-0010 is amended to name them on the consent screen).
 - **A memo with `private: true` is never synced.** It is stored on the Mac only, and is shown and notified only there.
@@ -97,7 +97,9 @@ The text changes often and must not be copied into each event. **How does MoonSh
 
 ### Occurrences and outcomes (native, synced under ADR-0010)
 
-- An **occurrence** is keyed by the memo note's path, the occurrence's start as a local date-time (an event's start; for a task, the start of its local date) and an ordinal when several matched items share that start, counted in the order Today lists them (owner, 2026-10-19). No calendar identifier is used anywhere, so ADR-0012 stays as it is.
+- An **occurrence** is keyed by the memo note's path and (owner, 2026-10-19 and 2026-10-20):
+  - for an event: its start as a local date-time, plus an ordinal when several matched events share that start. The ordinal comes from a stable sort, by end time and then by title, never from Today's display order. The title is used only for sorting and is not stored. No calendar identifier is used anywhere, so ADR-0012 stays as it is.
+  - for a task: the OmniFocus task id plus the local date. Task ids are stable and are already stored.
 - **`MemoOutcome`**:
   - the occurrence key;
   - a status (`done` · `partly` · `not done`);
@@ -159,7 +161,7 @@ The text changes often and must not be copied into each event. **How does MoonSh
   - a bad matcher or moment gives its own problem and does not drop the memo;
   - a non-memo note is ignored;
   - text outside the two sections is not shown;
-  - the caps hold: more than 5 memos on one item gives a problem, a section over 2 KiB gives a problem;
+  - the caps hold: more than 5 memos on one item gives a problem, a section over 2 KiB is cut at the last line break before the limit, ends with "…" and gives `memoSectionTruncated`;
   - a memo never shows a note with `moonshine: entry`.
 - **Matching tests:** weekdays, a time window across midnight, a one-off date, case-insensitive titles, a task tag, a task project. Two memos on one item are both shown.
 - **Rotation tests:**
@@ -169,7 +171,7 @@ The text changes often and must not be copied into each event. **How does MoonSh
   - an override affects one occurrence only.
 - **Outcome tests:**
   - every command can be undone;
-  - the occurrence key holds no calendar identifier; two items with the same start get different ordinals;
+  - the occurrence key holds no calendar identifier and no event title; two events with the same start get ordinals by end time, then title, the same on every device and whatever Today's order; a task's key is its OmniFocus id and local date;
   - a checked item's hash is the same after a relaunch and on another device;
   - a matching entry for the day marks "written", while an entry for another line, kind or day does not;
   - nothing is written to the vault.

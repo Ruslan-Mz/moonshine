@@ -383,7 +383,7 @@ Examples (illustrative; the shapes are P1's): a memo whose matcher has `title: "
 - Tasks match by `omnifocus_tag` or `project` only; links in a task's note bind nothing (the snapshot carries no task-note text, `snapshot-contract.md`).
 - **Several memos on one item:** all are shown, ordered by path; no memo hides another. At most 5 are shown; above that, a problem names the item.
 - **A memo never shows a note with `moonshine: entry`** (§6.3), however it is named.
-- **Sections are stored** on the Mac, each at most 2 KiB; a longer section is not shown and the memo gets a problem naming it. With sync on, sections are synced in encrypted fields (ADR-0010, ADR-0015); a memo with `private: true` is never synced and stays on the Mac.
+- **Sections are stored** on the Mac. The stored and synced copy is at most 2 KiB per section. A longer section is cut at the last line break before the limit, ends with "…" and gives `memoSectionTruncated`; on the Mac the full section opens from the vault. With sync on, sections are synced in encrypted fields (ADR-0010, ADR-0015); a memo with `private: true` is never synced and stays on the Mac.
 
 Problems:
 
@@ -391,7 +391,7 @@ Problems:
 - a bad matcher or moment is dropped with its own problem, never silently; the memo itself is kept;
 - a memo with no valid matcher matches nothing and says so;
 - more than 5 memos on one item → a problem naming the item;
-- a section over 2 KiB → a problem naming the section.
+- a section over 2 KiB → `memoSectionTruncated` (the stored copy is cut, as above).
 
 Problem texts never carry memo text (§3).
 
