@@ -12,8 +12,8 @@
       "Bash(swift test *)",
       "Bash(swift build *)",
       "Bash(xcodegen generate)",
-      "Bash(xcodebuild -scheme MoonShineMac -destination 'platform=macOS,arch=arm64' -derivedDataPath DerivedData -onlyUsePackageVersionsFromResolvedFile test)",
-      "Bash(xcodebuild -scheme MoonShineMac -destination 'platform=macOS,arch=arm64' -derivedDataPath DerivedData -onlyUsePackageVersionsFromResolvedFile build)"
+      "Bash(xcodebuild -scheme MoonShineMac -destination platform=macOS,arch=arm64 -derivedDataPath DerivedData -onlyUsePackageVersionsFromResolvedFile test)",
+      "Bash(xcodebuild -scheme MoonShineMac -destination platform=macOS,arch=arm64 -derivedDataPath DerivedData -onlyUsePackageVersionsFromResolvedFile build)"
     ],
     "deny": [
       "Edit(./.git/config)",

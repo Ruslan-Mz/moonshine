@@ -156,7 +156,7 @@ jobs:
           node scripts/check-project-scripts.mjs
           xcodegen generate
           scripts/pin-app-packages.sh
-          xcodebuild -scheme MoonShineMac -destination 'platform=macOS,arch=arm64' \
+          xcodebuild -scheme MoonShineMac -destination platform=macOS,arch=arm64 \
             -derivedDataPath DerivedData -onlyUsePackageVersionsFromResolvedFile test \
             2>&1 | tee "$RUNNER_TEMP/app-tests.log"
           node scripts/require-tests.mjs "$RUNNER_TEMP/app-tests.log" App
