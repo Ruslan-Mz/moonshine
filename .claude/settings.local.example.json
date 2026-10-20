@@ -13,8 +13,7 @@
       "Bash(swift build *)"
     ],
     "deny": [
-      "Edit(./.git/**)",
-      "Write(./.git/**)",
+      "Edit(./.git/config)",
       "Bash(git *fetch*--prune*)",
       "Bash(git *fetch* -p*)",
       "Bash(git *fetch*:refs/heads/*)",
@@ -93,7 +92,6 @@
       "git push origin *"
     ],
     "filesystem": {
-      "denyWrite": ["./.git/config"],
       "denyRead": ["~/", "/Volumes", "./data", "./deny-list.txt"],
       "allowRead": [
         ".",
