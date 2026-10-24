@@ -28,6 +28,13 @@ enum TodayFormat {
     return rest == 0 ? .hours(hours) : .hoursAndMinutes(hours, rest)
   }
 
+  /// An anchor chip's title: at most 22 characters, cut at the tail with an ellipsis.
+  static func chipTitle(_ title: String) -> String {
+    title.count <= chipTitleLimit ? title : String(title.prefix(chipTitleLimit - 1)) + "…"
+  }
+
+  static let chipTitleLimit = 22
+
   enum DueStyle: Equatable {
     /// The amber `Due` badge.
     case deadline

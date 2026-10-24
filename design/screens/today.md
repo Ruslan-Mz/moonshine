@@ -13,12 +13,13 @@ artboards: [mockups/Today.dc.html, mockups/Today-Dark.dc.html]
 Sidebar (Today selected) · toolbar: title "Today", subtitle `Thursday, 1 October · Week 40 · 23 open · 6 done · ≈ 11 h 15 min est.` · main table · right rail 300 · status bar.
 
 Main, top to bottom: 00. **Reminders strip** (ADR-0017, S4; § Reminders below): above everything else; absent when there are no reminders. 0. **Draft-2 — Anchors strip** (40): `Anchors · 3 of 5 done`, then up to 5 compact chips (checkbox + short title + line emoji) for today's tasks tagged `anchor`, first 5 in source order. The count covers **all** of today's anchors (`3 of 6 done` when there are 6). Done chips are checked and dimmed, not hidden. Absent if no anchors. Only anchors **shown in the strip** are left out of their line sections; further anchor tasks stay there.
-0b. **Draft-2 — Top 3 today**: flagged tasks, max 3 rows, as normal `TaskRow`s under a section header `Top 3 today`. If more than 3 are flagged: caption `5 flagged — 3 shown` and a "Show all" link. These tasks are **not repeated** in their line sections.
+0b. **Draft-2 — Top 3 today**: open flagged tasks, max 3 rows, as normal `TaskRow`s under a section header `Top 3 today`. If more than 3 are flagged: caption `5 flagged — 3 shown` and a "Show all" link (⌥⌘F). These tasks are **not repeated** in their line sections. It is the table's first section, so it sits under the column header (item 1), as the mockup draws it; one ↑↓ selection runs through it and the sections (owner, 2026-10-24).
 
 1. Column header (26): blank · Task · Project → Line → Artifact · Estimate · When.
-2. One section per line touched by today's tasks, **foundation lines first**, then the vault order. `LineGroupHeader` + `TaskRow`s. Done tasks stay in place (checked, struck through) until the next day.
+2. One section per line touched by today's tasks, **foundation lines first**, then the vault order. `LineGroupHeader` + `TaskRow`s. Open tasks only: a done task moves to Done today (item 5).
 3. Section **From earlier** (`arrow.uturn.backward`): available tasks whose planned date is before today. The "When" column shows `planned N days ago`. Never amber unless there is a real due date.
 4. **Life ops** (🧺): collapsed disclosure with count and estimate; expands to plain rows.
+5. **Done today** (`checkmark.circle`; owner, 2026-10-24): every task completed today, checked and struck through, most recent first; the 3 most recent are visible, the rest behind an `N more` disclosure (`@SceneStorage`). A done task is in no line section, Top 3 or From earlier; a done anchor also stays a checked chip in the strip.
 
 Right rail:
 
@@ -52,7 +53,8 @@ Right rail:
 - [ ] Italian is listed as quiet; Piano (maintenance) is not; Calligraphy appears only under "Paused on purpose".
 - [ ] Rhythm and progress are separate columns in the rail.
 - [ ] Light and dark both match the artboards.
-- [ ] Anchors strip shows only `anchor`-tagged tasks; Top 3 shows at most 3 flagged tasks and they are not duplicated below.
+- [ ] Anchors strip shows only `anchor`-tagged tasks; Top 3 shows at most 3 open flagged tasks and they are not duplicated below.
+- [ ] Every task completed today is in Done today, after Life ops, the 3 most recent visible and the rest behind `N more`; none is in a line section, Top 3 or From earlier.
 - [ ] Foundation sections come first.
 - [ ] Checked in Russian at 1440×900 and 1100×700.
 

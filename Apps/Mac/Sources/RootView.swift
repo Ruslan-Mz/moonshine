@@ -1,3 +1,4 @@
+import MoonShineCore
 import SwiftUI
 
 struct RootView: View {
@@ -20,11 +21,12 @@ struct RootView: View {
     switch model.state {
     case .loading:
       ProgressView()
-    case .loaded(let screen):
+    case .loaded(let overview):
       // Dates follow the workspace's zone, so Demo reads the same on any Mac.
-      TodayView(screen: screen)
-        .environment(\.timeZone, screen.timeZone)
-        .environment(\.calendar, TodayFormat.calendar(screen.timeZone))
+      let zone = overview.workspace.timeZone
+      TodayContainer(overview: overview)
+        .environment(\.timeZone, zone)
+        .environment(\.calendar, TodayFormat.calendar(zone))
     case .unavailable:
       ContentUnavailableView("Demo data could not be loaded.", systemImage: "tray")
     }
