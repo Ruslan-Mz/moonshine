@@ -293,18 +293,18 @@
         }
       }
     },
-    "From earlier": {
+    "From earlier (%lld)": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "From earlier"
+            "value": "From earlier (%lld)"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "С прошлых дней"
+            "value": "С прошлых дней (%lld)"
           }
         }
       }
@@ -337,6 +337,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Проект → Линия → Артефакт"
+          }
+        }
+      }
+    },
+    "Show All Flagged Tasks": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show All Flagged Tasks"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показать все задачи с флажком"
+          }
+        }
+      }
+    },
+    "Show Fewer Flagged Tasks": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Fewer Flagged Tasks"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показать меньше задач с флажком"
           }
         }
       }

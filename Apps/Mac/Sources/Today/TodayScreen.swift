@@ -49,6 +49,15 @@ struct TodayScreen: Equatable {
   let doneToday: [Row]
   let totals: TodayTotals
 
+  /// Done today shows the most recent ones; the rest sit behind "N more".
+  static let doneShown = 3
+
+  var doneVisible: [Row] { Array(doneToday.prefix(Self.doneShown)) }
+  var doneMore: [Row] { Array(doneToday.dropFirst(Self.doneShown)) }
+
+  /// `5 flagged — 3 shown` and its toggle, only with more candidates than Top 3 holds.
+  var showsFlaggedCaption: Bool { flaggedCount > Overview.topShown }
+
   /// Sum of the Life ops estimates; an estimate, over the tasks that have a positive one.
   /// The snapshot validator bounds each estimate; the sum still never traps.
   var lifeOpsEstimateMinutes: Int {

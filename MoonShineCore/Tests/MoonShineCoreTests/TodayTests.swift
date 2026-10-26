@@ -228,7 +228,31 @@ import Testing
     #expect(Overview.anchorsShown == 5)
     let group = try #require(today.groups.first)
     #expect(group.items.map(\.task.title) == ["A5", "A6", "In an anchor project"])
-    #expect(today.doneToday.map(\.task.title) == ["Done anchor"])
+    // A done anchor shown in the strip stays only there.
+    #expect(today.doneToday.isEmpty)
+    #expect(today.totals.done == 1)
+  }
+
+  /// Owner, 2026-10-26: a done anchor among the first five chips is only in the strip; a done
+  /// anchor beyond them is in Done today; both count as done.
+  @Test func aDoneAnchorBeyondTheFifthChipIsInDoneTodayAndBothCount() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    let anchor = world.tag("anchor")
+    for n in 1...4 {
+      world.task("A\(n)", line: violin, planned: W.date(2026, 9, 30, 9), tags: [anchor.id])
+    }
+    world.task(
+      "Fifth, done", line: violin, planned: W.date(2026, 9, 30, 9),
+      completed: W.date(2026, 9, 30, 10), tags: [anchor.id])
+    world.task(
+      "Sixth, done", line: violin, planned: W.date(2026, 9, 30, 9),
+      completed: W.date(2026, 9, 30, 11), tags: [anchor.id])
+    world.task("Other, done", line: violin, completed: W.date(2026, 9, 30, 8))
+    let today = Overview(workspace: world.workspace, now: now).today()
+    #expect(today.anchors.prefix(Overview.anchorsShown).last?.task.title == "Fifth, done")
+    #expect(today.doneToday.map(\.task.title) == ["Sixth, done", "Other, done"])
+    #expect(today.totals.done == 3)
   }
 
   @Test func topThreeIsOpenFlaggedDueFirstThenSourceOrderAndShowAllShowsEveryCandidate() {
@@ -274,15 +298,17 @@ import Testing
     world.task("Earlier", line: violin, planned: W.date(2026, 9, 27, 9))
     world.task("Errand", line: .lifeOps, due: W.date(2026, 9, 30, 20))
     world.task("Done", line: violin, completed: W.date(2026, 9, 30, 10))
+    world.task(
+      "Done anchor", line: violin, completed: W.date(2026, 9, 30, 11), tags: [anchor.id])
     let today = Overview(workspace: world.workspace, now: now).today()
-    let strip = today.anchors.prefix(Overview.anchorsShown).filter { !$0.isDone }
+    let strip = today.anchors.prefix(Overview.anchorsShown)
     let parts =
       strip + today.top + today.groups.flatMap(\.items) + today.fromEarlier + today.doneToday
     #expect(parts.count == today.items.count)
     #expect(Set(parts.map(\.task.id)) == Set(today.items.map(\.task.id)))
     #expect(
       today.items.map(\.task.title) == [
-        "Anchor", "Flagged", "Planned", "Earlier", "Errand", "Done",
+        "Anchor", "Flagged", "Planned", "Earlier", "Errand", "Done", "Done anchor",
       ])
   }
 

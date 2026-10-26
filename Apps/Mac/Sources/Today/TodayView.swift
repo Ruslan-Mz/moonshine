@@ -1,14 +1,17 @@
 import MoonShineCore
 import SwiftUI
 
-/// One row of the Today table: a task, or a collapsed summary (Life ops, the older done tasks).
+/// One row of the Today table: a task, or the summary row of a disclosure (From earlier, Life
+/// ops, the older done tasks).
 enum TodayTableRow: Identifiable, Hashable {
   case task(TodayScreen.Row)
+  case fromEarlier(count: Int)
   case lifeOps(count: Int, estimateMinutes: Int)
   case moreDone(count: Int)
 
   enum ID: Hashable {
     case task(TaskItemID)
+    case fromEarlier
     case lifeOps
     case moreDone
   }
@@ -16,8 +19,59 @@ enum TodayTableRow: Identifiable, Hashable {
   var id: ID {
     switch self {
     case .task(let row): .task(row.id)
+    case .fromEarlier: .fromEarlier
     case .lifeOps: .lifeOps
     case .moreDone: .moreDone
+    }
+  }
+}
+
+/// Column widths (`design/screens/today.md` § SwiftUI). On a narrow window the trace column
+/// gives way first, down to its minimum; the task keeps about 15 characters.
+enum TodayColumns {
+  static let checkbox: CGFloat = 34
+  static let taskMinimum: CGFloat = 120
+  static let traceMinimum: CGFloat = 120
+  static let traceIdeal: CGFloat = 290
+  static let estimate: CGFloat = 100
+  static let when: CGFloat = 118
+  /// The inset table style's side margins and the spacing between five columns.
+  static let margins: CGFloat = 40
+
+  /// The narrowest Today: every column at its minimum.
+  static var minimumWidth: CGFloat {
+    checkbox + taskMinimum + traceMinimum + estimate + when + margins
+  }
+}
+
+/// "Show all" of Top 3, as the View menu's command sees it in the key window.
+struct FlaggedToggle {
+  let isAvailable: Bool
+  let showsAll: Binding<Bool>
+}
+
+extension FocusedValues {
+  @Entry var flaggedToggle: FlaggedToggle?
+}
+
+/// ⌥⌘F in the View menu: it works wherever the list is scrolled, unlike a shortcut on the
+/// Top 3 header, which is drawn only while visible.
+struct TodayCommands: Commands {
+  @FocusedValue(\.flaggedToggle) private var toggle
+
+  var body: some Commands {
+    CommandGroup(after: .sidebar) {
+      Button {
+        toggle?.showsAll.wrappedValue.toggle()
+      } label: {
+        if toggle?.showsAll.wrappedValue == true {
+          Text("Show Fewer Flagged Tasks")
+        } else {
+          Text("Show All Flagged Tasks")
+        }
+      }
+      .keyboardShortcut("f", modifiers: [.option, .command])
+      .disabled(toggle?.isAvailable != true)
     }
   }
 }
@@ -29,9 +83,11 @@ struct TodayContainer: View {
   @SceneStorage("today.showAllFlagged") private var showAllFlagged = false
 
   var body: some View {
-    TodayView(
-      screen: TodayScreen(overview, showAllFlagged: showAllFlagged),
-      showAllFlagged: $showAllFlagged)
+    let screen = TodayScreen(overview, showAllFlagged: showAllFlagged)
+    TodayView(screen: screen, showAllFlagged: $showAllFlagged)
+      .focusedSceneValue(
+        \.flaggedToggle,
+        FlaggedToggle(isAvailable: screen.showsFlaggedCaption, showsAll: $showAllFlagged))
   }
 }
 
@@ -40,13 +96,14 @@ struct TodayContainer: View {
 struct TodayView: View {
   let screen: TodayScreen
   @Binding var showAllFlagged: Bool
+  @SceneStorage("today.fromEarlierExpanded") private var fromEarlierExpanded = true
   @SceneStorage("today.lifeOpsExpanded") private var lifeOpsExpanded = false
   @SceneStorage("today.moreDoneExpanded") private var moreDoneExpanded = false
   @State private var selection: TodayTableRow.ID?
+  /// The list has the keyboard from launch, and again after any row is clicked, so ↑↓ work
+  /// even when an earlier click went to the sidebar.
+  @FocusState private var listFocused: Bool
   @Environment(\.locale) private var locale
-
-  /// Done today shows the most recent ones; the rest sit behind "N more".
-  static let doneShown = 3
 
   var body: some View {
     VStack(spacing: 0) {
@@ -56,6 +113,7 @@ struct TodayView: View {
       }
       table
     }
+    .frame(minWidth: TodayColumns.minimumWidth)
     .navigationTitle("Today")
     .navigationSubtitle(subtitle)
   }
@@ -65,17 +123,21 @@ struct TodayView: View {
       TableColumn(Text(verbatim: "")) { row in
         if case .task(let task) = row { Checkbox(isDone: task.isDone) }
       }
-      .width(34)
+      .width(TodayColumns.checkbox)
       TableColumn("Task") { row in
         switch row {
         case .task(let task):
           Text(task.title)
             .strikethrough(task.isDone)
             .foregroundStyle(task.isDone ? Tokens.doneText : Color.primary)
+        case .fromEarlier(let count):
+          Label("From earlier (\(count))", systemImage: "arrow.uturn.backward")
+            .fontWeight(.semibold)
         case .lifeOps: Text("\(Text(verbatim: "🧺")) Life ops").fontWeight(.semibold)
         case .moreDone(let count): Text("\(count) more").foregroundStyle(.secondary)
         }
       }
+      .width(min: TodayColumns.taskMinimum)
       TableColumn("Project → Line → Artifact") { row in
         switch row {
         case .task(let task):
@@ -84,22 +146,22 @@ struct TodayView: View {
             .lineLimit(1)
         case .lifeOps(let count, _):
           Text("\(count) tasks").foregroundStyle(.secondary)
-        case .moreDone: EmptyView()
+        case .fromEarlier, .moreDone: EmptyView()
         }
       }
-      .width(290)
+      .width(min: TodayColumns.traceMinimum, ideal: TodayColumns.traceIdeal)
       TableColumn("Estimate") { row in
         switch row {
         case .task(let task): EstimateText(minutes: task.estimateMinutes)
         case .lifeOps(_, let minutes): EstimateText(minutes: minutes)
-        case .moreDone: EmptyView()
+        case .fromEarlier, .moreDone: EmptyView()
         }
       }
-      .width(100)
+      .width(TodayColumns.estimate)
       TableColumn("When") { row in
         if case .task(let task) = row { WhenText(row: task, timeZone: screen.timeZone) }
       }
-      .width(118)
+      .width(TodayColumns.when)
     } rows: {
       if !screen.top.isEmpty {
         Section {
@@ -116,10 +178,11 @@ struct TodayView: View {
         }
       }
       if !screen.fromEarlier.isEmpty {
-        Section {
+        DisclosureTableRow(
+          TodayTableRow.fromEarlier(count: screen.fromEarlier.count),
+          isExpanded: $fromEarlierExpanded
+        ) {
           ForEach(screen.fromEarlier) { TableRow(TodayTableRow.task($0)) }
-        } header: {
-          Label("From earlier", systemImage: "arrow.uturn.backward")
         }
       }
       if !screen.lifeOps.isEmpty {
@@ -133,17 +196,13 @@ struct TodayView: View {
       }
       if !screen.doneToday.isEmpty {
         Section {
-          ForEach(Array(screen.doneToday.prefix(Self.doneShown))) {
-            TableRow(TodayTableRow.task($0))
-          }
-          if screen.doneToday.count > Self.doneShown {
+          ForEach(screen.doneVisible) { TableRow(TodayTableRow.task($0)) }
+          if !screen.doneMore.isEmpty {
             DisclosureTableRow(
-              TodayTableRow.moreDone(count: screen.doneToday.count - Self.doneShown),
+              TodayTableRow.moreDone(count: screen.doneMore.count),
               isExpanded: $moreDoneExpanded
             ) {
-              ForEach(Array(screen.doneToday.dropFirst(Self.doneShown))) {
-                TableRow(TodayTableRow.task($0))
-              }
+              ForEach(screen.doneMore) { TableRow(TodayTableRow.task($0)) }
             }
           }
         } header: {
@@ -153,14 +212,20 @@ struct TodayView: View {
     }
     .tableStyle(.inset)
     .alternatingRowBackgrounds(.disabled)
+    .focused($listFocused)
+    .defaultFocus($listFocused, true)
+    .onChange(of: selection) { _, selected in
+      if selected != nil { listFocused = true }
+    }
   }
 
-  /// `Top 3 today`, and with more flagged tasks than that, the caption and its toggle (⌥⌘F).
+  /// `Top 3 today`, and with more flagged tasks than that, the caption and its toggle for the
+  /// mouse; the keyboard has ⌥⌘F in the View menu (`TodayCommands`).
   private var topHeader: some View {
     HStack(spacing: 8) {
       Text("Top 3 today")
       Spacer()
-      if screen.flaggedCount > Overview.topShown {
+      if screen.showsFlaggedCaption {
         Text("\(screen.flaggedCount) flagged — \(screen.top.count) shown")
           .fontWeight(.regular)
           .foregroundStyle(.secondary)
@@ -170,7 +235,6 @@ struct TodayView: View {
           if showAllFlagged { Text("Show fewer") } else { Text("Show all") }
         }
         .buttonStyle(.link)
-        .keyboardShortcut("f", modifiers: [.option, .command])
       }
     }
   }

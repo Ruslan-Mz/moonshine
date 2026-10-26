@@ -296,13 +296,17 @@ private func demo() async throws -> (Overview, TodayScreen) {
     let tasks =
       [task("Done", line: .line(violin.id), done: true), task("Errand", line: .lifeOps)]
       + (1...4).map { task("Bow \($0)", line: .line(violin.id)) }
+      + [task("Late", line: .line(violin.id), done: true)]
     let workspace = Workspace(timeZone: zone, lines: [violin], tasks: tasks, tags: [anchor])
     let screen = TodayScreen(Overview(workspace: workspace, now: now))
     #expect(screen.anchors.map(\.title) == ["Done", "Errand", "Bow 1", "Bow 2", "Bow 3"])
     #expect(screen.anchors.map(\.emoji) == ["🎻", "🧺", "🎻", "🎻", "🎻"])
     #expect(screen.anchors.map(\.isDone) == [true, false, false, false, false])
-    #expect(screen.anchorsTotal == 6)
-    #expect(screen.anchorsDone == 1)
+    #expect(screen.anchorsTotal == 7)
+    // The done anchor after the fifth chip counts and is in Done today; the chip is not.
+    #expect(screen.anchorsDone == 2)
+    #expect(screen.doneToday.map(\.title) == ["Late"])
+    #expect(screen.totals.done == 2)
     #expect(screen.sections.flatMap(\.rows).map(\.title) == ["Bow 4"])
   }
 
@@ -311,5 +315,71 @@ private func demo() async throws -> (Overview, TodayScreen) {
     #expect(TodayFormat.chipTitle(fits) == fits)
     #expect(TodayFormat.chipTitle(fits + "b") == String(repeating: "a", count: 21) + "…")
     #expect(TodayFormat.chipTitle("👨‍👩‍👧 reading") == "👨‍👩‍👧 reading")
+  }
+
+  // MARK: PR #31 round 1
+
+  /// Every table row once, in both modes of Top 3, and each section loses only the flagged
+  /// tasks "Show all" moves up.
+  @Test func rowIDsAreUniqueAndSectionsKeepTheirRowsWithShowAllOffAndOn() async throws {
+    let (overview, off) = try await demo()
+    let on = TodayScreen(overview, showAllFlagged: true)
+    func ids(_ screen: TodayScreen) -> [TaskItemID] {
+      (screen.top + screen.sections.flatMap(\.rows) + screen.fromEarlier + screen.lifeOps
+        + screen.doneToday).map(\.id)
+    }
+    for screen in [off, on] {
+      #expect(Set(ids(screen)).count == ids(screen).count)
+    }
+    #expect(Set(ids(off)) == Set(ids(on)))
+    let movedUp = Set(on.top.map(\.id)).subtracting(off.top.map(\.id))
+    func kept(_ rows: [TodayScreen.Row]) -> [TaskItemID] {
+      rows.map(\.id).filter { !movedUp.contains($0) }
+    }
+    #expect(on.fromEarlier.map(\.id) == kept(off.fromEarlier))
+    #expect(on.lifeOps.map(\.id) == kept(off.lifeOps))
+    #expect(on.doneToday.map(\.id) == off.doneToday.map(\.id))
+    for section in off.sections {
+      let rows = on.sections.first { $0.id == section.id }?.rows ?? []
+      #expect(rows.map(\.id) == kept(section.rows))
+    }
+    // Demo's From earlier has one task, not flagged, in both modes.
+    #expect(off.fromEarlier.count == 1)
+    #expect(on.fromEarlier.count == 1)
+  }
+
+  /// Invented: five tasks done today and three or four flagged ones.
+  @Test func doneTodayShowsThreeAndTheCaptionNeedsMoreThanThreeCandidates() throws {
+    let zone = try #require(TimeZone(identifier: "Europe/Moscow"))
+    let calendar = Calendar.iso8601(in: zone)
+    func at(_ hour: Int) -> Date {
+      calendar.date(from: DateComponents(year: 2026, month: 10, day: 1, hour: hour))!
+    }
+    let now = at(16)
+    func task(_ title: String, flagged: Bool = false, done: Date? = nil) -> TaskItem {
+      TaskItem(
+        id: .generate(), refs: [], title: title, projectID: nil, parentTaskID: nil, tagIDs: [],
+        status: done == nil ? .available : .completed, flagged: flagged, plannedAt: nil,
+        deferUntil: nil, dueAt: nil, effectivePlannedAt: nil, effectiveDeferUntil: nil,
+        effectiveDueAt: nil, estimateMinutes: nil, completedAt: done, modifiedAt: nil,
+        occurrenceOf: nil, line: .lifeOps)
+    }
+    let done = (1...5).map { task("Done \($0)", done: at(8 + $0)) }
+    func screen(flagged: Int) -> TodayScreen {
+      let tasks = done + (0..<flagged).map { task("F\($0)", flagged: true) }
+      return TodayScreen(
+        Overview(workspace: Workspace(timeZone: zone, tasks: tasks), now: now))
+    }
+    let three = screen(flagged: 3)
+    #expect(three.doneVisible.map(\.title) == ["Done 5", "Done 4", "Done 3"])
+    #expect(three.doneMore.map(\.title) == ["Done 2", "Done 1"])
+    #expect(!three.showsFlaggedCaption)
+    #expect(screen(flagged: 4).showsFlaggedCaption)
+  }
+
+  @Test func theNarrowestTodayIsTheSumOfTheColumnMinimums() {
+    #expect(TodayColumns.taskMinimum >= 120)
+    #expect(TodayColumns.traceMinimum < TodayColumns.traceIdeal)
+    #expect(TodayColumns.minimumWidth == 34 + 120 + 120 + 100 + 118 + TodayColumns.margins)
   }
 }

@@ -30,3 +30,4 @@ Models state APIs with confidence that do not exist, have a different signature,
 - OmniFocus 4 has no SQLite cache to read; its group container needs the "data from other apps" consent.
 - `terminate()` sends SIGTERM only.
 - `Date.ISO8601FormatStyle` rolls invalid fields over instead of failing.
+- A keyboard shortcut attached to a view inside a lazily drawn `Table` row or section header disappears when the row scrolls away (PR #31, ⌥⌘F on Top 3's "Show all"); put shortcuts on menu commands (`.commands` with a focused value).

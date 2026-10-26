@@ -17,6 +17,7 @@ struct MoonShineApp: App {
           .keyboardShortcut("1", modifiers: .command)
         Divider()
       }
+      TodayCommands()
     }
   }
 }

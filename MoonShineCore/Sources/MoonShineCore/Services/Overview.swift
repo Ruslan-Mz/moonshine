@@ -63,7 +63,8 @@ public struct TodayOverview: Hashable, Sendable {
   public let groups: [LineGroup]
   /// Planned on an earlier day and still open; oldest first.
   public let fromEarlier: [TodayItem]
-  /// Every task completed today, most recent first; in no other section.
+  /// Every task completed today but the done anchors in the strip, most recent first; in no
+  /// other section.
   public let doneToday: [TodayItem]
   public let totals: TodayTotals
   public let touchedToday: [LineAssignment]
@@ -222,8 +223,10 @@ public struct Overview: Sendable {
         byLine[item.task.line, default: []].append(item)
       }
     }
-    // Most recent first; the same completion time keeps source order.
-    let doneToday = items.enumerated().filter(\.element.isDone).sorted {
+    // Most recent first; the same completion time keeps source order. A done anchor in the
+    // strip stays only there (owner, 2026-10-26).
+    let done = items.filter(\.isDone)
+    let doneToday = done.enumerated().filter { !inStrip.contains($0.element.task.id) }.sorted {
       let (a, b) = ($0.element.task.completedAt ?? now, $1.element.task.completedAt ?? now)
       return a != b ? a > b : $0.offset < $1.offset
     }.map(\.element)
@@ -251,7 +254,7 @@ public struct Overview: Sendable {
         ($0.task.effectivePlannedAt ?? now) < ($1.task.effectivePlannedAt ?? now)
       },
       doneToday: doneToday,
-      totals: TodayTotals(open: open.count, done: doneToday.count, estimateMinutes: estimate),
+      totals: TodayTotals(open: open.count, done: done.count, estimateMinutes: estimate),
       touchedToday: lineOrder.filter(touched.contains), quietLines: quiet)
   }
 
