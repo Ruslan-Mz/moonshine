@@ -1,8 +1,10 @@
-# OmniFocus snapshot contract, v0.2
+# OmniFocus snapshot contract, v0.3
 
 Status: **draft**. Shared by the phase-1 JXA bridge (`bridge/snapshot.js`), the future Omni Automation plug-in export (ADR-0003) and `fixtures/omnifocus.snapshot.json`. One JSON document, produced read-only.
 
 v0.2 (phase 1 S3a-1, 2026-10-02) adds the export modes (`full`, `incremental`, change probe), dropped tasks in incremental snapshots, OmniFocus' default times and the bridge's runtime rules. A document without `mode` is a v0.1 full snapshot.
+
+v0.3 (2026-10-26, ADR-0020, owner) reads quota tags on repeating tasks (§Quota tags) and states the completion window that quotas need. The document's shape does not change.
 
 Written from the Omni Automation object model and the field set of `kip-d/omnifocus-mcp` v4.1.0, then checked against the live database through that server's read tool (`data-report.md`). Items V1, V3 and V4 are settled; V2 (bridge latency) is open and flagged as a risk.
 
@@ -162,6 +164,38 @@ No match → the task belongs to **Life ops**: a fixed bucket for household, adm
 ## Reminder tag (ADR-0017, 2026-10-16)
 
 One tag name is read as "reminder": a task carrying it (a setting, default `напоминание`, matched by leaf name like the deadline tag) is a reminder, not a task. MoonShine shows it in Today's Reminders strip and leaves it out of every task count, statistic, forecast and load, Rhythm and Progress below included (from S4). The snapshot itself does not change: the tag arrives in `tags` and `tagIds` like any other.
+
+## Quota tags (ADR-0020, 2026-10-26; read from the Quotas slice)
+
+A tag whose leaf name has the quota form declares a period quota on a repeating task: "done N times per week or per month". The snapshot itself does not change: the tag arrives in `tags` and `tagIds` like any other, and the count comes from completed copies already in the document.
+
+**Grammar.** The leaf name, trimmed, matched without case:
+
+| Form                 | N       | Period                       |
+| -------------------- | ------- | ---------------------------- |
+| `N/нед` or `N/week`  | 1 to 7  | ISO week, starting on Monday |
+| `N/мес` or `N/month` | 1 to 31 | calendar month               |
+
+followed by up to two optional suffixes, in either order:
+
+- `!` — strong emphasis for this task (overrides the line's `quota_emphasis`, `vault-contract.md` §1);
+- `+` — carry-over: the surplus of a period counts toward the next period only, up to N.
+
+Examples (invented): `2/нед`, `1/month`, `2/мес!`, `2/мес+!`, `3/week!+`.
+
+**Rules**
+
+- **Only repeating tasks** (`repetition != null`). Counted: the completed copies of the task's repeat series (the live task and its completed occurrences, whose `repeatOf` is the live task's id) whose `completionDate`, in the document's `timeZone`, falls in the period.
+- One problem per case; each names the task by its OmniFocus id, never by title (ADR-0020):
+
+| Kind                | When                                      | Effect                             |
+| ------------------- | ----------------------------------------- | ---------------------------------- |
+| `quotaInvalid`      | a quota-like tag with N out of range      | The tag is ignored                 |
+| `quotaAmbiguous`    | two quota tags on one task                | Both are ignored; neither wins     |
+| `quotaNotRepeating` | a quota tag on a non-repeating task       | Ignored; the task behaves as usual |
+| `quotaOnReminder`   | a quota tag on a reminder (§Reminder tag) | Ignored; reminders carry no quota  |
+
+**Completion window.** For quotas, the window must cover the current and the previous period, up to 62 days (from the first day of the previous month). When it does not, a count is **partly read**, shown as "at least N", and no period is reported short. The current window — `completedSince` = the Monday of the ISO week that holds the day 84 days ago (`bridge/snapshot.js`), so 84 to 90 days back — **already covers it**: no bridge change is needed.
 
 ## Line metrics (decision O1, 2026-09-30)
 
