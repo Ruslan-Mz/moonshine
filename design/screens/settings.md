@@ -57,7 +57,7 @@ Buttons (sheet variant only): Cancel, Done (default, accent). The Settings scene
 - [ ] Switching to Live without a vault prompts "Choose…", not an error.
 - [ ] No write APIs anywhere (phase 1).
 - [ ] The timer offers no interval under 15 min; there is no "incremental" label.
-- [ ] Switching the deadline rule changes which due dates are amber on Today and Week, and nothing else.
+- [ ] Switching the deadline rule changes which due dates are amber on Today and Week, and nothing else (strong quotas stay amber whatever the rule: owner, 2026-10-27; ADR-0020).
 - [ ] Changing the reminder tag moves those tasks between the Reminders strip and the task lists and counts; nothing else changes (unless the bridge is cut).
 - [ ] Language picker switches the whole UI; user data stays untranslated; dates and plurals follow the chosen language.
 

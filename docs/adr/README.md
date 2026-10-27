@@ -21,5 +21,7 @@
 | [0017](0017-reminders-native-entity-omnifocus-tag-bridge.md)                  | Reminders: a native entity that is seen, not done; an OmniFocus tag as the bridge                                                              | proposed |
 | [0018](0018-memos-rule-bound-notes-on-events-and-tasks.md)                    | Memos: notes bound by rules to events and tasks, shown before and after                                                                        | accepted |
 | [0019](0019-practice-lines-nested-lines-measured-by-entries.md)               | Practice lines: nested lines measured by entries in the vault                                                                                  | accepted |
+| [0020](0020-period-quotas-n-times-per-week-or-month.md)                       | Period quotas: a repeating task done N times per week or month                                                                                 | accepted |
+| [0021](0021-modules-and-the-library-module.md)                                | Modules: built-in features over the owner's own note kinds; the Library module first                                                           | accepted |
 
 Accepted ADRs are immutable; changes go into a new ADR that supersedes the old one.

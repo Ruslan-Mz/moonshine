@@ -1,4 +1,4 @@
-# Vault contract (Obsidian → MoonShine), v0.4
+# Vault contract (Obsidian → MoonShine), v0.5
 
 Status: **draft from phase-0 discovery** (see `data-report.md`). Implements ADR-0004: YAML frontmatter is the machine-readable truth; markdown bodies stay human text and are read for links and tags only, never for values (from the Hub slice; ADR-0014). Two exceptions (v0.4): a memo's two sections are read (§6.1), and an entry note's body is never read (§6.3).
 
@@ -19,6 +19,8 @@ v0.3 (2026-10-08, ADR-0014, ADR-0015, ADR-0016): project notes (§4) and reserve
 2026-10-15 (S3b-3c-2, owner): a line's `parent` is resolved as ADR-0014 says: case ignored, the shortest matching path, an ambiguous link reported as `ambiguousLink` (§2.3).
 
 v0.4 (2026-10-19, ADR-0018, ADR-0019, owner): note kinds by the `moonshine` key and one scanner for them (§6); memo notes (§6.1, read from P1), programme notes (§6.2, kind reserved), entry notes (§6.3, read from Practice lines); the optional line keys `within`, `measure` and `targets` (§1, "Practice lines", read from Practice lines); entry bodies are never read (§3).
+
+v0.5 (2026-10-26, ADR-0020, ADR-0021, owner): the optional line key `quota_emphasis` (§1, "Quota emphasis", read from the Quotas slice); module note kinds found by the owner's own `type` key, the Library module first (§7, read from Library L1).
 
 Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault writes before the Write phase; ADR-0015).
 
@@ -123,6 +125,33 @@ Problems (the other lines still read when one line has a problem):
 | `lineNestedTooDeep`  | the parent has its own `within`                                        | The line is read as not nested |
 | `lineParentNotHours` | the parent has `measure: entries`                                      | The line is read as not nested |
 | `lineBudgetIgnored`  | a nested line, or a line with `measure: entries`, has a budget above 0 | The budget is ignored          |
+
+### Quota emphasis (v0.5, reserved now; read from the Quotas slice, ADR-0020)
+
+One optional key on a `lines:` item: how loudly a period quota of the line's tasks shows a period that ended short. A budget note without it reads as before.
+
+| Key              | Values                         | Meaning                                                                             |
+| ---------------- | ------------------------------ | ----------------------------------------------------------------------------------- |
+| `quota_emphasis` | `neutral` (default) · `strong` | The default emphasis of the quotas on this line's tasks; `null` or absent = neutral |
+
+```yaml
+lines:
+  - id: reading
+    name: Reading
+    block: Study
+    state: active
+    quota_emphasis: strong # a period of this line's quotas that ended short shows in amber
+```
+
+Rules
+
+- The quotas themselves live in OmniFocus tag names (`snapshot-contract.md` § Quota tags), not in the vault.
+- **Precedence:** a trailing `!` on the task's quota tag → the line's `quota_emphasis` → neutral.
+- **An invalid value does not skip the line** (unlike the other keys of "Validation of `lines:`"): the line is read, its emphasis is neutral, and the problem `lineQuotaEmphasisInvalid` names the key path `lines.quota_emphasis` and the line.
+
+| Kind                       | When                              | Effect                         |
+| -------------------------- | --------------------------------- | ------------------------------ |
+| `lineQuotaEmphasisInvalid` | `quota_emphasis` is neither value | The line's emphasis is neutral |
 
 ## 2. Horizon and artifact notes
 
@@ -356,14 +385,16 @@ Rules
 - **`moonshine:`** — values `budget` (§1), `project` (§4), `memo`, `programme` and `entry` (§6). Until the scanner of §6 ships (P1), a note with any other value is not a problem and gives no banner; from then on it is `noteKindUnknown` (§6).
 - **`within`, `measure`, `targets`** on a line (§1, "Practice lines"; read from the Practice lines slice, ADR-0019).
 - **`portion_h_day`** on a line (§1; read from the Timer slice, ADR-0016).
+- **`quota_emphasis`** on a line (§1, "Quota emphasis"; read from the Quotas slice, ADR-0020).
+- **The owner's `type` values `book`, `academic_book` and `article`** are read by the Library module (§7; from Library L1, ADR-0021). They stay the owner's: MoonShine never writes `type`.
 - **`moonshine_ai: false`** on any note (read from the Ask phase, ADR-0015): the assistant never reads the note's body, even inside a folder on its allowlist, and the note is never sent in the standing context pack: it appears in the pack's list as excluded (owner, 2026-10-09).
-- **Keys MoonShine owns and may write** (from the Write phase, ADR-0015, through `SetNoteProperty`, one line at a time): `omnifocus_id` (§4). On an existing note no other key is written; a note made by `CreateNote` may carry §4's project-note keys and its template's own frontmatter.
+- **Keys MoonShine owns and may write** (from the Write phase, ADR-0015, through `SetNoteProperty`, one line at a time): `omnifocus_id`, on project notes (§4) and on module notes (§7.1, ADR-0021). On an existing note no other key is written; a note made by `CreateNote` may carry §4's project-note keys and its template's own frontmatter.
 
 ## 6. Note kinds by the `moonshine` key (v0.4; ADR-0018, ADR-0019)
 
-- One frontmatter key marks every note kind that MoonShine reads by kind rather than by folder: `moonshine: memo` (§6.1), `moonshine: programme` (§6.2) and `moonshine: entry` (§6.3). The owner's own keys, such as `type`, are never used for this.
+- One frontmatter key marks every note kind that MoonShine reads by kind rather than by folder: `moonshine: memo` (§6.1), `moonshine: programme` (§6.2) and `moonshine: entry` (§6.3). The owner's own keys, such as `type`, are never used for this. Module note kinds (§7) are the deliberate exception: they are the owner's own kinds, found by his `type` key.
 - **One scanner** finds them across the vault under the rules of §3 (hidden folders, symbolic links, limits). It reads only the frontmatter: at most the first 8 KiB, stopping at the closing `---`. Bytes after it are discarded unparsed. This cap is stricter than the 64 KiB of §3 on purpose.
-- **Frontmatter not closed within 8 KiB:** when those 8 KiB hold a top-level `moonshine: memo`, `programme` or `entry` line (the lexical rule of the budget marker, §1), the note gets `frontmatterTooLarge` with its path, whatever its kind, and is not read as that kind. A `moonshine` key placed after 8 KiB of other keys is not seen (known gap, like §1's).
+- **Frontmatter not closed within 8 KiB:** when those 8 KiB hold a top-level `moonshine: memo`, `programme` or `entry` line (the lexical rule of the budget marker, §1), the note gets `frontmatterTooLarge` with its path, whatever its kind, and is not read as that kind. The same holds for a top-level `type:` line whose value is a note kind of an enabled module (§7; owner, 2026-10-27), so a module note with long frontmatter is listed under its problem, never dropped. A `moonshine` key placed after 8 KiB of other keys is not seen (known gap, like §1's).
 - An unknown value (a typo such as `memmo`) yields the problem `noteKindUnknown` with the path.
 - The scanner arrives with P1 (phase 2); entry notes are read from the Practice lines slice, programmes from P4.
 
@@ -430,6 +461,87 @@ Problems:
 | `entryInvalid`          | a bad `covers`, `kind` too long                | The entry is not counted               |
 | `frontmatterTooLarge`   | the closing `---` is not within 8 KiB (§6)     | The entry is not counted               |
 | `entryKindNotInTargets` | `kind` is in none of the line's targets (info) | Counted for the line, not for a target |
+
+## 7. Module note kinds (v0.5; ADR-0021)
+
+A module is a feature set compiled into MoonShine and switched on in Settings (ADR-0021). Its notes are the owner's own note kinds, made from his templates, and they are found **by the owner's own `type` key, on purpose**: MoonShine adapts to the owner's conventions for these domains instead of asking for a marker. The `moonshine` key (§6, ADR-0018) stays for MoonShine's own note kinds (`budget`, `project`, `memo`, `programme`, `entry`).
+
+- The same scanner as §6 finds them, under the rules of §3, reading only the frontmatter (the first 8 KiB, stopping at the closing `---`; frontmatter not closed within them gives `frontmatterTooLarge`, §6). **A module never reads the bodies of its notes**, except a section its own ADR names (none in ADR-0021), and never writes to them before the Write phase.
+- Each module declares its note kinds (the `type` values, defaults below, changeable in Settings), a typed field schema, a small set of canonical states with a mapping from the owner's status values, and its problems. Every other key is ignored.
+- **Failed is not empty:** a field that does not parse gives its own problem and is never dropped silently; a note whose status has no mapping is listed under "Unknown status", never hidden; a rejected note is listed under its problem, not dropped; when the vault is unavailable, the last known lists are shown with their date, never an empty module.
+- In the UI a problem names its note. Logs carry only the kind and a count (§3, rule 5 of `CLAUDE.md`).
+
+### 7.1 The Library module (read from Library L1; ADR-0021)
+
+**Note kinds (defaults, changeable in Settings):**
+
+| Kind    | `type` values           |
+| ------- | ----------------------- |
+| Book    | `book`, `academic_book` |
+| Article | `article`               |
+
+**Fields read** (the exact shapes are fixed in Library L1's spec, with fixtures):
+
+| Key                           | Meaning                                                                                               |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `title`                       | The title shown in the Library                                                                        |
+| `author` or `authors`         | One author or a list                                                                                  |
+| `status`                      | The owner's status value, mapped to a canonical state (below)                                         |
+| `started`, `finished`         | Dates                                                                                                 |
+| `rating`                      | A rating                                                                                              |
+| `category` or `discipline`    | A category                                                                                            |
+| `pages_total`, `current_page` | Page counts; progress `current_page / pages_total` shows only when both are valid                     |
+| `source`                      | Articles: where the article comes from                                                                |
+| `omnifocus_id`                | The id of the bound OmniFocus project or task (ADR-0014), typed by hand until the Write phase sets it |
+
+The note's line comes through its binding (the bound project's line); there is no line key on a module note.
+
+```yaml
+---
+type: book
+title: The Quiet Orchard # invented
+author: A. Example
+status: reading
+started: 2026-10-01
+pages_total: 320
+current_page: 112
+omnifocus_id: abc123XYZ # the bound OmniFocus project or task
+---
+```
+
+**Canonical states:** `someday` · `to buy` · `queue` · `reading` · `paused` · `done`.
+
+**Default status mapping (changeable in Settings):**
+
+| Owner's `status` | Canonical state |
+| ---------------- | --------------- |
+| `todo`           | queue           |
+| `reading`, `wip` | reading         |
+| `paused`         | paused          |
+| `done`           | done            |
+| `someday`        | someday         |
+| `buy`            | to buy          |
+
+**Only notes count:** a book that lives only as a line of the owner's hand-kept registry note is not in the module, and that note is not parsed (ADR-0021, option 4 not taken).
+
+Problems:
+
+| Kind                       | When                                                                                                                                                        |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `libraryStatusUnknown`     | a `status` with no mapping; the note is listed under "Unknown status"                                                                                       |
+| `libraryFieldInvalid`      | a typed field that does not parse (a date, a page count, a rating)                                                                                          |
+| `libraryPagesInconsistent` | `current_page` greater than `pages_total`                                                                                                                   |
+| `libraryBindingMissing`    | `omnifocus_id` names no task or project in the snapshot, on a book in state `reading` or `paused`, and the store has never seen that id (owner, 2026-10-27) |
+
+An unbound book (no `omnifocus_id`) has no progress and no problem. A book in another state (a finished book whose project was completed long ago and has left the snapshot), or bound to an id the store has seen before, gives no `libraryBindingMissing`.
+
+**Progress on the book page** (Library L2; owner, 2026-10-27), with real counts (ADR-0020), by what `omnifocus_id` names:
+
+- a task with a quota (`snapshot-contract.md` § Quota tags): that quota's history in its own period (a monthly quota gives monthly bars), with the quota as a line;
+- a task without a quota: its completions per week;
+- a project: the completions of all its tasks per week, plus the quota line of a quota task inside it if there is one.
+
+`current_page / pages_total` shows next to it when both are valid.
 
 ## Open questions
 
