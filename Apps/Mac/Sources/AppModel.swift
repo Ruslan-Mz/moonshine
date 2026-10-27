@@ -1,4 +1,5 @@
 import Foundation
+import MoonShineCore
 import Observation
 
 enum SidebarItem: Hashable {
@@ -7,9 +8,10 @@ enum SidebarItem: Hashable {
 
 @MainActor @Observable
 final class AppModel {
-  enum State: Equatable {
+  enum State {
     case loading
-    case loaded(TodayScreen)
+    /// Views build their screens from it, with their own view state (Top 3's "Show all").
+    case loaded(Overview)
     /// Shown as one neutral sentence; no error text, id or value reaches the screen.
     case unavailable
   }
@@ -49,7 +51,7 @@ final class AppModel {
       return
     }
     do {
-      state = .loaded(TodayScreen(try await DemoEnvironment.overview(snapshot: snapshot)))
+      state = .loaded(try await DemoEnvironment.overview(snapshot: snapshot))
     } catch {
       state = .unavailable
     }

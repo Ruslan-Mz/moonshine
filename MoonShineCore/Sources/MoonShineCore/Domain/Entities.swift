@@ -209,6 +209,15 @@ public struct Tag: Hashable, Sendable, Identifiable {
   }
 }
 
+extension Tag {
+  /// Whether this tag's leaf name is `name`, both trimmed, case ignored: how a rule names a tag
+  /// (`anchor`, the deadline tag).
+  public func matchesLeafName(_ name: String) -> Bool {
+    self.name.trimmingCharacters(in: .whitespacesAndNewlines)
+      .caseInsensitiveCompare(name.trimmingCharacters(in: .whitespacesAndNewlines)) == .orderedSame
+  }
+}
+
 public struct NoteRef: Hashable, Sendable, Identifiable {
   public let id: NoteID
   public let refs: [ExternalRef]

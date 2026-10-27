@@ -14,6 +14,7 @@ public struct TodayItem: Hashable, Sendable {
   public let isUrgent: Bool
   /// Calendar days since the planned date, for items carried over from earlier days.
   public let plannedDaysAgo: Int?
+  public let isDone: Bool
 }
 
 public struct LineGroup: Hashable, Sendable {
@@ -32,12 +33,40 @@ public struct QuietLine: Hashable, Sendable {
   public let reason: Reason
 }
 
+public struct TodayTotals: Hashable, Sendable {
+  public let open: Int
+  public let done: Int
+  /// Sum of the open items' positive estimates: an estimate, never a measured time.
+  public let estimateMinutes: Int
+
+  public init(open: Int, done: Int, estimateMinutes: Int) {
+    self.open = open
+    self.done = done
+    self.estimateMinutes = estimateMinutes
+  }
+}
+
 public struct TodayOverview: Hashable, Sendable {
   public let day: Horizon
-  /// In vault line order, Life ops last.
+  /// Every item of the day once, in source order: the open items and every task done today.
+  public let items: [TodayItem]
+  /// Every anchor among `items`, open and done, in source order; the strip shows the first
+  /// `Overview.anchorsShown`, and only those leave their sections.
+  public let anchors: [TodayItem]
+  /// Top 3: open flagged items not shown in the strip, a due date today or earlier first,
+  /// then source order; the first three, or all of them when asked.
+  public let top: [TodayItem]
+  /// Every Top 3 candidate, shown or not.
+  public let flaggedCount: Int
+  /// Foundation lines first, then vault line order, Life ops last; open items only, without
+  /// the strip's and Top 3's.
   public let groups: [LineGroup]
   /// Planned on an earlier day and still open; oldest first.
   public let fromEarlier: [TodayItem]
+  /// Every task completed today but the done anchors in the strip, most recent first; in no
+  /// other section.
+  public let doneToday: [TodayItem]
+  public let totals: TodayTotals
   public let touchedToday: [LineAssignment]
   public let quietLines: [QuietLine]
 }
@@ -109,6 +138,10 @@ public struct Overview: Sendable {
   public let tracer: Tracer
 
   public static let quietAfterDays = 14
+  public static let anchorsShown = 5
+  public static let topShown = 3
+  /// The tag that makes a task an anchor, matched by leaf name on the task's own tags.
+  public static let anchorTag = "anchor"
   public static let sparklineWeeks = 8
 
   public init(workspace: Workspace, now: Date) {
@@ -139,11 +172,17 @@ public struct Overview: Sendable {
 
   // MARK: Today
 
-  public func today() -> TodayOverview {
-    let day = day(containing: now)
-    var byLine: [LineAssignment: [TodayItem]] = [:]
-    var earlier: [TodayItem] = []
-    for task in available {
+  /// Foundation lines, then the other lines, each in vault order; Life ops last.
+  private var todayLineOrder: [LineAssignment] {
+    let lines = workspace.lines.filter(\.foundation) + workspace.lines.filter { !$0.foundation }
+    return lines.map { .line($0.id) } + [.lifeOps]
+  }
+
+  /// Today's open items and every task completed today, in source order.
+  private func todayItems(_ day: Horizon) -> [TodayItem] {
+    workspace.tasks.compactMap { task in
+      let isDone = task.status == .completed && task.completedAt.map(day.contains) == true
+      guard task.status == .available || isDone else { return nil }
       var reasons: Set<TodayReason> = []
       if let due = task.effectiveDueAt, due < day.end { reasons.insert(.due) }
       if task.flagged { reasons.insert(.flagged) }
@@ -151,17 +190,49 @@ public struct Overview: Sendable {
         reasons.insert(.deferred)
       }
       if let planned = task.effectivePlannedAt, planned < day.end { reasons.insert(.planned) }
-      guard !reasons.isEmpty else { continue }
+      guard isDone || !reasons.isEmpty else { return nil }
       let plannedEarlier = task.effectivePlannedAt.flatMap { $0 < day.start ? $0 : nil }
-      let item = TodayItem(
+      return TodayItem(
         task: task, trace: tracer.trace(task), reasons: reasons,
-        isUrgent: reasons.contains(.due),
-        plannedDaysAgo: plannedEarlier.map { calendarDays(from: $0, to: day) })
-      if plannedEarlier != nil {
+        isUrgent: !isDone && reasons.contains(.due),
+        plannedDaysAgo: isDone ? nil : plannedEarlier.map { calendarDays(from: $0, to: day) },
+        isDone: isDone)
+    }
+  }
+
+  public func today(showAllFlagged: Bool = false) -> TodayOverview {
+    let day = day(containing: now)
+    let items = todayItems(day)
+    let open = items.filter { !$0.isDone }
+
+    let anchorTags = Set(workspace.tags.filter { $0.matchesLeafName(Self.anchorTag) }.map(\.id))
+    let anchors = items.filter { $0.task.tagIDs.contains(where: anchorTags.contains) }
+    let inStrip = Set(anchors.prefix(Self.anchorsShown).map(\.task.id))
+    let candidates = open.filter { $0.task.flagged && !inStrip.contains($0.task.id) }
+    let dueByToday = { (item: TodayItem) in item.task.effectiveDueAt.map { $0 < day.end } == true }
+    let ranked = candidates.filter(dueByToday) + candidates.filter { !dueByToday($0) }
+    let top = showAllFlagged ? ranked : Array(ranked.prefix(Self.topShown))
+    let lifted = inStrip.union(top.map(\.task.id))
+
+    var byLine: [LineAssignment: [TodayItem]] = [:]
+    var earlier: [TodayItem] = []
+    for item in open where !lifted.contains(item.task.id) {
+      if item.plannedDaysAgo != nil {
         earlier.append(item)
       } else {
-        byLine[task.line, default: []].append(item)
+        byLine[item.task.line, default: []].append(item)
       }
+    }
+    // Most recent first; the same completion time keeps source order. A done anchor in the
+    // strip stays only there (owner, 2026-10-26).
+    let done = items.filter(\.isDone)
+    let doneToday = done.enumerated().filter { !inStrip.contains($0.element.task.id) }.sorted {
+      let (a, b) = ($0.element.task.completedAt ?? now, $1.element.task.completedAt ?? now)
+      return a != b ? a > b : $0.offset < $1.offset
+    }.map(\.element)
+    let estimate = open.compactMap(\.task.estimateMinutes).filter { $0 > 0 }.reduce(0) {
+      let (total, overflow) = $0.addingReportingOverflow($1)
+      return overflow ? .max : total
     }
 
     let touched = Set(
@@ -174,14 +245,16 @@ public struct Overview: Sendable {
       guard calendarDays(from: last, to: day) >= Self.quietAfterDays else { return nil }
       return QuietLine(line: line, reason: .lastActivity(last))
     }
-    let groups = lineOrder.compactMap { line in
-      byLine[line].map { LineGroup(line: line, items: $0) }
-    }
     return TodayOverview(
-      day: day, groups: groups,
+      day: day, items: items, anchors: anchors, top: top, flaggedCount: candidates.count,
+      groups: todayLineOrder.compactMap { line in
+        byLine[line].map { LineGroup(line: line, items: $0) }
+      },
       fromEarlier: earlier.sorted {
         ($0.task.effectivePlannedAt ?? now) < ($1.task.effectivePlannedAt ?? now)
       },
+      doneToday: doneToday,
+      totals: TodayTotals(open: open.count, done: done.count, estimateMinutes: estimate),
       touchedToday: lineOrder.filter(touched.contains), quietLines: quiet)
   }
 

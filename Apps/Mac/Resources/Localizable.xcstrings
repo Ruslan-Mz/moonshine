@@ -17,18 +17,114 @@
         }
       }
     },
-    "%@ · Week %lld": {
+    "%@ · %@": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ · Week %2$lld"
+            "value": "%1$@ · %2$@"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ · Неделя %2$lld"
+            "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "%@ · Week %lld · %@ · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · Week %2$lld · %3$@ · %4$@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · Неделя %2$lld · %3$@ · %4$@"
+          }
+        }
+      }
+    },
+    "%lld done": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld done"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "выполнено %lld"
+          }
+        }
+      }
+    },
+    "%lld flagged — %lld shown": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld flagged — %2$lld shown"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld с флажком — показаны %2$lld"
+          }
+        }
+      }
+    },
+    "%lld more": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld more"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ещё %lld"
+          }
+        }
+      }
+    },
+    "%lld of %lld done": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld of %2$lld done"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld из %2$lld"
+          }
+        }
+      }
+    },
+    "%lld open": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld open"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "открыто %lld"
           }
         }
       }
@@ -85,6 +181,38 @@
         }
       }
     },
+    "Anchors": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anchors"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Якоря"
+          }
+        }
+      }
+    },
+    "Completed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Completed"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выполнено"
+          }
+        }
+      }
+    },
     "Demo data": {
       "localizations": {
         "en": {
@@ -113,6 +241,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Демо-данные не загрузились."
+          }
+        }
+      }
+    },
+    "Done today": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done today"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сделано сегодня"
           }
         }
       }
@@ -149,18 +293,18 @@
         }
       }
     },
-    "From earlier": {
+    "From earlier (%lld)": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "From earlier"
+            "value": "From earlier (%lld)"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "С прошлых дней"
+            "value": "С прошлых дней (%lld)"
           }
         }
       }
@@ -197,6 +341,70 @@
         }
       }
     },
+    "Show All Flagged Tasks": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show All Flagged Tasks"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показать все задачи с флажком"
+          }
+        }
+      }
+    },
+    "Show Fewer Flagged Tasks": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show Fewer Flagged Tasks"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показать меньше задач с флажком"
+          }
+        }
+      }
+    },
+    "Show all": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show all"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показать все"
+          }
+        }
+      }
+    },
+    "Show fewer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show fewer"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показать меньше"
+          }
+        }
+      }
+    },
     "Task": {
       "localizations": {
         "en": {
@@ -225,6 +433,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Сегодня"
+          }
+        }
+      }
+    },
+    "Top 3 today": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Top 3 today"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Главные 3"
           }
         }
       }
@@ -345,6 +569,38 @@
         }
       }
     },
+    "≈ %lld h %lld min est.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "≈ %1$lld h %2$lld min est."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "≈ %1$lld ч %2$lld мин (оценка)"
+          }
+        }
+      }
+    },
+    "≈ %lld h est.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "≈ %lld h est."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "≈ %lld ч (оценка)"
+          }
+        }
+      }
+    },
     "≈ %lld min": {
       "localizations": {
         "en": {
@@ -357,6 +613,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "≈ %lld мин"
+          }
+        }
+      }
+    },
+    "≈ %lld min est.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "≈ %lld min est."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "≈ %lld мин (оценка)"
           }
         }
       }

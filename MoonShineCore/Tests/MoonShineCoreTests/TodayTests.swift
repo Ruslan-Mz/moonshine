@@ -8,8 +8,9 @@ import Testing
   // Wednesday 2026-09-30, noon in Moscow.
   let now = W.date(2026, 9, 30)
 
+  /// Open items planned for today or undated, wherever Today shows them (strip, Top 3, lines).
   func titles(_ today: TodayOverview) -> Set<String> {
-    Set(today.groups.flatMap(\.items).map(\.task.title))
+    Set(today.items.filter { !$0.isDone && $0.plannedDaysAgo == nil }.map(\.task.title))
   }
 
   @Test func includesPlannedDeferredFlaggedAndDueUpToToday() {
@@ -31,6 +32,7 @@ import Testing
       titles(today) == [
         "Planned today", "Deferred to today", "Flagged", "Due today", "Due yesterday",
       ])
+    #expect(today.doneToday.map(\.task.title) == ["Done flagged"])
   }
 
   @Test func onlyARealDueDateIsUrgent() throws {
@@ -38,7 +40,7 @@ import Testing
     let violin = LineAssignment.line(world.line("violin").id)
     world.task("Flagged", line: violin, flagged: true, planned: W.date(2026, 9, 30, 9))
     world.task("Due", line: violin, due: W.date(2026, 9, 30, 20))
-    let items = Overview(workspace: world.workspace, now: now).today().groups.flatMap(\.items)
+    let items = Overview(workspace: world.workspace, now: now).today().items
     let flagged = try #require(items.first { $0.task.title == "Flagged" })
     let due = try #require(items.first { $0.task.title == "Due" })
     #expect(flagged.reasons == [.flagged, .planned])
@@ -70,9 +72,9 @@ import Testing
     let violin = LineAssignment.line(world.line("violin").id)
     let piano = LineAssignment.line(world.line("piano").id)
     world.line("math")
-    world.task("Pay rent", line: .lifeOps, flagged: true)
-    world.task("Chords", line: piano, flagged: true)
-    world.task("Scales", line: violin, flagged: true)
+    world.task("Pay rent", line: .lifeOps, planned: W.date(2026, 9, 30, 9))
+    world.task("Chords", line: piano, planned: W.date(2026, 9, 30, 9))
+    world.task("Scales", line: violin, planned: W.date(2026, 9, 30, 9))
     let today = Overview(workspace: world.workspace, now: now).today()
     #expect(today.groups.map(\.line) == [violin, piano, .lifeOps])
   }
@@ -82,8 +84,7 @@ import Testing
     let violin = world.line("violin")
     let project = world.project("Partita", line: .line(violin.id))
     let task = world.task("Bars 1–16", line: .line(violin.id), project: project.id, flagged: true)
-    let item = try #require(
-      Overview(workspace: world.workspace, now: now).today().groups.first?.items.first)
+    let item = try #require(Overview(workspace: world.workspace, now: now).today().items.first)
     #expect(item.trace == Tracer(workspace: world.workspace, now: now).trace(task))
     #expect(item.trace.project == project)
   }
@@ -105,8 +106,7 @@ import Testing
   @Test func plannedEarlierIsCarriedOverOnceOldestFirstAndUrgentOnlyWhenDue() {
     var world = W()
     let violin = LineAssignment.line(world.line("violin").id)
-    world.task(
-      "Three days ago, flagged", line: violin, flagged: true, planned: W.date(2026, 9, 27, 10))
+    world.task("Three days ago", line: violin, planned: W.date(2026, 9, 27, 10))
     world.task(
       "Five days ago, due today", line: violin, planned: W.date(2026, 9, 25, 10),
       due: W.date(2026, 9, 30, 18))
@@ -114,7 +114,7 @@ import Testing
     #expect(today.groups.isEmpty)
     #expect(
       today.fromEarlier.map(\.task.title) == [
-        "Five days ago, due today", "Three days ago, flagged",
+        "Five days ago, due today", "Three days ago",
       ])
     #expect(today.fromEarlier.map(\.plannedDaysAgo) == [5, 3])
     #expect(today.fromEarlier.map(\.isUrgent) == [true, false])
@@ -149,5 +149,184 @@ import Testing
     world.task("Chords", line: piano, completed: W.date(2026, 9, 29, 21))
     let today = Overview(workspace: world.workspace, now: now).today()
     #expect(today.touchedToday == [violin, .lifeOps])
+  }
+
+  // MARK: Done today, order, anchors, Top 3, totals (S4-1b-1)
+
+  @Test func everyTaskDoneTodayIsInDoneTodayMostRecentFirstAndNowhereElse() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.task(
+      "Planned today", line: violin, planned: W.date(2026, 9, 30, 8),
+      completed: W.date(2026, 9, 30, 9))
+    world.task("No date", line: .lifeOps, completed: W.date(2026, 9, 30, 15))
+    world.task(
+      "Planned Monday", line: violin, planned: W.date(2026, 9, 28, 10),
+      completed: W.date(2026, 9, 30, 11))
+    world.task(
+      "Flagged, due today", line: violin, flagged: true, due: W.date(2026, 9, 30, 18),
+      completed: W.date(2026, 9, 30, 11))
+    world.task("Done yesterday", line: violin, completed: W.date(2026, 9, 29, 21))
+    world.task("Dropped", line: violin, status: .dropped, planned: W.date(2026, 9, 30, 9))
+    world.task("Open", line: violin, planned: W.date(2026, 9, 30, 9))
+    let today = Overview(workspace: world.workspace, now: now).today()
+    // Same completion time: source order.
+    #expect(
+      today.doneToday.map(\.task.title) == [
+        "No date", "Planned Monday", "Flagged, due today", "Planned today",
+      ])
+    #expect(today.doneToday.allSatisfy { $0.isDone && !$0.isUrgent && $0.plannedDaysAgo == nil })
+    let elsewhere = today.groups.flatMap(\.items) + today.fromEarlier + today.top
+    #expect(elsewhere.map(\.task.title) == ["Open"])
+    #expect(today.totals.done == 4)
+    #expect(today.totals.open == 1)
+  }
+
+  @Test func foundationGroupsComeFirstThenVaultOrderThenLifeOps() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    let core = LineAssignment.line(world.line("core", foundation: true).id)
+    let piano = LineAssignment.line(world.line("piano").id)
+    let gym = LineAssignment.line(world.line("gym", foundation: true).id)
+    for line in [LineAssignment.lifeOps, piano, gym, violin, core] {
+      world.task("Task", line: line, planned: W.date(2026, 9, 30, 9))
+    }
+    let today = Overview(workspace: world.workspace, now: now).today()
+    #expect(today.groups.map(\.line) == [core, gym, violin, piano, .lifeOps])
+  }
+
+  @Test func leafTagMatchIsTrimmedAndCaseInsensitive() {
+    func tag(_ name: String) -> MoonShineCore.Tag {
+      Tag(id: .generate(), refs: [], name: name, parentID: nil, isMeta: false)
+    }
+    #expect(tag(" Anchor ").matchesLeafName("anchor"))
+    #expect(tag("ANCHOR").matchesLeafName("  anchor\n"))
+    #expect(tag("Якорь").matchesLeafName("якорь"))
+    #expect(!tag("anchors").matchesLeafName("anchor"))
+    #expect(!tag("deadline").matchesLeafName("anchor"))
+  }
+
+  @Test func anchorsAreOwnTagsAndOnlyTheFirstFiveShownLeaveTheirSections() throws {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    let rituals = world.tag("Rituals")
+    let anchor = world.tag("Anchor", parent: rituals.id)
+    let project = world.project("Daily", line: violin, tags: [anchor.id])
+    world.task(
+      "Done anchor", line: violin, planned: W.date(2026, 9, 30, 7),
+      completed: W.date(2026, 9, 30, 8), tags: [anchor.id])
+    for n in 1...6 {
+      world.task("A\(n)", line: violin, planned: W.date(2026, 9, 30, 9), tags: [anchor.id])
+    }
+    world.task(
+      "In an anchor project", line: violin, project: project.id,
+      planned: W.date(2026, 9, 30, 9))
+    world.task("Not today", line: violin, tags: [anchor.id])
+    let today = Overview(workspace: world.workspace, now: now).today()
+    #expect(
+      today.anchors.map(\.task.title) == ["Done anchor", "A1", "A2", "A3", "A4", "A5", "A6"])
+    #expect(Overview.anchorsShown == 5)
+    let group = try #require(today.groups.first)
+    #expect(group.items.map(\.task.title) == ["A5", "A6", "In an anchor project"])
+    // A done anchor shown in the strip stays only there.
+    #expect(today.doneToday.isEmpty)
+    #expect(today.totals.done == 1)
+  }
+
+  /// Owner, 2026-10-26: a done anchor among the first five chips is only in the strip; a done
+  /// anchor beyond them is in Done today; both count as done.
+  @Test func aDoneAnchorBeyondTheFifthChipIsInDoneTodayAndBothCount() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    let anchor = world.tag("anchor")
+    for n in 1...4 {
+      world.task("A\(n)", line: violin, planned: W.date(2026, 9, 30, 9), tags: [anchor.id])
+    }
+    world.task(
+      "Fifth, done", line: violin, planned: W.date(2026, 9, 30, 9),
+      completed: W.date(2026, 9, 30, 10), tags: [anchor.id])
+    world.task(
+      "Sixth, done", line: violin, planned: W.date(2026, 9, 30, 9),
+      completed: W.date(2026, 9, 30, 11), tags: [anchor.id])
+    world.task("Other, done", line: violin, completed: W.date(2026, 9, 30, 8))
+    let today = Overview(workspace: world.workspace, now: now).today()
+    #expect(today.anchors.prefix(Overview.anchorsShown).last?.task.title == "Fifth, done")
+    #expect(today.doneToday.map(\.task.title) == ["Sixth, done", "Other, done"])
+    #expect(today.totals.done == 3)
+  }
+
+  @Test func topThreeIsOpenFlaggedDueFirstThenSourceOrderAndShowAllShowsEveryCandidate() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.task("F1", line: violin, flagged: true)
+    world.task("F2", line: violin, flagged: true, due: W.date(2026, 9, 30, 18))
+    world.task("F3", line: violin, flagged: true)
+    world.task("F4", line: violin, flagged: true, due: W.date(2026, 9, 29, 18))
+    world.task("F5", line: .lifeOps, flagged: true)
+    world.task("Done", line: violin, flagged: true, completed: W.date(2026, 9, 30, 9))
+    let overview = Overview(workspace: world.workspace, now: now)
+    let today = overview.today()
+    #expect(today.top.map(\.task.title) == ["F2", "F4", "F1"])
+    #expect(today.flaggedCount == 5)
+    #expect(today.groups.flatMap(\.items).map(\.task.title) == ["F3", "F5"])
+    let all = overview.today(showAllFlagged: true)
+    #expect(all.top.map(\.task.title) == ["F2", "F4", "F1", "F3", "F5"])
+    #expect(all.flaggedCount == 5)
+    #expect(all.groups.isEmpty)
+  }
+
+  @Test func aFlaggedAnchorInTheStripIsNoTopThreeCandidate() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    let anchor = world.tag("anchor")
+    world.task("Flagged anchor", line: violin, flagged: true, tags: [anchor.id])
+    for n in 1...3 { world.task("F\(n)", line: violin, flagged: true) }
+    let today = Overview(workspace: world.workspace, now: now).today()
+    #expect(today.anchors.map(\.task.title) == ["Flagged anchor"])
+    #expect(today.top.map(\.task.title) == ["F1", "F2", "F3"])
+    #expect(today.flaggedCount == 3)
+    #expect(today.groups.isEmpty)
+  }
+
+  @Test func stripTopGroupsFromEarlierAndDoneTodayAreDisjointAndCoverItems() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    let anchor = world.tag("anchor")
+    world.task("Anchor", line: violin, planned: W.date(2026, 9, 30, 9), tags: [anchor.id])
+    world.task("Flagged", line: violin, flagged: true)
+    world.task("Planned", line: violin, planned: W.date(2026, 9, 30, 9))
+    world.task("Earlier", line: violin, planned: W.date(2026, 9, 27, 9))
+    world.task("Errand", line: .lifeOps, due: W.date(2026, 9, 30, 20))
+    world.task("Done", line: violin, completed: W.date(2026, 9, 30, 10))
+    world.task(
+      "Done anchor", line: violin, completed: W.date(2026, 9, 30, 11), tags: [anchor.id])
+    let today = Overview(workspace: world.workspace, now: now).today()
+    let strip = today.anchors.prefix(Overview.anchorsShown)
+    let parts =
+      strip + today.top + today.groups.flatMap(\.items) + today.fromEarlier + today.doneToday
+    #expect(parts.count == today.items.count)
+    #expect(Set(parts.map(\.task.id)) == Set(today.items.map(\.task.id)))
+    #expect(
+      today.items.map(\.task.title) == [
+        "Anchor", "Flagged", "Planned", "Earlier", "Errand", "Done", "Done anchor",
+      ])
+  }
+
+  @Test func totalsCountEveryItemOnceAndEstimateOnlyOpenOnes() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.task("Planned", line: violin, planned: W.date(2026, 9, 30, 9), estimate: 45)
+    world.task("Flagged", line: violin, flagged: true, estimate: 30)
+    world.task("Earlier", line: violin, planned: W.date(2026, 9, 27, 9), estimate: 15)
+    world.task("Errand", line: .lifeOps, flagged: true, estimate: -20)
+    world.task("No estimate", line: .lifeOps, flagged: true)
+    world.task("Done", line: violin, estimate: 60, completed: W.date(2026, 9, 30, 10))
+    let today = Overview(workspace: world.workspace, now: now).today()
+    #expect(today.totals == TodayTotals(open: 5, done: 1, estimateMinutes: 90))
+
+    var huge = W()
+    huge.task("Big", line: .lifeOps, flagged: true, estimate: .max)
+    huge.task("Small", line: .lifeOps, flagged: true, estimate: 1)
+    #expect(Overview(workspace: huge.workspace, now: now).today().totals.estimateMinutes == .max)
   }
 }

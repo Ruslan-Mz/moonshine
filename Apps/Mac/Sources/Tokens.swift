@@ -8,12 +8,17 @@ enum Tokens {
   static let dueFill = dynamic(light: 0xFFEFD6, dark: 0xFFB040, darkAlpha: 0.15)
   static let chipText = dynamic(light: 0x4F4F57, dark: 0xBDBDC4)
   static let checkboxStroke = dynamic(light: 0xB4B4BB, dark: 0x64646C)
+  static let doneText = dynamic(light: 0x9A9AA2, dark: 0x7E7E86)
+  static let chipFill = dynamic(
+    light: 0x000000, dark: 0xFFFFFF, lightAlpha: 0.045, darkAlpha: 0.075)
 
-  private static func dynamic(light: Int, dark: Int, darkAlpha: CGFloat = 1) -> Color {
+  private static func dynamic(
+    light: Int, dark: Int, lightAlpha: CGFloat = 1, darkAlpha: CGFloat = 1
+  ) -> Color {
     Color(
       nsColor: NSColor(name: nil) { appearance in
         let isDark = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-        return rgb(isDark ? dark : light, alpha: isDark ? darkAlpha : 1)
+        return rgb(isDark ? dark : light, alpha: isDark ? darkAlpha : lightAlpha)
       })
   }
 

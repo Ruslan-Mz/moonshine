@@ -13,12 +13,13 @@ artboards: [mockups/Today.dc.html, mockups/Today-Dark.dc.html]
 Sidebar (Today selected) · toolbar: title "Today", subtitle `Thursday, 1 October · Week 40 · 23 open · 6 done · ≈ 11 h 15 min est.` · main table · right rail 300 · status bar.
 
 Main, top to bottom: 00. **Reminders strip** (ADR-0017, S4; § Reminders below): above everything else; absent when there are no reminders. 0. **Draft-2 — Anchors strip** (40): `Anchors · 3 of 5 done`, then up to 5 compact chips (checkbox + short title + line emoji) for today's tasks tagged `anchor`, first 5 in source order. The count covers **all** of today's anchors (`3 of 6 done` when there are 6). Done chips are checked and dimmed, not hidden. Absent if no anchors. Only anchors **shown in the strip** are left out of their line sections; further anchor tasks stay there.
-0b. **Draft-2 — Top 3 today**: flagged tasks, max 3 rows, as normal `TaskRow`s under a section header `Top 3 today`. If more than 3 are flagged: caption `5 flagged — 3 shown` and a "Show all" link. These tasks are **not repeated** in their line sections.
+0b. **Draft-2 — Top 3 today**: open flagged tasks, max 3 rows, a real due date today or earlier first, then source order (owner, 2026-10-26), as normal `TaskRow`s under a section header `Top 3 today`. The candidates are the open flagged tasks not shown in the Anchors strip; if there are more than 3: caption `5 flagged — 3 shown` (it counts the candidates) and a "Show all" link, also in the View menu as "Show All Flagged Tasks" with ⌥⌘F (owner, 2026-10-26). These tasks are **not repeated** in their line sections. It is the table's first section, so it sits under the column header (item 1), as the mockup draws it; one ↑↓ selection runs through it and the sections (owner, 2026-10-24).
 
 1. Column header (26): blank · Task · Project → Line → Artifact · Estimate · When.
-2. One section per line touched by today's tasks, **foundation lines first**, then the vault order. `LineGroupHeader` + `TaskRow`s. Done tasks stay in place (checked, struck through) until the next day.
-3. Section **From earlier** (`arrow.uturn.backward`): available tasks whose planned date is before today. The "When" column shows `planned N days ago`. Never amber unless there is a real due date.
+2. One section per line touched by today's tasks, **foundation lines first**, then the vault order. `LineGroupHeader` + `TaskRow`s. Open tasks only: a done task moves to Done today (item 5).
+3. **From earlier** (`arrow.uturn.backward`), header `From earlier (8)` / `С прошлых дней (8)`: a disclosure like Life ops, expanded by default, the state in `@SceneStorage` (owner, 2026-10-26); available tasks whose planned date is before today. The "When" column shows `planned N days ago`. Never amber unless there is a real due date.
 4. **Life ops** (🧺): collapsed disclosure with count and estimate; expands to plain rows.
+5. **Done today** (`checkmark.circle`; owner, 2026-10-24): every task completed today, checked and struck through, most recent first; the 3 most recent are visible, the rest behind an `N more` disclosure (`@SceneStorage`). A done task is in no line section, Top 3 or From earlier. A done anchor shown in the strip stays only there, as a checked chip; an anchor beyond the first five is in Done today; the subtitle's `done` counts both (owner, 2026-10-26).
 
 Right rail:
 
@@ -29,7 +30,7 @@ Right rail:
 
 ## Data (phase-1 spec)
 
-- Included: available tasks with effective planned or defer = today, flagged, or effective due ≤ today.
+- Included: available tasks with effective planned or defer = today, flagged, or effective due ≤ today; and every task completed today (Done today).
 - Grouping: by mapped line (task tag → project tag → project name → folder → Life ops).
 - Urgent styling: only for a **deadline** (a due date that counts under the deadline rule, `settings.md` § Deadlines) with effective due ≤ today. Any other due date is plain secondary text (`due 20:35`).
 - Est. sums: open tasks only.
@@ -38,11 +39,13 @@ Right rail:
 
 - ↑↓ moves the selection, ↵ or double-click opens in OmniFocus (`omnifocus:///task/<id>`), space toggles Quick Look-like details (later).
 - Checkbox is **read-only in phase 1**: it shows state and does not write. Clicking it opens in OmniFocus instead.
-- Life ops expansion persists (`@SceneStorage`).
+- Life ops, From earlier and `N more` expansion persists (`@SceneStorage`). On a disclosure row, → expands and ← collapses, the macOS standard; Space does not (owner, 2026-10-26).
+- Focus (owner, 2026-10-26): the table has the keyboard focus at launch; a click on any row selects it and focuses the table, also after an earlier click went to the sidebar; Tab moves focus between the sidebar and the table.
+- ⌥⌘F toggles "Show all" of Top 3 from the View menu, wherever the list is scrolled.
 
 ## SwiftUI
 
-`NavigationSplitView` → detail: `Table(sections)` with `TableColumn`s (widths: 34 fixed, flex, 290, 100, 118), `.tableStyle(.inset)`, `alternatesRowBackgrounds: false`. Rail: `.inspector(isPresented:)` + `.inspectorColumnWidth(300)`. Header text: `.navigationTitle` / `.navigationSubtitle`.
+`NavigationSplitView` → detail: `Table(sections)` with `TableColumn`s (widths: 34 fixed; Task flex, minimum 120, about 15 characters; trace ideal 290, minimum 120; 100; 118). On a narrow window the trace column gives way first, down to its minimum; Today's minimum width is the sum of the column minimums plus 40 for the inset style's margins and column spacing (532; owner, 2026-10-26; `TodayColumns`), `.tableStyle(.inset)`, `alternatesRowBackgrounds: false`. Rail: `.inspector(isPresented:)` + `.inspectorColumnWidth(300)`. Header text: `.navigationTitle` / `.navigationSubtitle`.
 
 ## Acceptance
 
@@ -52,7 +55,12 @@ Right rail:
 - [ ] Italian is listed as quiet; Piano (maintenance) is not; Calligraphy appears only under "Paused on purpose".
 - [ ] Rhythm and progress are separate columns in the rail.
 - [ ] Light and dark both match the artboards.
-- [ ] Anchors strip shows only `anchor`-tagged tasks; Top 3 shows at most 3 flagged tasks and they are not duplicated below.
+- [ ] Anchors strip shows only `anchor`-tagged tasks; Top 3 shows at most 3 open flagged tasks and they are not duplicated below.
+- [ ] Every task completed today is in Done today, after Life ops, the 3 most recent visible and the rest behind `N more`; none is in a line section, Top 3 or From earlier; a done anchor in the strip is not repeated there.
+- [ ] `From earlier (N)` shows its count and collapses and expands with ←/→ and a click; "Show all" leaves its rows as they are.
+- [ ] At launch ↑↓ move the selection without a click; after a click in the sidebar, a click on a row brings ↑↓ back to the table; Tab moves between sidebar and table.
+- [ ] ⌥⌘F toggles "Show all" from anywhere in the list; the View menu shows it.
+- [ ] At the narrowest window the task title keeps about 15 characters.
 - [ ] Foundation sections come first.
 - [ ] Checked in Russian at 1440×900 and 1100×700.
 
