@@ -57,11 +57,11 @@ Title (colour square + "Rhythm" + subtitle), big number (30 bold) + context ("th
 
 Card (radius 10, `card` + `cardBorder`, padding 14): emoji + name, and on the right a moon symbol + `quiet for 29 days` (secondary). Below: "Last: Lesson 14 review, 2 September", a divider, "Suggested next step" (11 tertiary), the action (13), then `≈ 10 min est.` and the link "Open in OmniFocus".
 
-Rule: active lines with no completion for ≥ 14 days. Never maintenance, never paused.
+Rule: active lines with no completion for ≥ 14 days. Never maintenance, never paused, never foundation. The suggested next step is the line's first available next action in source order (an available task that is not the parent of another available task; owner, 2026-10-24); a line with none shows `no next action` in its place. The link "Open in OmniFocus" comes with the link opener (S4-5).
 
 ## NoActivityCard
 
-Dashed border, no fill: emoji + name + `no activity yet`; "First step: …".
+Dashed border, no fill: emoji + name + `no activity yet`; "First step: …", the same next-action rule as the QuietLineCard, or `no next action`.
 
 ## LineStateLabel
 

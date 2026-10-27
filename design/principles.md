@@ -23,13 +23,13 @@ date: 2026-10-01
 
 ## Window layout (as drawn)
 
-| Region     | Size                                               | Notes                                                                             |
-| ---------- | -------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Window     | 1440 × 900 (mock size)                             | Must also work at 1100 × 700: the rail collapses, columns truncate                |
-| Sidebar    | 236                                                | Views (⌘1–⌘4), then the line list (emoji + name + state tag)                      |
-| Toolbar    | 56                                                 | Title 19 bold + subtitle 12 secondary; search field (⌘K) and refresh on the right |
-| Status bar | 28                                                 | "Demo data" badge, "Updated N min ago", shortcut hints                            |
-| Right rail | 300 (Today) · 380 (Month note) · 360 (Line detail) | `.inspector`, can be hidden                                                       |
+| Region     | Size                                               | Notes                                                                                                       |
+| ---------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Window     | 1440 × 900 (mock size)                             | Must also work at 1100 × 700: the rail stays shown and hides with ⌃⌘I (owner, 2026-10-27), columns truncate |
+| Sidebar    | 236                                                | Views (⌘1–⌘4), then the line list (emoji + name + state tag)                                                |
+| Toolbar    | 56                                                 | Title 19 bold + subtitle 12 secondary; search field (⌘K) and refresh on the right                           |
+| Status bar | 28                                                 | "Demo data" badge, "Updated N min ago", shortcut hints                                                      |
+| Right rail | 300 (Today) · 380 (Month note) · 360 (Line detail) | `.inspector`, can be hidden                                                                                 |
 
 ## Tone rules as UI constraints (hard)
 
