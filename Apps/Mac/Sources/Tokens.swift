@@ -9,6 +9,12 @@ enum Tokens {
   static let chipText = dynamic(light: 0x4F4F57, dark: 0xBDBDC4)
   static let checkboxStroke = dynamic(light: 0xB4B4BB, dark: 0x64646C)
   static let doneText = dynamic(light: 0x9A9AA2, dark: 0x7E7E86)
+  static let rhythm = dynamic(light: 0x2F68C8, dark: 0x5E92EE)
+  static let progress = dynamic(light: 0x14917A, dark: 0x3FA690)
+  static let paused = dynamic(light: 0x8E8E95, dark: 0x7E7E86)
+  static let card = dynamic(light: 0xFFFFFF, dark: 0x2A2A2E)
+  static let cardBorder = dynamic(
+    light: 0x000000, dark: 0xFFFFFF, lightAlpha: 0.08, darkAlpha: 0.07)
   static let chipFill = dynamic(
     light: 0x000000, dark: 0xFFFFFF, lightAlpha: 0.045, darkAlpha: 0.075)
 

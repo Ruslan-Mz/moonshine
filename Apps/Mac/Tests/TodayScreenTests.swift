@@ -99,6 +99,12 @@ private func demo() async throws -> (Overview, TodayScreen) {
       from: DateComponents(year: 2026, month: 10, day: 1, hour: 17))!
     #expect(TodayFormat.dueDate(due, timeZone: moscow, locale: english) == "1 Oct")
     #expect(TodayFormat.dueDate(due, timeZone: auckland, locale: english) == "2 Oct")
+    let lateEvening = DemoVault.calendar.date(
+      from: DateComponents(year: 2026, month: 9, day: 1, hour: 23, minute: 30))!
+    #expect(
+      TodayFormat.lastDate(lateEvening, timeZone: moscow, locale: english) == "1 September")
+    #expect(
+      TodayFormat.lastDate(lateEvening, timeZone: auckland, locale: english) == "2 September")
   }
 
   @Test func estimatesAndDueStyles() {
@@ -381,5 +387,74 @@ private func demo() async throws -> (Overview, TodayScreen) {
     #expect(TodayColumns.taskMinimum >= 120)
     #expect(TodayColumns.traceMinimum < TodayColumns.traceIdeal)
     #expect(TodayColumns.minimumWidth == 34 + 120 + 120 + 100 + 118 + TodayColumns.margins)
+  }
+
+  // MARK: Rail (S4-1b-2)
+
+  /// `design/screens/today.md` § Acceptance: Italian is quiet, Piano (maintenance) is not,
+  /// Calligraphy appears only under Paused on purpose; foundation lines are never quiet.
+  @Test func theRailFollowsTheDemoFixture() async throws {
+    let (overview, screen) = try await demo()
+    let lines = overview.workspace.lines
+    func key(_ id: LineID) -> LineKey? { lines.first { $0.id == id }?.key }
+    let italian = try #require(screen.quiet.first)
+    #expect(screen.quiet.compactMap { key($0.id) } == ["italian"])
+    // The fixture's last Italian completion is 1 September, so Thursday 1 October reads 30
+    // days; the design's `quiet for 29 days · Last: 2 September` waits for S4-DD.
+    let last = try #require(
+      DemoVault.calendar.date(from: DateComponents(year: 2026, month: 9, day: 1, hour: 8)))
+    #expect(italian.lastDate == last)
+    let calendar = overview.calendar
+    #expect(
+      italian.days
+        == calendar.dateComponents(
+          [.day], from: calendar.startOfDay(for: last), to: calendar.startOfDay(for: screen.day)
+        ).day)
+    #expect(italian.days == 30)
+    let quietOrNew = Set(screen.quiet.map(\.id) + screen.noActivity.map(\.id))
+    for line in lines where line.foundation || line.state != .active {
+      #expect(!quietOrNew.contains(line.id))
+    }
+    #expect(screen.paused.compactMap { key($0.id) } == ["calligraphy"])
+    let touched = overview.today().touchedToday
+    try #require(!touched.isEmpty)
+    #expect(screen.touched.map(\.id) == touched.map(\.line))
+    #expect(screen.touched.map(\.sessions) == touched.map(\.counts.rhythm))
+    #expect(screen.touched.map(\.tasks) == touched.map(\.counts.progress))
+    #expect(!screen.touched.contains { $0.name == "Calligraphy" })
+    #expect(!screen.railIsEmpty)
+  }
+
+  /// Invented: an active line with no tasks has no first step, so its card reads
+  /// `no next action`; an empty workspace leaves the rail with its one calm line.
+  @Test func aLineWithoutANextActionHasNoNextStepAndAnEmptyRailSaysSo() throws {
+    let zone = try #require(TimeZone(identifier: "Europe/Moscow"))
+    let now = Calendar.iso8601(in: zone).date(
+      from: DateComponents(year: 2026, month: 10, day: 1, hour: 12))!
+    let line = Line(
+      id: .generate(), refs: [], key: "japanese", name: "Japanese", emoji: nil,
+      block: "Languages", state: .active, budgetHoursPerWeek: nil, parentLink: nil,
+      taskRules: LineTaskRules())
+    let screen = TodayScreen(
+      Overview(workspace: Workspace(timeZone: zone, lines: [line]), now: now))
+    #expect(screen.noActivity.map(\.id) == [line.id])
+    #expect(screen.noActivity.first?.next == nil)
+    #expect(TodayScreen(Overview(workspace: Workspace(timeZone: zone), now: now)).railIsEmpty)
+  }
+
+  /// The catalog's Russian plurals, looked up in the app's `ru.lproj`.
+  @Test func russianPluralsResolveFromTheCatalog() throws {
+    let path = try #require(Bundle.main.path(forResource: "ru", ofType: "lproj"))
+    let ru = try #require(Bundle(path: path))
+    let russian = Locale(identifier: "ru")
+    func format(_ key: String, _ value: Int) -> String {
+      String(
+        format: ru.localizedString(forKey: key, value: nil, table: nil), locale: russian, value)
+    }
+    #expect(format("%lld sessions", 1) == "1 занятие")
+    #expect(format("%lld sessions", 3) == "3 занятия")
+    #expect(format("%lld sessions", 5) == "5 занятий")
+    #expect(format("quiet for %lld days", 21) == "тихо 21 день")
+    #expect(format("quiet for %lld days", 29) == "тихо 29 дней")
   }
 }

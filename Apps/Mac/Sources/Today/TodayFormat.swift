@@ -13,6 +13,11 @@ enum TodayFormat {
     date.formatted(style(timeZone, locale).day().month(.abbreviated))
   }
 
+  /// `2 September`: the day of a quiet line's last completion.
+  static func lastDate(_ date: Date, timeZone: TimeZone, locale: Locale) -> String {
+    date.formatted(style(timeZone, locale).day().month(.wide))
+  }
+
   /// An estimate as the catalog shows it: `≈ 45 min`, `≈ 2 h`, `≈ 1 h 15 min`.
   enum Estimate: Equatable {
     case minutes(Int)

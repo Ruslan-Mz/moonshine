@@ -18,6 +18,8 @@ struct MoonShineApp: App {
         Divider()
       }
       TodayCommands()
+      // Show / Hide Inspector, ⌃⌘I, in the View menu.
+      InspectorCommands()
     }
   }
 }

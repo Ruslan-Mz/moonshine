@@ -32,6 +32,45 @@ struct TodayScreen: Equatable {
     let rows: [Row]
   }
 
+  /// A row of Touched today: the day's sessions and tasks, never summed.
+  struct Touched: Identifiable, Hashable {
+    let id: LineAssignment
+    let emoji: String?
+    /// Nil for Life ops, which the view names in the UI language.
+    let name: String?
+    let sessions: Int
+    let tasks: Int
+  }
+
+  /// The line's first available next action in source order (owner, 2026-10-24).
+  struct NextStep: Hashable {
+    let title: String
+    let estimateMinutes: Int?
+  }
+
+  struct Quiet: Identifiable, Hashable {
+    let id: LineID
+    let emoji: String?
+    let name: String
+    let days: Int
+    let lastTitle: String
+    let lastDate: Date
+    let next: NextStep?
+  }
+
+  struct NoActivity: Identifiable, Hashable {
+    let id: LineID
+    let emoji: String?
+    let name: String
+    let next: NextStep?
+  }
+
+  struct Paused: Identifiable, Hashable {
+    let id: LineID
+    let emoji: String?
+    let name: String
+  }
+
   let day: Date
   let week: Int
   let timeZone: TimeZone
@@ -48,6 +87,16 @@ struct TodayScreen: Equatable {
   /// Most recent first.
   let doneToday: [Row]
   let totals: TodayTotals
+  /// The rail: vault order, Life ops last; paused lines are not touched (owner, 2026-10-27).
+  let touched: [Touched]
+  let quiet: [Quiet]
+  let noActivity: [NoActivity]
+  let paused: [Paused]
+
+  /// With nothing to show, the rail holds one calm line (owner, 2026-10-27).
+  var railIsEmpty: Bool {
+    touched.isEmpty && quiet.isEmpty && noActivity.isEmpty && paused.isEmpty
+  }
 
   /// Done today shows the most recent ones; the rest sit behind "N more".
   static let doneShown = 3
@@ -93,6 +142,36 @@ struct TodayScreen: Equatable {
     flaggedCount = today.flaggedCount
     doneToday = today.doneToday.map(Self.row)
     totals = today.totals
+    touched = today.touchedToday.compactMap { row in
+      let (sessions, tasks) = (row.counts.rhythm, row.counts.progress)
+      guard case .line(let id) = row.line else {
+        return Touched(id: row.line, emoji: "🧺", name: nil, sessions: sessions, tasks: tasks)
+      }
+      guard let line = lines[id] else { return nil }
+      return Touched(
+        id: row.line, emoji: line.emoji, name: line.name, sessions: sessions, tasks: tasks)
+    }
+    var quiet: [Quiet] = []
+    var noActivity: [NoActivity] = []
+    for line in today.quietLines {
+      let next = line.nextStep.map {
+        NextStep(title: $0.title, estimateMinutes: $0.estimateMinutes)
+      }
+      switch line.reason {
+      case .quiet(let days, let last):
+        guard let done = last.completedAt else { continue }
+        quiet.append(
+          Quiet(
+            id: line.line.id, emoji: line.line.emoji, name: line.line.name, days: days,
+            lastTitle: last.title, lastDate: done, next: next))
+      case .noActivityYet:
+        noActivity.append(
+          NoActivity(id: line.line.id, emoji: line.line.emoji, name: line.line.name, next: next))
+      }
+    }
+    self.quiet = quiet
+    self.noActivity = noActivity
+    paused = today.pausedLines.map { Paused(id: $0.id, emoji: $0.emoji, name: $0.name) }
   }
 
   private static func row(_ item: TodayItem) -> Row {
