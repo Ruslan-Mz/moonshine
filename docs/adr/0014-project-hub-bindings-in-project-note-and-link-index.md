@@ -62,6 +62,8 @@ Keys are flat on purpose: MoonShine later writes `omnifocus_id` by editing one l
 
 Any other note joins a project with `project: <id>` (one id or a list), or by being linked from the project note.
 
+**Amendment (2026-10-26, owner; ADR-0021).** The Library module binds a book or article note to an OmniFocus project or task with the same `omnifocus_id` key, typed by hand until the Write phase sets it. Such a note is a module note found by the owner's own `type` key, not a project note: it carries no `moonshine: project` marker and no `id`. Its book page is a variant of the hub page (the fields, the bound tasks, progress, "Open in Obsidian"). An `omnifocus_id` that names no task or project in the snapshot gives `libraryBindingMissing` only on a book in state `reading` or `paused`, and never for an id the store has seen before (owner, 2026-10-27).
+
 ### One `Project`, several anchors
 
 `Project` keeps its `UUIDv7`. Its anchors:

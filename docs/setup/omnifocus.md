@@ -1,0 +1,33 @@
+# OmniFocus setup for MoonShine
+
+What to set up by hand in OmniFocus for features that read it. MoonShine never writes to OmniFocus before the Act phase, so these steps stay manual until then.
+
+## Period quotas: "N times per week or month" (ADR-0020)
+
+A quota is a tag on a **repeating** task: `2/нед` (or `2/week`) for twice a week, `1/мес` (or `1/month`) for once a month. A trailing `!` makes a period that ended short show in amber; a trailing `+` lets the surplus of a period count toward the next one. The full grammar and the problems are in `docs/discovery/snapshot-contract.md` § Quota tags.
+
+**Repeat the task "after completion", not on a fixed schedule.** In the task's repeat settings choose a repeat from completion, for example defer again 1 day after it is completed.
+
+Why: with a fixed weekly due date, completing the task once moves it to next week. The second completion this week can then never happen, and a `2/нед` quota could never be met. Repeating 1 day after completion brings the task back the next day, so it can be done again this week; once the week's count is reached, MoonShine takes it off Today until the next week starts.
+
+A quota tag on a task that does not repeat gives the problem `quotaNotRepeating`, and the task behaves as usual.
+
+## Binding a book note to OmniFocus (ADR-0021, ADR-0014)
+
+The Library module shows a book's tasks and its reading progress when the book's note names the bound OmniFocus project or task in `omnifocus_id`. Until the Write phase, when MoonShine sets this key itself, add it by hand:
+
+1. In OmniFocus, select the book's project or its reading task and choose **Edit → Copy as Link**. The link has the form `omnifocus:///task/<id>` or `omnifocus:///project/<id>`.
+2. Take the **last path segment** of the link, whichever form it has: that is the id.
+3. In the book note's frontmatter, add one line with it:
+
+   ```yaml
+   omnifocus_id: abc123XYZ # invented example
+   ```
+
+What the book page shows as progress depends on the binding:
+
+- a repeating task with a quota tag: that quota's history in its own period, with the quota as a line;
+- a task without a quota: its completions per week;
+- a project: the completions of all its tasks per week, plus the quota line of a quota task inside it if there is one.
+
+An id that names no task or project in the snapshot gives the problem `libraryBindingMissing`, but only for a book in state `reading` or `paused`, and never for an id MoonShine has seen before: a finished book whose project was completed long ago stays quiet. A book with no `omnifocus_id` is listed in the Library without progress and without a problem. The note's other fields are in `docs/discovery/vault-contract.md` §7.

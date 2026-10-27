@@ -111,6 +111,8 @@ covers: 2026-10 # optional: an ISO week (2026-W43) or a month (2026-10)
 - **Parent line card:** the nested line as a chip. The parent's hours are not split.
 - **Weekly and quarterly review:** practices as regularity ("5 of 7 days", "4 of 4 weeks met"), not as hours.
 
+**Amendment (2026-10-26, owner; ADR-0020).** Period quotas on repeating OmniFocus tasks share this ADR's period, streak and read-state rules: ISO weeks starting on Monday and calendar months, in local dates; the streak of consecutive periods that met their target, with the running period never counted as missed; and the read state (**read**, **partly read** shown as "at least", **unavailable** with the last known counts and their date, never 0, and no streak broken by a failed read). One period engine serves practices and quotas.
+
 ### Memos
 
 A memo's `after.entry` (ADR-0018) names a line and a kind. The memo shows "written" when a matching entry exists for that day. The memo's own outcome is kept by MoonShine, but the fact of writing comes only from the entry.
