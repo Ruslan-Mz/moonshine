@@ -26,7 +26,7 @@ Some of the owner's repeating tasks have no due date in the usual sense. What ma
 - Works while OmniFocus is read-only (before the Act phase).
 - The same period rules as practice targets (ADR-0019): ISO week from Monday, calendar month, local dates, a streak of periods, the current period never counted as missed while it runs, a failed read never shown as zero.
 - Some quotas are gentle reminders of a habit; others matter. The owner chooses how loud a short period is.
-- UI tone (CLAUDE.md rule 8): no red, no "missed" or "overdue" wording; amber only where the owner asked for emphasis.
+- UI tone (CLAUDE.md rule 8): no red, no "missed" or "overdue" wording; amber only where the owner asked for emphasis. Rule 8 is amended for this (owner, 2026-10-27): amber marks a commitment the owner chose to make loud, a deadline or a strong quota (its time state or a period that ended short); no red anywhere. The phase-1 spec's deadline rule, `design/screens/settings.md` and `design/tokens.md` carry the same exception.
 
 ## Considered Options
 
@@ -45,18 +45,21 @@ Some of the owner's repeating tasks have no due date in the usual sense. What ma
   - `N/мес` (also `N/month`) — N from 1 to 31;
   - an optional trailing `!` marks strong emphasis;
   - an optional trailing `+` allows carry-over (below). Both may be present in either order, e.g. `2/мес+!`.
-- **Only repeating tasks.**
-  - A quota tag on a non-repeating task gives the problem `quotaNotRepeating`, and the task behaves as usual.
-  - A tag that looks like a quota but is out of range gives `quotaInvalid`.
-  - Two quota tags on one task give `quotaAmbiguous`, and neither applies. No tag wins over another.
-- **Reminders** (ADR-0017) carry no quota. A quota tag on a reminder is ignored and reported.
+- **Quota-like and valid** (owner, 2026-10-27):
+  - a tag is **quota-like** when it is a number, `/`, letters, then any run of `!` and `+`;
+  - it is **valid** when the unit is known (`нед`, `week`, `мес`, `month`), N is in range, and each suffix appears at most once;
+  - a quota-like tag that is not valid gives `quotaInvalid` and is ignored. So `2/нед!!`, `9/нед` and `2/день` are `quotaInvalid`.
+- **Checks, in this order** (owner, 2026-10-27); the first that applies decides, and the task gets one problem:
+  1. **Reminders** (ADR-0017) carry no quota. A valid quota tag on a reminder, repeating or not, gives `quotaOnReminder` and is ignored.
+  2. **Only repeating tasks.** A valid quota tag on a non-repeating task gives `quotaNotRepeating`, and the task behaves as usual.
+  3. **One quota per task.** Two or more valid quota tags give `quotaAmbiguous`, and none applies. No tag wins over another. `quotaInvalid` tags do not count here: `2/нед` with `9/нед` applies `2/нед`, and `9/нед` gives `quotaInvalid`.
 
 ### Counting
 
 - **What counts:** the completed copies of the task's repeat series (the live task and its completed occurrences in the snapshot) whose completion date, in the workspace time zone, falls in the period.
 - **Periods:** an ISO week starting on Monday, or a calendar month.
-- **Coverage:** the snapshot's completion window must cover the current and the previous period, up to 62 days.
-  - When it does not, the count is **partly read**, shown as "at least N", and no period is reported short.
+- **Coverage:** the snapshot's completion window must cover the current and the previous period, up to 62 days. A `+` quota also needs the period before the previous one, up to 92 days, because the previous period's carried surplus comes from it.
+  - When it does not, the count is **partly read**, shown as "at least N", and no period is reported short. For a `+` quota whose stored history does not reach the start of the period before the previous one, the previous period is partly read and not reported short.
   - When the snapshot cannot be read, the last known counts are shown with their date, never 0.
 
 ### Showing it
@@ -99,15 +102,15 @@ The consecutive periods that met their quota, shown wherever practice streaks ar
 
 ### Problems
 
-| Kind                       | When                              | Effect  |
-| -------------------------- | --------------------------------- | ------- |
-| `quotaInvalid`             | a quota-like tag out of range     | ignored |
-| `quotaAmbiguous`           | two quota tags on one task        | ignored |
-| `quotaNotRepeating`        | quota tag on a non-repeating task | ignored |
-| `quotaOnReminder`          | quota tag on a reminder           | ignored |
-| `lineQuotaEmphasisInvalid` | a bad `quota_emphasis` value      | neutral |
+| Kind                       | When                                                                              | Effect  |
+| -------------------------- | --------------------------------------------------------------------------------- | ------- |
+| `quotaInvalid`             | a quota-like tag that is not valid (unknown unit, N out of range, a suffix twice) | ignored |
+| `quotaAmbiguous`           | two or more valid quota tags on one task                                          | ignored |
+| `quotaNotRepeating`        | a valid quota tag on a non-repeating task                                         | ignored |
+| `quotaOnReminder`          | a valid quota tag on a reminder, repeating or not                                 | ignored |
+| `lineQuotaEmphasisInvalid` | a bad `quota_emphasis` value                                                      | neutral |
 
-Every problem names the task by its OmniFocus id, never by title (rule 5 for logs).
+In the UI a problem names its task (owner, 2026-10-27, as ADR-0021); the OmniFocus id identifies the task in the store. Logs carry only the kind and a count (rule 5).
 
 ### Roadmap
 
@@ -132,14 +135,16 @@ Every problem names the task by its OmniFocus id, never by title (rule 5 for log
 - **Grammar tests:**
   - every valid form, Russian and English, with and without `!` and `+`, in either order;
   - out-of-range values;
-  - two quota tags;
+  - two valid quota tags, and one valid with one `quotaInvalid` (the valid one applies);
+  - a quota-like tag with a suffix twice (`2/нед!!`) or an unknown unit;
   - a non-repeating task;
-  - a reminder.
+  - a reminder, repeating and not (`quotaOnReminder` only).
 - **Count tests:**
   - completions on Sunday 23:59 and Monday 00:00 land in different weeks;
   - the month boundary;
   - a copy completed in the previous period is not counted;
-  - a window that does not reach the period start gives "partly read" and no short period.
+  - a window that does not reach the period start gives "partly read" and no short period;
+  - a `+` quota whose history does not reach the period before the previous one: the previous period is partly read and not short.
 - **Over-quota tests:**
   - 3 of 2 is met and the history keeps 3;
   - without `+` the next period starts at 0;
@@ -151,4 +156,5 @@ Every problem names the task by its OmniFocus id, never by title (rule 5 for log
     - with neutral emphasis it shows only on the first day;
     - with strong emphasis it stays until met;
     - the task's `!` overrides the line default.
-- **Tone check:** no red; no "missed" or "overdue" in English or Russian.
+- **Tone check:** no red; no "missed" or "overdue" in English or Russian; amber only for deadlines and strong quotas.
+- **Privacy:** quota problems in logs carry the kind and a count, no id or title.

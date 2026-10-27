@@ -118,18 +118,21 @@ The mapping is editable in Settings.
 - **Book page** (a hub page variant):
   - the fields;
   - the bound tasks;
-  - **progress** — the quota history of the bound repeating task per week, with real counts (ADR-0020) and the quota as a line, plus `current_page / pages_total` when both are present;
+  - **progress**, by what the note is bound to (owner, 2026-10-27), with real counts (ADR-0020), plus `current_page / pages_total` when both are present:
+    - a task with a quota: that quota's history in its own period (a monthly quota gives monthly bars), with the quota as a line;
+    - a task without a quota: its completions per week;
+    - a project: the completions of all its tasks per week, plus the quota line of a quota task inside it if there is one;
   - "Open in Obsidian";
   - later, ritual buttons ("Summary", "Report") that start the owner's templates (ADR-0015).
 
 **Problems:**
 
-| Kind                       | When                                                               |
-| -------------------------- | ------------------------------------------------------------------ |
-| `libraryStatusUnknown`     | a status with no mapping                                           |
-| `libraryFieldInvalid`      | a typed field that does not parse (a date, a page count, a rating) |
-| `libraryPagesInconsistent` | `current_page` greater than `pages_total`                          |
-| `libraryBindingMissing`    | `omnifocus_id` names no task or project in the snapshot            |
+| Kind                       | When                                                                                                                                                        |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `libraryStatusUnknown`     | a status with no mapping                                                                                                                                    |
+| `libraryFieldInvalid`      | a typed field that does not parse (a date, a page count, a rating)                                                                                          |
+| `libraryPagesInconsistent` | `current_page` greater than `pages_total`                                                                                                                   |
+| `libraryBindingMissing`    | `omnifocus_id` names no task or project in the snapshot, on a book in state `reading` or `paused`, and the store has never seen that id (owner, 2026-10-27) |
 
 In the UI a problem names its note. Logs carry only the kind and a count (rule 5).
 
@@ -137,13 +140,15 @@ In the UI a problem names its note. Logs carry only the kind and a count (rule 5
 
 - When the vault is unavailable, the last known lists are shown with their date, never an empty library.
 - A rejected note is listed under its problem, not dropped.
+- A finished or set-aside book whose project was completed long ago and has left the snapshot gives no problem: `libraryBindingMissing` is only for books in `reading` or `paused`, and never for an id the store has seen before.
+- A note whose frontmatter is not closed within the scanner's 8 KiB gives `frontmatterTooLarge` when those 8 KiB hold a top-level `type:` line naming a note kind of an enabled module (vault contract §6).
 
 ### Roadmap
 
 | Phase / slice | Change                                                                                                                                                                                              |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | After Hub     | **Library L1** (risky: parses vault notes): the module frame, note kinds, fields, states, problems, the Library screen. **Library L2** (plain): the book page with progress from the quota history. |
-| Write         | Ritual buttons on the book page; MoonShine sets `omnifocus_id`.                                                                                                                                     |
+| Write         | Ritual buttons on the book page; MoonShine sets `omnifocus_id` on book notes.                                                                                                                       |
 | Later         | Native library records (option 3). Integrations, e.g. Zotero for articles. A named body section (an academic book's chapter checklist) as a progress source.                                        |
 
 ### Consequences
@@ -168,9 +173,11 @@ In the UI a problem names its note. Logs carry only the kind and a count (rule 5
   - an unknown status lists the note under "Unknown status";
   - changing the mapping in Settings moves notes between states;
   - an unbound book has no progress and no problem;
-  - a binding to a missing id gives `libraryBindingMissing`.
+  - a binding to a missing id gives `libraryBindingMissing` on a book in `reading` or `paused`, and nothing on a book in `done`, or for an id the store has seen before.
 - **Progress tests:**
   - weeks with 1, 3 and 2 completions against a 2/week quota show 1, 3 and 2 with the quota line;
+  - a `1/мес` quota shows monthly bars; a task without a quota shows completions per week;
+  - a project binding shows the completions of all its tasks per week, with the quota line of its quota task when it has one;
   - pages progress appears only when both fields are valid.
 - **Read-state tests:** an unreadable vault shows the last lists with their date.
 - **Privacy:** no title, author or path appears in logs or problem texts sent anywhere.

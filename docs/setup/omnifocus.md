@@ -16,12 +16,18 @@ A quota tag on a task that does not repeat gives the problem `quotaNotRepeating`
 
 The Library module shows a book's tasks and its reading progress when the book's note names the bound OmniFocus project or task in `omnifocus_id`. Until the Write phase, when MoonShine sets this key itself, add it by hand:
 
-1. In OmniFocus, select the book's project (or its repeating reading task) and choose **Edit → Copy as Link**. The link has the form `omnifocus:///task/<id>`.
-2. Take the part after `/task/`: that is the id.
+1. In OmniFocus, select the book's project or its reading task and choose **Edit → Copy as Link**. The link has the form `omnifocus:///task/<id>` or `omnifocus:///project/<id>`.
+2. Take the **last path segment** of the link, whichever form it has: that is the id.
 3. In the book note's frontmatter, add one line with it:
 
    ```yaml
    omnifocus_id: abc123XYZ # invented example
    ```
 
-An id that names no task or project in the latest snapshot gives the problem `libraryBindingMissing`. A book with no `omnifocus_id` is listed in the Library without progress and without a problem. The note's other fields are in `docs/discovery/vault-contract.md` §7.
+What the book page shows as progress depends on the binding:
+
+- a repeating task with a quota tag: that quota's history in its own period, with the quota as a line;
+- a task without a quota: its completions per week;
+- a project: the completions of all its tasks per week, plus the quota line of a quota task inside it if there is one.
+
+An id that names no task or project in the snapshot gives the problem `libraryBindingMissing`, but only for a book in state `reading` or `paused`, and never for an id MoonShine has seen before: a finished book whose project was completed long ago stays quiet. A book with no `omnifocus_id` is listed in the Library without progress and without a problem. The note's other fields are in `docs/discovery/vault-contract.md` §7.
