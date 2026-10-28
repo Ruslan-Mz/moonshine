@@ -14,8 +14,13 @@ enum TodayFormat {
   }
 
   /// `2 September`: the day of a quiet line's last completion.
-  static func lastDate(_ date: Date, timeZone: TimeZone, locale: Locale) -> String {
-    date.formatted(style(timeZone, locale).day().month(.wide))
+  /// `2 September 2025` when its year is not `today`'s (owner, 2026-10-28).
+  static func lastDate(_ date: Date, today: Date, timeZone: TimeZone, locale: Locale) -> String {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = timeZone
+    let style = style(timeZone, locale).day().month(.wide)
+    let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: today)
+    return date.formatted(sameYear ? style : style.year())
   }
 
   /// An estimate as the catalog shows it: `≈ 45 min`, `≈ 2 h`, `≈ 1 h 15 min`.

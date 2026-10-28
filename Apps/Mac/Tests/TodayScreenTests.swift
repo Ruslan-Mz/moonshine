@@ -102,9 +102,26 @@ private func demo() async throws -> (Overview, TodayScreen) {
     let lateEvening = DemoVault.calendar.date(
       from: DateComponents(year: 2026, month: 9, day: 1, hour: 23, minute: 30))!
     #expect(
-      TodayFormat.lastDate(lateEvening, timeZone: moscow, locale: english) == "1 September")
+      TodayFormat.lastDate(lateEvening, today: now, timeZone: moscow, locale: english)
+        == "1 September")
     #expect(
-      TodayFormat.lastDate(lateEvening, timeZone: auckland, locale: english) == "2 September")
+      TodayFormat.lastDate(lateEvening, today: now, timeZone: auckland, locale: english)
+        == "2 September")
+    // A year other than today's is shown; the year is the zone's: 31 December 2025 23:30 in
+    // Moscow is already 2026 in Auckland.
+    let lastYear = DemoVault.calendar.date(
+      from: DateComponents(year: 2025, month: 9, day: 2, hour: 8))!
+    #expect(
+      TodayFormat.lastDate(lastYear, today: now, timeZone: moscow, locale: english)
+        == "2 September 2025")
+    let newYearsEve = DemoVault.calendar.date(
+      from: DateComponents(year: 2025, month: 12, day: 31, hour: 23, minute: 30))!
+    #expect(
+      TodayFormat.lastDate(newYearsEve, today: now, timeZone: moscow, locale: english)
+        == "31 December 2025")
+    #expect(
+      TodayFormat.lastDate(newYearsEve, today: now, timeZone: auckland, locale: english)
+        == "1 January")
   }
 
   @Test func estimatesAndDueStyles() {
@@ -412,8 +429,11 @@ private func demo() async throws -> (Overview, TodayScreen) {
         ).day)
     #expect(italian.days == 30)
     let quietOrNew = Set(screen.quiet.map(\.id) + screen.noActivity.map(\.id))
-    for line in lines where line.foundation || line.state != .active {
+    for line in lines where line.state != .active {
       #expect(!quietOrNew.contains(line.id))
+    }
+    for line in lines where line.foundation {
+      #expect(!screen.quiet.contains { $0.id == line.id })
     }
     #expect(screen.paused.compactMap { key($0.id) } == ["calligraphy"])
     let touched = overview.today().touchedToday
@@ -421,7 +441,16 @@ private func demo() async throws -> (Overview, TodayScreen) {
     #expect(screen.touched.map(\.id) == touched.map(\.line))
     #expect(screen.touched.map(\.sessions) == touched.map(\.counts.rhythm))
     #expect(screen.touched.map(\.tasks) == touched.map(\.counts.progress))
-    #expect(!screen.touched.contains { $0.name == "Calligraphy" })
+    // The card carries Core's last task and next step; the paused-line rule is pinned in Core.
+    let core = try #require(overview.today().quietLines.first { $0.line.id == italian.id })
+    guard case .quiet(_, let lastTask) = core.reason else {
+      Issue.record("Italian is not quiet in Core")
+      return
+    }
+    let next = try #require(core.nextStep)
+    #expect(italian.lastTitle == lastTask.title)
+    #expect(italian.next?.title == next.title)
+    #expect(italian.next?.estimateMinutes == next.estimateMinutes)
     #expect(!screen.railIsEmpty)
   }
 
@@ -440,6 +469,37 @@ private func demo() async throws -> (Overview, TodayScreen) {
     #expect(screen.noActivity.map(\.id) == [line.id])
     #expect(screen.noActivity.first?.next == nil)
     #expect(TodayScreen(Overview(workspace: Workspace(timeZone: zone), now: now)).railIsEmpty)
+  }
+
+  /// Invented: a paused line with a task completed today is only under Paused on purpose,
+  /// while an active line completed today has its Touched today row.
+  @Test func aPausedLineCompletedTodayIsNotInTouchedToday() throws {
+    let zone = try #require(TimeZone(identifier: "Europe/Moscow"))
+    let now = Calendar.iso8601(in: zone).date(
+      from: DateComponents(year: 2026, month: 10, day: 1, hour: 12))!
+    func line(_ key: LineKey, _ state: LineState) -> Line {
+      Line(
+        id: .generate(), refs: [], key: key, name: key.rawValue, emoji: nil, block: "Arts",
+        state: state, budgetHoursPerWeek: nil, parentLink: nil, taskRules: LineTaskRules())
+    }
+    let flute = line("flute", .active)
+    let sketching = line("sketching", .paused)
+    func done(_ line: Line) -> TaskItem {
+      TaskItem(
+        id: .generate(), refs: [], title: "Done", projectID: nil, parentTaskID: nil,
+        tagIDs: [], status: .completed, flagged: false, plannedAt: nil, deferUntil: nil,
+        dueAt: nil, effectivePlannedAt: nil, effectiveDeferUntil: nil, effectiveDueAt: nil,
+        estimateMinutes: nil, completedAt: now.addingTimeInterval(-3600), modifiedAt: nil,
+        occurrenceOf: nil, line: .line(line.id))
+    }
+    let screen = TodayScreen(
+      Overview(
+        workspace: Workspace(
+          timeZone: zone, lines: [flute, sketching], tasks: [done(flute), done(sketching)]),
+        now: now))
+    #expect(screen.touched.map(\.id) == [.line(flute.id)])
+    #expect(screen.touched.map(\.tasks) == [1])
+    #expect(screen.paused.map(\.id) == [sketching.id])
   }
 
   /// The catalog's Russian plurals, looked up in the app's `ru.lproj`.

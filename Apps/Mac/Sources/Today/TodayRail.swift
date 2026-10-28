@@ -48,7 +48,9 @@ struct TodayRail: View {
   private var quiet: some View {
     RailSection("Quiet lines") {
       VStack(alignment: .leading, spacing: 10) {
-        ForEach(screen.quiet) { QuietLineCard(line: $0, timeZone: screen.timeZone) }
+        ForEach(screen.quiet) {
+          QuietLineCard(line: $0, today: screen.day, timeZone: screen.timeZone)
+        }
         ForEach(screen.noActivity) { NoActivityCard(line: $0) }
         Text(
           "Quiet: an active line with no completed task for \(Overview.quietAfterDays) days or more. Foundation, maintenance and paused lines are never quiet."
@@ -128,6 +130,7 @@ private struct CountText: View {
 /// `design/components.md` § QuietLineCard: a fact, then a next step.
 private struct QuietLineCard: View {
   let line: TodayScreen.Quiet
+  let today: Date
   let timeZone: TimeZone
   @Environment(\.locale) private var locale
 
@@ -141,7 +144,7 @@ private struct QuietLineCard: View {
           .lineLimit(1)
       }
       Text(
-        "Last: \(line.lastTitle), \(TodayFormat.lastDate(line.lastDate, timeZone: timeZone, locale: locale))"
+        "Last: \(line.lastTitle), \(TodayFormat.lastDate(line.lastDate, today: today, timeZone: timeZone, locale: locale))"
       )
       .foregroundStyle(.secondary)
       Divider()

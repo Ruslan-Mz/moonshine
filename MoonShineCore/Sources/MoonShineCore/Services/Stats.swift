@@ -119,12 +119,13 @@ public struct Stats: Sendable {
       progress: Double(previous.map(\.counts.progress).reduce(0, +)) / total)
   }
 
-  /// A day's counts (owner, 2026-10-27): a session counts on every day one of its completions
-  /// falls on; weeks keep its first completion.
-  public func counts(_ line: LineAssignment, in range: Horizon) -> WeekCounts {
-    WeekCounts(
-      rhythm: (sessionDates[line] ?? []).filter { $0.contains(where: range.contains) }.count,
-      progress: (oneOffDates[line] ?? []).filter(range.contains).count)
+  /// The counts of the day around `date` (owner, 2026-10-27): a session counts on every day one
+  /// of its completions falls on; weeks keep its first completion.
+  public func dayCounts(_ line: LineAssignment, on date: Date) -> WeekCounts {
+    guard let day = Horizon.containing(date, scale: .day, calendar: calendar) else { return .zero }
+    return WeekCounts(
+      rhythm: (sessionDates[line] ?? []).filter { $0.contains(where: day.contains) }.count,
+      progress: (oneOffDates[line] ?? []).filter(day.contains).count)
   }
 
   public func lastCompletion(_ line: LineAssignment) -> Date? {

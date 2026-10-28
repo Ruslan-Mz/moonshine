@@ -272,12 +272,13 @@ public struct Overview: Sendable {
       doneToday: doneToday,
       totals: TodayTotals(open: open.count, done: done.count, estimateMinutes: estimate),
       touchedToday: lineOrder.filter(touched.contains).map {
-        TouchedLine(line: $0, counts: stats.counts($0, in: day))
+        TouchedLine(line: $0, counts: stats.dayCounts($0, on: now))
       },
       quietLines: quietLines(day), pausedLines: paused)
   }
 
-  /// Active lines but foundation ones, with no completion for `quietAfterDays` or none at all.
+  /// Active lines with no completion for `quietAfterDays`, foundation lines never (owner,
+  /// 2026-10-24), or with none at all, foundation lines included (owner, 2026-10-28).
   private func quietLines(_ day: Horizon) -> [QuietLine] {
     var lastDone: [LineAssignment: TaskItem] = [:]
     for task in workspace.tasks where task.status == .completed {
@@ -288,13 +289,13 @@ public struct Overview: Sendable {
     }
     let firstNext = Dictionary(
       nextActions.map { ($0.line, $0) }, uniquingKeysWith: { first, _ in first })
-    return workspace.lines.filter { $0.state == .active && !$0.foundation }.compactMap { line in
+    return workspace.lines.filter { $0.state == .active }.compactMap { line in
       let next = firstNext[.line(line.id)]
       guard let last = lastDone[.line(line.id)], let done = last.completedAt else {
         return QuietLine(line: line, reason: .noActivityYet, nextStep: next)
       }
       let days = calendarDays(from: done, to: day)
-      guard days >= Self.quietAfterDays else { return nil }
+      guard !line.foundation, days >= Self.quietAfterDays else { return nil }
       return QuietLine(line: line, reason: .quiet(days: days, last: last), nextStep: next)
     }
   }

@@ -134,12 +134,14 @@ import Testing
     world.task("C", line: .line(maintenance.id), completed: W.date(2026, 8, 1))
     world.task("D", line: .lifeOps, completed: W.date(2026, 8, 1))
     world.task("E", line: .line(foundation.id), completed: W.date(2026, 8, 1))
-    _ = (fresh, paused, newFoundation)
+    let first = world.task("Warm-up", line: .line(newFoundation.id))
+    _ = (fresh, paused)
     let today = Overview(workspace: world.workspace, now: now).today()
     #expect(
       today.quietLines == [
         QuietLine(line: quiet, reason: .quiet(days: 14, last: last), nextStep: nil),
         QuietLine(line: fresh, reason: .noActivityYet, nextStep: nil),
+        QuietLine(line: newFoundation, reason: .noActivityYet, nextStep: first),
       ])
   }
 

@@ -61,7 +61,7 @@ Rule: active lines with no completion for ≥ 14 days. Never maintenance, never 
 
 ## NoActivityCard
 
-Dashed border, no fill: emoji + name + `no activity yet`; "First step: …", the same next-action rule as the QuietLineCard, or `no next action`.
+Dashed border, no fill: emoji + name + `no activity yet`; "First step: …", the same next-action rule as the QuietLineCard, or `no next action`. An active line with no completions at all, foundation lines included (owner, 2026-10-28).
 
 ## LineStateLabel
 
