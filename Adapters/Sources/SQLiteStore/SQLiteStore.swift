@@ -93,6 +93,7 @@ public struct SQLiteStore: Store {
     let record = try WorkspaceRecord.fetchOne(db)
     return StoredWorkspace(
       timeZone: record.flatMap { TimeZone(identifier: $0.timeZone) } ?? fallback,
+      defaultTimeSettings: try record?.defaultTimeSettings() ?? DefaultTimeSettings(),
       lines: try rows(LineRecord.self), artifacts: try rows(ArtifactRecord.self),
       notes: try rows(NoteRecord.self), projects: try rows(ProjectRecord.self),
       tasks: try rows(TaskRecord.self), tags: try rows(TagRecord.self),

@@ -10,7 +10,7 @@ struct TodayScreen: Equatable {
     /// project → line → artifact (or the line's parent note); a missing step is left out.
     let trace: [String]
     let estimateMinutes: Int?
-    /// The effective due date, shown as a date only until S4-3a brings the default times.
+    /// The effective due date, shown as a date only until S4-3b shows due times (owner, 2026-10-28).
     let due: Date?
     let isUrgent: Bool
     let plannedDaysAgo: Int?

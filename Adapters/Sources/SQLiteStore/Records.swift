@@ -12,6 +12,8 @@ extension Date {
 
 enum SQLiteStoreError: Error, Equatable {
   case unknownValue(column: String, value: String)
+  /// A stored number outside its range; the value is left out.
+  case outOfRange(column: String)
 }
 
 func decode<Value: RawRepresentable>(_ raw: String, _ column: String) throws -> Value
@@ -320,7 +322,8 @@ struct TaskRecord: EntityRecord {
   }
 }
 
-/// The single `workspace` row: time zone as data, and the issues of the last import.
+/// The single `workspace` row: time zone as data, OmniFocus' default times and the issues of
+/// the last import.
 struct WorkspaceRecord: Codable, FetchableRecord, PersistableRecord {
   static let databaseTableName = "workspace"
   static let databaseColumnDecodingStrategy = DatabaseColumnDecodingStrategy.convertFromSnakeCase
@@ -331,9 +334,19 @@ struct WorkspaceRecord: Codable, FetchableRecord, PersistableRecord {
     case unknownLineKey(key: String, in: String)
     case vault(path: String, line: Int?, kind: VaultProblem.Kind, key: String?)
     case vaultWide(kind: VaultProblem.Kind, key: String?)
+    case defaultTimesNotRead
+  }
+  /// Minutes from midnight, read in the row's time zone. Absent from a row written before
+  /// S4-3a.
+  struct Times: Codable, Equatable {
+    var due: Int?
+    var `defer`: Int?
+    var planned: Int?
   }
   struct Attrs: Codable, Equatable {
     var issues: [Issue]
+    /// nil when every time is absent: one encoding for that state.
+    var defaultTimes: Times?
   }
   var id = 1
   var timeZone: String
@@ -356,8 +369,33 @@ struct WorkspaceRecord: Codable, FetchableRecord, PersistableRecord {
           .vault(path: path, line: line, kind: problem.kind, key: problem.key)
         case .vaultWide(let problem):
           .vaultWide(kind: problem.kind, key: problem.key)
+        case .defaultTimesNotRead: .defaultTimesNotRead
         }
-      })
+      },
+      defaultTimes: Self.times(stored.defaultTimeSettings))
+  }
+
+  private static func times(_ settings: DefaultTimeSettings) -> Times? {
+    func minutes(_ time: TimeOfDay?) -> Int? { time.map { $0.hour * 60 + $0.minute } }
+    let times = Times(
+      due: minutes(settings.due), defer: minutes(settings.defer),
+      planned: minutes(settings.planned))
+    return times == Times() ? nil : times
+  }
+
+  /// Every stored minute is checked: one outside 0..<1440 throws, naming only its key.
+  func defaultTimeSettings() throws -> DefaultTimeSettings {
+    func time(_ minutes: Int?, _ key: String) throws -> TimeOfDay? {
+      guard let minutes else { return nil }
+      guard let time = TimeOfDay(hour: minutes / 60, minute: minutes % 60) else {
+        throw SQLiteStoreError.outOfRange(column: "workspace.attrs.defaultTimes.\(key)")
+      }
+      return time
+    }
+    guard let times = attrs.defaultTimes else { return DefaultTimeSettings() }
+    return DefaultTimeSettings(
+      due: try time(times.due, "due"), defer: try time(times.defer, "defer"),
+      planned: try time(times.planned, "planned"))
   }
 
   var issues: [ImportIssue] {
@@ -371,6 +409,7 @@ struct WorkspaceRecord: Codable, FetchableRecord, PersistableRecord {
         .vault(path: path, line: line, problem: VaultProblem(kind, key: key))
       case .vaultWide(let kind, let key):
         .vaultWide(VaultProblem(kind, key: key))
+      case .defaultTimesNotRead: .defaultTimesNotRead
       }
     }
   }

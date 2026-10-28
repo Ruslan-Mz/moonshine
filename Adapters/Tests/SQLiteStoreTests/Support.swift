@@ -23,12 +23,14 @@ struct FixedTaskProvider: TaskProvider {
 }
 
 extension TaskSourceSnapshot {
+  /// `defaultTimes: .some(nil)` says the times were not read; leaving it out keeps them.
   func with(
-    timeZone: TimeZone? = nil, tags: [SourceTag]? = nil, projects: [SourceProject]? = nil,
-    tasks: [SourceTask]? = nil
+    timeZone: TimeZone? = nil, defaultTimes: DefaultTimeSettings?? = nil,
+    tags: [SourceTag]? = nil, projects: [SourceProject]? = nil, tasks: [SourceTask]? = nil
   ) -> TaskSourceSnapshot {
     TaskSourceSnapshot(
       provider: provider, generatedAt: generatedAt, timeZone: timeZone ?? self.timeZone,
+      defaultTimes: defaultTimes ?? self.defaultTimes,
       tags: tags ?? self.tags, projects: projects ?? self.projects, tasks: tasks ?? self.tasks)
   }
 
@@ -119,6 +121,8 @@ func expectSame(
   _ actual: Workspace, _ expected: Workspace, sourceLocation: SourceLocation = #_sourceLocation
 ) {
   #expect(actual.timeZone == expected.timeZone, sourceLocation: sourceLocation)
+  #expect(
+    actual.defaultTimeSettings == expected.defaultTimeSettings, sourceLocation: sourceLocation)
   #expect(actual.lines == expected.lines, sourceLocation: sourceLocation)
   #expect(actual.artifacts == expected.artifacts, sourceLocation: sourceLocation)
   #expect(actual.notes == expected.notes, sourceLocation: sourceLocation)

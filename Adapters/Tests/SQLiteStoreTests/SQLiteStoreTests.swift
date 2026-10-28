@@ -50,6 +50,53 @@ import Testing
     #expect(try await store.workspace().issues == issues)
   }
 
+  @Test func defaultTimesSurviveClosingAndReopeningTheFile() async throws {
+    let path = temporaryDatabasePath()
+    let times = DefaultTimeSettings(
+      due: TimeOfDay(hour: 17, minute: 0), planned: TimeOfDay(hour: 9, minute: 30))
+    try await SQLiteStore(path: path).commit(
+      Workspace(timeZone: .gmt, defaultTimeSettings: times), identities: IdentityMap(),
+      expectedVersion: 0, at: first)
+    #expect(try await SQLiteStore(path: path).workspace().defaultTimeSettings == times)
+  }
+
+  @Test func allAbsentDefaultTimesHaveOneEncoding() throws {
+    let record = WorkspaceRecord(
+      StoredWorkspace(timeZone: .gmt, defaultTimeSettings: DefaultTimeSettings()),
+      committedAt: 0, version: 1)
+    #expect(record.attrs.defaultTimes == nil)
+    let set = WorkspaceRecord(
+      StoredWorkspace(
+        timeZone: .gmt, defaultTimeSettings: DefaultTimeSettings(due: TimeOfDay(hour: 0, minute: 0))
+      ), committedAt: 0, version: 1)
+    #expect(set.attrs.defaultTimes == WorkspaceRecord.Times(due: 0))
+  }
+
+  @Test func aWorkspaceRowFromBeforeDefaultTimesReadsWithAllAbsent() throws {
+    let attrs = Data(#"{"issues":[]}"#.utf8)
+    var record = WorkspaceRecord(StoredWorkspace(timeZone: .gmt), committedAt: 0, version: 1)
+    record.attrs = try JSONDecoder().decode(WorkspaceRecord.Attrs.self, from: attrs)
+    #expect(try record.defaultTimeSettings() == DefaultTimeSettings())
+  }
+
+  @Test func aStoredMinuteOutOfRangeThrowsNamingOnlyItsKey() throws {
+    var record = WorkspaceRecord(StoredWorkspace(timeZone: .gmt), committedAt: 0, version: 1)
+    record.attrs.defaultTimes = WorkspaceRecord.Times(due: 1439, planned: 0)
+    #expect(
+      try record.defaultTimeSettings()
+        == DefaultTimeSettings(
+          due: TimeOfDay(hour: 23, minute: 59), planned: TimeOfDay(hour: 0, minute: 0)))
+    for (times, key) in [
+      (WorkspaceRecord.Times(due: 1440), "due"), (WorkspaceRecord.Times(defer: -1), "defer"),
+      (WorkspaceRecord.Times(planned: Int.max), "planned"),
+    ] {
+      record.attrs.defaultTimes = times
+      #expect(
+        throws: SQLiteStoreError.outOfRange(column: "workspace.attrs.defaultTimes.\(key)")
+      ) { try record.defaultTimeSettings() }
+    }
+  }
+
   @Test func aLineStoredBeforeTheVersionPointTwoKeysReadsWithoutThem() throws {
     let attrs = Data(#"{"parentLink":null,"tags":["a"],"folders":[],"projects":[]}"#.utf8)
     let decoded = try JSONDecoder().decode(LineRecord.Attrs.self, from: attrs)
