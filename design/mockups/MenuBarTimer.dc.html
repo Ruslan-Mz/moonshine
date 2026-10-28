@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Timer — menu bar and activity palette (draft-5)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0A64D8}a:hover{color:#084FA8}
+button{font:inherit;color:inherit;cursor:default}
+</style>
+</helmet>
+<div dir="{{ss.dir}}" lang="{{ss.lang}}" style="width:1440px;height:900px;box-sizing:border-box;position:relative;overflow:hidden;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;font-size:13px;line-height:1.35;color:{{c.text}};background:{{wall}};-webkit-font-smoothing:antialiased"><div aria-hidden="true" style="position:absolute;left:70px;top:64px;width:900px;height:760px;border-radius:12px;overflow:hidden;background:{{win}};border:1px solid {{c.windowBorder}};display:flex;flex-direction:column"><div style="height:44px;flex-shrink:0;display:flex;align-items:center;gap:8px;padding:0 14px;background:{{winBar}}"><span style="width:12px;height:12px;border-radius:6px;background:#FF5F57"></span><span style="width:12px;height:12px;border-radius:6px;background:#FEBC2E"></span><span style="width:12px;height:12px;border-radius:6px;background:#28C840"></span></div><div style="flex:1;display:flex"><div style="width:220px;background:{{winBar}};opacity:0.6"></div><div style="flex:1;padding:22px 26px;display:flex;flex-direction:column;gap:11px"><sc-for list="{{codeRows}}" as="r" hint-placeholder-count="20"><span style="display:block;height:8px;border-radius:4px;margin-inline-start:{{r.ind}}px;width:{{r.w}}%;background:{{code}}"></span></sc-for></div></div></div><div style="position:absolute;left:0;right:0;top:0;height:26px;display:flex;align-items:center;gap:20px;padding:0 12px 0 18px;box-sizing:border-box;background:{{mb.bg}};color:{{mb.fg}};font-size:13px"><svg width="13" height="15" viewBox="0 0 14 17" fill="currentColor" style="display:block;flex-shrink:0"><path d="M11.6 9c0-2 1.6-2.9 1.7-3-1-1.4-2.4-1.6-2.9-1.6-1.2-.1-2.4.7-3 .7-.6 0-1.6-.7-2.6-.7C3.4 4.4 2.2 5.2 1.5 6.4.1 8.8 1.1 12.4 2.5 14.3c.6.9 1.4 2 2.4 1.9 1-.1 1.3-.6 2.5-.6s1.5.6 2.5.6c1 0 1.7-1 2.3-1.9.7-1 1-2 1-2.1 0 0-2-.8-2-3.2zM9.7 3.1c.5-.7.9-1.6.8-2.6-.8 0-1.8.5-2.4 1.2-.5.6-1 1.6-.8 2.5.9.1 1.8-.4 2.4-1.1z"></path></svg><span style="font-weight:700">Xcode</span><sc-for list="{{menus}}" as="m" hint-placeholder-count="9"><span>{{m}}</span></sc-for><span style="flex:1"></span><span aria-label="MoonShine timer, AI/ML, 22 minutes" style="display:flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:5px;background:{{mb.sel}};font-variant-numeric:tabular-nums"><span style="font-size:13px">🤖</span><span>{{run.el}}</span></span><svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="display:block"><path d="M1.5 4.5a9.5 9.5 0 0 1 13 0M4 7.2a6 6 0 0 1 8 0M6.4 9.8a2.4 2.4 0 0 1 3.2 0"></path></svg><svg width="24" height="12" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width="1.1" style="display:block"><rect x="0.6" y="0.6" width="20" height="10.8" rx="3"></rect><rect x="2.4" y="2.4" width="14" height="7.2" rx="1.6" fill="currentColor" stroke="none"></rect><path d="M22.4 4.2v3.6" stroke-width="1.6" stroke-linecap="round"></path></svg><span style="font-variant-numeric:tabular-nums">{{clock}}</span></div><div role="dialog" aria-label="Activity palette" style="position:absolute;top:34px;left:1012px;width:380px;box-sizing:border-box;border-radius:14px;background:{{c.sheet}};box-shadow:{{c.shadow}};display:flex;flex-direction:column"><span style="position:absolute;top:-6px;left:174px;width:12px;height:12px;transform:rotate(45deg);background:{{c.sheet}}"></span><div style="position:relative;display:flex;align-items:center;gap:10px;padding:14px 14px 12px;border-bottom:1px solid {{c.sep}}"><span style="width:32px;height:32px;flex-shrink:0;border-radius:16px;background:{{c.selBg}};display:flex;align-items:center;justify-content:center;font-size:17px">{{run.e}}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{run.title}}</span><span style="font-size:11px;color:{{c.ter}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{run.sub}}</span></span><span style="font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;color:{{c.accent}}">{{run.el}}</span><button aria-label="{{T.pause}}" style="width:26px;height:26px;border:0;border-radius:13px;background:{{c.field}};display:flex;align-items:center;justify-content:center;color:{{c.sec}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="display:block"><path d="M5.5 3.5v9M10.5 3.5v9"></path></svg></button><button aria-label="{{T.stop}}" style="width:26px;height:26px;border:0;border-radius:13px;background:{{c.field}};display:flex;align-items:center;justify-content:center;color:{{c.sec}}"><svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" style="display:block"><rect x="3" y="3" width="10" height="10" rx="2"></rect></svg></button></div><div style="padding:10px 14px 4px"><div style="display:flex;align-items:center;gap:7px;height:28px;padding:0 9px;border-radius:7px;background:{{c.field}};color:{{c.ter}}"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="display:block;flex-shrink:0"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg><span style="flex:1;font-size:12.5px">{{T.startA}}</span><span style="font-size:11px">⌃⌥T</span></div></div><sc-for list="{{secs}}" as="sec" hint-placeholder-count="3"><div style="padding:6px 14px 2px;font-size:11px;font-weight:600;color:{{c.ter}}">{{sec.n}}</div><div style="display:grid;grid-template-columns:repeat(4, 82px);gap:6px;padding:0 14px 4px"><sc-for list="{{sec.tiles}}" as="t" hint-placeholder-count="4"><button style="position:relative;height:56px;box-sizing:border-box;border-radius:9px;border:{{t.bd}};background:{{t.bg}};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:0 4px"><span style="font-size:18px;line-height:22px">{{t.e}}</span><span style="max-width:72px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{t.n}}</span><span style="font-size:10px;color:{{t.mc}};font-variant-numeric:tabular-nums">{{t.m}}</span><sc-if value="{{t.run}}" hint-placeholder-val="{{false}}"><span style="position:absolute;top:6px;right:6px;width:6px;height:6px;border-radius:3px;background:{{c.accent}}"></span></sc-if></button></sc-for></div></sc-for><div style="margin-top:8px;padding:11px 14px 10px;background:{{c.band}};border-top:1px solid {{c.sep}};display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:baseline;gap:8px"><span style="font-size:12.5px;font-weight:600">{{T.soFar}}</span><span style="font-size:11px;color:{{c.ter}}">{{B.sinceL}}</span></div><div role="img" aria-label="{{B.workL}}, {{B.otherL}}, {{B.ntL}}" style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:1px"><span style="width:{{B.workW}}%;background:{{B.wc}}"></span><span style="width:{{B.otherW}}%;background:{{c.seg}}"></span><span style="flex:1;background:repeating-linear-gradient(135deg, {{c.hatch}} 0 1px, transparent 1px 4px)"></span></div><div style="display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:{{c.sec}}"><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:{{B.wc}}"></span>{{B.workL}}</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:{{c.seg}}"></span>{{B.otherL}}</span><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:2px;background:repeating-linear-gradient(135deg, {{c.hatch}} 0 1px, transparent 1px 3px);border:1px solid {{c.hatch}};box-sizing:border-box"></span>{{B.ntL}}</span></div><div style="display:flex;flex-direction:column;gap:1px;margin-top:2px"><sc-for list="{{B.marks}}" as="m" hint-placeholder-count="4"><div style="display:grid;grid-template-columns:18px minmax(0, 1fr) auto 18px;align-items:center;gap:6px;height:20px;font-size:11.5px"><span>{{m.e}}</span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span style="font-variant-numeric:tabular-nums">{{m.got}}</span><span style="color:{{c.ter}}"> · {{m.mark}}</span></span><span style="font-size:11px;color:{{m.lc}};white-space:nowrap">{{m.left}}</span><button aria-label="{{T.start}} {{m.n}}" style="width:18px;height:18px;border:0;border-radius:9px;padding:0;background:{{c.field}};display:flex;align-items:center;justify-content:center;color:{{c.accent}}"><svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor" style="display:block"><path d="M5 3.2v9.6L13 8z"></path></svg></button></div></sc-for></div><div style="display:flex;align-items:center;gap:8px;margin-top:2px;padding-top:7px;border-top:1px solid {{c.sep}};font-size:11.5px"><span style="color:{{c.sec}};flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{T.nextFree}} {{B.free}}</span><button style="display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border:0;border-radius:11px;background:{{c.accentFill}};color:#FFFFFF;font-size:11.5px;font-weight:600;white-space:nowrap"><svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor" style="display:block"><path d="M5 3.2v9.6L13 8z"></path></svg>{{B.suggest}}</button></div><div style="font-size:11px;color:{{c.ter}}">{{B.fact}}</div></div><div style="display:flex;align-items:center;gap:10px;height:30px;padding:0 14px;border-top:1px solid {{c.sep}};font-size:11px;color:{{c.ter}}"><span style="color:{{c.accent}}">{{T.openTime}} ⌘6</span><span style="flex:1"></span><span>{{T.keys}}</span></div></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark": {"editor": "boolean", "default": false}, "lang": {"editor": "enum", "options": ["en", "ru"], "default": "en"}, "$preview": {"width": 1440, "height": 900}}'>
+function theme(d) {
+  return d ? {
+    dark:true, window:'#1E1E21', sidebar:'#28272C', rail:'#232326', band:'#252528', text:'#EDEDF0', sec:'#A6A6AD', ter:'#8D8D95',
+    sep:'rgba(255,255,255,0.08)', rowSep:'rgba(255,255,255,0.045)', chip:'rgba(255,255,255,0.075)', chipText:'#BDBDC4',
+    accent:'#5A9DFF', accentFill:'#2F6BD0', selBg:'rgba(90,157,255,0.16)', navSel:'rgba(255,255,255,0.09)', check:'#64646C', checkDone:'#4C8DF0',
+    dueText:'#FFC266', dueBg:'rgba(255,176,64,0.15)', card:'#2A2A2E', cardBorder:'rgba(255,255,255,0.07)',
+    field:'rgba(255,255,255,0.07)', fieldBorder:'rgba(255,255,255,0.12)', badgeBorder:'rgba(255,255,255,0.2)', paused:'#7E7E86',
+    windowBorder:'rgba(255,255,255,0.14)', rhythm:'#5E92EE', progress:'#3FA690', done:'#7E7E86', track:'rgba(255,255,255,0.07)',
+    heat:'94,146,238', scrim:'rgba(0,0,0,0.42)', sheet:'#2A2A2E', shadow:'0 24px 70px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.1)',
+    band1:'rgba(94,146,238,0.22)', bandLine:'#5E92EE', grid:'rgba(255,255,255,0.07)', seg:'#4A5468', segAlt:'#596378', segText:'#EDEDF0',
+    hatch:'rgba(255,255,255,0.22)', ctrl:'#3A3A3F', ctrlSel:'#5C5C63', knob:'#E6E6EA', future:'#B9A6F0'
+  } : {
+    dark:false, window:'#FFFFFF', sidebar:'#EFEEF2', rail:'#F8F8FA', band:'#F6F6F8', text:'#1D1D1F', sec:'#5F5F67', ter:'#74747C',
+    sep:'rgba(0,0,0,0.08)', rowSep:'rgba(0,0,0,0.045)', chip:'rgba(0,0,0,0.045)', chipText:'#4F4F57',
+    accent:'#0A64D8', accentFill:'#0A64D8', selBg:'rgba(10,100,216,0.08)', navSel:'rgba(0,0,0,0.07)', check:'#B4B4BB', checkDone:'#0A64D8',
+    dueText:'#8A4B00', dueBg:'#FFEFD6', card:'#FFFFFF', cardBorder:'rgba(0,0,0,0.08)',
+    field:'rgba(0,0,0,0.045)', fieldBorder:'rgba(0,0,0,0.12)', badgeBorder:'rgba(0,0,0,0.18)', paused:'#8E8E95',
+    windowBorder:'rgba(0,0,0,0.16)', rhythm:'#2F68C8', progress:'#14917A', done:'#9A9AA2', track:'rgba(0,0,0,0.05)',
+    heat:'47,104,200', scrim:'rgba(0,0,0,0.18)', sheet:'#FFFFFF', shadow:'0 24px 70px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.08)',
+    band1:'rgba(47,104,200,0.16)', bandLine:'#2F68C8', grid:'rgba(0,0,0,0.06)', seg:'#C9D3E6', segAlt:'#B4C1DA', segText:'#1D2A44',
+    hatch:'rgba(0,0,0,0.22)', ctrl:'#E4E4E8', ctrlSel:'#FFFFFF', knob:'#FFFFFF', future:'#5B3FA8'
+  };
+}
+var SS = {
+  en:{ lang:'en', dir:'ltr', today:'Today', week:'Week', month:'Month', lines:'Lines', time:'Time', search:'Search', demo:'Demo data', updated:'Updated 3 min ago',
+       keys:'⌘1–⌘4, ⌘6 Views · ⌘K Search · ⌘T Timer', tiers:{ foundation:'Foundation', active:'Active this season', maintenance:'Maintenance', paused:'Not in focus — on purpose' } },
+  ru:{ lang:'ru', dir:'ltr', today:'Сегодня', week:'Неделя', month:'Месяц', lines:'Линии', time:'Время', search:'Поиск', demo:'Демо-данные', updated:'Обновлено 3 мин назад',
+       keys:'⌘1–⌘4, ⌘6 Виды · ⌘K Поиск · ⌘T Таймер', tiers:{ foundation:'Фундамент', active:'Активные в сезоне', maintenance:'На поддержании', paused:'Не в фокусе — намеренно' } }
+};
+var SIDE_T = [
+  ['foundation', [['🧘','Core practice'],['💪','Calisthenics']], true],
+  ['active', [['🎻','Violin'],['🇮🇹','Italian'],['🇯🇵','Japanese'],['📐','Math'],['🤖','AI/ML'],['🔬','Research'],['👨‍👩‍👧','Family']], true],
+  ['maintenance', [['🎹','Piano']], true],
+  ['paused', [['✒️','Calligraphy']], false]
+];
+function side(c, lang) {
+  var ss = SS[lang] || SS.en;
+  return SIDE_T.map(function (t) { var paused = t[0] === 'paused';
+    return { n: ss.tiers[t[0]], open: t[2], count: t[2] ? '' : String(t[1].length), chev: t[2] ? 'M3.5 6L8 10.5 12.5 6' : 'M6 3.5L10.5 8 6 12.5',
+      rows: t[1].map(function (r) { return { e:r[0], n:r[1], fg: paused ? c.paused : c.text, op: paused ? 0.5 : 1 }; }) }; });
+}
+// Sidebar views. ⌘5 stays reserved for Plan (iPad answer, design/README.md); Time takes ⌘6.
+var NAV_I = {
+  today:'M11 8a3 3 0 1 1-6 0a3 3 0 1 1 6 0M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1',
+  week:'M4 3h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM2 6.5h12M5 1.8v2.4M11 1.8v2.4M6 6.5v7.5M10 6.5v7.5',
+  month:'M4 3h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM2 6.5h12M5 1.8v2.4M11 1.8v2.4M5 9.5h1M7.5 9.5h1M10 9.5h1M5 11.8h1M7.5 11.8h1',
+  lines:'M2.5 4h11M2.5 8h11M2.5 12h7',
+  time:'M14 8A6 6 0 1 1 2 8a6 6 0 1 1 12 0zM8 4.6V8l2.4 1.5'
+};
+function nav(c, lang, sel) {
+  var ss = SS[lang] || SS.en;
+  return [['today','⌘1'],['week','⌘2'],['month','⌘3'],['lines','⌘4'],['time','⌘6']].map(function (v) {
+    var on = v[0] === sel;
+    return { n: ss[v[0]], k: v[1], d: NAV_I[v[0]], bg: on ? c.navSel : 'transparent', fw: on ? 600 : 400, ic: on ? c.accent : c.sec };
+  });
+}
+// ---------- time (draft-5, invented) ----------
+var LN = {
+  core:{e:'🧘',n:'Core practice',a:'Daily practice 2026'}, cal:{e:'💪',n:'Calisthenics',a:'20 strict pull-ups'}, violin:{e:'🎻',n:'Violin',a:'Spring recital 2027'},
+  italian:{e:'🇮🇹',n:'Italian',a:'B1 by summer 2027'}, japanese:{e:'🇯🇵',n:'Japanese',a:'Kana and first 300 words'}, math:{e:'📐',n:'Math',a:'Linear algebra foundation'},
+  ai:{e:'🤖',n:'AI/ML',a:'Eval toolkit v1'}, research:{e:'🔬',n:'Research',a:'Practice-drift paper'}, family:{e:'👨‍👩‍👧',n:'Family',a:'Family year 2026'},
+  piano:{e:'🎹',n:'Piano',a:'Keep repertoire alive'}
+};
+var LIFEC = {
+  sleep:{e:'😴',en:'Sleep',ru:'Сон'}, food:{e:'🍽️',en:'Food',ru:'Еда'}, cooking:{e:'🍳',en:'Cooking',ru:'Готовка'}, hygiene:{e:'🪥',en:'Hygiene',ru:'Гигиена'},
+  house:{e:'🏠',en:'House',ru:'Дом'}, transport:{e:'🚌',en:'Transport',ru:'Дорога'}, errands:{e:'🛒',en:'Errands',ru:'Дела'}, inbox:{e:'📥',en:'Inbox',ru:'Входящие'}
+};
+var LIFE_ORDER = ['sleep','food','cooking','hygiene','house','transport','errands','inbox'];
+var LINE_ORDER = ['core','cal','violin','italian','japanese','math','ai','research','family','piano'];
+var WORK = { ai:1, research:1 };
+var FLOORS = { core:180, cal:60, math:20 };          // floor_h_day in minutes (math: a non-foundation floor, 0.33 h)
+var PORTION = { violin:60 };                          // today's day portion: the Violin lesson 17:00–18:00 in a line-mapped calendar
+var BUDGET = { violin:6, italian:2, japanese:1, math:4, ai:6, research:3, piano:1 };
+function subj(k, lang) {
+  if (LN[k]) return { e: LN[k].e, n: LN[k].n, work: !!WORK[k], life: false, k: k };
+  var x = LIFEC[k]; return { e: x.e, n: x[lang] || x.en, work: false, life: true, k: k };
+}
+function hm(t) { var p = t.split(':'); return +p[0] * 60 + +p[1]; }
+function clk(m) { m = ((m % 1440) + 1440) % 1440; var h = Math.floor(m / 60), r = m % 60; return (h < 10 ? '0' : '') + h + ':' + (r < 10 ? '0' : '') + r; }
+function hmm(m) { var h = Math.floor(m / 60), r = m % 60; return h + ':' + (r < 10 ? '0' : '') + r; }
+function plr(lang, n, f) {
+  if (lang === 'ru') { var a = n % 10, b = n % 100; return f[(a === 1 && b !== 11) ? 0 : (a >= 2 && a <= 4 && (b < 10 || b >= 20)) ? 1 : 2]; }
+  return f[n === 1 ? 0 : 1];
+}
+function dur(m, lang) { var ru = lang === 'ru', H = ru ? 'ч' : 'h', M = ru ? 'мин' : 'min', h = Math.floor(m / 60), r = m % 60;
+  return ((h ? h + ' ' + H : '') + (h && r ? ' ' : '') + (r ? r + ' ' + M : '')) || ('0 ' + M); }
+// Thu 1 Oct 2026. [start, end, subject, project, task]; the 10:00–12:40 run is 15 short intervals on lines only.
+var STORM = [['ai',12],['research',8],['ai',15],['inbox',5],['ai',10],['research',12],['ai',6],['research',14],['ai',9],['inbox',6],['ai',13],['research',10],['ai',15],['research',7],['ai',18]];
+var DAY = (function () {
+  var d = [['00:00','06:40','sleep'],['06:40','06:50','hygiene'],['06:50','07:40','core','Daily practice','Morning session'],['07:40','07:55','cal','Daily mobility','Mobility — hips & shoulders'],
+    ['07:55','08:10','food'],['08:10','08:35','transport'],['08:15','08:30','math'],['08:35','10:00','ai','Eval toolkit','Eval harness — deterministic seeds']]
+    .map(function (r) { return [hm(r[0]), hm(r[1]), r[2], r[3] || '', r[4] || '']; });
+  var t = 600; STORM.forEach(function (s) { d.push([t, t + s[1], s[0], '', '', 1]); t += s[1]; });
+  [['13:00','13:30','food'],['13:30','14:38','research','Drift paper draft','Outline section 3 — method'],['14:38','15:20','ai','Workshop 2026','Submit workshop abstract'],
+   ['15:20','15:40','violin'],['15:40','16:40','ai','Eval toolkit','Eval harness — deterministic seeds'],['16:40','16:55','transport'],
+   ['17:00','18:00','violin'],['18:00','18:25','transport'],['18:30','20:00','family'],['20:00','20:30','cooking'],['20:30','20:50','food'],
+   ['20:50','21:10','family','Evenings','Evening reading with the kids'],['21:10','23:59','core','Daily practice','Evening session']]
+    .forEach(function (r) { d.push([hm(r[0]), hm(r[1]), r[2], r[3] || '', r[4] || '']); });
+  return d;
+})();
+var WAKE = 400;   // 06:40, the end of the night's Sleep interval: "the day so far" starts here
+function dayAt(now, from) {
+  from = from || 0;
+  var iv = DAY.map(function (r) { return [Math.max(r[0], from), Math.min(r[1], now), r[2], r[3], r[4]]; }).filter(function (x) { return x[1] > x[0]; });
+  var by = {}, tracked = 0, work = 0, proj = {};
+  iv.forEach(function (x) { var m = x[1] - x[0]; by[x[2]] = (by[x[2]] || 0) + m; tracked += m; if (WORK[x[2]]) work += m; if (x[3]) proj[x[3]] = (proj[x[3]] || 0) + m; });
+  var s = iv.map(function (x) { return [x[0], x[1]]; }).sort(function (a, b) { return a[0] - b[0]; }), clock = 0, end = -1;
+  s.forEach(function (x) { if (x[0] >= end) { clock += x[1] - x[0]; end = x[1]; } else if (x[1] > end) { clock += x[1] - end; end = x[1]; } });
+  return { by: by, proj: proj, tracked: tracked, clock: clock, parallel: tracked - clock, work: work, n: iv.length, iv: iv };
+}
+function ios(c) {
+  return c.dark ? {
+    bg:'#000000', cell:'#1C1C1E', cell2:'#2C2C2E', sep:'rgba(84,84,88,0.45)', fill:'rgba(120,120,128,0.24)', fill2:'rgba(120,120,128,0.36)',
+    bar:'rgba(30,30,32,0.86)', barBorder:'rgba(255,255,255,0.12)', panel:'#1C1C1E', sheet:'#1C1C1E', grabber:'rgba(235,235,245,0.3)',
+    scrim:'rgba(0,0,0,0.5)', lift:'0 18px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.12)', hover:'rgba(255,255,255,0.07)',
+    ghost:'rgba(120,120,128,0.18)', menu:'rgba(44,44,46,0.96)', wall:'#1D2330', ofbg:'#2C2C2E', island:'#000000'
+  } : {
+    bg:'#F2F2F7', cell:'#FFFFFF', cell2:'#F2F2F7', sep:'rgba(60,60,67,0.18)', fill:'rgba(120,120,128,0.12)', fill2:'rgba(120,120,128,0.2)',
+    bar:'rgba(249,249,251,0.9)', barBorder:'rgba(0,0,0,0.08)', panel:'#FFFFFF', sheet:'#F2F2F7', grabber:'rgba(60,60,67,0.3)',
+    scrim:'rgba(0,0,0,0.22)', lift:'0 18px 40px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.06)', hover:'rgba(0,0,0,0.045)',
+    ghost:'rgba(120,120,128,0.1)', menu:'rgba(250,250,252,0.97)', wall:'#C9D2DE', ofbg:'#E5E5EA', island:'#000000'
+  };
+}
+// Shared time UI strings and the day-balance model (draft-5).
+var TT = {
+  en:{ since:'since', soFar:'Today so far', work:'Work', other:'Everything else', notTr:'Not tracked',
+    fact:function (t, c, p, lang) { return 'Tracked ' + dur(t, lang) + ' · by the clock ' + dur(c, lang) + ' · in parallel ' + dur(p, lang); },
+    floor:function (m, lang) { return 'floor ' + (m % 60 ? m + ' min' : m / 60 + ' h') + '/day'; },
+    portion:function (m, lang) { return 'day portion ' + dur(m, lang); },
+    toFloor:function (m, lang) { return dur(m, lang) + ' to the floor'; }, toPortion:function (m, lang) { return dur(m, lang) + ' to the portion'; },
+    inMark:function (m, lang) { return 'today’s ' + dur(m, lang) + ' are in'; },
+    nextFree:'Free', start:'Start', startA:'Start a timer…', alongside:'alongside', lines:'Lines', projects:'Projects', life:'Life ops',
+    openTime:'Time view', settings:'Timer Settings…', keys:'↩ start · ⌥↩ alongside · ⌘Z undo', running:'running',
+    stopped:'stopped', keep:'Keep running', undo:'Undo', pause:'Pause', stop:'Stop', resume:'Resume', plan:'Plan', tracked:'Tracked', now:'now',
+    marks:'Day marks', otherLines:'Other time today', lesson:'lesson' },
+  ru:{ since:'с', soFar:'За сегодня', work:'Работа', other:'Всё остальное', notTr:'Не учтено',
+    fact:function (t, c, p, lang) { return 'Учтено ' + dur(t, lang) + ' · по часам ' + dur(c, lang) + ' · параллельно ' + dur(p, lang); },
+    floor:function (m, lang) { return 'пол ' + (m % 60 ? m + ' мин' : m / 60 + ' ч') + '/день'; },
+    portion:function (m, lang) { return 'доля дня ' + dur(m, lang); },
+    toFloor:function (m, lang) { return 'до пола ' + dur(m, lang); }, toPortion:function (m, lang) { return 'до доли ' + dur(m, lang); },
+    inMark:function (m, lang) { return 'сегодняшние ' + dur(m, lang) + ' есть'; },
+    nextFree:'Свободно', start:'Запустить', startA:'Запустить таймер…', alongside:'параллельно', lines:'Линии', projects:'Проекты', life:'Быт и система',
+    openTime:'«Время»', settings:'Настройки таймера…', keys:'↩ запуск · ⌥↩ параллельно · ⌘Z отменить', running:'идёт',
+    stopped:'остановлен', keep:'Не останавливать', undo:'Отменить', pause:'Пауза', stop:'Стоп', resume:'Продолжить', plan:'План', tracked:'Учтено', now:'сейчас',
+    marks:'Отметки дня', otherLines:'Остальное время сегодня', lesson:'урок' }
+};
+// The day so far: from the end of the night's Sleep to now. Work = lines marked as work (Settings → Time).
+function balance(c, lang, now) {
+  var T = TT[lang] || TT.en, w = dayAt(now, WAKE), since = now - WAKE, other = w.clock - w.work, nt = since - w.clock, d = dayAt(now, 0);
+  var W = 1;
+  function seg(m) { return Math.round(m / since * 1000) / 10; }
+  var marks = [];
+  ['core', 'cal', 'math', 'violin'].forEach(function (k) {
+    var got = d.by[k] || 0, fl = FLOORS[k], po = PORTION[k], goal = fl || po;
+    var left = Math.max(0, goal - got);
+    marks.push({ e: LN[k].e, n: LN[k].n, got: dur(got, lang), mark: fl ? T.floor(fl, lang) : T.portion(po, lang) + (po ? ' · 17:00' : ''),
+      left: left ? (fl ? T.toFloor(left, lang) : T.toPortion(left, lang)) : T.inMark(goal, lang), done: !left, lc: left ? c.sec : c.ter });
+  });
+  var others = ['ai', 'research'].map(function (k) { return { e: LN[k].e, n: LN[k].n, m: dur(d.by[k] || 0, lang), run: k === 'ai' }; });
+  var lifeM = 0; LIFE_ORDER.forEach(function (k) { if (k !== 'sleep') lifeM += w.by[k] || 0; });
+  others.push({ e: '🧺', n: lang === 'ru' ? 'Быт и система' : 'Life ops', m: dur(lifeM, lang), run: false });
+  return {
+    T: T, wc: workCol(c), sinceL: T.since + ' ' + clk(WAKE) + ' · ' + dur(since, lang), workW: seg(w.work), otherW: seg(other), ntW: seg(nt),
+    workL: T.work + ' ' + dur(w.work, lang), otherL: T.other + ' ' + dur(other, lang), ntL: T.notTr + ' ' + dur(nt, lang),
+    fact: T.fact(w.tracked, w.clock, w.parallel, lang), marks: marks, others: others,
+    free: '15:20–17:00 · ' + dur(100, lang), suggest: LN.core.e + ' ' + LN.core.n
+  };
+}
+// workSegment token (draft-5): the third, darkest step of the load hue; tokens.json.
+function workCol(c) { return c.dark ? '#8291AF' : '#8C9FC2'; }
+// Tracked blocks for a rail or a day view. Runs of 3+ intervals, each under 20 min, with gaps under 5 min, become one cluster.
+function trackBlocks(c, lang, now, from, to, pxh, laneW, right) {
+  var T = TT[lang] || TT.en, wc = workCol(c);
+  var iv = DAY.map(function (r) { return { s: Math.max(r[0], from), e: Math.min(r[1], now, to), k: r[2], p: r[3], t: r[4], run: r[1] > now && r[0] < now }; })
+    .filter(function (x) { return x.e > x.s; });
+  function y(m) { return Math.round((m - from) / 60 * pxh); }
+  // parallel columns: an interval overlapping another takes half the lane
+  iv.forEach(function (x) { x.col = 0; x.cols = 1; });
+  iv.forEach(function (a, i) { iv.forEach(function (b, j) { if (i < j && a.s < b.e && b.s < a.e) { a.cols = b.cols = 2; b.col = 1; } }); });
+  var out = [], i = 0;
+  while (i < iv.length) {
+    var j = i;
+    while (j + 1 < iv.length && iv[j + 1].cols === 1 && iv[j].cols === 1 && iv[j + 1].e - iv[j + 1].s < 20 && iv[j].e - iv[j].s < 20 && iv[j + 1].s - iv[j].e < 5) j++;
+    var run = iv.slice(i, j + 1);
+    if (run.length >= 3) {
+      var s0 = run[0].s, e0 = run[run.length - 1].e, by = {}, em = [];
+      run.forEach(function (x) { by[x.k] = (by[x.k] || 0) + x.e - x.s; });
+      Object.keys(by).sort(function (a, b) { return by[b] - by[a]; }).forEach(function (k) { em.push(subj(k, lang).e); });
+      out.push({ y: y(s0), h: Math.max(4, y(e0) - y(s0) - 1), r: right, w: laneW, ol: 'none', fw: 600, fg: c.text,
+        sl: run.map(function (x) { return { y: y(x.s) - y(s0), h: Math.max(1, y(x.e) - y(x.s) - 1), bg: WORK[x.k] ? wc : c.seg }; }),
+        lbg: c.card, lm: '3px', l1: em.join(' '), l2: run.length + ' ' + plr(lang, run.length, lang === 'ru' ? ['интервал', 'интервала', 'интервалов'] : ['interval', 'intervals']),
+        tip: clk(s0) + '–' + clk(e0) + ' · ' + run.length, cluster: true, s: s0, e: e0, n: run.length, by: by });
+    } else {
+      run.forEach(function (x) {
+        var h = Math.max(2, y(x.e) - y(x.s) - 1), su = subj(x.k, lang), m = x.e - x.s, w = x.cols === 2 ? Math.floor((laneW - 2) / 2) : laneW;
+        out.push({ y: y(x.s), h: h, r: right + (x.cols === 2 && x.col === 0 ? w + 2 : 0), w: w, fw: 400, fg: WORK[x.k] && c.dark && !x.run ? '#16213A' : c.segText,
+          ol: x.run ? '1.5px solid ' + c.accent : 'none', lbg: 'transparent', lm: '0',
+          sl: [{ y: 0, h: h, bg: x.run ? c.selBg : (WORK[x.k] ? wc : c.seg) }],
+          l1: h >= 11 ? su.e + (h >= 24 && w > 60 ? ' ' + su.n : '') + (h < 24 ? ' ' + dur(m, lang) : '') : '',
+          l2: h >= 24 ? (x.run ? T.running + ' · ' : '') + dur(m, lang) : '', tip: clk(x.s) + '–' + clk(x.e) + ' ' + su.n,
+          s: x.s, e: x.e, k: x.k, p: x.p, t: x.t, run: x.run });
+      });
+    }
+    i = j + 1;
+  }
+  return out;
+}
+// MenuBarTimer: the macOS menu bar item and its popover at 15:00 on Thu 1 Oct (draft-5).
+var NOW = 900;
+var PROJ = [['ai', 'Eval toolkit'], ['ai', 'Workshop 2026'], ['research', 'Drift paper draft']];
+function tile(c, e, n, m, run, lang) {
+  return { e: e, n: n, m: m ? dur(m, lang) : '—', mc: m ? c.sec : c.ter, run: !!run,
+    bg: run ? c.selBg : c.chip, bd: run ? '1.5px solid ' + c.accent : '1.5px solid transparent' };
+}
+function build(c, lang) {
+  var d = dayAt(NOW, 0), B = balance(c, lang, NOW), T = B.T;
+  var lines = LINE_ORDER.map(function (k) { return tile(c, LN[k].e, LN[k].n, d.by[k] || 0, k === 'ai', lang); });
+  var proj = PROJ.map(function (p) { return tile(c, LN[p[0]].e, p[1], d.proj[p[1]] || 0, p[1] === 'Workshop 2026', lang); });
+  var life = LIFE_ORDER.map(function (k) { return tile(c, LIFEC[k].e, LIFEC[k][lang] || LIFEC[k].en, d.by[k] || 0, false, lang); });
+  return {
+    B: B, T: T, wall: c.dark ? 'linear-gradient(160deg, #1B2230 0%, #2A2333 100%)' : 'linear-gradient(160deg, #C9D6E8 0%, #E3D9EA 100%)',
+    mb: { bg: c.dark ? 'rgba(30,30,34,0.72)' : 'rgba(246,246,248,0.78)', fg: c.dark ? '#EDEDF0' : '#1D1D1F', sel: c.dark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)' },
+    win: c.dark ? '#26262A' : '#FBFBFC', winBar: c.dark ? '#2E2E33' : '#ECECF0', code: c.dark ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.07)',
+    codeRows: [62, 48, 70, 30, 55, 80, 44, 66, 38, 72, 50, 28, 64, 58, 46, 74, 34, 60, 52, 40, 68, 36, 57, 63].map(function (w, i) { return { w: w, ind: (i % 5) * 18 }; }),
+    run: { e: '🤖', title: 'Submit workshop abstract', sub: 'Workshop 2026 · ' + T.since + ' 14:38', el: hmm(NOW - 878) },
+    secs: [{ n: T.lines, tiles: lines }, { n: T.projects, tiles: proj }, { n: T.life, tiles: life }],
+    clock: lang === 'ru' ? 'Чт 1 окт. 15:00' : 'Thu 1 Oct 15:00',
+    menus: ['File', 'Edit', 'View', 'Find', 'Navigate', 'Editor', 'Product', 'Window', 'Help']
+  };
+}
+
+class Component extends DCLogic {
+  renderVals() {
+    var c = theme(!!this.props.dark), lang = this.props.lang || 'en';
+    var v = build.call(this, c, lang) || {};
+    v.c = c; v.ss = SS[lang] || SS.en; v.side = side(c, lang);
+    return v;
+  }
+}
+</script>
+</body>
+</html>

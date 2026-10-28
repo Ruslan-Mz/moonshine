@@ -53,6 +53,7 @@ The owner records his hours in an Excel workbook, mostly from memory at the end 
   - **Subject:** a line (or Life ops, when the task maps to no line), and optionally a project, a task or a plan step. The line is stored on the entry at capture, so a later change of mapping does not rewrite history; re-attributing is an explicit command.
   - **Source:** `timer` · `manual` · `excel` · `calendar` (confirmed by the owner from an ended event) · `omnifocusEstimate` (derived).
 - **Calendar entries** (owner, 2026-10-09; amends ADR-0012). A time entry the owner confirms from an event keeps the event's start, end and line, never its title, attendees, id or calendar name. A timer target taken from an event is only a duration. These are the only event-derived values besides ADR-0012's busy minutes that leave the device.
+- **Life ops categories** (amendment 2026-10-28, owner; design draft-5). An entry or a session whose subject is Life ops carries `lifeCategory`, stored at capture like the line, so renaming a category later does not rewrite history. The categories are native data, edited in Settings → Time: eight defaults (Sleep, Food, Cooking, Hygiene, House, Transport, Errands, Inbox), renamed, reordered, added or archived by the owner. Sleep is built in (it can be renamed, not removed): the end of the night's Sleep interval is where "today so far" starts; without one, the day window's start. A category never has a budget, a floor, a portion or a day mark, and is never a line.
 - **Intervals are the atoms.** Pause closes an interval and resume opens the next one in the same session; each interval is one entry. An interval that crosses local midnight is split in two at stop. A workbook entry has a day and minutes and no clock times.
 
 ### Up to three running timers
@@ -65,6 +66,7 @@ The owner records his hours in an Excel workbook, mostly from memory at the end 
 - **At three running sessions** (owner, 2026-10-17) a start cannot keep them all: an alongside start stops the oldest, a plain start stops all three, and the notice reads "🎻 stopped (three at most)" with no button.
 - **Offline merge across devices:** sessions are kept as they are while at most three overlap; when a fourth overlaps, the one that started first ends at the later start. Every device computes the same result.
 - A running session survives the app being closed (the start time is stored).
+- **Undo on the notice** (amendment 2026-10-28, owner). Undo of a start is the undo of `StartTimer` that ADR-0013 requires of every command: the new session is removed and the sessions it stopped resume from the instant they stopped, with no gap. On the iPhone the switch notice carries it as a button for about eight seconds, next to `Keep running` ("🎻 stopped · Keep running · Undo"); on the Mac it is ⌘Z. With three running, both "three at most" notices offer only the undo. After the notice, a wrong interval is corrected with `EditTimeEntry` (the Day list's `Change`).
 
 How time is counted:
 
@@ -126,6 +128,7 @@ A nudge is a local notification on the device where the session was started (for
 - On a locked screen, notification text follows the system's preview setting for MoonShine on every platform; MoonShine has no setting of its own for notifications (owner, 2026-10-17).
 - **Break nudge.** Its two actions are `Break` and `Keep going`. `Break` pauses every running session, so the break is not counted, and one nudge to resume follows after the break length (default 5 minutes); resuming resumes all of them (amendment 2026-10-16). Without an answer the timers keep running.
 - No streaks. A day mark is never shown as missed.
+- **Per-line values** (amendment 2026-10-28, owner). A line's break-nudge N and its check-mark limit come from the optional budget-note keys `break_after_min` and `check_after_h` (vault contract v0.6, § 1); without them the defaults in Settings → Time apply (50 min, 4 h). A Life ops category sets its own values in Settings → Time; Sleep has no break nudge and a 12 h check limit by default.
 - **Amendment (2026-10-16, ADR-0017).** Nudges are scheduled by the one notification planner in Core that also schedules reminders; a running timer's nudges rank first within the 64 pending notifications iOS allows. The planner and the `Notifier` arrive with whichever of the Timer slice or the Reminders slice ships first. The break nudge was called "Break reminder" until then; it is renamed so that "reminder" names only ADR-0017's entity.
 
 ### A forgotten timer is visible (owner decision, 2026-10-07)
@@ -158,6 +161,8 @@ Both stay. The unit of comparison is **(day, line)**.
 | After 3b | Watch; standalone countdown timers that belong to nothing.                                                                                                                                                                                                                   |
 
 **Amendment (2026-10-09, owner).** The fallback is removed: it said that if the other phase-2 slices were not merged by 2026-12-07, Timer (Mac) would move to directly after R1. It existed only to protect R1's deadline (2026-12-28). R1 is now built in the two-week usage period after phase 1 (`docs/ROADMAP.md`, rule of gates), so that deadline has a margin of weeks, and Timer (Mac) stays the last slice of phase 2.
+
+**Amendment (2026-10-28, owner; design draft-5).** The two-sources choice (§ Two sources: the cell mark, the four choices, the reconcile list) is its own slice, **Time reconcile**, right after Timer (Mac) (`docs/ROADMAP.md`). Until it ships, the import's rule holds: the native entries are counted and the pairs stay open. Whether a minimal iPhone capture (Lock Screen widgets and controls, the Live Activity) comes before 3b is decided at phase-2 planning; its prerequisites are CloudKit sync of native records (ADR-0010) and the paid Apple Developer Program.
 
 ### Consequences
 

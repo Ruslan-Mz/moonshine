@@ -1,4 +1,4 @@
-# Vault contract (Obsidian → MoonShine), v0.5
+# Vault contract (Obsidian → MoonShine), v0.6
 
 Status: **draft from phase-0 discovery** (see `data-report.md`). Implements ADR-0004: YAML frontmatter is the machine-readable truth; markdown bodies stay human text and are read for links and tags only, never for values (from the Hub slice; ADR-0014). Two exceptions (v0.4): a memo's two sections are read (§6.1), and an entry note's body is never read (§6.3).
 
@@ -21,6 +21,8 @@ v0.3 (2026-10-08, ADR-0014, ADR-0015, ADR-0016): project notes (§4) and reserve
 v0.4 (2026-10-19, ADR-0018, ADR-0019, owner): note kinds by the `moonshine` key and one scanner for them (§6); memo notes (§6.1, read from P1), programme notes (§6.2, kind reserved), entry notes (§6.3, read from Practice lines); the optional line keys `within`, `measure` and `targets` (§1, "Practice lines", read from Practice lines); entry bodies are never read (§3).
 
 v0.5 (2026-10-26, ADR-0020, ADR-0021, owner): the optional line key `quota_emphasis` (§1, "Quota emphasis", read from the Quotas slice); module note kinds found by the owner's own `type` key, the Library module first (§7, read from Library L1).
+
+v0.6 (2026-10-28, ADR-0016, owner, design draft-5): the optional line keys `break_after_min` and `check_after_h` (§1, "Nudge values", read from the Timer slice): a line's own break-nudge minutes and check limit, over the defaults in Settings → Time.
 
 Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault writes before the Write phase; ADR-0015).
 
@@ -53,6 +55,8 @@ lines: # order = display order within a block
     foundation: false # optional (v0.2); true = foundation tier (the spine), shown first, never "quiet"
     floor_h_day: null # optional number ≥ 0 (v0.2); daily minimum, on any line
     portion_h_day: null # optional number ≥ 0 (v0.3, reserved; read from the Timer slice, ADR-0016); the day mark's portion when the line's calendar has no events today
+    break_after_min: null # optional integer 10…240 (v0.6, reserved; read from the Timer slice, ADR-0016); the break nudge's N for this line
+    check_after_h: null # optional number 1…24 (v0.6, reserved; read from the Timer slice, ADR-0016); the check-mark limit for this line
     language: it # optional BCP-47 tag (v0.2); language lines only. Parsed and stored; a content-language detection hint
     parent: "[[Artifacts_2026]]" # optional wikilink to the note that holds this line's artifact(s)
     omnifocus: # how OmniFocus items map to this line (see snapshot-contract.md §Mapping)
@@ -64,7 +68,7 @@ lines: # order = display order within a block
 Rules
 
 - Tier (UI grouping) = `foundation: true` → Foundation, else `state` → Active this season / Maintenance / Paused on purpose. `block` is a secondary label.
-- `floor_h_day` is allowed on any line (owner, 2026-10-08); `foundation: true` decides only the tier and the "never quiet" rule. A line may have both `floor_h_day` and `budget_h_week`: a foundation line shows the floor; any other line shows the floor as a daily minimum next to its weekly budget (exact form: the screen spec or the next design round).
+- `floor_h_day` is allowed on any line (owner, 2026-10-08); `foundation: true` decides only the tier and the "never quiet" rule. A line may have both `floor_h_day` and `budget_h_week`: a foundation line shows the floor; any other line shows the floor as a daily minimum next to its weekly budget (exact form, decided in design draft-5: `4 h / week` over `floor 20 min/day`, `design/screens/lines.md` § Draft-5).
 - `state: paused` = "paused on purpose" in the UI. It is never shown as missing activity.
 - Tasks that match no line belong to **Life ops** (not a line; see `snapshot-contract.md`).
 - A task maps to **at most one** line. Precedence: task tag → project tag → project name → folder. Two lines claiming the same tag/folder → banner naming both line ids; first in list wins.
@@ -152,6 +156,35 @@ Rules
 | Kind                       | When                              | Effect                         |
 | -------------------------- | --------------------------------- | ------------------------------ |
 | `lineQuotaEmphasisInvalid` | `quota_emphasis` is neither value | The line's emphasis is neutral |
+
+### Nudge values (v0.6, reserved now; read from the Timer slice, ADR-0016)
+
+Two optional keys on a `lines:` item (owner, 2026-10-28). ADR-0016 makes the break nudge's N and the check-mark limit per line; these keys carry the line's own values, over the defaults in Settings → Time (50 min, 4 h). A budget note without them reads as before.
+
+| Key               | Values             | Meaning                                                                                                                                |
+| ----------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `break_after_min` | an integer, 10…240 | Minutes of continuous activity before the break nudge; with several sessions running, the smallest N of their lines applies (ADR-0016) |
+| `check_after_h`   | a number, 1…24     | Hours a session of this line may run without a pause before it gets the check mark                                                     |
+
+```yaml
+lines:
+  - id: research
+    name: Research
+    block: Profession
+    state: active
+    break_after_min: 25 # a short break nudge on this line only
+    check_after_h: 6 # long writing sessions are normal here
+```
+
+Rules
+
+- `null` or absent = the Settings → Time default. Numbers follow "Validation of `lines:`" (`^[0-9]+(\.[0-9]+)?$`); `break_after_min` must also be a whole number.
+- **An invalid value does not skip the line** (like `quota_emphasis`): the line is read, the default applies, and the problem `lineNudgeValueInvalid` names the key path (`lines.break_after_min`, `lines.check_after_h`) and the line.
+- Life ops categories are not lines: their values are set in Settings → Time (`design/screens/settings.md` § Time).
+
+| Kind                    | When                                                                     | Effect              |
+| ----------------------- | ------------------------------------------------------------------------ | ------------------- |
+| `lineNudgeValueInvalid` | a value out of range, not a number, or `break_after_min` with a fraction | The default applies |
 
 ## 2. Horizon and artifact notes
 
@@ -385,6 +418,7 @@ Rules
 - **`moonshine:`** — values `budget` (§1), `project` (§4), `memo`, `programme` and `entry` (§6). Until the scanner of §6 ships (P1), a note with any other value is not a problem and gives no banner; from then on it is `noteKindUnknown` (§6).
 - **`within`, `measure`, `targets`** on a line (§1, "Practice lines"; read from the Practice lines slice, ADR-0019).
 - **`portion_h_day`** on a line (§1; read from the Timer slice, ADR-0016).
+- **`break_after_min`, `check_after_h`** on a line (§1, "Nudge values"; read from the Timer slice, ADR-0016; owner, 2026-10-28).
 - **`quota_emphasis`** on a line (§1, "Quota emphasis"; read from the Quotas slice, ADR-0020).
 - **The owner's `type` values `book`, `academic_book` and `article`** are read by the Library module (§7; from Library L1, ADR-0021). They stay the owner's: MoonShine never writes `type`.
 - **`moonshine_ai: false`** on any note (read from the Ask phase, ADR-0015): the assistant never reads the note's body, even inside a folder on its allowlist, and the note is never sent in the standing context pack: it appears in the pack's list as excluded (owner, 2026-10-09).
