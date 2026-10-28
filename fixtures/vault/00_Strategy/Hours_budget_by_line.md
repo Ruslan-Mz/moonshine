@@ -7,6 +7,44 @@ created: 2026-05-01
 updated: 2026-09-28
 parent: "[[_index]]"
 lines:
+  - id: core
+    name: Core practice
+    emoji: "🧘"
+    block: Foundation
+    state: active
+    foundation: true
+    floor_h_day: 3
+    parent: "[[Artifacts_2026]]"
+    omnifocus:
+      tags: [practice]
+  - id: calisthenics
+    name: Calisthenics
+    emoji: "💪"
+    block: Foundation
+    state: active
+    foundation: true
+    floor_h_day: 1
+    parent: "[[Artifacts_2026]]"
+    omnifocus:
+      tags: [calisthenics]
+  - id: ai
+    name: AI/ML
+    emoji: "🤖"
+    block: Profession
+    state: active
+    budget_h_week: 6
+    parent: "[[Artifacts_2026]]"
+    omnifocus:
+      projects: [Eval toolkit, Paper reading, Workshop 2026]
+  - id: research
+    name: Research
+    emoji: "🔬"
+    block: Profession
+    state: active
+    budget_h_week: 3
+    parent: "[[Artifacts_2026]]"
+    omnifocus:
+      tags: [исследование]
   - id: violin
     name: Violin
     emoji: "🎻"
@@ -23,7 +61,8 @@ lines:
     emoji: "🎹"
     block: Creative
     state: maintenance
-    budget_h_week: 1.25
+    budget_h_week: 1
+    parent: "[[Artifacts_2026]]"
     omnifocus:
       tags: [piano]
   - id: calligraphy
@@ -31,66 +70,61 @@ lines:
     emoji: "✒️"
     block: Creative
     state: paused
-    budget_h_week: 0
     omnifocus:
       tags: [calligraphy]
   - id: italian
-    name: Italiano
+    name: Italian
     emoji: "🇮🇹"
     block: Languages
     state: active
     budget_h_week: 2
     language: it
+    parent: "[[Artifacts_2026]]"
     omnifocus:
       tags: [italian]
+  - id: japanese
+    name: Japanese
+    emoji: "🇯🇵"
+    block: Languages
+    state: active
+    budget_h_week: 1
+    language: ja
+    parent: "[[Artifacts_2026]]"
+    omnifocus:
+      tags: [japanese]
   - id: math
-    name: Математика
+    name: Math
     emoji: "📐"
-    block: Foundation
-    state: active
-    budget_h_week: 1.5
-    omnifocus:
-      folders: [Study]
-  - id: calisthenics
-    name: Calisthenics
-    emoji: "💪"
-    block: Foundation
-    state: active
-    budget_h_week: 2
-    foundation: true
-    floor_h_day: 1
-    omnifocus:
-      tags: [calisthenics]
-  - id: research
-    name: Research
-    emoji: "🔬"
-    block: Professional
+    block: Science
     state: active
     budget_h_week: 4
     parent: "[[Artifacts_2026]]"
     omnifocus:
-      tags: [исследование]
-  - id: work
-    name: Client work
-    emoji: "💻"
-    block: Professional
+      folders: [Study]
+  - id: family
+    name: Family
+    emoji: "👨‍👩‍👧"
+    block: Life
     state: active
-    budget_h_week: 13
+    parent: "[[Artifacts_2026]]"
     omnifocus:
-      folders: [Work]
+      folders: [Family]
 ---
 
 # Hours budget by line
 
-Synthetic fixture. The YAML block above is authoritative for MoonShine; this table is for humans and may drift.
+Synthetic fixture (`design/demo-data.md`). The YAML block above is authoritative for MoonShine; this table is for humans and may drift.
 
-| Line            | Block        | h/week | State             |
-| --------------- | ------------ | ------ | ----------------- |
-| 🎻 Violin       | Creative     | 6      | active            |
-| 🎹 Piano        | Creative     | 1.25   | maintenance       |
-| ✒️ Calligraphy  | Creative     | 0      | paused on purpose |
-| 🇮🇹 Italiano     | Languages    | 2      | active            |
-| 📐 Математика   | Foundation   | 1.5    | active            |
-| 💪 Calisthenics | Foundation   | 2      | active            |
-| 🔬 Research     | Professional | 4      | active            |
-| 💻 Client work  | Professional | 13     | active            |
+| Line             | Block      | h/week      | State             |
+| ---------------- | ---------- | ----------- | ----------------- |
+| 🧘 Core practice | Foundation | floor 3/day | foundation        |
+| 💪 Calisthenics  | Foundation | floor 1/day | foundation        |
+| 🤖 AI/ML         | Profession | 6           | active            |
+| 🔬 Research      | Profession | 3           | active            |
+| 🎻 Violin        | Creative   | 6           | active            |
+| 🎹 Piano         | Creative   | 1           | maintenance       |
+| ✒️ Calligraphy   | Creative   | —           | paused on purpose |
+| 🇮🇹 Italian       | Languages  | 2           | active            |
+| 🇯🇵 Japanese      | Languages  | 1           | active            |
+| 📐 Math          | Science    | 4           | active            |
+| 👨‍👩‍👧 Family        | Life       | —           | active            |

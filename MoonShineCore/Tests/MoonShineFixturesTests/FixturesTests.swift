@@ -10,19 +10,26 @@ import Testing
   @Test func mirrorsTheFixtureBudgetNote() {
     #expect(
       vault.lines.read.map(\.key.rawValue) == [
-        "violin", "piano", "calligraphy", "italian", "math", "calisthenics", "research", "work",
+        "core", "calisthenics", "ai", "research", "violin", "piano", "calligraphy", "italian",
+        "japanese", "math", "family",
       ])
     let calligraphy = vault.lines.read.first { $0.key == "calligraphy" }
     #expect(calligraphy?.state == .paused)
-    #expect(vault.lines.read.first { $0.key == "piano" }?.budgetHoursPerWeek == 1.25)
+    #expect(vault.lines.read.first { $0.key == "piano" }?.state == .maintenance)
+    let core = vault.lines.read.first { $0.key == "core" }
+    #expect(core?.foundation == true && core?.floorHoursPerDay == 3)
+    #expect(core?.budgetHoursPerWeek == nil)
+    #expect(vault.lines.read.first { $0.key == "ai" }?.taskRules.projects.count == 3)
     #expect(vault.lines.read.first { $0.key == "math" }?.taskRules.folders == ["Study"])
     #expect(vault.lines.read.first { $0.key == "research" }?.taskRules.tags == ["исследование"])
   }
 
   @Test func mirrorsTheFixtureArtifactsAndNotes() {
-    #expect(
-      vault.artifacts.map(\.key) == ["a26-01", "a26-02", "a26-03", "a26-04", "a26-05", "a26-06"])
-    #expect(vault.artifacts.last?.lineKeys == ["work"])
+    #expect(vault.artifacts.filter { $0.periodKey == "2026" }.count == 10)
+    // `design/demo-data.md` § Draft-2: the Q4 focus, two of five done.
+    let quarter = vault.artifacts.filter { $0.periodKey == "2026-Q4" }
+    #expect(quarter.map(\.key) == ["q4-01", "q4-02", "q4-03", "q4-04", "q4-05"])
+    #expect(quarter.filter { $0.status == .done }.count == 2)
     #expect(vault.notes.count == 6)
     let month = vault.notes.first { $0.type == "month_plan" }
     #expect(month?.scale == .month)
@@ -55,8 +62,9 @@ import Testing
     #expect(first.projects.map(\.id) == second.projects.map(\.id))
     #expect(first.lines.map(\.id) == second.lines.map(\.id))
     #expect(stored.tasks.count == 1)
-    #expect(stored.lines.count == 8)
-    #expect(stored.tasks.first?.line == .line(try #require(stored.lines.first).id))
+    #expect(stored.lines.count == 11)
+    let violin = try #require(stored.lines.first { $0.key == "violin" })
+    #expect(stored.tasks.first?.line == .line(violin.id))
   }
 
   @Test func emptyStoreHasNoData() async {

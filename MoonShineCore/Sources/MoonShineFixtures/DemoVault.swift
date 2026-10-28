@@ -12,58 +12,64 @@ public struct DemoVault: NoteProvider {
 
   private static let budget = "00_Strategy/Hours_budget_by_line.md"
   private static let year = "00_Strategy/Years/Artifacts_2026.md"
+  private static let quarter = "00_Strategy/Years/Q4_2026_focus.md"
+  private static let parent = "[[Artifacts_2026]]"
 
   public static let snapshot = VaultSnapshot(
     lines: .read(
       [
         SourceLine(
-          key: "violin", name: "Violin", emoji: "🎻", block: "Creative", state: .active,
-          budgetHoursPerWeek: 6, parentLink: "[[Artifacts_2026]]", tags: ["violin"]),
-        SourceLine(
-          key: "piano", name: "Piano", emoji: "🎹", block: "Creative", state: .maintenance,
-          budgetHoursPerWeek: 1.25, tags: ["piano"]),
-        SourceLine(
-          key: "calligraphy", name: "Calligraphy", emoji: "✒️", block: "Creative", state: .paused,
-          budgetHoursPerWeek: 0, tags: ["calligraphy"]),
-        SourceLine(
-          key: "italian", name: "Italiano", emoji: "🇮🇹", block: "Languages", state: .active,
-          budgetHoursPerWeek: 2, tags: ["italian"], language: "it"),
-        SourceLine(
-          key: "math", name: "Математика", emoji: "📐", block: "Foundation", state: .active,
-          budgetHoursPerWeek: 1.5, folders: ["Study"]),
+          key: "core", name: "Core practice", emoji: "🧘", block: "Foundation", state: .active,
+          parentLink: parent, tags: ["practice"], foundation: true, floorHoursPerDay: 3),
         SourceLine(
           key: "calisthenics", name: "Calisthenics", emoji: "💪", block: "Foundation",
-          state: .active, budgetHoursPerWeek: 2, tags: ["calisthenics"], foundation: true,
+          state: .active, parentLink: parent, tags: ["calisthenics"], foundation: true,
           floorHoursPerDay: 1),
         SourceLine(
-          key: "research", name: "Research", emoji: "🔬", block: "Professional", state: .active,
-          budgetHoursPerWeek: 4, parentLink: "[[Artifacts_2026]]", tags: ["исследование"]),
+          key: "ai", name: "AI/ML", emoji: "🤖", block: "Profession", state: .active,
+          budgetHoursPerWeek: 6, parentLink: parent,
+          projects: ["Eval toolkit", "Paper reading", "Workshop 2026"]),
         SourceLine(
-          key: "work", name: "Client work", emoji: "💻", block: "Professional", state: .active,
-          budgetHoursPerWeek: 13, folders: ["Work"]),
+          key: "research", name: "Research", emoji: "🔬", block: "Profession", state: .active,
+          budgetHoursPerWeek: 3, parentLink: parent, tags: ["исследование"]),
+        SourceLine(
+          key: "violin", name: "Violin", emoji: "🎻", block: "Creative", state: .active,
+          budgetHoursPerWeek: 6, parentLink: parent, tags: ["violin"]),
+        SourceLine(
+          key: "piano", name: "Piano", emoji: "🎹", block: "Creative", state: .maintenance,
+          budgetHoursPerWeek: 1, parentLink: parent, tags: ["piano"]),
+        SourceLine(
+          key: "calligraphy", name: "Calligraphy", emoji: "✒️", block: "Creative", state: .paused,
+          tags: ["calligraphy"]),
+        SourceLine(
+          key: "italian", name: "Italian", emoji: "🇮🇹", block: "Languages", state: .active,
+          budgetHoursPerWeek: 2, parentLink: parent, tags: ["italian"], language: "it"),
+        SourceLine(
+          key: "japanese", name: "Japanese", emoji: "🇯🇵", block: "Languages", state: .active,
+          budgetHoursPerWeek: 1, parentLink: parent, tags: ["japanese"], language: "ja"),
+        SourceLine(
+          key: "math", name: "Math", emoji: "📐", block: "Science", state: .active,
+          budgetHoursPerWeek: 4, parentLink: parent, folders: ["Study"]),
+        SourceLine(
+          key: "family", name: "Family", emoji: "👨‍👩‍👧", block: "Life", state: .active,
+          parentLink: parent, folders: ["Family"]),
       ], complete: true),
     artifacts: [
-      SourceArtifact(
-        key: "a26-01", periodKey: "2026", title: "First paper draft submitted",
-        lineKeys: ["research"],
-        status: .inProgress, priority: true, notePath: year),
-      SourceArtifact(
-        key: "a26-02", periodKey: "2026", title: "Partita first movement performed for friends",
-        lineKeys: ["violin"], status: .inProgress, priority: true, notePath: year),
-      SourceArtifact(
-        key: "a26-03", periodKey: "2026", title: "Italian B1 certificate", lineKeys: ["italian"],
-        status: .planned,
-        notePath: year),
-      SourceArtifact(
-        key: "a26-04", periodKey: "2026", title: "10 strict pull-ups", lineKeys: ["calisthenics"],
-        status: .inProgress, notePath: year),
-      SourceArtifact(
-        key: "a26-05", periodKey: "2026", title: "Linear algebra course finished",
-        lineKeys: ["math"],
-        status: .inProgress, notePath: year),
-      SourceArtifact(
-        key: "a26-06", periodKey: "2026", title: "Client North app v2 released", lineKeys: ["work"],
-        status: .done, notePath: year),
+      artifact("a26-01", "Daily practice 2026", "core", priority: true),
+      artifact("a26-02", "20 strict pull-ups", "calisthenics"),
+      artifact("a26-03", "Eval toolkit v1", "ai", priority: true),
+      artifact("a26-04", "Practice-drift paper", "research"),
+      artifact("a26-05", "Spring recital 2027", "violin", priority: true),
+      artifact("a26-06", "Keep repertoire alive", "piano"),
+      artifact("a26-07", "B1 by summer 2027", "italian", .planned),
+      artifact("a26-08", "Kana and first 300 words", "japanese", .planned),
+      artifact("a26-09", "Linear algebra foundation", "math"),
+      artifact("a26-10", "Family year 2026", "family"),
+      artifact("q4-01", "Spring recital programme chosen", "violin", .done, in: .quarter),
+      artifact("q4-02", "Eval toolkit v1 published", "ai", in: .quarter),
+      artifact("q4-03", "Practice-drift paper draft", "research", in: .quarter),
+      artifact("q4-04", "Linear algebra ch. 1–4", "math", .done, in: .quarter),
+      artifact("q4-05", "10 strict pull-ups", "calisthenics", in: .quarter),
     ],
     // In path order, as the vault reader returns them (its golden test compares the two).
     notes: [
@@ -88,10 +94,21 @@ public struct DemoVault: NoteProvider {
           scale: .years(5), start: date(2026, 1), end: date(2031, 1)),
         parentLink: "[[Long_horizons]]", status: "draft"),
       SourceNote(
-        path: "00_Strategy/Years/Q4_2026_focus.md", title: "Q4 2026 focus",
+        path: quarter, title: "Q4 2026 focus",
         type: "quarter_focus", scale: .quarter, period: period(.quarter, 2026, 10),
         parentLink: "[[Artifacts_2026]]", status: "active"),
     ], unread: .nothing)
+
+  private enum Period { case year, quarter }
+
+  private static func artifact(
+    _ key: String, _ title: String, _ line: LineKey, _ status: ArtifactStatus = .inProgress,
+    priority: Bool = false, in period: Period = .year
+  ) -> SourceArtifact {
+    SourceArtifact(
+      key: key, periodKey: period == .year ? "2026" : "2026-Q4", title: title, lineKeys: [line],
+      status: status, priority: priority, notePath: period == .year ? year : quarter)
+  }
 
   private static func date(_ year: Int, _ month: Int) -> Date {
     calendar.date(from: DateComponents(year: year, month: month, day: 1))!
