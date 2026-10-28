@@ -57,6 +57,10 @@ public struct TaskSourceSnapshot: Sendable {
   public let provider: ProviderID
   public let generatedAt: Date
   public let timeZone: TimeZone
+  /// OmniFocus' default times; nil when the provider could not read them, which is not the
+  /// same as a setting that is absent (`docs/discovery/snapshot-contract.md` § Default times).
+  /// No default: every caller says it.
+  public let defaultTimes: DefaultTimeSettings?
   /// nil = a complete snapshot; otherwise only tasks changed since this date. Only a
   /// complete snapshot may be merged as a full import (its absences soft-delete).
   public let modifiedSince: Date?
@@ -65,12 +69,14 @@ public struct TaskSourceSnapshot: Sendable {
   public let tasks: [SourceTask]
 
   public init(
-    provider: ProviderID, generatedAt: Date, timeZone: TimeZone, modifiedSince: Date? = nil,
-    tags: [SourceTag], projects: [SourceProject], tasks: [SourceTask]
+    provider: ProviderID, generatedAt: Date, timeZone: TimeZone,
+    defaultTimes: DefaultTimeSettings?, modifiedSince: Date? = nil, tags: [SourceTag],
+    projects: [SourceProject], tasks: [SourceTask]
   ) {
     self.provider = provider
     self.generatedAt = generatedAt
     self.timeZone = timeZone
+    self.defaultTimes = defaultTimes
     self.modifiedSince = modifiedSince
     self.tags = tags
     self.projects = projects

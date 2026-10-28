@@ -251,6 +251,7 @@ public struct NoteRef: Hashable, Sendable, Identifiable {
 /// Everything the store holds for phase 1. Services read only this.
 public struct Workspace: Sendable {
   public var timeZone: TimeZone
+  public var defaultTimeSettings: DefaultTimeSettings
   public var lines: [Line]
   public var artifacts: [Artifact]
   public var notes: [NoteRef]
@@ -260,10 +261,12 @@ public struct Workspace: Sendable {
   public var issues: [ImportIssue]
 
   public init(
-    timeZone: TimeZone, lines: [Line] = [], artifacts: [Artifact] = [], notes: [NoteRef] = [],
+    timeZone: TimeZone, defaultTimeSettings: DefaultTimeSettings = DefaultTimeSettings(),
+    lines: [Line] = [], artifacts: [Artifact] = [], notes: [NoteRef] = [],
     projects: [Project] = [], tasks: [TaskItem] = [], tags: [Tag] = [], issues: [ImportIssue] = []
   ) {
     self.timeZone = timeZone
+    self.defaultTimeSettings = defaultTimeSettings
     self.lines = lines
     self.artifacts = artifacts
     self.notes = notes
@@ -272,10 +275,16 @@ public struct Workspace: Sendable {
     self.tags = tags
     self.issues = issues
   }
+
+  /// The default times in the workspace's own zone, so the two can never disagree.
+  public var defaultTimes: DefaultTimes { DefaultTimes(timeZone: timeZone, defaultTimeSettings) }
 }
 
 /// A calm, non-fatal problem found while importing; shown as a banner, never a crash.
 public enum ImportIssue: Hashable, Sendable {
+  /// The task snapshot came without OmniFocus' default times: the stored ones were kept, or,
+  /// with none stored, only 00:00 counts as date only (owner, 2026-10-28).
+  case defaultTimesNotRead
   case ruleClaimedTwice(rule: String, kept: LineKey, ignored: LineKey)
   case unknownLineKey(LineKey, in: String)
   /// `path` is vault-relative; `line` is the note's line number, when known.

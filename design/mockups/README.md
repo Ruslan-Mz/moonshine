@@ -10,3 +10,7 @@ The exact `.dc.html` source of every artboard on the Claude Design canvas "MoonS
 - `Main.dc.html`, `TodayA-Dark`, `TodayB`, `TodayB-Dark` = the two rejected Today directions (A: list-centric, B: dense outline), kept for history. The chosen hybrid is `Today.dc.html`.
 - `Palette` and `Settings` embed `Today` as their background.
 - `Components.dc.html` renders the light and dark sets side by side.
+
+## Draft-5 (2026-10-28)
+
+`MenuBarTimer`, `TimerStates`, `Today-Time`, `TimeDay`, `TimeWeek`, `TodayReminders`, `Lines-Periods`, `iPhoneLockSwitch` and `iPhoneCapture` (+ `-Dark`, and `-RU` / `-RU-Dark` for `MenuBarTimer`, `Today-Time`, `Lines-Periods`, `iPhoneLockSwitch`) were **authored in the repository**, not generated on the canvas, in the same format: `theme()` copied from the canvas files, `{{ }}` values, `sc-for` / `sc-if`, `dc-import` wrappers. `Today-Time` is `Today` with the draft-5 additions. They can be pasted into the canvas; until a designer redraws them there, the screen specs win, as always.

@@ -125,6 +125,8 @@ Tasks reference tags **by id**. Leaf names are not unique (e.g. `Низкая` c
 
 OmniFocus stores a time on every date; a date picked without a time gets the user's default time. `defaultTimes` exports those settings as `HH:mm` (24 h, local): `due` and `defer` always; `planned` only when the OmniFocus version has that setting (absent key otherwise). If the settings cannot be read, `defaultTimes` is absent. **Fallback (owner decision 2026-10-05):** when `defaultTimes` or the key for a date kind is absent, only 00:00 counts as "date only" for that kind. Consumers may treat a date at the default time as "a day, no particular time" — not used before a spec asks for it.
 
+**Stored and used (S4-3a; owner, 2026-10-28):** the mapper carries `defaultTimes` into the task source, the importer into the workspace and the store keeps them (minutes from midnight in the `workspace` row, read in the workspace's time zone). An absent `defaultTimes` object is a failed read, not "no settings": the stored times stay, and the import reports `defaultTimesNotRead` (no value in it); with nothing stored yet, the 00:00 fallback above applies, with the same issue. A missing `planned` key alone (an older OmniFocus) is taken as it is, with no issue. `HH:mm` takes ASCII digits only. The Day rail and Today's due times (S4-3b) are the first readers.
+
 **Known limit of that rule:** a task deliberately planned or due exactly at the default time is indistinguishable from a date-only one and is treated as date-only. On the live data (2026-10-02) one-off tasks are mostly at the default time (planned 35 of 39, due 34 of 49), repeating ones mostly at other times (planned 142 of 973 at the default, due 78 of 251).
 
 ## Bridge (v0.2)

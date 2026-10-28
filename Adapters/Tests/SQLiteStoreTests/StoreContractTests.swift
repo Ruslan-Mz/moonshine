@@ -48,6 +48,20 @@ import Testing
   }
 
   @Test(arguments: StoreKind.allCases)
+  func defaultTimesAndTheirIssueReadBackInTheWorkspaceZone(kind: StoreKind) async throws {
+    let store = try kind.make()
+    let tokyo = try #require(TimeZone(identifier: "Asia/Tokyo"))
+    let times = DefaultTimeSettings(
+      due: TimeOfDay(hour: 23, minute: 59), defer: TimeOfDay(hour: 0, minute: 0))
+    let workspace = Workspace(
+      timeZone: tokyo, defaultTimeSettings: times, issues: [.defaultTimesNotRead])
+    try await store.commit(workspace, identities: IdentityMap(), expectedVersion: 0, at: first)
+    let read = try await store.workspace()
+    expectSame(read, workspace)
+    #expect(read.defaultTimes == DefaultTimes(timeZone: tokyo, times))
+  }
+
+  @Test(arguments: StoreKind.allCases)
   func versionPointTwoLineKeysReadBackExactly(kind: StoreKind) async throws {
     let store = try kind.make()
     let lines: VaultLines = .read(

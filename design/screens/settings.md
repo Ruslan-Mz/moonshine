@@ -47,6 +47,14 @@ Refresh follows ADR-0011: imports are always full and start when OmniFocus resig
 
 Buttons (sheet variant only): Cancel, Done (default, accent). The Settings scene applies changes immediately.
 
+**Time** tab (draft-5; Timer (Mac), phase 2; `timer-mac.md`)
+
+- **Work:** a list of the lines, each with a checkbox; checked lines are **work** in the day balance and the week table's Work row (owner, 2026-10-28). Asked once on the first open of the timer (`timer-mac.md` § Work lines); until answered, or after `Not now`, none is checked and no Work term is shown anywhere.
+- **Activity palette:** sections in order (Lines · Projects · Life ops, reorderable); pinned projects and tasks (up to 8, removable; with eight, `Pin to Palette` is disabled until one is removed); the system-wide shortcut (a recorder, default `⌃⌥T`); `Show in the menu bar: Always | While a timer runs` (with the second and nothing running, ⌃⌥T shows the item while the popover is open).
+- **Life ops categories:** eight defaults (Sleep, Food, Cooking, Hygiene, House, Transport, Errands, Inbox); rename, change the emoji, reorder, add, archive (owner, 2026-10-28). Sleep is built in: it can be renamed, not archived (it marks where "today so far" starts). Each category may set its own break-nudge minutes and check limit; by default Sleep has no break nudge and a 12 h check limit, the others use the defaults below.
+- **Nudges** (ADR-0016): Break nudge on/off and its **default** minutes (50); the **default** check limit (4 h); day marks on/off; the calendar suggestion on/off. A line overrides the two defaults with `break_after_min` and `check_after_h` in the budget note (owner, 2026-10-28; `docs/discovery/vault-contract.md` § 1, "Nudge values"); caption `A line can set its own values in the budget note: break_after_min, check_after_h.`
+- Caption: `Time entries are MoonShine’s own data. They are never written to OmniFocus, your vault or your calendars.`
+
 ## Status bar
 
 `.safeAreaInset(edge: .bottom)` HStack, 28 high: "Demo data" capsule (Demo only) · `Updated 3 min ago` (relative, refreshes every minute) · while importing: a small `ProgressView` + `Importing…` (never blocks the UI) · shortcut hints on the right.

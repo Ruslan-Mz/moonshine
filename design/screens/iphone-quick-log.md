@@ -91,3 +91,7 @@ Second `Picker(.segmented)` state of the existing sheet; `TextField` with `.focu
 - [ ] Reachable with one thumb; every control ≥ 44 pt.
 - [ ] Saving with an empty direction works.
 - [ ] No reminder, badge or notification is created by a draft.
+
+## Draft-5 — capture at the moment
+
+The Lock Screen widgets, the Live Activity's changing slot and switch notice, and the capture app (Now, Day, Lock Screen set) are specified in `iphone-capture.md`. In 3b, Now and Day become the Log tab; this quick-log sheet stays for logging afterwards, and the practice timer sheet becomes Now's running card.

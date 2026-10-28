@@ -13,6 +13,20 @@ public struct TimeOfDay: Hashable, Sendable {
   }
 }
 
+/// OmniFocus' default times of day as the snapshot exports them, without a zone: a workspace
+/// reads them in its own (`Workspace.defaultTimes`). A nil time is an absent setting.
+public struct DefaultTimeSettings: Hashable, Sendable {
+  public let due: TimeOfDay?
+  public let `defer`: TimeOfDay?
+  public let planned: TimeOfDay?
+
+  public init(due: TimeOfDay? = nil, defer: TimeOfDay? = nil, planned: TimeOfDay? = nil) {
+    self.due = due
+    self.defer = `defer`
+    self.planned = planned
+  }
+}
+
 /// OmniFocus' default times (`docs/discovery/snapshot-contract.md` § Default times), in the
 /// snapshot's time zone. A nil time is an absent setting: then only 00:00 counts as date only.
 public struct DefaultTimes: Hashable, Sendable {
@@ -33,6 +47,11 @@ public struct DefaultTimes: Hashable, Sendable {
     self.due = due
     self.defer = `defer`
     self.planned = planned
+  }
+
+  public init(timeZone: TimeZone, _ settings: DefaultTimeSettings) {
+    self.init(
+      timeZone: timeZone, due: settings.due, defer: settings.defer, planned: settings.planned)
   }
 
   /// "A day, no particular time": the date's time in the snapshot's zone equals the default

@@ -8,7 +8,7 @@ enum TodayFormat {
     date.formatted(style(timeZone, locale).weekday(.wide).day().month(.wide))
   }
 
-  /// `29 Sep`: a due date without its time, which is shown from S4-3a on.
+  /// `29 Sep`: a due date without its time, which is shown from S4-3b on (owner, 2026-10-28).
   static func dueDate(_ date: Date, timeZone: TimeZone, locale: Locale) -> String {
     date.formatted(style(timeZone, locale).day().month(.abbreviated))
   }

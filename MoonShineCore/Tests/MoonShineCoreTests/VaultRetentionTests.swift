@@ -15,6 +15,7 @@ import Testing
   var source: TaskSourceSnapshot {
     TaskSourceSnapshot(
       provider: .omnifocus, generatedAt: first, timeZone: TestWorld.timeZone,
+      defaultTimes: DefaultTimeSettings(),
       tags: [SourceTag(externalId: "t-violin", name: "violin")], projects: [],
       tasks: [SourceTask(externalId: "x", name: "Scales", tagExternalIds: ["t-violin"])])
   }

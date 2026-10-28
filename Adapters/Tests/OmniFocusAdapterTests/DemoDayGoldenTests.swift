@@ -57,6 +57,13 @@ import Testing
     #expect(document.defaultTimes?.planned == hhmm(defaults.planned))
   }
 
+  /// The demo app's import path (S4-3a): the workspace's default times are `DemoDay`'s.
+  @Test func theImportedDefaultTimesAreTheDemoDefaults() async throws {
+    let workspace = try await workspace()
+    #expect(workspace.defaultTimes == DemoDay.defaultTimes)
+    #expect(!workspace.issues.contains(.defaultTimesNotRead))
+  }
+
   /// Over the whole snapshot, not only week 40: every other planned or due date is date only.
   @Test func theTimedTasksOfTheSnapshotAreTheDemoDay() async throws {
     let defaults = DemoDay.defaultTimes
@@ -96,10 +103,11 @@ import Testing
   @Test func theThursdayDayLoadOnTheSnapshotMatchesTheDesign() async throws {
     let noon = try #require(
       DemoCalendar.calendar.date(from: DateComponents(year: 2026, month: 10, day: 1, hour: 12)))
+    let workspace = try await workspace()
     let load = DayLoad.compute(
       day: noon, now: DemoCalendar.now, window: .standard,
       events: .read(DemoCalendar.events, skipped: 0), visibility: DemoCalendar.visibility,
-      tasks: try await workspace().tasks, defaultTimes: DemoDay.defaultTimes,
+      tasks: workspace.tasks, defaultTimes: workspace.defaultTimes,
       calendar: DemoCalendar.calendar)
     #expect(load.eventCount == 4)
     #expect(load.inCalendarMinutes == 240)

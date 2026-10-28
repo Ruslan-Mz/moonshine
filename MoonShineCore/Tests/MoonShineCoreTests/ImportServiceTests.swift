@@ -16,7 +16,7 @@ import Testing
       if !isOpen { await withCheckedContinuation { waiting.append($0) } }
       return TaskSourceSnapshot(
         provider: .omnifocus, generatedAt: Date(timeIntervalSince1970: 0),
-        timeZone: TestWorld.timeZone, tags: [], projects: [],
+        timeZone: TestWorld.timeZone, defaultTimes: DefaultTimeSettings(), tags: [], projects: [],
         tasks: [SourceTask(externalId: "x", name: "Scales")])
     }
 
@@ -64,6 +64,7 @@ import Testing
     func snapshot(modifiedSince: Date?) async throws -> TaskSourceSnapshot {
       TaskSourceSnapshot(
         provider: .omnifocus, generatedAt: since, timeZone: TestWorld.timeZone,
+        defaultTimes: DefaultTimeSettings(),
         modifiedSince: since, tags: [], projects: [], tasks: [])
     }
   }
@@ -76,5 +77,33 @@ import Testing
       try await service.run()
     }
     #expect(try await store.identityMap().version == 0)
+  }
+
+  struct TimedTaskProvider: TaskProvider {
+    let defaultTimes: DefaultTimeSettings?
+    func snapshot(modifiedSince: Date?) async throws -> TaskSourceSnapshot {
+      TaskSourceSnapshot(
+        provider: .omnifocus, generatedAt: Date(timeIntervalSince1970: 0),
+        timeZone: TestWorld.timeZone, defaultTimes: defaultTimes, tags: [], projects: [],
+        tasks: [])
+    }
+  }
+
+  @Test func anImportStoresTheDefaultTimesAndAnUnreadOneKeepsThem() async throws {
+    let store = InMemoryStore(timeZone: TestWorld.timeZone)
+    let times = DefaultTimeSettings(
+      due: TimeOfDay(hour: 17, minute: 0), defer: TimeOfDay(hour: 6, minute: 0))
+    let now = Date(timeIntervalSince1970: 1_790_000_000)
+    try await ImportService(
+      tasks: TimedTaskProvider(defaultTimes: times), notes: DemoVault(), store: store
+    ).run(now: now)
+    #expect(try await store.workspace().defaultTimeSettings == times)
+
+    try await ImportService(
+      tasks: TimedTaskProvider(defaultTimes: nil), notes: DemoVault(), store: store
+    ).run(now: now.addingTimeInterval(60))
+    let after = try await store.workspace()
+    #expect(after.defaultTimeSettings == times)
+    #expect(after.issues.contains(.defaultTimesNotRead))
   }
 }
