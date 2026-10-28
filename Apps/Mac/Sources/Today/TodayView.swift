@@ -99,6 +99,8 @@ struct TodayView: View {
   @SceneStorage("today.fromEarlierExpanded") private var fromEarlierExpanded = true
   @SceneStorage("today.lifeOpsExpanded") private var lifeOpsExpanded = false
   @SceneStorage("today.moreDoneExpanded") private var moreDoneExpanded = false
+  /// The rail is shown by default, at 1100×700 too (owner, 2026-10-27); ⌃⌘I hides it.
+  @SceneStorage("today.railShown") private var railShown = true
   @State private var selection: TodayTableRow.ID?
   /// The list has the keyboard from launch, and again after any row is clicked, so ↑↓ work
   /// even when an earlier click went to the sidebar.
@@ -116,6 +118,17 @@ struct TodayView: View {
     .frame(minWidth: TodayColumns.minimumWidth)
     .navigationTitle("Today")
     .navigationSubtitle(subtitle)
+    .inspector(isPresented: $railShown) {
+      TodayRail(screen: screen).inspectorColumnWidth(300)
+    }
+    .toolbar {
+      Button {
+        railShown.toggle()
+      } label: {
+        Label("Right Rail", systemImage: "sidebar.trailing")
+      }
+      .help(Text("Show or hide the right rail (⌃⌘I)"))
+    }
   }
 
   private var table: some View {

@@ -25,7 +25,7 @@ Right rail:
 
 - **Draft-2 — Quarter focus** (top): card `Q4 focus · 2 of 5 done` listing the current quarter's artifacts (status dot neutral / check), each with its line emoji; footer link `Open quarter note`. Source: the quarter note (`scale: quarter`) and its artifacts. Absent if no quarter note.
 - **Touched today**: a grid Line | Rhythm | Progress, e.g. `🎻 Violin | 1 session | —`. Rhythm values in `rhythm` colour, progress values in `progress` colour, "—" in tertiary.
-- **Quiet lines**: `QuietLineCard`s, then `NoActivityCard`s, then a caption explaining the rule.
+- **Quiet lines**: `QuietLineCard`s, then `NoActivityCard`s, then a caption explaining the rule. Foundation lines are never quiet, but a foundation line with no completions at all gets a `NoActivityCard` with its first step (owner, 2026-10-28).
 - **Paused on purpose**: greyed rows.
 
 ## Data (phase-1 spec)

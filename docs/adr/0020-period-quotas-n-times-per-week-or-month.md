@@ -72,7 +72,7 @@ The state of the current period:
 | **Open** | count < N, days left > needed + 1                  | Shown by its OmniFocus dates as usual, with a quiet chip `1 of 2 · this week`.                                                  |
 | **Time** | count < N, days left ≤ needed + 1 (today included) | Chip `time · 1 of 2 · by Sun`, secondary text when neutral, amber when strong.                                                  |
 
-"Needed" is N minus the count. So "2 per week" with none done shows _time_ from Friday, "1 per week" from Saturday, and "2 per month" from three days before the month ends.
+"Needed" is N minus the count. So with none done, "2 per week" shows _time_ from Friday, "1 per week" from Saturday, and "2 per month" on the last 3 days of the month (owner, 2026-10-27).
 
 A period that ended short:
 

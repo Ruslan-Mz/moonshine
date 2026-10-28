@@ -129,6 +129,58 @@
         }
       }
     },
+    "%lld sessions": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld session"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld sessions"
+                }
+              }
+            }
+          }
+        },
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld занятие"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld занятия"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld занятий"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld занятия"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld tasks": {
       "localizations": {
         "en": {
@@ -293,6 +345,22 @@
         }
       }
     },
+    "First step": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "First step"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Первый шаг"
+          }
+        }
+      }
+    },
     "From earlier (%lld)": {
       "localizations": {
         "en": {
@@ -305,6 +373,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "С прошлых дней (%lld)"
+          }
+        }
+      }
+    },
+    "Last: %@, %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last: %1$@, %2$@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Последнее: %1$@, %2$@"
+          }
+        }
+      }
+    },
+    "Line": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Line"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Линия"
           }
         }
       }
@@ -325,6 +425,54 @@
         }
       }
     },
+    "Nothing on the rail today": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing on the rail today"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сегодня на панели ничего нет"
+          }
+        }
+      }
+    },
+    "Paused on purpose": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused on purpose"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "На паузе намеренно"
+          }
+        }
+      }
+    },
+    "Progress": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Progress"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Продвижение"
+          }
+        }
+      }
+    },
     "Project → Line → Artifact": {
       "localizations": {
         "en": {
@@ -337,6 +485,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "Проект → Линия → Артефакт"
+          }
+        }
+      }
+    },
+    "Quiet lines": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quiet lines"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Тихие линии"
+          }
+        }
+      }
+    },
+    "Quiet: an active line with no completed task for %lld days or more. Foundation, maintenance and paused lines are never quiet.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quiet: an active line with no completed task for %lld days or more. Foundation, maintenance and paused lines are never quiet."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Тихая линия — активная линия без выполненных задач %lld дней и дольше. Фундамент, линии на поддержании и на паузе тихими не бывают."
+          }
+        }
+      }
+    },
+    "Rhythm": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rhythm"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ритм"
+          }
+        }
+      }
+    },
+    "Right Rail": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Right Rail"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Правая панель"
           }
         }
       }
@@ -405,6 +617,38 @@
         }
       }
     },
+    "Show or hide the right rail (⌃⌘I)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show or hide the right rail (⌃⌘I)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показать или скрыть правую панель (⌃⌘I)"
+          }
+        }
+      }
+    },
+    "Suggested next step": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggested next step"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Следующий шаг"
+          }
+        }
+      }
+    },
     "Task": {
       "localizations": {
         "en": {
@@ -453,6 +697,22 @@
         }
       }
     },
+    "Touched today": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touched today"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Затронуты сегодня"
+          }
+        }
+      }
+    },
     "When": {
       "localizations": {
         "en": {
@@ -481,6 +741,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "срок %@"
+          }
+        }
+      }
+    },
+    "no activity yet": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "no activity yet"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "пока без активности"
+          }
+        }
+      }
+    },
+    "no next action": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "no next action"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "нет следующего шага"
           }
         }
       }
@@ -530,6 +822,58 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "запланировано %lld дня назад"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "quiet for %lld days": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "quiet for %lld day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "quiet for %lld days"
+                }
+              }
+            }
+          }
+        },
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "тихо %lld день"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "тихо %lld дня"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "тихо %lld дней"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "тихо %lld дня"
                 }
               }
             }

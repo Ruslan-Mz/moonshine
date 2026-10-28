@@ -1,7 +1,7 @@
 import Foundation
 
-/// Completions in one week, never mixed (decision O1): rhythm = sessions of repeating tasks,
-/// progress = completed one-off tasks.
+/// Completions in one week or one day, never mixed (decision O1): rhythm = sessions of
+/// repeating tasks, progress = completed one-off tasks.
 public struct WeekCounts: Hashable, Sendable {
   public var rhythm: Int
   public var progress: Int
@@ -44,6 +44,9 @@ public struct Stats: Sendable {
 
   private var weekly: [LineAssignment: [ISOWeek: WeekCounts]] = [:]
   private var last: [LineAssignment: Date] = [:]
+  /// Every completion date of each session, and each one-off's, for day counts.
+  private var sessionDates: [LineAssignment: [[Date]]] = [:]
+  private var oneOffDates: [LineAssignment: [Date]] = [:]
 
   /// One completed repeating group is one session per line it touches, however many
   /// of its cloned children belong to that line.
@@ -58,6 +61,7 @@ public struct Stats: Sendable {
     let byID = Dictionary(
       workspace.tasks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     var sessions: [SessionKey: Date] = [:]
+    var sessionDates: [SessionKey: [Date]] = [:]
     var oneOffs: [(LineAssignment, Date)] = []
     for task in workspace.tasks where task.status == .completed {
       guard let done = task.completedAt else { continue }
@@ -65,6 +69,7 @@ public struct Stats: Sendable {
       if task.isOccurrence {
         let key = SessionKey(root: Self.sessionRoot(of: task, in: byID), line: task.line)
         sessions[key] = min(sessions[key] ?? done, done)
+        sessionDates[key, default: []].append(done)
       } else {
         oneOffs.append((task.line, done))
       }
@@ -78,6 +83,8 @@ public struct Stats: Sendable {
     for (line, done) in oneOffs { add(line, done, \.progress) }
     for (key, done) in sessions { add(key.line, done, \.rhythm) }
     self.weekly = weekly
+    for (key, dates) in sessionDates { self.sessionDates[key.line, default: []].append(dates) }
+    for (line, done) in oneOffs { oneOffDates[line, default: []].append(done) }
   }
 
   /// The outermost occurrence above `task`: the cloned group it was completed with.
@@ -110,6 +117,15 @@ public struct Stats: Sendable {
     return WeekAverage(
       rhythm: Double(previous.map(\.counts.rhythm).reduce(0, +)) / total,
       progress: Double(previous.map(\.counts.progress).reduce(0, +)) / total)
+  }
+
+  /// The counts of the day around `date` (owner, 2026-10-27): a session counts on every day one
+  /// of its completions falls on; weeks keep its first completion.
+  public func dayCounts(_ line: LineAssignment, on date: Date) -> WeekCounts {
+    guard let day = Horizon.containing(date, scale: .day, calendar: calendar) else { return .zero }
+    return WeekCounts(
+      rhythm: (sessionDates[line] ?? []).filter { $0.contains(where: day.contains) }.count,
+      progress: (oneOffDates[line] ?? []).filter(day.contains).count)
   }
 
   public func lastCompletion(_ line: LineAssignment) -> Date? {

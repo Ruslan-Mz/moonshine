@@ -23,14 +23,27 @@ public struct LineGroup: Hashable, Sendable {
 }
 
 /// An active line without recent completions: a fact with a next step, never a warning.
+/// Foundation lines are never quiet.
 public struct QuietLine: Hashable, Sendable {
   public enum Reason: Hashable, Sendable {
-    case lastActivity(Date)
+    /// Calendar days since the line's last completion, and that completed task.
+    case quiet(days: Int, last: TaskItem)
+    /// No completed task in the store. History older than the import window reads the same
+    /// until S4-4c carries the window start (owner, 2026-10-27).
     case noActivityYet
   }
 
   public let line: Line
   public let reason: Reason
+  /// The line's first available next action in source order (owner, 2026-10-24); nil when
+  /// it has none.
+  public let nextStep: TaskItem?
+}
+
+/// A line with a task completed today, with that day's sessions and tasks.
+public struct TouchedLine: Hashable, Sendable {
+  public let line: LineAssignment
+  public let counts: WeekCounts
 }
 
 public struct TodayTotals: Hashable, Sendable {
@@ -67,8 +80,12 @@ public struct TodayOverview: Hashable, Sendable {
   /// other section.
   public let doneToday: [TodayItem]
   public let totals: TodayTotals
-  public let touchedToday: [LineAssignment]
+  /// Vault order, Life ops last; paused lines are left out (owner, 2026-10-27).
+  public let touchedToday: [TouchedLine]
+  /// Vault order.
   public let quietLines: [QuietLine]
+  /// Lines paused on purpose, in vault order.
+  public let pausedLines: [Line]
 }
 
 // MARK: - Week
@@ -161,6 +178,13 @@ public struct Overview: Sendable {
     workspace.tasks.filter { $0.status == .available }
   }
 
+  /// Available tasks that are not the parent of another available task, in source order.
+  private var nextActions: [TaskItem] {
+    let available = available
+    let parents = Set(available.compactMap(\.parentTaskID))
+    return available.filter { !parents.contains($0.id) }
+  }
+
   private func day(containing date: Date) -> Horizon {
     Horizon.containing(date, scale: .day, calendar: calendar)
       ?? Horizon(scale: .day, start: date, end: date)
@@ -235,16 +259,8 @@ public struct Overview: Sendable {
       return overflow ? .max : total
     }
 
-    let touched = Set(
-      workspace.tasks.filter { $0.status == .completed && $0.completedAt.map(day.contains) == true }
-        .map(\.line))
-    let quiet = workspace.lines.filter { $0.state == .active }.compactMap { line -> QuietLine? in
-      guard let last = stats.lastCompletion(.line(line.id)) else {
-        return QuietLine(line: line, reason: .noActivityYet)
-      }
-      guard calendarDays(from: last, to: day) >= Self.quietAfterDays else { return nil }
-      return QuietLine(line: line, reason: .lastActivity(last))
-    }
+    let paused = workspace.lines.filter { $0.state == .paused }
+    let touched = Set(done.map(\.task.line)).subtracting(paused.map { .line($0.id) })
     return TodayOverview(
       day: day, items: items, anchors: anchors, top: top, flaggedCount: candidates.count,
       groups: todayLineOrder.compactMap { line in
@@ -255,7 +271,33 @@ public struct Overview: Sendable {
       },
       doneToday: doneToday,
       totals: TodayTotals(open: open.count, done: done.count, estimateMinutes: estimate),
-      touchedToday: lineOrder.filter(touched.contains), quietLines: quiet)
+      touchedToday: lineOrder.filter(touched.contains).map {
+        TouchedLine(line: $0, counts: stats.dayCounts($0, on: now))
+      },
+      quietLines: quietLines(day), pausedLines: paused)
+  }
+
+  /// Active lines with no completion for `quietAfterDays`, foundation lines never (owner,
+  /// 2026-10-24), or with none at all, foundation lines included (owner, 2026-10-28).
+  private func quietLines(_ day: Horizon) -> [QuietLine] {
+    var lastDone: [LineAssignment: TaskItem] = [:]
+    for task in workspace.tasks where task.status == .completed {
+      guard let done = task.completedAt else { continue }
+      // The latest completion; the first in source order on a tie.
+      if let current = lastDone[task.line]?.completedAt, current >= done { continue }
+      lastDone[task.line] = task
+    }
+    let firstNext = Dictionary(
+      nextActions.map { ($0.line, $0) }, uniquingKeysWith: { first, _ in first })
+    return workspace.lines.filter { $0.state == .active }.compactMap { line in
+      let next = firstNext[.line(line.id)]
+      guard let last = lastDone[.line(line.id)], let done = last.completedAt else {
+        return QuietLine(line: line, reason: .noActivityYet, nextStep: next)
+      }
+      let days = calendarDays(from: done, to: day)
+      guard !line.foundation, days >= Self.quietAfterDays else { return nil }
+      return QuietLine(line: line, reason: .quiet(days: days, last: last), nextStep: next)
+    }
   }
 
   // MARK: Week
@@ -298,9 +340,7 @@ public struct Overview: Sendable {
   // MARK: Lines
 
   public func lines() -> LinesOverview {
-    let parentsOfAvailable = Set(available.compactMap(\.parentTaskID))
-    let nextActions = Dictionary(
-      grouping: available.filter { !parentsOfAvailable.contains($0.id) }, by: \.line)
+    let nextActions = Dictionary(grouping: nextActions, by: \.line)
     func activity(_ line: LineAssignment) -> LineActivity {
       let actions = nextActions[line] ?? []
       let estimates = actions.compactMap(\.estimateMinutes)

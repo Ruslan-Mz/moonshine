@@ -127,28 +127,108 @@ import Testing
     let fresh = world.line("italian")
     let paused = world.line("calligraphy", state: .paused)
     let maintenance = world.line("math", state: .maintenance)
-    world.task("A", line: .line(quiet.id), completed: W.date(2026, 9, 16, 22))
+    let foundation = world.line("core", foundation: true)
+    let newFoundation = world.line("calisthenics", foundation: true)
+    let last = world.task("A", line: .line(quiet.id), completed: W.date(2026, 9, 16, 22))
     world.task("B", line: .line(recent.id), completed: W.date(2026, 9, 17, 8))
     world.task("C", line: .line(maintenance.id), completed: W.date(2026, 8, 1))
     world.task("D", line: .lifeOps, completed: W.date(2026, 8, 1))
+    world.task("E", line: .line(foundation.id), completed: W.date(2026, 8, 1))
+    let first = world.task("Warm-up", line: .line(newFoundation.id))
     _ = (fresh, paused)
     let today = Overview(workspace: world.workspace, now: now).today()
     #expect(
       today.quietLines == [
-        QuietLine(line: quiet, reason: .lastActivity(W.date(2026, 9, 16, 22))),
-        QuietLine(line: fresh, reason: .noActivityYet),
+        QuietLine(line: quiet, reason: .quiet(days: 14, last: last), nextStep: nil),
+        QuietLine(line: fresh, reason: .noActivityYet, nextStep: nil),
+        QuietLine(line: newFoundation, reason: .noActivityYet, nextStep: first),
       ])
   }
 
-  @Test func touchedTodayListsLinesWithACompletionToday() {
+  @Test func lastTaskIsTheLatestCompletionAndTheFirstInSourceOrderOnATie() throws {
+    var world = W()
+    let violin = world.line("violin")
+    let line = LineAssignment.line(violin.id)
+    world.task("Older", line: line, completed: W.date(2026, 9, 1, 9))
+    let first = world.task("Same time, first", line: line, completed: W.date(2026, 9, 2, 9))
+    world.task("Same time, second", line: line, completed: W.date(2026, 9, 2, 9))
+    let today = Overview(workspace: world.workspace, now: now).today()
+    let quiet = try #require(today.quietLines.first)
+    #expect(quiet.reason == .quiet(days: 28, last: first))
+  }
+
+  @Test func nextStepIsTheFirstAvailableNextActionInSourceOrder() throws {
+    var world = W()
+    let violin = world.line("violin")
+    let italian = world.line("italian")
+    let japanese = world.line("japanese")
+    let line = LineAssignment.line(violin.id)
+    world.task("Lesson", line: line, completed: W.date(2026, 9, 1))
+    world.task("Blocked", line: line, status: .blocked)
+    world.task("Done", line: line, completed: W.date(2026, 8, 30))
+    let parent = world.task("Parent with an open child", line: line)
+    world.task("Dropped", line: line, status: .dropped)
+    let child = world.task("Child", line: line, parent: parent.id)
+    world.task("Later", line: line)
+    // A parent whose children are all done is a next action itself.
+    let italianLine = LineAssignment.line(italian.id)
+    world.task("Old", line: italianLine, completed: W.date(2026, 9, 1))
+    let review = world.task("Review", line: italianLine)
+    world.task("Read", line: italianLine, parent: review.id, completed: W.date(2026, 9, 1))
+    // No completions and no next action.
+    world.task("Waiting", line: .line(japanese.id), status: .blocked)
+    let today = Overview(workspace: world.workspace, now: now).today()
+    #expect(today.quietLines.map(\.nextStep) == [child, review, nil])
+    #expect(today.quietLines.last?.reason == .noActivityYet)
+  }
+
+  @Test func nextStepAlsoComesWithNoActivityYet() throws {
+    var world = W()
+    let japanese = world.line("japanese")
+    let first = world.task("Learn kana", line: .line(japanese.id))
+    let today = Overview(workspace: world.workspace, now: now).today()
+    #expect(
+      today.quietLines == [QuietLine(line: japanese, reason: .noActivityYet, nextStep: first)])
+  }
+
+  @Test func touchedTodayListsLinesWithACompletionTodayAndTheirCounts() {
     var world = W()
     let violin = LineAssignment.line(world.line("violin").id)
     let piano = LineAssignment.line(world.line("piano").id)
+    let calligraphy = LineAssignment.line(world.line("calligraphy", state: .paused).id)
     world.task("Pay rent", line: .lifeOps, completed: W.date(2026, 9, 30, 9))
     world.session("Scales", line: violin, at: W.date(2026, 9, 30, 7))
     world.task("Chords", line: piano, completed: W.date(2026, 9, 29, 21))
+    world.task("Ink", line: calligraphy, completed: W.date(2026, 9, 30, 10))
     let today = Overview(workspace: world.workspace, now: now).today()
-    #expect(today.touchedToday == [violin, .lifeOps])
+    #expect(
+      today.touchedToday == [
+        TouchedLine(line: violin, counts: WeekCounts(rhythm: 1)),
+        TouchedLine(line: .lifeOps, counts: WeekCounts(progress: 1)),
+      ])
+  }
+
+  @Test func aSessionThatStraddlesMidnightCountsOnBothDays() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    let group = world.session("Evening practice", line: violin, at: W.date(2026, 9, 29, 23, 50))
+    world.session("Etude", line: violin, at: W.date(2026, 9, 29, 23, 50), parent: group.id)
+    world.session("Scales", line: violin, at: W.date(2026, 9, 30, 0, 10), parent: group.id)
+    world.session("Open strings", line: violin, at: W.date(2026, 9, 30, 0, 20), parent: group.id)
+    let today = Overview(workspace: world.workspace, now: now).today()
+    #expect(today.touchedToday == [TouchedLine(line: violin, counts: WeekCounts(rhythm: 1))])
+    let yesterday = Overview(workspace: world.workspace, now: W.date(2026, 9, 29)).today()
+    #expect(yesterday.touchedToday == [TouchedLine(line: violin, counts: WeekCounts(rhythm: 1))])
+  }
+
+  @Test func pausedLinesAreListedInVaultOrder() {
+    var world = W()
+    world.line("violin")
+    let calligraphy = world.line("calligraphy", state: .paused)
+    world.line("piano", state: .maintenance)
+    let chess = world.line("chess", state: .paused)
+    let today = Overview(workspace: world.workspace, now: now).today()
+    #expect(today.pausedLines == [calligraphy, chess])
   }
 
   // MARK: Done today, order, anchors, Top 3, totals (S4-1b-1)

@@ -57,6 +57,16 @@ import Testing
     #expect(stats.counts(violin, in: w40) == WeekCounts(progress: 1))
   }
 
+  @Test func dayCountsIncludeTheDayStartAndExcludeItsEnd() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.task("At midnight", line: violin, completed: W.date(2026, 9, 30, 0))
+    world.task("Next midnight", line: violin, completed: W.date(2026, 10, 1, 0))
+    world.session("Scales", line: violin, at: W.date(2026, 9, 30, 23, 59))
+    let stats = Stats(workspace: world.workspace, now: now)
+    #expect(stats.dayCounts(violin, on: now) == WeekCounts(rhythm: 1, progress: 1))
+  }
+
   @Test func lifeOpsIsItsOwnBucket() {
     var world = W()
     let violin = LineAssignment.line(world.line("violin").id)

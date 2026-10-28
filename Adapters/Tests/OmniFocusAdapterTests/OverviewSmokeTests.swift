@@ -34,11 +34,14 @@ import Testing
     #expect(try daysSinceLastActivity("piano", in: overview) == 29)
     let quiet = overview.today().quietLines
     #expect(quiet.map(\.line.key) == ["italian"])
+    guard case .quiet(let days, let last) = quiet.first?.reason else {
+      Issue.record("Italian is not quiet")
+      return
+    }
+    #expect(days == 29)
     #expect(
-      quiet.first?.reason
-        == .lastActivity(
-          DemoVault.calendar.date(
-            from: DateComponents(year: 2026, month: 9, day: 1, hour: 8))!))
+      last.completedAt
+        == DemoVault.calendar.date(from: DateComponents(year: 2026, month: 9, day: 1, hour: 8)))
   }
 
   @Test func everyViewRendersOnTheFixture() async throws {
