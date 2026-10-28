@@ -110,11 +110,15 @@ Artboards: `Today-CalB` (chosen), `Today-CalB-RU`, `Today-CalB-Mixed`, `Today-Ca
 
 ## Reminders (ADR-0017)
 
-Position and states only; the visual comes in the next design round (`design/README.md` § Pending design rounds, Before S4). S4 builds the OmniFocus tag bridge; the whole bridge (the tag setting, the exclusion and the strip) is the first thing cut from S4 if the timebox is at risk (`docs/specs/phase-1-see.md` → S4).
+Drawn in draft-5 (`TodayReminders`, + `-Dark`). S4 builds the OmniFocus tag bridge; the whole bridge (the tag setting, the exclusion and the strip) is the first thing cut from S4 if the timebox is at risk (`docs/specs/phase-1-see.md` → S4).
+
+- **Visual (draft-5):** one row, 36 pt, on the `band` fill with a hairline below: the `bell` symbol 12 and `Reminders` (12 semibold, secondary), then the reminders as chips (`ReminderChip`, `components.md`): `card` fill, 1 pt `cardBorder`, radius 6, 24 high, line emoji 12 + text 12.5, at most 240 wide. No checkbox, no count, no amber: a reminder is seen, not done. The strip reads apart from the Anchors strip below it (plain background, chips with checkboxes).
+- **More than fit:** a reminder is never cut short to fit. The ones that do not fit whole go behind `+3 more` (accent text, a chip like the others); only a single reminder wider than 240 truncates at the tail (tooltip with the full text). `+3 more` is a chip like the others: ↵ or a click opens it, and the chips wrap into as many rows as needed with `Show less` as the last chip (↵ or a click closes). The open state is kept per window (`@SceneStorage`), like Life ops.
+- **Keyboard:** the strip is in the Tab order before the table. ←/→ only move between chips (`+3 more` and `Show less` included) and never open or close anything; ↵ opens the focused reminder in OmniFocus, or opens or closes the overflow on `+3 more` / `Show less`. Space does nothing here, as on every disclosure (owner, 2026-10-26).
 
 - **Position:** the first row of the main area, above the Anchors strip. Absent when no task carries the reminder tag (`settings.md` § Reminders).
 - **Content:** OmniFocus tasks with the reminder tag that are not completed, not dropped and available now (defer date absent or ≤ now), in source order; a repeating task shows only its current copy; text and line emoji only. No checkbox, no estimate, no due styling and no urgent colour: a reminder is seen, never done or overdue.
-- **States:** none (absent) · one or more (shown in full up to the strip's height) · more than fit (the rest behind a `+N more` disclosure; the visual decides the height) · Demo mode (from the demo fixtures once they have reminders; absent until then).
+- **States:** none (absent) · one or more (shown in full up to the strip's height, one row) · more than fit (the rest behind a `+N more` disclosure, 36 pt closed) · opened (all rows, `Show less`) · Demo mode (the three demo reminders of `demo-data.md` § Draft-5 once the fixtures have them; absent until then).
 - **Behaviour:** read-only; ↵ or double-click opens the task in OmniFocus, as task rows do. Notifications stay with OmniFocus until the native Reminders slice.
 - **Counts:** these tasks are in no count on Today (the subtitle's open, done and estimate, Touched today, quiet lines) and in no line section, Top 3, Anchors strip or From earlier; they are hidden from every other task list too (Line detail, Week, Month) and shown only here. ⌘K finds them labelled "reminder". The trace still shows them under their project.
 
@@ -128,3 +132,42 @@ Position and states only; the visual comes in the next design round (`design/REA
 ## My take (draft-4)
 
 Not drawn on Today. One rule changes here (owner decision, 3 Oct 2026): any take or note **resets the quiet count** from its date (the date the note was written or the take was set, never a future date). A line with a take or a note in the last 14 days is therefore **not** listed under "Quiet lines" in the right rail, even with no task done. The take on the Today rail is drawn in the 3b round.
+
+## Time (draft-5)
+
+Artboards: `Today-Time`, `Today-Time-RU` (+ `-Dark`). Today at **15:00** on Thu 1 Oct, the moment the brief asks for: work has taken most of the day so far, and the owner should see it now, not at 22:00. Built in the Timer (Mac) slice (phase 2, ADR-0016); nothing of it is in S4.
+
+### Layout
+
+- **Today so far** (`DayBalance`, `components.md`), the first card of the right rail, above Day:
+  - `Today so far` · `since 06:40 · 8 h 20 min` (the day so far starts where the night's Sleep ended; owner, 2026-10-28).
+  - The bar and its legend: `Work 5 h 24 min` · `Everything else 2 h 36 min` · `Not tracked 20 min`. Work is the lines chosen as work in Settings → Time (`settings.md` § Time).
+  - **Day marks**, one row per line with a floor or a day portion today, paused lines excluded (a paused line is never shown as missing activity, vault contract § 1): `Core practice 50 min` over `floor 3 h/day · 2 h 10 min to the floor`; `Calisthenics 15 min` · `floor 1 h/day · 45 min to the floor`; `Math 15 min` · `floor 20 min/day · 5 min to the floor`; `Violin 0 min` · `day portion 1 h · 17:00 · 1 h to the portion`. Each row has a ▶ that starts that line.
+  - **Other time today:** `🤖 AI/ML 3 h 25 min` · `🔬 Research 1 h 59 min` · `🧺 Life ops 1 h 31 min`.
+  - **The next free stretch** from the calendar facts (`Free 15:20–17:00 · 1 h 40 min`) and **at most one suggested start**: among the lines whose mark is still open (paused lines never), foundation lines first, then the one with the most left to its floor or portion (`▶ 🧘 Core practice`). Absent when no mark is open or no stretch is free.
+  - `Tracked 8 h 15 min · by the clock 8 h · in parallel 15 min`, since 06:40.
+- **Day rail with two lanes:** `Plan` (events, timed tasks and due marks as before, now 118 wide) and `Tracked` (100 wide) on the same hours. Tracked blocks, clusters of short switches and the running block as in `time.md` § Day, at 26 pt per hour. Tracked time before the day window is one pinned row (`00:00–08:00 · 😴 🪥 🧘 💪 🍽️ · 8 h`). The toolbar's calendar fact uses free time from now: `≈ 3 h 25 min free until 22:00` at 15:00.
+- **Rows:** the running task shows the running pill (`● 0:22` on `Submit workshop abstract`); the selected row shows ▶ (`timer-mac.md` § Starting a timer).
+
+### The 15:00 moment
+
+What the owner sees, in rule 8's tone: facts, then one next step.
+
+- A fact about the whole day: 5 h 24 min of 8 h 20 min since waking went to work. No "too much", no colour for work, no percentage.
+- What is still open, as distances, never as shortfalls: `2 h 10 min to the floor`. A mark already reached reads `today’s 1 h is in`.
+- When he has room for it: the next free stretch and one ▶. He can ignore it; nothing repeats it or counts it.
+
+### Data
+
+- Today's entries and running sessions (ADR-0016); floors (`floor_h_day`) and day portions (today's events in a line-mapped calendar, else `portion_h_day`); the calendar's free time from now (§ Calendar).
+- "Since" = the end of today's Sleep interval; without one, the day window's start (owner, 2026-10-28). Tracked time before it is in the Time view, not in the bar.
+- Work = lines checked as work in Settings → Time, asked once on the first open of the timer (owner, 2026-10-28; `timer-mac.md` § Work lines); with none checked the bar shows tracked against not tracked only, and the legend has no Work term.
+
+### Acceptance
+
+- [ ] Every number derives from `demo-data.md` § Draft-5 at 15:00 (`since 06:40 · 8 h 20 min`, `Work 5 h 24 min`, `Everything else 2 h 36 min`, `Not tracked 20 min`, `Tracked 8 h 15 min · by the clock 8 h · in parallel 15 min`).
+- [ ] No red, no amber, no "behind" or "missed" anywhere in the card; a reached mark shows as reached and an open one as a distance.
+- [ ] At most one suggested start: foundation lines first, then the line with the most left to its floor or portion; never a paused line; absent when no mark is open or no stretch is free.
+- [ ] A paused line with `floor_h_day` has no day mark row.
+- [ ] The Plan lane is unchanged apart from its width; the Tracked lane never covers an event.
+- [ ] Checked in Russian at 1440 × 900 (`Today-Time-RU`).

@@ -36,3 +36,11 @@ An overlay in the window (`ZStack` + `.transition(.opacity)`), or an `NSPanel` v
 ## My take (draft-4)
 
 Drawn as a panel on `TakeStates`. A command `My take: <line>…` (typing `my take vio` finds `My take: 🎻 Violin…`). `↩` turns the palette into a one-line note field for that line; `1`–`4` set an optional direction; `↩` saves a dated **draft** on the current week and closes the palette. Nothing is confirmed from the palette.
+
+## Timer (draft-5)
+
+The in-window route to the timer (Timer (Mac), phase 2); the menu bar popover is the main one (`timer-mac.md`).
+
+- `Start timer: 🎻 Violin` for every activity (lines that are neither nested nor paused, pinned projects and tasks, Life ops categories) and today's tasks: typing `start vio` or just `vio` lists them under **Commands**. `↵` starts (a switch); `⌥↵` starts alongside, and the row reads `Start alongside: 🎻 Violin` while ⌥ is held.
+- `Pause timers` / `Resume timers` (⇧⌘T) · `Stop timers` (⌃⌘T) · `Pin to palette: Bach Partita No. 2` · `Show Time view` (⌘6).
+- A paused line is found here by name; a nested line is not offered (ADR-0019).

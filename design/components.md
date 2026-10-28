@@ -172,3 +172,76 @@ Grid 18 · 34 · flex: mark 12 · `W36` (11.5, tertiary, tabular) · direction (
 ### TakeDraftSheet
 
 The capture sheet (`screens/iphone-quick-log.md` § My take): line chips (recent first) · one text field · four optional direction buttons · caption · `Save draft to <line>`. iPhone: bottom sheet ≈ 610 pt; iPad: popover 420 wide; Mac: the ⌘K command and `Add a note` in Line detail use a one-line field with `1`–`4`.
+
+## Time components (draft-5)
+
+ADR-0016's surfaces. Artboards: `mockups/TimerStates.dc.html` (start points, notices, marks), `MenuBarTimer`, `Today-Time`, `TimeDay`, `TimeWeek`. One new colour token, `workSegment` (`tokens.md`): the darkest step of the load hue, so work and everything else are two steps of one hue, never two meanings.
+
+### ActivityTile
+
+The palette's unit: a line (neither nested nor paused), a pinned project or task, or a Life ops category. Mac 82 × 56, radius 9, `chipFill`: emoji 18 · name 11 (one line, tail truncation) · today's tracked time 10 (`—` when none). iPhone 72 high, four per row, radius 14, `cell` fill: emoji 24 · name 11.5 · time 10.5; a lock glyph 10 when it is one of the four Lock Screen places. Running: 1.5 pt (iPhone 2 pt) accent outline, `selection` fill, a 6 pt accent dot. VoiceOver: "Research, 1 hour 59 minutes today, start timer".
+
+### TimerButton and RunningPill
+
+- **TimerButton:** an 18 pt circle, `field` fill, 1 pt `fieldBorder`, `play.fill` 8 in accent. At the trailing edge of a row's name or title cell, on hover and on the selected row. Click = start (switch); ⌥-click = start alongside. Label "Start timer (⌘T)".
+- **RunningPill:** replaces the button on the running subject: 18 high, radius 9, `selection` fill, a 6 pt accent dot and the elapsed `0:22` (11 semibold, tabular, accent). Paused: `chipFill`, `secondary` text and the pause glyph. A click pauses or resumes.
+
+### RunningTimerRow
+
+Popover and iPhone Now: emoji badge (32 Mac, 40 iPhone) on the selection tint · title 13 semibold · subtitle 11 tertiary (`Workshop 2026 · since 14:38`, `· alongside`) · elapsed (20 Mac, 24 iPhone, semibold, tabular, accent) · pause and stop buttons (26 Mac, 36 iPhone). Up to three rows, earliest first. A marked session adds `clock.badge.questionmark` before the elapsed time.
+
+### MenuBarTimerItem
+
+The menu bar label: `timer` glyph when idle; emoji + `h:mm` (tabular) while one runs; + `+1` / `+2` with more; dimmed with a pause glyph when paused; `clock.badge.questionmark` when marked. Never coloured.
+
+### SwitchNotice
+
+Non-modal, about 8 s, never takes focus. Mac: a 22 pt capsule in the centre of the status bar, `band` fill, 1 pt `cardBorder`: `🤖 stopped` · a `Keep running` button · `⌘Z` hint; variants `🤖 🔬 stopped` (two stopped), `🤖 stopped (three at most)` (three ran and the start was alongside: the oldest stopped) and `🤖 🔬 🎻 stopped (three at most)` (three ran and the start was plain: all three stopped). Both "three at most" variants have no button: Keep running would need a fourth session (ADR-0016). iPhone: the Live Activity's bottom row, `🤖 stopped at 15:00 · 22 min` over `Keep running` and `Undo` (accent), Undo on the side away from the changing slot; taps ignored for its first 0.5 s; in the "three at most" cases only `Undo`. ⌘Z (Mac) and Undo (iPhone) undo the start in every variant.
+
+### DayBalance
+
+"Where did today go, so far." Rail card on Today (260 inner width, `card`, radius 10), compact in the menu bar popover (`band` fill, no card), and the summary strip of the Time view.
+
+- Header `Today so far` (13 semibold) · `since 06:40 · 8 h 20 min` (11.5 tertiary). "Since" = the end of today's Sleep interval; without one, the day window's start (owner, 2026-10-28).
+- **Bar**, 8 high, radius 4, 1 pt gaps: work (`workSegment`) · everything else (`loadSegment`) · not tracked (hatched with `hatch`), widths in proportion to "since … to now". No percentages.
+- Legend: three rows with 8 pt swatches: `Work 5 h 24 min` · `Everything else 2 h 36 min` · `Not tracked 20 min`. With no work lines chosen, the work term and its segment are absent.
+- **Day marks:** one row per line with a floor or a day portion today, **paused lines excluded** (a paused line is never shown as missing activity): emoji · name · today's time (tabular), under it `floor 3 h/day · 2 h 10 min to the floor` or `today’s 1 h is in` (11, tertiary) · a TimerButton.
+- **Other time today:** the remaining lines and Life ops with time today (11.5, secondary).
+- **Next free stretch** (from the calendar facts, `today.md` § Calendar) and at most one suggested start, an accent capsule `▶ 🧘 Core practice`: among the open marks (never a paused line), foundation lines first, then the line with the most left to its mark. Absent when no mark is open or no free stretch is left.
+- Footer: `Tracked 8 h 15 min · by the clock 8 h · in parallel 15 min` (11, tertiary), over the same "since".
+
+### TrackedBlock and SwitchCluster
+
+- **TrackedBlock:** on the Day rail (26 pt per hour, 100 wide) and in the Time view (42 pt per hour at 1×, 360 wide). Radius 3–4; fill `workSegment` or `loadSegment`; label text `segText`, on a work block `workSegmentText` (`tokens.json`). Label: emoji + name + duration from 24 pt, emoji + duration from 11 pt, nothing below. Parallel sessions split the lane in two or three. Running: 1.5 pt accent outline. Selected: 2 pt accent outline + edge handles. Edited: pencil glyph; from a calendar event: calendar glyph; marked: dashed outline + `clock.badge.questionmark`.
+- **SwitchCluster:** a run of 3 or more consecutive intervals, each under 20 min, gaps under 5 min, no parallel session: one block, one slice per interval with 1 pt between, one label on a `card` chip: the subjects' emoji by share and `15 intervals`. Selecting it lists the intervals; at 4× in the Time view it dissolves into blocks once every member is at least 11 pt.
+- **Gap:** hatched (`hatch`) between intervals after the day so far began.
+
+### IntervalRow
+
+Time view inspector and iPhone Day. Mac 23 high: time range 12 tabular · emoji · subject · minutes (right). iPhone 56 high: start over end · emoji 20 · title over line · duration 14 semibold; swipe `Change` (accent) · `Split` · `Delete` (neutral fills, never red). Cluster row: `15 intervals` + the shares, a chevron. Gap row: hatched, `Not tracked · 20 min`, `Fill…`.
+
+### TimeCell (week table)
+
+22 high, `h:mm` 12 tabular, right-aligned, empty at zero. Today's column on `track` (a running period). Selected: `selection` fill + 1.5 pt accent outline. Two sources: `square.on.square` 10 in `secondary` at the cell's leading top corner, with the tooltip "Two sources: MoonShine and the workbook".
+
+## Reminders strip (draft-5)
+
+### ReminderStrip and ReminderChip
+
+Today, above the Anchors strip (`screens/today.md` § Reminders). Strip: one row, 36 pt, `band` fill, hairline below; `bell` 12 + `Reminders` 12 semibold in `secondary`. Chip: `card` fill, 1 pt `cardBorder`, radius 6, 24 high, padding 0 × 9, line emoji 12 + text 12.5, max 240 wide. A chip never shrinks to fit: those that do not fit whole go behind `+N more` (accent text); only one reminder wider than 240 truncates. Opened: chips wrap; the last chip is `Show less`. `+N more` and `Show less` are ordinary focusable chips: ↵ or a click opens or closes; ←/→ only move between chips; Space does nothing. No checkbox, count, estimate, due styling or amber.
+
+## Period components (draft-5)
+
+ADR-0019 practice targets and ADR-0020 quotas share one period engine; they share their look too. Artboard: `Lines-Periods`.
+
+### PracticeTarget
+
+Text, not a chip: `diary 4 of 5 · this week` (11.5), one line per target; under them the streak `4 weeks in a row` (11, tertiary) from 2 periods. Partly read: `at least 4 of 5 · this week`; unavailable: `4 of 5 · as of Tue`. Entries sparkline: one neutral series (`chipText` at 55 %), 11 wide bars, a dashed `secondary` rule at the weekly target, the current week partial.
+
+### QuotaChip
+
+18 high, radius 5, padding 1 × 7, text 11: met `2 of 2 ✓` (`chipFill`, `secondary`); open `0 of 1 · this week` (`chipFill`, `chipText`); time `time · 1 of 4 · by Sun` (neutral: `chipFill`, `chipText`; strong: `dueFill`, `dueText`, semibold); short last period `last week: 1 of 2` (neutral or strong as time); carried `2 of 2 ✓ (carried)`. On a Lines row the task title sits above it (11, tertiary).
+
+### BudgetCell (draft-5)
+
+`6 h / week`; `floor 3 h/day` for a foundation line; a weekly budget with a floor on a line that is not foundation: `4 h / week` over `floor 20 min/day` (11, `secondary`); a floor and no weekly budget on a line that is not foundation: `floor 30 min/day` alone; `by entries` (tertiary) for a practice line; `—` when unset. Floor format: `screens/lines.md` § Draft-5.
