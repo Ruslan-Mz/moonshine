@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lines — S4-2 columns, practice lines, quotas (draft-5)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0A64D8}a:hover{color:#084FA8}
+button{font:inherit;color:inherit;cursor:default}
+</style>
+</helmet>
+<div dir="{{ss.dir}}" lang="{{ss.lang}}" style="width:1440px;height:900px;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;border-radius:12px;border:1px solid {{c.windowBorder}};font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;font-size:13px;line-height:1.35;color:{{c.text}};background:{{c.window}};-webkit-font-smoothing:antialiased;position:relative"><div style="flex:1;display:flex;min-height:0"><nav aria-label="Sidebar" style="width:236px;flex-shrink:0;display:flex;flex-direction:column;gap:14px;padding:16px 12px;box-sizing:border-box;overflow:hidden;background:{{c.sidebar}};border-inline-end:1px solid {{c.sep}}"><div style="display:flex;align-items:center;gap:8px;height:20px;padding-inline-start:4px"><span style="width:12px;height:12px;border-radius:6px;background:#FF5F57"></span><span style="width:12px;height:12px;border-radius:6px;background:#FEBC2E"></span><span style="width:12px;height:12px;border-radius:6px;background:#28C840"></span></div><div style="display:flex;flex-direction:column;gap:2px"><sc-for list="{{nav}}" as="v" hint-placeholder-count="5"><button style="display:flex;align-items:center;gap:10px;height:28px;padding:0 8px;border:0;border-radius:7px;background:{{v.bg}};font-weight:{{v.fw}};text-align:start"><span style="display:flex;color:{{v.ic}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="{{v.d}}"></path></svg></span><span style="flex:1">{{v.n}}</span><span style="font-size:11px;font-weight:400;color:{{c.ter}}">{{v.k}}</span></button></sc-for></div><div style="display:flex;flex-direction:column;gap:6px"><sc-for list="{{side}}" as="tier" hint-placeholder-count="4"><div style="display:flex;flex-direction:column;gap:0"><button style="display:flex;align-items:center;gap:6px;height:22px;padding:0 8px;border:0;background:transparent;text-align:start;font-size:11px;font-weight:600;color:{{c.ter}}"><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{tier.n}}</span><span style="font-weight:400">{{tier.count}}</span><svg width="9" height="9" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="{{tier.chev}}"></path></svg></button><sc-if value="{{tier.open}}" hint-placeholder-val="{{true}}"><sc-for list="{{tier.rows}}" as="l" hint-placeholder-count="3"><button style="display:flex;align-items:center;gap:9px;height:24px;padding:0 8px;border:0;border-radius:6px;background:transparent;text-align:start;color:{{l.fg}}"><span style="width:18px;text-align:center;opacity:{{l.op}}">{{l.e}}</span><span style="flex:1">{{l.n}}</span></button></sc-for></sc-if></div></sc-for></div></nav><div style="flex:1;min-width:0;display:flex;flex-direction:column"><div style="height:56px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 14px 0 22px;box-sizing:border-box;border-bottom:1px solid {{c.sep}}"><div style="display:flex;flex-direction:column;gap:1px;min-width:0"><h1 style="margin:0;font-size:19px;font-weight:700;letter-spacing:-0.2px;white-space:nowrap">{{S.title}}</h1><span style="font-size:12px;color:{{c.sec}};white-space:nowrap">{{S.sub}}</span></div><div style="flex:1"></div><button style="width:200px;height:28px;display:flex;align-items:center;gap:7px;padding:0 9px;border:0;border-radius:7px;background:{{c.field}};color:{{c.ter}};text-align:start"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg><span style="flex:1;font-size:12.5px">{{ss.search}}</span><span style="font-size:11px">⌘K</span></button></div><div style="flex:1;min-height:0;display:flex"><main style="flex:1;min-width:0;overflow:hidden;display:flex;flex-direction:column;position:relative"><div style="display:flex;align-items:center;gap:18px;height:36px;flex-shrink:0;padding:0 20px;font-size:11.5px;color:{{c.sec}};border-bottom:1px solid {{c.sep}}"><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:{{c.rhythm}}"></span>{{S.rhythm}}</span><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:{{c.progress}}"></span>{{S.progress}}</span><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:{{c.chipText}};opacity:0.55"></span>{{S.entries}} <span style="font-size:9.5px;font-weight:600;padding:0 5px;border-radius:4px;border:1px solid {{c.future}};color:{{c.future}}">{{S.phase}}</span></span><span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;box-sizing:border-box;border:1px dashed {{c.badgeBorder}};background:{{c.track}}"></span>{{S.partial}}</span><span style="margin-inline-start:auto;color:{{c.ter}}">{{S.weeks}}</span></div><div style="display:grid;grid-template-columns:214px 112px 124px 176px 150px 76px 196px minmax(0, 1fr);align-items:center;height:26px;flex-shrink:0;padding:0 10px 0 20px;font-size:11px;color:{{c.ter}};border-bottom:1px solid {{c.sep}}"><span>{{S.cols.0}}</span><span>{{S.cols.1}}</span><span>{{S.cols.2}}</span><span>{{S.cols.3}}</span><span>{{S.cols.4}}</span><span>{{S.cols.5}}</span><span style="display:flex;align-items:center;gap:6px">{{S.cols.6}} <span style="font-size:9.5px;font-weight:600;padding:0 5px;border-radius:4px;border:1px solid {{c.future}};color:{{c.future}}">{{S.phase}}</span></span><span>{{S.cols.7}}</span></div><sc-for list="{{tiers}}" as="t" hint-placeholder-count="3"><div style="display:flex;align-items:baseline;gap:8px;height:34px;padding:12px 20px 0;box-sizing:border-box;border-bottom:1px solid {{c.sep}}"><span style="font-size:13px;font-weight:700">{{t.n}}</span><span style="font-size:11.5px;color:{{c.ter}}">{{t.s}}</span></div><sc-for list="{{t.rows}}" as="r" hint-placeholder-count="3"><sc-if value="{{r.isLine}}" hint-placeholder-val="{{true}}"><div style="display:grid;grid-template-columns:214px 112px 124px 176px 150px 76px 196px minmax(0, 1fr);align-items:center;height:46px;padding:0 10px 0 20px;border-bottom:1px solid {{c.rowSep}};background:{{r.bg}}"><span style="display:flex;align-items:center;gap:10px;min-width:0;padding-inline-end:8px"><span style="font-size:17px">{{r.e}}</span><span style="display:flex;flex-direction:column;min-width:0"><span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.n}}</span><span style="font-size:11px;color:{{c.ter}}">{{r.blk}}</span></span><span style="flex:1"></span><sc-if value="{{r.sel}}" hint-placeholder-val="{{false}}"><span aria-label="Start timer (⌘T)" style="width:18px;height:18px;flex-shrink:0;border-radius:9px;background:{{c.field}};border:1px solid {{c.fieldBorder}};box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:{{c.accent}}"><svg width="8" height="8" viewBox="0 0 16 16" fill="currentColor" style="display:block"><path d="M5 3.2v9.6L13 8z"></path></svg></span></sc-if></span><span style="font-size:12.5px;color:{{r.sc}}">{{r.state}}</span><span style="display:flex;flex-direction:column;font-size:12.5px"><span>{{r.b1}}</span><span style="font-size:11px;color:{{c.sec}}">{{r.b2}}</span></span><span style="padding-inline-end:12px"><div style="display:flex;align-items:flex-end;gap:6px;height:28px;border-bottom:1px solid {{c.sep}}"><sc-for list="{{r.spark}}" as="w" hint-placeholder-count="8"><span style="display:flex;align-items:flex-end;gap:1px;height:28px;padding:0 1px;box-sizing:border-box;border:{{w.bd}};border-bottom:0;background:{{w.bg}};opacity:{{w.op}}"><span style="width:5px;height:{{w.rh}}px;border-radius:2px 2px 0 0;background:{{c.rhythm}}"></span><span style="width:5px;height:{{w.ph}}px;border-radius:2px 2px 0 0;background:{{c.progress}}"></span></span></sc-for></div></span><span style="display:flex;align-items:center;gap:5px;font-size:12px;color:{{r.lastC}};white-space:nowrap"><sc-if value="{{r.moon}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:block;flex-shrink:0"><path d="M13 9.5A5.5 5.5 0 1 1 6.5 3a4.5 4.5 0 0 0 6.5 6.5z"></path></svg></sc-if>{{r.last}}</span><span style="font-size:12.5px;font-variant-numeric:tabular-nums">{{r.next}}</span><span style="min-width:0;padding-inline-end:10px"><sc-if value="{{r.hasQ}}" hint-placeholder-val="{{false}}"><span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:11px;color:{{c.ter}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.q.task}}</span><span style="align-self:flex-start;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:1px 7px;border-radius:5px;font-size:11px;font-weight:{{r.q.fw}};background:{{r.q.bg}};color:{{r.q.fg}}">{{r.q.text}}</span></span></sc-if></span><span style="display:flex;align-items:center;font-size:12px;color:{{c.sec}};white-space:nowrap"><span style="flex:1;overflow:hidden;text-overflow:ellipsis">{{r.est}}</span><sc-if value="{{r.sel}}" hint-placeholder-val="{{false}}"><span style="color:{{c.ter}}"><svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M6 3.5L10.5 8 6 12.5"></path></svg></span></sc-if></span></div></sc-if><sc-if value="{{r.isPract}}" hint-placeholder-val="{{false}}"><div style="display:grid;grid-template-columns:214px 112px 124px 176px 150px 76px 196px minmax(0, 1fr);align-items:center;height:42px;padding:0 10px 0 20px;border-bottom:1px solid {{c.rowSep}}"><span style="display:flex;align-items:center;gap:8px;min-width:0;padding-inline-start:14px"><span style="width:8px;height:16px;flex-shrink:0;box-sizing:border-box;border-inline-start:1px solid {{c.badgeBorder}};border-bottom:1px solid {{c.badgeBorder}};margin-top:-10px"></span><span style="font-size:15px">{{r.e}}</span><span style="display:flex;flex-direction:column;min-width:0"><span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.n}}</span><span style="font-size:11px;color:{{c.ter}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.within}}</span></span></span><span style="display:flex;align-items:center;gap:6px;font-size:12.5px">{{S.active}} <span style="font-size:9.5px;font-weight:600;padding:0 5px;border-radius:4px;border:1px solid {{c.future}};color:{{c.future}}">{{S.phase}}</span></span><span style="font-size:12px;color:{{c.ter}}">{{S.byEntries}}</span><span style="padding-inline-end:12px"><div style="position:relative;display:flex;align-items:flex-end;gap:6px;height:28px;border-bottom:1px solid {{c.sep}}"><sc-for list="{{r.bars}}" as="w" hint-placeholder-count="8"><span style="display:flex;align-items:flex-end;height:28px;padding:0 1px;box-sizing:border-box;border:{{w.bd}};border-bottom:0;background:{{w.bg}};opacity:{{w.op}}"><span style="width:11px;height:{{w.h}}px;border-radius:2px 2px 0 0;background:{{c.chipText}};opacity:0.55"></span></span></sc-for><span style="position:absolute;left:0;right:0;top:{{r.ty}}px;border-top:1px dashed {{c.sec}}"></span></div></span><span style="font-size:12px;color:{{c.sec}};white-space:nowrap">{{r.last}}</span><span style="font-size:12.5px;color:{{c.ter}}">—</span><span style="display:flex;flex-direction:column;min-width:0;font-size:11.5px"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.t1}}</span><sc-if value="{{r.hasT2}}" hint-placeholder-val="{{false}}"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{r.t2}}</span></sc-if><span style="font-size:11px;color:{{c.ter}}">{{r.streak}}</span></span><span style="font-size:12px;color:{{c.ter}}">—</span></div></sc-if></sc-for></sc-for><div style="display:flex;align-items:baseline;gap:8px;height:40px;padding:14px 20px 0;box-sizing:border-box;border-bottom:1px solid {{c.sep}}"><span style="font-size:13px;font-weight:700">{{S.paused.0}}</span><span style="font-size:11.5px;color:{{c.ter}}">{{S.paused.1}}</span><span style="margin-inline-start:auto;display:flex;align-items:center;gap:4px;font-size:11.5px;color:{{c.ter}}">{{S.paused.2}}<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block"><path d="M6 3.5L10.5 8 6 12.5"></path></svg></span></div></main></div></div></div><footer style="height:28px;flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 14px;box-sizing:border-box;font-size:11.5px;color:{{c.ter}};border-top:1px solid {{c.sep}};background:{{c.sidebar}}"><span style="display:inline-flex;align-items:center;gap:5px;padding:1px 8px;border-radius:10px;border:1px solid {{c.badgeBorder}};color:{{c.sec}}"><span style="width:6px;height:6px;border-radius:3px;background:{{c.sec}}"></span>{{ss.demo}}</span><span>{{ss.updated}}</span><span style="margin-inline-start:auto">{{ss.keys}}</span></footer></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark": {"editor": "boolean", "default": false}, "lang": {"editor": "enum", "options": ["en", "ru"], "default": "en"}, "$preview": {"width": 1440, "height": 900}}'>
+function theme(d) {
+  return d ? {
+    dark:true, window:'#1E1E21', sidebar:'#28272C', rail:'#232326', band:'#252528', text:'#EDEDF0', sec:'#A6A6AD', ter:'#8D8D95',
+    sep:'rgba(255,255,255,0.08)', rowSep:'rgba(255,255,255,0.045)', chip:'rgba(255,255,255,0.075)', chipText:'#BDBDC4',
+    accent:'#5A9DFF', accentFill:'#2F6BD0', selBg:'rgba(90,157,255,0.16)', navSel:'rgba(255,255,255,0.09)', check:'#64646C', checkDone:'#4C8DF0',
+    dueText:'#FFC266', dueBg:'rgba(255,176,64,0.15)', card:'#2A2A2E', cardBorder:'rgba(255,255,255,0.07)',
+    field:'rgba(255,255,255,0.07)', fieldBorder:'rgba(255,255,255,0.12)', badgeBorder:'rgba(255,255,255,0.2)', paused:'#7E7E86',
+    windowBorder:'rgba(255,255,255,0.14)', rhythm:'#5E92EE', progress:'#3FA690', done:'#7E7E86', track:'rgba(255,255,255,0.07)',
+    heat:'94,146,238', scrim:'rgba(0,0,0,0.42)', sheet:'#2A2A2E', shadow:'0 24px 70px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.1)',
+    band1:'rgba(94,146,238,0.22)', bandLine:'#5E92EE', grid:'rgba(255,255,255,0.07)', seg:'#4A5468', segAlt:'#596378', segText:'#EDEDF0',
+    hatch:'rgba(255,255,255,0.22)', ctrl:'#3A3A3F', ctrlSel:'#5C5C63', knob:'#E6E6EA', future:'#B9A6F0'
+  } : {
+    dark:false, window:'#FFFFFF', sidebar:'#EFEEF2', rail:'#F8F8FA', band:'#F6F6F8', text:'#1D1D1F', sec:'#5F5F67', ter:'#74747C',
+    sep:'rgba(0,0,0,0.08)', rowSep:'rgba(0,0,0,0.045)', chip:'rgba(0,0,0,0.045)', chipText:'#4F4F57',
+    accent:'#0A64D8', accentFill:'#0A64D8', selBg:'rgba(10,100,216,0.08)', navSel:'rgba(0,0,0,0.07)', check:'#B4B4BB', checkDone:'#0A64D8',
+    dueText:'#8A4B00', dueBg:'#FFEFD6', card:'#FFFFFF', cardBorder:'rgba(0,0,0,0.08)',
+    field:'rgba(0,0,0,0.045)', fieldBorder:'rgba(0,0,0,0.12)', badgeBorder:'rgba(0,0,0,0.18)', paused:'#8E8E95',
+    windowBorder:'rgba(0,0,0,0.16)', rhythm:'#2F68C8', progress:'#14917A', done:'#9A9AA2', track:'rgba(0,0,0,0.05)',
+    heat:'47,104,200', scrim:'rgba(0,0,0,0.18)', sheet:'#FFFFFF', shadow:'0 24px 70px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.08)',
+    band1:'rgba(47,104,200,0.16)', bandLine:'#2F68C8', grid:'rgba(0,0,0,0.06)', seg:'#C9D3E6', segAlt:'#B4C1DA', segText:'#1D2A44',
+    hatch:'rgba(0,0,0,0.22)', ctrl:'#E4E4E8', ctrlSel:'#FFFFFF', knob:'#FFFFFF', future:'#5B3FA8'
+  };
+}
+var SS = {
+  en:{ lang:'en', dir:'ltr', today:'Today', week:'Week', month:'Month', lines:'Lines', time:'Time', search:'Search', demo:'Demo data', updated:'Updated 3 min ago',
+       keys:'⌘1–⌘4, ⌘6 Views · ⌘K Search · ⌘T Timer', tiers:{ foundation:'Foundation', active:'Active this season', maintenance:'Maintenance', paused:'Not in focus — on purpose' } },
+  ru:{ lang:'ru', dir:'ltr', today:'Сегодня', week:'Неделя', month:'Месяц', lines:'Линии', time:'Время', search:'Поиск', demo:'Демо-данные', updated:'Обновлено 3 мин назад',
+       keys:'⌘1–⌘4, ⌘6 Виды · ⌘K Поиск · ⌘T Таймер', tiers:{ foundation:'Фундамент', active:'Активные в сезоне', maintenance:'На поддержании', paused:'Не в фокусе — намеренно' } }
+};
+var SIDE_T = [
+  ['foundation', [['🧘','Core practice'],['💪','Calisthenics']], true],
+  ['active', [['🎻','Violin'],['🇮🇹','Italian'],['🇯🇵','Japanese'],['📐','Math'],['🤖','AI/ML'],['🔬','Research'],['👨‍👩‍👧','Family']], true],
+  ['maintenance', [['🎹','Piano']], true],
+  ['paused', [['✒️','Calligraphy']], false]
+];
+function side(c, lang) {
+  var ss = SS[lang] || SS.en;
+  return SIDE_T.map(function (t) { var paused = t[0] === 'paused';
+    return { n: ss.tiers[t[0]], open: t[2], count: t[2] ? '' : String(t[1].length), chev: t[2] ? 'M3.5 6L8 10.5 12.5 6' : 'M6 3.5L10.5 8 6 12.5',
+      rows: t[1].map(function (r) { return { e:r[0], n:r[1], fg: paused ? c.paused : c.text, op: paused ? 0.5 : 1 }; }) }; });
+}
+// Sidebar views. ⌘5 stays reserved for Plan (iPad answer, design/README.md); Time takes ⌘6.
+var NAV_I = {
+  today:'M11 8a3 3 0 1 1-6 0a3 3 0 1 1 6 0M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1',
+  week:'M4 3h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM2 6.5h12M5 1.8v2.4M11 1.8v2.4M6 6.5v7.5M10 6.5v7.5',
+  month:'M4 3h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM2 6.5h12M5 1.8v2.4M11 1.8v2.4M5 9.5h1M7.5 9.5h1M10 9.5h1M5 11.8h1M7.5 11.8h1',
+  lines:'M2.5 4h11M2.5 8h11M2.5 12h7',
+  time:'M14 8A6 6 0 1 1 2 8a6 6 0 1 1 12 0zM8 4.6V8l2.4 1.5'
+};
+function nav(c, lang, sel) {
+  var ss = SS[lang] || SS.en;
+  return [['today','⌘1'],['week','⌘2'],['month','⌘3'],['lines','⌘4'],['time','⌘6']].map(function (v) {
+    var on = v[0] === sel;
+    return { n: ss[v[0]], k: v[1], d: NAV_I[v[0]], bg: on ? c.navSel : 'transparent', fw: on ? 600 : 400, ic: on ? c.accent : c.sec };
+  });
+}
+// ---------- time (draft-5, invented) ----------
+var LN = {
+  core:{e:'🧘',n:'Core practice',a:'Daily practice 2026'}, cal:{e:'💪',n:'Calisthenics',a:'20 strict pull-ups'}, violin:{e:'🎻',n:'Violin',a:'Spring recital 2027'},
+  italian:{e:'🇮🇹',n:'Italian',a:'B1 by summer 2027'}, japanese:{e:'🇯🇵',n:'Japanese',a:'Kana and first 300 words'}, math:{e:'📐',n:'Math',a:'Linear algebra foundation'},
+  ai:{e:'🤖',n:'AI/ML',a:'Eval toolkit v1'}, research:{e:'🔬',n:'Research',a:'Practice-drift paper'}, family:{e:'👨‍👩‍👧',n:'Family',a:'Family year 2026'},
+  piano:{e:'🎹',n:'Piano',a:'Keep repertoire alive'}
+};
+var LIFEC = {
+  sleep:{e:'😴',en:'Sleep',ru:'Сон'}, food:{e:'🍽️',en:'Food',ru:'Еда'}, cooking:{e:'🍳',en:'Cooking',ru:'Готовка'}, hygiene:{e:'🪥',en:'Hygiene',ru:'Гигиена'},
+  house:{e:'🏠',en:'House',ru:'Дом'}, transport:{e:'🚌',en:'Transport',ru:'Дорога'}, errands:{e:'🛒',en:'Errands',ru:'Дела'}, inbox:{e:'📥',en:'Inbox',ru:'Входящие'}
+};
+var LIFE_ORDER = ['sleep','food','cooking','hygiene','house','transport','errands','inbox'];
+var LINE_ORDER = ['core','cal','violin','italian','japanese','math','ai','research','family','piano'];
+var WORK = { ai:1, research:1 };
+var FLOORS = { core:180, cal:60, math:20 };          // floor_h_day in minutes (math: a non-foundation floor, 0.33 h)
+var PORTION = { violin:60 };                          // today's day portion: the Violin lesson 17:00–18:00 in a line-mapped calendar
+var BUDGET = { violin:6, italian:2, japanese:1, math:4, ai:6, research:3, piano:1 };
+function subj(k, lang) {
+  if (LN[k]) return { e: LN[k].e, n: LN[k].n, work: !!WORK[k], life: false, k: k };
+  var x = LIFEC[k]; return { e: x.e, n: x[lang] || x.en, work: false, life: true, k: k };
+}
+function hm(t) { var p = t.split(':'); return +p[0] * 60 + +p[1]; }
+function clk(m) { m = ((m % 1440) + 1440) % 1440; var h = Math.floor(m / 60), r = m % 60; return (h < 10 ? '0' : '') + h + ':' + (r < 10 ? '0' : '') + r; }
+function hmm(m) { var h = Math.floor(m / 60), r = m % 60; return h + ':' + (r < 10 ? '0' : '') + r; }
+function plr(lang, n, f) {
+  if (lang === 'ru') { var a = n % 10, b = n % 100; return f[(a === 1 && b !== 11) ? 0 : (a >= 2 && a <= 4 && (b < 10 || b >= 20)) ? 1 : 2]; }
+  return f[n === 1 ? 0 : 1];
+}
+function dur(m, lang) { var ru = lang === 'ru', H = ru ? 'ч' : 'h', M = ru ? 'мин' : 'min', h = Math.floor(m / 60), r = m % 60;
+  return ((h ? h + ' ' + H : '') + (h && r ? ' ' : '') + (r ? r + ' ' + M : '')) || ('0 ' + M); }
+// Thu 1 Oct 2026. [start, end, subject, project, task]; the 10:00–12:40 run is 15 short intervals on lines only.
+var STORM = [['ai',12],['research',8],['ai',15],['inbox',5],['ai',10],['research',12],['ai',6],['research',14],['ai',9],['inbox',6],['ai',13],['research',10],['ai',15],['research',7],['ai',18]];
+var DAY = (function () {
+  var d = [['00:00','06:40','sleep'],['06:40','06:50','hygiene'],['06:50','07:40','core','Daily practice','Morning session'],['07:40','07:55','cal','Daily mobility','Mobility — hips & shoulders'],
+    ['07:55','08:10','food'],['08:10','08:35','transport'],['08:15','08:30','math'],['08:35','10:00','ai','Eval toolkit','Eval harness — deterministic seeds']]
+    .map(function (r) { return [hm(r[0]), hm(r[1]), r[2], r[3] || '', r[4] || '']; });
+  var t = 600; STORM.forEach(function (s) { d.push([t, t + s[1], s[0], '', '', 1]); t += s[1]; });
+  [['13:00','13:30','food'],['13:30','14:38','research','Drift paper draft','Outline section 3 — method'],['14:38','15:20','ai','Workshop 2026','Submit workshop abstract'],
+   ['15:20','15:40','violin'],['15:40','16:40','ai','Eval toolkit','Eval harness — deterministic seeds'],['16:40','16:55','transport'],
+   ['17:00','18:00','violin'],['18:00','18:25','transport'],['18:30','20:00','family'],['20:00','20:30','cooking'],['20:30','20:50','food'],
+   ['20:50','21:10','family','Evenings','Evening reading with the kids'],['21:10','23:59','core','Daily practice','Evening session']]
+    .forEach(function (r) { d.push([hm(r[0]), hm(r[1]), r[2], r[3] || '', r[4] || '']); });
+  return d;
+})();
+var WAKE = 400;   // 06:40, the end of the night's Sleep interval: "the day so far" starts here
+function dayAt(now, from) {
+  from = from || 0;
+  var iv = DAY.map(function (r) { return [Math.max(r[0], from), Math.min(r[1], now), r[2], r[3], r[4]]; }).filter(function (x) { return x[1] > x[0]; });
+  var by = {}, tracked = 0, work = 0, proj = {};
+  iv.forEach(function (x) { var m = x[1] - x[0]; by[x[2]] = (by[x[2]] || 0) + m; tracked += m; if (WORK[x[2]]) work += m; if (x[3]) proj[x[3]] = (proj[x[3]] || 0) + m; });
+  var s = iv.map(function (x) { return [x[0], x[1]]; }).sort(function (a, b) { return a[0] - b[0]; }), clock = 0, end = -1;
+  s.forEach(function (x) { if (x[0] >= end) { clock += x[1] - x[0]; end = x[1]; } else if (x[1] > end) { clock += x[1] - end; end = x[1]; } });
+  return { by: by, proj: proj, tracked: tracked, clock: clock, parallel: tracked - clock, work: work, n: iv.length, iv: iv };
+}
+// Shared time UI strings and the day-balance model (draft-5).
+var TT = {
+  en:{ since:'since', soFar:'Today so far', work:'Work', other:'Everything else', notTr:'Not tracked',
+    fact:function (t, c, p, lang) { return 'Tracked ' + dur(t, lang) + ' · by the clock ' + dur(c, lang) + ' · in parallel ' + dur(p, lang); },
+    floor:function (m, lang) { return 'floor ' + (m % 60 ? m + ' min' : m / 60 + ' h') + '/day'; },
+    portion:function (m, lang) { return 'day portion ' + dur(m, lang); },
+    toFloor:function (m, lang) { return dur(m, lang) + ' to the floor'; }, toPortion:function (m, lang) { return dur(m, lang) + ' to the portion'; },
+    inMark:function (m, lang) { return 'today’s ' + dur(m, lang) + ' are in'; },
+    nextFree:'Free', start:'Start', startA:'Start a timer…', alongside:'alongside', lines:'Lines', projects:'Projects', life:'Life ops',
+    openTime:'Time view', settings:'Timer Settings…', keys:'↩ start · ⌥↩ alongside · ⌘Z undo', running:'running',
+    stopped:'stopped', keep:'Keep running', undo:'Undo', pause:'Pause', stop:'Stop', resume:'Resume', plan:'Plan', tracked:'Tracked', now:'now',
+    marks:'Day marks', otherLines:'Other time today', lesson:'lesson' },
+  ru:{ since:'с', soFar:'За сегодня', work:'Работа', other:'Всё остальное', notTr:'Не учтено',
+    fact:function (t, c, p, lang) { return 'Учтено ' + dur(t, lang) + ' · по часам ' + dur(c, lang) + ' · параллельно ' + dur(p, lang); },
+    floor:function (m, lang) { return 'пол ' + (m % 60 ? m + ' мин' : m / 60 + ' ч') + '/день'; },
+    portion:function (m, lang) { return 'доля дня ' + dur(m, lang); },
+    toFloor:function (m, lang) { return 'до пола ' + dur(m, lang); }, toPortion:function (m, lang) { return 'до доли ' + dur(m, lang); },
+    inMark:function (m, lang) { return 'сегодняшние ' + dur(m, lang) + ' есть'; },
+    nextFree:'Свободно', start:'Запустить', startA:'Запустить таймер…', alongside:'параллельно', lines:'Линии', projects:'Проекты', life:'Быт и система',
+    openTime:'«Время»', settings:'Настройки таймера…', keys:'↩ запуск · ⌥↩ параллельно · ⌘Z отменить', running:'идёт',
+    stopped:'остановлен', keep:'Не останавливать', undo:'Отменить', pause:'Пауза', stop:'Стоп', resume:'Продолжить', plan:'План', tracked:'Учтено', now:'сейчас',
+    marks:'Отметки дня', otherLines:'Остальное время сегодня', lesson:'урок' }
+};
+// The day so far: from the end of the night's Sleep to now. Work = lines marked as work (Settings → Time).
+function balance(c, lang, now) {
+  var T = TT[lang] || TT.en, w = dayAt(now, WAKE), since = now - WAKE, other = w.clock - w.work, nt = since - w.clock, d = dayAt(now, 0);
+  var W = 1;
+  function seg(m) { return Math.round(m / since * 1000) / 10; }
+  var marks = [];
+  ['core', 'cal', 'math', 'violin'].forEach(function (k) {
+    var got = d.by[k] || 0, fl = FLOORS[k], po = PORTION[k], goal = fl || po;
+    var left = Math.max(0, goal - got);
+    marks.push({ e: LN[k].e, n: LN[k].n, got: dur(got, lang), mark: fl ? T.floor(fl, lang) : T.portion(po, lang) + (po ? ' · 17:00' : ''),
+      left: left ? (fl ? T.toFloor(left, lang) : T.toPortion(left, lang)) : T.inMark(goal, lang), done: !left, lc: left ? c.sec : c.ter });
+  });
+  var others = ['ai', 'research'].map(function (k) { return { e: LN[k].e, n: LN[k].n, m: dur(d.by[k] || 0, lang), run: k === 'ai' }; });
+  var lifeM = 0; LIFE_ORDER.forEach(function (k) { if (k !== 'sleep') lifeM += w.by[k] || 0; });
+  others.push({ e: '🧺', n: lang === 'ru' ? 'Быт и система' : 'Life ops', m: dur(lifeM, lang), run: false });
+  return {
+    T: T, wc: workCol(c), sinceL: T.since + ' ' + clk(WAKE) + ' · ' + dur(since, lang), workW: seg(w.work), otherW: seg(other), ntW: seg(nt),
+    workL: T.work + ' ' + dur(w.work, lang), otherL: T.other + ' ' + dur(other, lang), ntL: T.notTr + ' ' + dur(nt, lang),
+    fact: T.fact(w.tracked, w.clock, w.parallel, lang), marks: marks, others: others,
+    free: '15:20–17:00 · ' + dur(100, lang), suggest: LN.core.e + ' ' + LN.core.n
+  };
+}
+// workSegment token (draft-5): the third, darkest step of the load hue; tokens.json.
+function workCol(c) { return c.dark ? '#8291AF' : '#8C9FC2'; }
+// Tracked blocks for a rail or a day view. Runs of 3+ intervals, each under 20 min, with gaps under 5 min, become one cluster.
+function trackBlocks(c, lang, now, from, to, pxh, laneW, right) {
+  var T = TT[lang] || TT.en, wc = workCol(c);
+  var iv = DAY.map(function (r) { return { s: Math.max(r[0], from), e: Math.min(r[1], now, to), k: r[2], p: r[3], t: r[4], run: r[1] > now && r[0] < now }; })
+    .filter(function (x) { return x.e > x.s; });
+  function y(m) { return Math.round((m - from) / 60 * pxh); }
+  // parallel columns: an interval overlapping another takes half the lane
+  iv.forEach(function (x) { x.col = 0; x.cols = 1; });
+  iv.forEach(function (a, i) { iv.forEach(function (b, j) { if (i < j && a.s < b.e && b.s < a.e) { a.cols = b.cols = 2; b.col = 1; } }); });
+  var out = [], i = 0;
+  while (i < iv.length) {
+    var j = i;
+    while (j + 1 < iv.length && iv[j + 1].cols === 1 && iv[j].cols === 1 && iv[j + 1].e - iv[j + 1].s < 20 && iv[j].e - iv[j].s < 20 && iv[j + 1].s - iv[j].e < 5) j++;
+    var run = iv.slice(i, j + 1);
+    if (run.length >= 3) {
+      var s0 = run[0].s, e0 = run[run.length - 1].e, by = {}, em = [];
+      run.forEach(function (x) { by[x.k] = (by[x.k] || 0) + x.e - x.s; });
+      Object.keys(by).sort(function (a, b) { return by[b] - by[a]; }).forEach(function (k) { em.push(subj(k, lang).e); });
+      out.push({ y: y(s0), h: Math.max(4, y(e0) - y(s0) - 1), r: right, w: laneW, ol: 'none', fw: 600, fg: c.text,
+        sl: run.map(function (x) { return { y: y(x.s) - y(s0), h: Math.max(1, y(x.e) - y(x.s) - 1), bg: WORK[x.k] ? wc : c.seg }; }),
+        lbg: c.card, lm: '3px', l1: em.join(' '), l2: run.length + ' ' + plr(lang, run.length, lang === 'ru' ? ['интервал', 'интервала', 'интервалов'] : ['interval', 'intervals']),
+        tip: clk(s0) + '–' + clk(e0) + ' · ' + run.length, cluster: true, s: s0, e: e0, n: run.length, by: by });
+    } else {
+      run.forEach(function (x) {
+        var h = Math.max(2, y(x.e) - y(x.s) - 1), su = subj(x.k, lang), m = x.e - x.s, w = x.cols === 2 ? Math.floor((laneW - 2) / 2) : laneW;
+        out.push({ y: y(x.s), h: h, r: right + (x.cols === 2 && x.col === 0 ? w + 2 : 0), w: w, fw: 400, fg: WORK[x.k] && c.dark && !x.run ? '#16213A' : c.segText,
+          ol: x.run ? '1.5px solid ' + c.accent : 'none', lbg: 'transparent', lm: '0',
+          sl: [{ y: 0, h: h, bg: x.run ? c.selBg : (WORK[x.k] ? wc : c.seg) }],
+          l1: h >= 11 ? su.e + (h >= 24 && w > 60 ? ' ' + su.n : '') + (h < 24 ? ' ' + dur(m, lang) : '') : '',
+          l2: h >= 24 ? (x.run ? T.running + ' · ' : '') + dur(m, lang) : '', tip: clk(x.s) + '–' + clk(x.e) + ' ' + su.n,
+          s: x.s, e: x.e, k: x.k, p: x.p, t: x.t, run: x.run });
+      });
+    }
+    i = j + 1;
+  }
+  return out;
+}
+// Lines-Periods: Lines for S4-2 (tiers, columns, a floor next to a weekly budget) with the phase-2 practice rows and quota chips (draft-5).
+var LS = {
+  en:{ title:'Lines', sub:'13 lines · 2 foundation · 7 active · 2 practice · 1 maintenance · 1 paused', cols:['Line','State','Budget','Last 8 weeks','Last activity','Next actions','This period','Estimated this week'],
+    rhythm:'Rhythm — repeated sessions per week', progress:'Progress — one-off tasks done per week', entries:'Entries per week · ┄ target', partial:'current week, partial', weeks:'Weeks 33–40',
+    phase:'phase 2', active:'active', foundation:'foundation', maintenance:'maintenance', byEntries:'by entries', within:'within', week:' / week', today:'today', yesterday:'yesterday',
+    daysAgo:function (n) { return n + ' days ago'; }, quiet:'quiet for 29 days', noAct:'no activity yet', thisWeek:'this week', october:'October', inRow:function (n) { return n + ' weeks in a row'; },
+    floor:function (t) { return 'floor ' + t; }, est:function (t) { return '≈ ' + t + ' est.'; }, time:'time', bySun:'by Sun', of:function (a, b) { return a + ' of ' + b; },
+    tiers:[['Foundation','2 lines · floor 4 h/day'],['Active this season','7 lines · 22 h / week'],['Maintenance','1 line · 1 h / week']], paused:['Not in focus — on purpose','1 line','collapsed'],
+    lastEntry:function (t) { return 'last entry ' + t; } },
+  ru:{ title:'Линии', sub:'13 линий · 2 фундамент · 7 активных · 2 практики · 1 на поддержании · 1 на паузе', cols:['Линия','Состояние','Бюджет','8 недель','Последняя активность','След. шаги','Этот период','Оценка на неделю'],
+    rhythm:'Ритм — повторяющиеся занятия в неделю', progress:'Продвижение — разовые задачи в неделю', entries:'Записи в неделю · ┄ цель', partial:'текущая неделя, неполная', weeks:'Недели 33–40',
+    phase:'фаза 2', active:'активная', foundation:'фундамент', maintenance:'на поддержании', byEntries:'по записям', within:'внутри', week:' / нед', today:'сегодня', yesterday:'вчера',
+    daysAgo:function (n) { return n + ' ' + plr('ru', n, ['день','дня','дней']) + ' назад'; }, quiet:'тихо 29 дней', noAct:'пока без активности', thisWeek:'эта неделя', october:'октябрь', inRow:function (n) { return n + ' ' + plr('ru', n, ['неделя','недели','недель']) + ' подряд'; },
+    floor:function (t) { return 'пол ' + t; }, est:function (t) { return '≈ ' + t + ' (оценка)'; }, time:'пора', bySun:'до вс', of:function (a, b) { return a + ' из ' + b; },
+    tiers:[['Фундамент','2 линии · пол 4 ч/день'],['Активные в сезоне','7 линий · 22 ч / нед'],['На поддержании','1 линия · 1 ч / нед']], paused:['Не в фокусе — намеренно','1 линия','свёрнуто'],
+    lastEntry:function (t) { return 'запись ' + t; } }
+};
+// rhythm / progress W33–W40 (demo-data.md); practice entries per week (draft-5)
+var SP = { core:[[12,13,11,9,12,13,14,8],[0,0,0,0,0,0,0,0]], cal:[[4,4,3,2,3,4,4,4],[0,1,0,0,0,1,0,0]], violin:[[6,5,2,1,3,6,6,4],[1,2,0,0,1,2,1,1]],
+  italian:[[3,2,1,0,0,0,0,0],[1,1,0,0,0,0,0,0]], japanese:[[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]], math:[[2,3,2,1,2,2,3,1],[2,1,2,1,2,2,1,1]],
+  ai:[[0,0,0,0,0,0,0,0],[3,4,2,3,3,4,2,3]], research:[[0,0,0,0,0,0,0,0],[1,2,1,0,1,2,1,1]], family:[[5,6,4,6,5,5,4,3],[1,0,1,1,0,2,1,1]], piano:[[2,1,1,0,0,0,0,0],[0,0,0,0,0,0,0,0]] };
+var PRACT = { reflection:{ e:'📓', n:'Reflection', parent:'core', entries:[5,6,4,5,5,7,5,4], target:5, kind:'diary', last:'today', month:[0,1,'report'], streak:4 },
+  journal:{ e:'🎼', n:'Practice journal', parent:'violin', entries:[3,3,1,0,2,3,3,2], target:3, kind:'note', last:'yesterday', streak:2 } };
+function build(c, lang) {
+  var S = LS[lang] || LS.en, T = TT[lang] || TT.en, ru = lang === 'ru';
+  function H(n) { return n + (ru ? ' ч' : ' h') + S.week; }
+  function E(m) { return S.est(dur(m, lang)); }
+  function spark(k) { var r = SP[k][0], p = SP[k][1], mx = Math.max.apply(null, r.concat(p)) || 1;
+    return r.map(function (v, i) { var cur = i === 7;
+      return { rh: v ? Math.max(3, Math.round(v / mx * 24)) : 0, ph: p[i] ? Math.max(3, Math.round(p[i] / mx * 24)) : 0, op: cur ? 0.6 : 1, bd: cur ? '1px dashed ' + c.badgeBorder : '1px solid transparent', bg: cur ? c.track : 'transparent' }; }); }
+  function pspark(x) { var mx = Math.max.apply(null, x.entries.concat([x.target]));
+    return { bars: x.entries.map(function (v, i) { var cur = i === 7; return { h: v ? Math.max(3, Math.round(v / mx * 24)) : 0, op: cur ? 0.6 : 1, bd: cur ? '1px dashed ' + c.badgeBorder : '1px solid transparent', bg: cur ? c.track : 'transparent' }; }),
+      ty: 28 - Math.round(x.target / mx * 24) }; }
+  function line(k, o) { o = o || {}; var l = LN[k];
+    return { e: l.e, n: l.n, blk: o.blk, state: o.state || S.active, sc: o.sc || c.text, b1: o.b1 || '—', b2: o.b2 || '', spark: spark(k), last: o.last || '', lastC: o.lastC || c.sec, moon: !!o.moon,
+      next: String(o.next || 0), q: o.q || null, hasQ: !!o.q, est: o.est || '—', sel: !!o.sel, bg: o.sel ? c.selBg : 'transparent', pract: null, isPract: false, isLine: true }; }
+  function pract(id) { var x = PRACT[id], last = x.last === 'today' ? S.today : S.yesterday, P = pspark(x);
+    var t1 = x.kind + ' ' + S.of(x.entries[7], x.target) + ' · ' + S.thisWeek, t2 = x.month ? x.month[2] + ' ' + S.of(x.month[0], x.month[1]) + ' · ' + S.october : '';
+    return { e: x.e, n: x.n, within: S.within + ' ' + LN[x.parent].e + ' ' + LN[x.parent].n, isPract: true, isLine: false, bars: P.bars, ty: P.ty, last: S.lastEntry(last), t1: t1, t2: t2, hasT2: !!t2, streak: S.inRow(x.streak) }; }
+  function quota(task, text, kind) { // kind: met | open | time-strong
+    var strong = kind === 'strong';
+    return { task: task, text: text, bg: strong ? c.dueBg : c.chip, fg: strong ? c.dueText : (kind === 'met' ? c.sec : c.chipText), fw: strong ? 600 : 400 }; }
+  var tiers = [
+    { n: S.tiers[0][0], s: S.tiers[0][1], rows: [
+      line('core', { blk: 'Foundation', state: S.foundation, b1: S.floor(ru ? '3 ч/день' : '3 h/day'), last: S.today, next: 2, est: E(60) }), pract('reflection'),
+      line('cal', { blk: 'Foundation', state: S.foundation, b1: S.floor(ru ? '1 ч/день' : '1 h/day'), last: S.today, next: 2, est: E(40), q: quota('Long walk — 90 min', S.of(2, 2) + ' ✓', 'met') }) ] },
+    { n: S.tiers[1][0], s: S.tiers[1][1], rows: [
+      line('ai', { blk: 'Profession', b1: H(6), last: S.yesterday, next: 4, est: E(250) }),
+      line('research', { blk: 'Profession', b1: H(3), last: S.daysAgo(2), next: 3, est: E(75) }),
+      line('violin', { blk: 'Creative', b1: H(6), last: S.today, next: 9, est: E(400), sel: true }), pract('journal'),
+      line('italian', { blk: 'Languages', b1: H(2), last: S.quiet, moon: true, next: 3 }),
+      line('japanese', { blk: 'Languages', b1: H(1), last: S.noAct, next: 2, est: E(10) }),
+      line('math', { blk: 'Science', b1: H(4), b2: S.floor(lang === 'ru' ? '20 мин/день' : '20 min/day'), last: S.yesterday, next: 5, est: E(90),
+        q: quota('Proof practice — one theorem', S.time + ' · ' + S.of(1, 4) + ' · ' + S.bySun, 'strong') }),
+      line('family', { blk: 'Life', last: S.today, next: 3, est: E(35), q: quota('Board game evening', S.of(0, 1) + ' · ' + S.thisWeek, 'open') }) ] },
+    { n: S.tiers[2][0], s: S.tiers[2][1], rows: [ line('piano', { blk: 'Creative', state: S.maintenance, sc: c.sec, b1: H(1), last: S.daysAgo(29), next: 1 }) ] }
+  ];
+  return { nav: nav(c, lang, 'lines'), S: S, T: T, tiers: tiers, pentry: lang === 'ru' ? 'запись' : 'entry' };
+}
+
+class Component extends DCLogic {
+  renderVals() {
+    var c = theme(!!this.props.dark), lang = this.props.lang || 'en';
+    var v = build.call(this, c, lang) || {};
+    v.c = c; v.ss = SS[lang] || SS.en; v.side = side(c, lang);
+    return v;
+  }
+}
+</script>
+</body>
+</html>

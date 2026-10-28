@@ -64,7 +64,7 @@ lines: # order = display order within a block
 Rules
 
 - Tier (UI grouping) = `foundation: true` → Foundation, else `state` → Active this season / Maintenance / Paused on purpose. `block` is a secondary label.
-- `floor_h_day` is allowed on any line (owner, 2026-10-08); `foundation: true` decides only the tier and the "never quiet" rule. A line may have both `floor_h_day` and `budget_h_week`: a foundation line shows the floor; any other line shows the floor as a daily minimum next to its weekly budget (exact form: the screen spec or the next design round).
+- `floor_h_day` is allowed on any line (owner, 2026-10-08); `foundation: true` decides only the tier and the "never quiet" rule. A line may have both `floor_h_day` and `budget_h_week`: a foundation line shows the floor; any other line shows the floor as a daily minimum next to its weekly budget (exact form, decided in design draft-5: `4 h / week` over `floor 20 min/day`, `design/screens/lines.md` § Draft-5).
 - `state: paused` = "paused on purpose" in the UI. It is never shown as missing activity.
 - Tasks that match no line belong to **Life ops** (not a line; see `snapshot-contract.md`).
 - A task maps to **at most one** line. Precedence: task tag → project tag → project name → folder. Two lines claiming the same tag/folder → banner naming both line ids; first in list wins.

@@ -47,6 +47,14 @@ Refresh follows ADR-0011: imports are always full and start when OmniFocus resig
 
 Buttons (sheet variant only): Cancel, Done (default, accent). The Settings scene applies changes immediately.
 
+**Time** tab (draft-5; Timer (Mac), phase 2; `timer-mac.md`)
+
+- **Work:** a list of the lines, each with a checkbox; checked lines are **work** in the day balance and the week table's Work row. Default: none checked, and then no Work term is shown anywhere.
+- **Activity palette:** sections in order (Lines · Projects · Life ops, reorderable); pinned projects and tasks (up to 8, removable); the system-wide shortcut (a recorder, default `⌃⌥T`); `Show in the menu bar: Always | While a timer runs`.
+- **Life ops categories:** rename, change the emoji, reorder, add, archive. Sleep is built in: it can be renamed, not archived (it marks where "today so far" starts).
+- **Nudges** (ADR-0016): Break nudge on/off and its minutes (default 50); a session's check limit (default 4 h); day marks on/off; the calendar suggestion on/off.
+- Caption: `Time entries are MoonShine’s own data. They are never written to OmniFocus, your vault or your calendars.`
+
 ## Status bar
 
 `.safeAreaInset(edge: .bottom)` HStack, 28 high: "Demo data" capsule (Demo only) · `Updated 3 min ago` (relative, refreshes every minute) · while importing: a small `ProgressView` + `Importing…` (never blocks the UI) · shortcut hints on the right.

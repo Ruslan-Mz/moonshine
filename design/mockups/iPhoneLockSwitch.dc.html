@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>iPhone — Lock Screen capture (draft-5)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:#0A64D8}a:hover{color:#084FA8}
+button{font:inherit;color:inherit;cursor:default}
+</style>
+</helmet>
+<div dir="ltr" lang="{{S.lang}}" style="width:1320px;height:1000px;box-sizing:border-box;padding:20px 24px;display:flex;flex-direction:column;gap:14px;overflow:hidden;font-family:-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;font-size:17px;line-height:1.3;color:{{c.text}};background:{{i.bg}};-webkit-font-smoothing:antialiased"><div style="display:flex;align-items:baseline;gap:12px"><h1 style="margin:0;font-size:24px;font-weight:700">{{S.title}}</h1><span style="font-size:14px;color:{{c.sec}}">{{S.sub}}</span></div><div style="display:flex;gap:33px"><sc-for list="{{phones}}" as="p" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:10px;width:402px"><div style="width:402px;height:800px;box-sizing:border-box;position:relative;overflow:hidden;border-radius:48px;background:{{i.wall}};display:flex;flex-direction:column;align-items:center"><div style="display:flex;flex-direction:column;align-items:center;padding-top:70px;color:{{lockFg}}"><span style="font-size:20px;font-weight:600">{{S.date}}</span><span style="font-size:92px;font-weight:600;letter-spacing:-2px;line-height:1">{{p.time}}</span></div><div style="display:flex;gap:14px;margin-top:14px"><sc-for list="{{p.ws}}" as="w" hint-placeholder-count="4"><div role="button" aria-label="{{w.n}}" style="width:72px;height:72px;box-sizing:border-box;border-radius:36px;background:{{dim}};border:{{w.ring}};display:flex;flex-direction:column;align-items:center;justify-content:center;color:{{lockFg}}"><span style="font-size:24px;line-height:26px;filter:grayscale(1)">{{w.e}}</span><span style="font-size:10px;font-weight:600;font-variant-numeric:tabular-nums">{{w.n}}</span><sc-if value="{{w.run}}" hint-placeholder-val="{{false}}"><span style="font-size:9.5px;font-variant-numeric:tabular-nums">{{w.el}}</span></sc-if></div></sc-for></div><div style="flex:1"></div><section aria-label="Live Activity" style="width:370px;margin-bottom:22px;padding:14px 16px;box-sizing:border-box;border-radius:26px;background:{{i.bar}};border:1px solid {{i.barBorder}};display:flex;flex-direction:column;gap:12px"><div style="display:flex;align-items:center;gap:12px"><span style="width:44px;height:44px;border-radius:22px;background:{{i.fill}};display:flex;align-items:center;justify-content:center;font-size:22px">{{p.e}}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:17px;font-weight:600">{{p.n}}</span><span style="font-size:14px;color:{{c.sec}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{p.s}}</span></span><span style="font-size:34px;font-weight:600;font-variant-numeric:tabular-nums;color:{{c.accent}}">{{p.el}}</span></div><sc-if value="{{p.plain}}" hint-placeholder-val="{{true}}"><div style="display:flex;gap:8px"><button style="flex:1;min-width:0;height:44px;border:0;border-radius:22px;background:{{i.fill}};font-size:15px;font-weight:600;color:{{c.text}};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 12px">{{p.slot}}</button><button aria-label="{{S.pause}}" style="width:44px;height:44px;border:0;border-radius:22px;background:{{i.fill}};display:flex;align-items:center;justify-content:center;color:{{c.text}}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:block"><path d="M6 4v8M10 4v8"></path></svg></button><button aria-label="{{S.stop}}" style="width:44px;height:44px;border:0;border-radius:22px;background:{{i.fill}};display:flex;align-items:center;justify-content:center;color:{{c.text}}"><svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" style="display:block"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5"></rect></svg></button></div></sc-if><sc-if value="{{p.notice}}" hint-placeholder-val="{{false}}"><div style="display:flex;flex-direction:column;gap:8px"><span role="status" style="font-size:14px;color:{{c.sec}}">{{p.nt}}</span><div style="display:flex;gap:8px"><button style="flex:1.3;height:44px;border:0;border-radius:22px;background:{{i.fill}};font-size:15px;font-weight:600;color:{{c.text}};white-space:nowrap">{{S.keep}}</button><button style="flex:1;height:44px;border:0;border-radius:22px;background:{{c.accentFill}};color:#FFFFFF;font-size:15px;font-weight:600">{{S.undo}}</button></div></div></sc-if></section><div style="width:330px;display:flex;justify-content:space-between;margin-bottom:26px"><span aria-label="Activity palette" style="width:50px;height:50px;border-radius:25px;background:{{dim}};display:flex;align-items:center;justify-content:center;color:{{lockFg}}"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" style="display:block"><rect x="2" y="2" width="5" height="5" rx="1.2"></rect><rect x="9" y="2" width="5" height="5" rx="1.2"></rect><rect x="2" y="9" width="5" height="5" rx="1.2"></rect><rect x="9" y="9" width="5" height="5" rx="1.2"></rect></svg></span><span aria-label="Camera" style="width:50px;height:50px;border-radius:25px;background:{{dim}};display:flex;align-items:center;justify-content:center;color:{{lockFg}};font-size:18px">◉</span></div><span style="width:134px;height:5px;border-radius:3px;background:{{lockFg}};margin-bottom:8px;opacity:0.85"></span></div><div style="font-size:13px;line-height:1.35;color:{{c.sec}}">{{p.cap}}</div></div></sc-for></div></div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"dark": {"editor": "boolean", "default": false}, "lang": {"editor": "enum", "options": ["en", "ru"], "default": "en"}, "$preview": {"width": 1320, "height": 1000}}'>
+function theme(d) {
+  return d ? {
+    dark:true, window:'#1E1E21', sidebar:'#28272C', rail:'#232326', band:'#252528', text:'#EDEDF0', sec:'#A6A6AD', ter:'#8D8D95',
+    sep:'rgba(255,255,255,0.08)', rowSep:'rgba(255,255,255,0.045)', chip:'rgba(255,255,255,0.075)', chipText:'#BDBDC4',
+    accent:'#5A9DFF', accentFill:'#2F6BD0', selBg:'rgba(90,157,255,0.16)', navSel:'rgba(255,255,255,0.09)', check:'#64646C', checkDone:'#4C8DF0',
+    dueText:'#FFC266', dueBg:'rgba(255,176,64,0.15)', card:'#2A2A2E', cardBorder:'rgba(255,255,255,0.07)',
+    field:'rgba(255,255,255,0.07)', fieldBorder:'rgba(255,255,255,0.12)', badgeBorder:'rgba(255,255,255,0.2)', paused:'#7E7E86',
+    windowBorder:'rgba(255,255,255,0.14)', rhythm:'#5E92EE', progress:'#3FA690', done:'#7E7E86', track:'rgba(255,255,255,0.07)',
+    heat:'94,146,238', scrim:'rgba(0,0,0,0.42)', sheet:'#2A2A2E', shadow:'0 24px 70px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.1)',
+    band1:'rgba(94,146,238,0.22)', bandLine:'#5E92EE', grid:'rgba(255,255,255,0.07)', seg:'#4A5468', segAlt:'#596378', segText:'#EDEDF0',
+    hatch:'rgba(255,255,255,0.22)', ctrl:'#3A3A3F', ctrlSel:'#5C5C63', knob:'#E6E6EA', future:'#B9A6F0'
+  } : {
+    dark:false, window:'#FFFFFF', sidebar:'#EFEEF2', rail:'#F8F8FA', band:'#F6F6F8', text:'#1D1D1F', sec:'#5F5F67', ter:'#74747C',
+    sep:'rgba(0,0,0,0.08)', rowSep:'rgba(0,0,0,0.045)', chip:'rgba(0,0,0,0.045)', chipText:'#4F4F57',
+    accent:'#0A64D8', accentFill:'#0A64D8', selBg:'rgba(10,100,216,0.08)', navSel:'rgba(0,0,0,0.07)', check:'#B4B4BB', checkDone:'#0A64D8',
+    dueText:'#8A4B00', dueBg:'#FFEFD6', card:'#FFFFFF', cardBorder:'rgba(0,0,0,0.08)',
+    field:'rgba(0,0,0,0.045)', fieldBorder:'rgba(0,0,0,0.12)', badgeBorder:'rgba(0,0,0,0.18)', paused:'#8E8E95',
+    windowBorder:'rgba(0,0,0,0.16)', rhythm:'#2F68C8', progress:'#14917A', done:'#9A9AA2', track:'rgba(0,0,0,0.05)',
+    heat:'47,104,200', scrim:'rgba(0,0,0,0.18)', sheet:'#FFFFFF', shadow:'0 24px 70px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.08)',
+    band1:'rgba(47,104,200,0.16)', bandLine:'#2F68C8', grid:'rgba(0,0,0,0.06)', seg:'#C9D3E6', segAlt:'#B4C1DA', segText:'#1D2A44',
+    hatch:'rgba(0,0,0,0.22)', ctrl:'#E4E4E8', ctrlSel:'#FFFFFF', knob:'#FFFFFF', future:'#5B3FA8'
+  };
+}
+var SS = {
+  en:{ lang:'en', dir:'ltr', today:'Today', week:'Week', month:'Month', lines:'Lines', time:'Time', search:'Search', demo:'Demo data', updated:'Updated 3 min ago',
+       keys:'⌘1–⌘4, ⌘6 Views · ⌘K Search · ⌘T Timer', tiers:{ foundation:'Foundation', active:'Active this season', maintenance:'Maintenance', paused:'Not in focus — on purpose' } },
+  ru:{ lang:'ru', dir:'ltr', today:'Сегодня', week:'Неделя', month:'Месяц', lines:'Линии', time:'Время', search:'Поиск', demo:'Демо-данные', updated:'Обновлено 3 мин назад',
+       keys:'⌘1–⌘4, ⌘6 Виды · ⌘K Поиск · ⌘T Таймер', tiers:{ foundation:'Фундамент', active:'Активные в сезоне', maintenance:'На поддержании', paused:'Не в фокусе — намеренно' } }
+};
+var SIDE_T = [
+  ['foundation', [['🧘','Core practice'],['💪','Calisthenics']], true],
+  ['active', [['🎻','Violin'],['🇮🇹','Italian'],['🇯🇵','Japanese'],['📐','Math'],['🤖','AI/ML'],['🔬','Research'],['👨‍👩‍👧','Family']], true],
+  ['maintenance', [['🎹','Piano']], true],
+  ['paused', [['✒️','Calligraphy']], false]
+];
+function side(c, lang) {
+  var ss = SS[lang] || SS.en;
+  return SIDE_T.map(function (t) { var paused = t[0] === 'paused';
+    return { n: ss.tiers[t[0]], open: t[2], count: t[2] ? '' : String(t[1].length), chev: t[2] ? 'M3.5 6L8 10.5 12.5 6' : 'M6 3.5L10.5 8 6 12.5',
+      rows: t[1].map(function (r) { return { e:r[0], n:r[1], fg: paused ? c.paused : c.text, op: paused ? 0.5 : 1 }; }) }; });
+}
+// Sidebar views. ⌘5 stays reserved for Plan (iPad answer, design/README.md); Time takes ⌘6.
+var NAV_I = {
+  today:'M11 8a3 3 0 1 1-6 0a3 3 0 1 1 6 0M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1',
+  week:'M4 3h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM2 6.5h12M5 1.8v2.4M11 1.8v2.4M6 6.5v7.5M10 6.5v7.5',
+  month:'M4 3h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM2 6.5h12M5 1.8v2.4M11 1.8v2.4M5 9.5h1M7.5 9.5h1M10 9.5h1M5 11.8h1M7.5 11.8h1',
+  lines:'M2.5 4h11M2.5 8h11M2.5 12h7',
+  time:'M14 8A6 6 0 1 1 2 8a6 6 0 1 1 12 0zM8 4.6V8l2.4 1.5'
+};
+function nav(c, lang, sel) {
+  var ss = SS[lang] || SS.en;
+  return [['today','⌘1'],['week','⌘2'],['month','⌘3'],['lines','⌘4'],['time','⌘6']].map(function (v) {
+    var on = v[0] === sel;
+    return { n: ss[v[0]], k: v[1], d: NAV_I[v[0]], bg: on ? c.navSel : 'transparent', fw: on ? 600 : 400, ic: on ? c.accent : c.sec };
+  });
+}
+// ---------- time (draft-5, invented) ----------
+var LN = {
+  core:{e:'🧘',n:'Core practice',a:'Daily practice 2026'}, cal:{e:'💪',n:'Calisthenics',a:'20 strict pull-ups'}, violin:{e:'🎻',n:'Violin',a:'Spring recital 2027'},
+  italian:{e:'🇮🇹',n:'Italian',a:'B1 by summer 2027'}, japanese:{e:'🇯🇵',n:'Japanese',a:'Kana and first 300 words'}, math:{e:'📐',n:'Math',a:'Linear algebra foundation'},
+  ai:{e:'🤖',n:'AI/ML',a:'Eval toolkit v1'}, research:{e:'🔬',n:'Research',a:'Practice-drift paper'}, family:{e:'👨‍👩‍👧',n:'Family',a:'Family year 2026'},
+  piano:{e:'🎹',n:'Piano',a:'Keep repertoire alive'}
+};
+var LIFEC = {
+  sleep:{e:'😴',en:'Sleep',ru:'Сон'}, food:{e:'🍽️',en:'Food',ru:'Еда'}, cooking:{e:'🍳',en:'Cooking',ru:'Готовка'}, hygiene:{e:'🪥',en:'Hygiene',ru:'Гигиена'},
+  house:{e:'🏠',en:'House',ru:'Дом'}, transport:{e:'🚌',en:'Transport',ru:'Дорога'}, errands:{e:'🛒',en:'Errands',ru:'Дела'}, inbox:{e:'📥',en:'Inbox',ru:'Входящие'}
+};
+var LIFE_ORDER = ['sleep','food','cooking','hygiene','house','transport','errands','inbox'];
+var LINE_ORDER = ['core','cal','violin','italian','japanese','math','ai','research','family','piano'];
+var WORK = { ai:1, research:1 };
+var FLOORS = { core:180, cal:60, math:20 };          // floor_h_day in minutes (math: a non-foundation floor, 0.33 h)
+var PORTION = { violin:60 };                          // today's day portion: the Violin lesson 17:00–18:00 in a line-mapped calendar
+var BUDGET = { violin:6, italian:2, japanese:1, math:4, ai:6, research:3, piano:1 };
+function subj(k, lang) {
+  if (LN[k]) return { e: LN[k].e, n: LN[k].n, work: !!WORK[k], life: false, k: k };
+  var x = LIFEC[k]; return { e: x.e, n: x[lang] || x.en, work: false, life: true, k: k };
+}
+function hm(t) { var p = t.split(':'); return +p[0] * 60 + +p[1]; }
+function clk(m) { m = ((m % 1440) + 1440) % 1440; var h = Math.floor(m / 60), r = m % 60; return (h < 10 ? '0' : '') + h + ':' + (r < 10 ? '0' : '') + r; }
+function hmm(m) { var h = Math.floor(m / 60), r = m % 60; return h + ':' + (r < 10 ? '0' : '') + r; }
+function plr(lang, n, f) {
+  if (lang === 'ru') { var a = n % 10, b = n % 100; return f[(a === 1 && b !== 11) ? 0 : (a >= 2 && a <= 4 && (b < 10 || b >= 20)) ? 1 : 2]; }
+  return f[n === 1 ? 0 : 1];
+}
+function dur(m, lang) { var ru = lang === 'ru', H = ru ? 'ч' : 'h', M = ru ? 'мин' : 'min', h = Math.floor(m / 60), r = m % 60;
+  return ((h ? h + ' ' + H : '') + (h && r ? ' ' : '') + (r ? r + ' ' + M : '')) || ('0 ' + M); }
+// Thu 1 Oct 2026. [start, end, subject, project, task]; the 10:00–12:40 run is 15 short intervals on lines only.
+var STORM = [['ai',12],['research',8],['ai',15],['inbox',5],['ai',10],['research',12],['ai',6],['research',14],['ai',9],['inbox',6],['ai',13],['research',10],['ai',15],['research',7],['ai',18]];
+var DAY = (function () {
+  var d = [['00:00','06:40','sleep'],['06:40','06:50','hygiene'],['06:50','07:40','core','Daily practice','Morning session'],['07:40','07:55','cal','Daily mobility','Mobility — hips & shoulders'],
+    ['07:55','08:10','food'],['08:10','08:35','transport'],['08:15','08:30','math'],['08:35','10:00','ai','Eval toolkit','Eval harness — deterministic seeds']]
+    .map(function (r) { return [hm(r[0]), hm(r[1]), r[2], r[3] || '', r[4] || '']; });
+  var t = 600; STORM.forEach(function (s) { d.push([t, t + s[1], s[0], '', '', 1]); t += s[1]; });
+  [['13:00','13:30','food'],['13:30','14:38','research','Drift paper draft','Outline section 3 — method'],['14:38','15:20','ai','Workshop 2026','Submit workshop abstract'],
+   ['15:20','15:40','violin'],['15:40','16:40','ai','Eval toolkit','Eval harness — deterministic seeds'],['16:40','16:55','transport'],
+   ['17:00','18:00','violin'],['18:00','18:25','transport'],['18:30','20:00','family'],['20:00','20:30','cooking'],['20:30','20:50','food'],
+   ['20:50','21:10','family','Evenings','Evening reading with the kids'],['21:10','23:59','core','Daily practice','Evening session']]
+    .forEach(function (r) { d.push([hm(r[0]), hm(r[1]), r[2], r[3] || '', r[4] || '']); });
+  return d;
+})();
+var WAKE = 400;   // 06:40, the end of the night's Sleep interval: "the day so far" starts here
+function dayAt(now, from) {
+  from = from || 0;
+  var iv = DAY.map(function (r) { return [Math.max(r[0], from), Math.min(r[1], now), r[2], r[3], r[4]]; }).filter(function (x) { return x[1] > x[0]; });
+  var by = {}, tracked = 0, work = 0, proj = {};
+  iv.forEach(function (x) { var m = x[1] - x[0]; by[x[2]] = (by[x[2]] || 0) + m; tracked += m; if (WORK[x[2]]) work += m; if (x[3]) proj[x[3]] = (proj[x[3]] || 0) + m; });
+  var s = iv.map(function (x) { return [x[0], x[1]]; }).sort(function (a, b) { return a[0] - b[0]; }), clock = 0, end = -1;
+  s.forEach(function (x) { if (x[0] >= end) { clock += x[1] - x[0]; end = x[1]; } else if (x[1] > end) { clock += x[1] - end; end = x[1]; } });
+  return { by: by, proj: proj, tracked: tracked, clock: clock, parallel: tracked - clock, work: work, n: iv.length, iv: iv };
+}
+function ios(c) {
+  return c.dark ? {
+    bg:'#000000', cell:'#1C1C1E', cell2:'#2C2C2E', sep:'rgba(84,84,88,0.45)', fill:'rgba(120,120,128,0.24)', fill2:'rgba(120,120,128,0.36)',
+    bar:'rgba(30,30,32,0.86)', barBorder:'rgba(255,255,255,0.12)', panel:'#1C1C1E', sheet:'#1C1C1E', grabber:'rgba(235,235,245,0.3)',
+    scrim:'rgba(0,0,0,0.5)', lift:'0 18px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.12)', hover:'rgba(255,255,255,0.07)',
+    ghost:'rgba(120,120,128,0.18)', menu:'rgba(44,44,46,0.96)', wall:'#1D2330', ofbg:'#2C2C2E', island:'#000000'
+  } : {
+    bg:'#F2F2F7', cell:'#FFFFFF', cell2:'#F2F2F7', sep:'rgba(60,60,67,0.18)', fill:'rgba(120,120,128,0.12)', fill2:'rgba(120,120,128,0.2)',
+    bar:'rgba(249,249,251,0.9)', barBorder:'rgba(0,0,0,0.08)', panel:'#FFFFFF', sheet:'#F2F2F7', grabber:'rgba(60,60,67,0.3)',
+    scrim:'rgba(0,0,0,0.22)', lift:'0 18px 40px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.06)', hover:'rgba(0,0,0,0.045)',
+    ghost:'rgba(120,120,128,0.1)', menu:'rgba(250,250,252,0.97)', wall:'#C9D2DE', ofbg:'#E5E5EA', island:'#000000'
+  };
+}
+// Shared time UI strings and the day-balance model (draft-5).
+var TT = {
+  en:{ since:'since', soFar:'Today so far', work:'Work', other:'Everything else', notTr:'Not tracked',
+    fact:function (t, c, p, lang) { return 'Tracked ' + dur(t, lang) + ' · by the clock ' + dur(c, lang) + ' · in parallel ' + dur(p, lang); },
+    floor:function (m, lang) { return 'floor ' + (m % 60 ? m + ' min' : m / 60 + ' h') + '/day'; },
+    portion:function (m, lang) { return 'day portion ' + dur(m, lang); },
+    toFloor:function (m, lang) { return dur(m, lang) + ' to the floor'; }, toPortion:function (m, lang) { return dur(m, lang) + ' to the portion'; },
+    inMark:function (m, lang) { return 'today’s ' + dur(m, lang) + ' are in'; },
+    nextFree:'Free', start:'Start', startA:'Start a timer…', alongside:'alongside', lines:'Lines', projects:'Projects', life:'Life ops',
+    openTime:'Time view', settings:'Timer Settings…', keys:'↩ start · ⌥↩ alongside · ⌘Z undo', running:'running',
+    stopped:'stopped', keep:'Keep running', undo:'Undo', pause:'Pause', stop:'Stop', resume:'Resume', plan:'Plan', tracked:'Tracked', now:'now',
+    marks:'Day marks', otherLines:'Other time today', lesson:'lesson' },
+  ru:{ since:'с', soFar:'За сегодня', work:'Работа', other:'Всё остальное', notTr:'Не учтено',
+    fact:function (t, c, p, lang) { return 'Учтено ' + dur(t, lang) + ' · по часам ' + dur(c, lang) + ' · параллельно ' + dur(p, lang); },
+    floor:function (m, lang) { return 'пол ' + (m % 60 ? m + ' мин' : m / 60 + ' ч') + '/день'; },
+    portion:function (m, lang) { return 'доля дня ' + dur(m, lang); },
+    toFloor:function (m, lang) { return 'до пола ' + dur(m, lang); }, toPortion:function (m, lang) { return 'до доли ' + dur(m, lang); },
+    inMark:function (m, lang) { return 'сегодняшние ' + dur(m, lang) + ' есть'; },
+    nextFree:'Свободно', start:'Запустить', startA:'Запустить таймер…', alongside:'параллельно', lines:'Линии', projects:'Проекты', life:'Быт и система',
+    openTime:'«Время»', settings:'Настройки таймера…', keys:'↩ запуск · ⌥↩ параллельно · ⌘Z отменить', running:'идёт',
+    stopped:'остановлен', keep:'Не останавливать', undo:'Отменить', pause:'Пауза', stop:'Стоп', resume:'Продолжить', plan:'План', tracked:'Учтено', now:'сейчас',
+    marks:'Отметки дня', otherLines:'Остальное время сегодня', lesson:'урок' }
+};
+// The day so far: from the end of the night's Sleep to now. Work = lines marked as work (Settings → Time).
+function balance(c, lang, now) {
+  var T = TT[lang] || TT.en, w = dayAt(now, WAKE), since = now - WAKE, other = w.clock - w.work, nt = since - w.clock, d = dayAt(now, 0);
+  var W = 1;
+  function seg(m) { return Math.round(m / since * 1000) / 10; }
+  var marks = [];
+  ['core', 'cal', 'math', 'violin'].forEach(function (k) {
+    var got = d.by[k] || 0, fl = FLOORS[k], po = PORTION[k], goal = fl || po;
+    var left = Math.max(0, goal - got);
+    marks.push({ e: LN[k].e, n: LN[k].n, got: dur(got, lang), mark: fl ? T.floor(fl, lang) : T.portion(po, lang) + (po ? ' · 17:00' : ''),
+      left: left ? (fl ? T.toFloor(left, lang) : T.toPortion(left, lang)) : T.inMark(goal, lang), done: !left, lc: left ? c.sec : c.ter });
+  });
+  var others = ['ai', 'research'].map(function (k) { return { e: LN[k].e, n: LN[k].n, m: dur(d.by[k] || 0, lang), run: k === 'ai' }; });
+  var lifeM = 0; LIFE_ORDER.forEach(function (k) { if (k !== 'sleep') lifeM += w.by[k] || 0; });
+  others.push({ e: '🧺', n: lang === 'ru' ? 'Быт и система' : 'Life ops', m: dur(lifeM, lang), run: false });
+  return {
+    T: T, wc: workCol(c), sinceL: T.since + ' ' + clk(WAKE) + ' · ' + dur(since, lang), workW: seg(w.work), otherW: seg(other), ntW: seg(nt),
+    workL: T.work + ' ' + dur(w.work, lang), otherL: T.other + ' ' + dur(other, lang), ntL: T.notTr + ' ' + dur(nt, lang),
+    fact: T.fact(w.tracked, w.clock, w.parallel, lang), marks: marks, others: others,
+    free: '15:20–17:00 · ' + dur(100, lang), suggest: LN.core.e + ' ' + LN.core.n
+  };
+}
+// workSegment token (draft-5): the third, darkest step of the load hue; tokens.json.
+function workCol(c) { return c.dark ? '#8291AF' : '#8C9FC2'; }
+// Tracked blocks for a rail or a day view. Runs of 3+ intervals, each under 20 min, with gaps under 5 min, become one cluster.
+function trackBlocks(c, lang, now, from, to, pxh, laneW, right) {
+  var T = TT[lang] || TT.en, wc = workCol(c);
+  var iv = DAY.map(function (r) { return { s: Math.max(r[0], from), e: Math.min(r[1], now, to), k: r[2], p: r[3], t: r[4], run: r[1] > now && r[0] < now }; })
+    .filter(function (x) { return x.e > x.s; });
+  function y(m) { return Math.round((m - from) / 60 * pxh); }
+  // parallel columns: an interval overlapping another takes half the lane
+  iv.forEach(function (x) { x.col = 0; x.cols = 1; });
+  iv.forEach(function (a, i) { iv.forEach(function (b, j) { if (i < j && a.s < b.e && b.s < a.e) { a.cols = b.cols = 2; b.col = 1; } }); });
+  var out = [], i = 0;
+  while (i < iv.length) {
+    var j = i;
+    while (j + 1 < iv.length && iv[j + 1].cols === 1 && iv[j].cols === 1 && iv[j + 1].e - iv[j + 1].s < 20 && iv[j].e - iv[j].s < 20 && iv[j + 1].s - iv[j].e < 5) j++;
+    var run = iv.slice(i, j + 1);
+    if (run.length >= 3) {
+      var s0 = run[0].s, e0 = run[run.length - 1].e, by = {}, em = [];
+      run.forEach(function (x) { by[x.k] = (by[x.k] || 0) + x.e - x.s; });
+      Object.keys(by).sort(function (a, b) { return by[b] - by[a]; }).forEach(function (k) { em.push(subj(k, lang).e); });
+      out.push({ y: y(s0), h: Math.max(4, y(e0) - y(s0) - 1), r: right, w: laneW, ol: 'none', fw: 600, fg: c.text,
+        sl: run.map(function (x) { return { y: y(x.s) - y(s0), h: Math.max(1, y(x.e) - y(x.s) - 1), bg: WORK[x.k] ? wc : c.seg }; }),
+        lbg: c.card, lm: '3px', l1: em.join(' '), l2: run.length + ' ' + plr(lang, run.length, lang === 'ru' ? ['интервал', 'интервала', 'интервалов'] : ['interval', 'intervals']),
+        tip: clk(s0) + '–' + clk(e0) + ' · ' + run.length, cluster: true, s: s0, e: e0, n: run.length, by: by });
+    } else {
+      run.forEach(function (x) {
+        var h = Math.max(2, y(x.e) - y(x.s) - 1), su = subj(x.k, lang), m = x.e - x.s, w = x.cols === 2 ? Math.floor((laneW - 2) / 2) : laneW;
+        out.push({ y: y(x.s), h: h, r: right + (x.cols === 2 && x.col === 0 ? w + 2 : 0), w: w, fw: 400, fg: WORK[x.k] && c.dark && !x.run ? '#16213A' : c.segText,
+          ol: x.run ? '1.5px solid ' + c.accent : 'none', lbg: 'transparent', lm: '0',
+          sl: [{ y: 0, h: h, bg: x.run ? c.selBg : (WORK[x.k] ? wc : c.seg) }],
+          l1: h >= 11 ? su.e + (h >= 24 && w > 60 ? ' ' + su.n : '') + (h < 24 ? ' ' + dur(m, lang) : '') : '',
+          l2: h >= 24 ? (x.run ? T.running + ' · ' : '') + dur(m, lang) : '', tip: clk(x.s) + '–' + clk(x.e) + ' ' + su.n,
+          s: x.s, e: x.e, k: x.k, p: x.p, t: x.t, run: x.run });
+      });
+    }
+    i = j + 1;
+  }
+  return out;
+}
+// iPhoneLockSwitch: Lock Screen capture — four one-tap widgets, the Live Activity switcher, the switch notice (draft-5).
+var LK = {
+  en:{ title:'iPhone — Lock Screen capture', sub:'draft-5 · one tap switches · titles hidden on the Lock Screen', since:'since', date:'Thursday 1 October',
+    stoppedAt:function (e, t, m) { return e + ' stopped at ' + t + ' · ' + m; }, undo:'Undo', keep:'Keep running', back:'Back to', pause:'Pause', stop:'Stop',
+    caps:['Running. Four fixed one-tap activities under the clock; their places never move. The Live Activity holds the one slot that changes: back to the previous activity.',
+          'One tap on 🔬 at 15:00. A light haptic, the widget gets the ring, the Live Activity flips at once. For 8 s it offers Keep running (both run) and, away from where the thumb was, Undo (a mis-tap).',
+          'Five minutes before an event in a line-mapped calendar the changing slot offers it: ▶ 🎻 17:00 · 1 h, the event’s length as the target. No event title on the Lock Screen.'] },
+  ru:{ title:'iPhone — запись с экрана блокировки', sub:'draft-5 · одно касание переключает · названия скрыты на экране блокировки', since:'с', date:'четверг, 1 октября',
+    stoppedAt:function (e, t, m) { return e + ' остановлен в ' + t + ' · ' + m; }, undo:'Отменить', keep:'Не останавливать', back:'Назад к', pause:'Пауза', stop:'Стоп',
+    caps:['Идёт таймер. Четыре постоянные активности под часами, их места не меняются. В Live Activity одно меняющееся место: назад к предыдущей активности.',
+          'Касание 🔬 в 15:00. Лёгкий отклик, кольцо на виджете, Live Activity сразу меняется. 8 с — «Не останавливать» (идут оба) и, в стороне от места касания, «Отменить» (промах).',
+          'За пять минут до события из календаря, привязанного к линии, меняющееся место предлагает его: ▶ 🎻 17:00 · 1 ч. Название события на экране блокировки не показывается.'] }
+};
+function build(c, lang) {
+  var S = LK[lang] || LK.en, ru = lang === 'ru'; S.lang = lang;
+  var lockFg = c.dark ? '#FFFFFF' : '#1D1D1F', dim = c.dark ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.45)';
+  function w(e, n, run, el) { return { e: e, n: n, run: !!run, el: el || '', ring: run ? '3px solid ' + lockFg : '3px solid transparent' }; }
+  var FIX = function (runK, el) { return [w('🤖', 'AI/ML', runK === 'ai', el), w('🔬', 'Research', runK === 'research', el), w('🧘', ru ? 'Core pr.' : 'Core pr.', runK === 'core', el), w('🍽️', ru ? 'Еда' : 'Food', runK === 'food', el)]; };
+  var phones = [
+    { time: '15:00', ws: FIX('ai', '0:22'), e: '🤖', n: 'AI/ML', s: S.since + ' 14:38', el: '0:22', notice: false, slot: '↩ ' + S.back + ' 🔬 Research', slotSub: '', cap: S.caps[0] },
+    { time: '15:00', ws: FIX('research', '0:00'), e: '🔬', n: 'Research', s: S.since + ' 15:00', el: '0:00', notice: true, nt: S.stoppedAt('🤖', '15:00', ru ? '22 мин' : '22 min'), cap: S.caps[1] },
+    { time: '16:55', ws: FIX('', ''), e: '🚌', n: ru ? 'Дорога' : 'Transport', s: (ru ? 'Быт и система · ' : 'Life ops · ') + S.since + ' 16:40', el: '0:15', notice: false, slot: '▶ 🎻 17:00 · ' + (ru ? '1 ч' : '1 h'), cap: S.caps[2] }
+  ];
+  phones.forEach(function (p) { p.plain = !p.notice; });
+  return { S: S, phones: phones, lockFg: lockFg, dim: dim, i: ios(c) };
+}
+
+class Component extends DCLogic {
+  renderVals() {
+    var c = theme(!!this.props.dark), lang = this.props.lang || 'en';
+    var v = build.call(this, c, lang) || {};
+    v.c = c; v.ss = SS[lang] || SS.en; v.side = side(c, lang);
+    return v;
+  }
+}
+</script>
+</body>
+</html>

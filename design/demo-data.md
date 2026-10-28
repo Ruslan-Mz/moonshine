@@ -159,3 +159,99 @@ Invented. Weeks 33–40; today is Thu 1 Oct 2026 (W40, in progress). ISO weeks: 
 **Used only on the states sheet (not demo data):** hours against the budget — 🎻 W36 `2 h of 6 h budget`, 🔬 W38 `5 h of 3 h budget` (phase-2 time data; the states sheet still shows the prompt's `of 6 planned`) · a 🇮🇹 Italian draft `Rise` in W40 to show `my take: Rise` in place of `quiet for 29 days` · the Sunday confirmation of 🎻 W40 as `Steady`, `set Sun 4 Oct` · the notes in other scripts: `Вибрато наконец получилось`, `Sarabande: темп ♩ = 54, legato come una voce — やっと`, `סוף סוף ויברטו עובד`.
 
 **🤖 W37 (decided, owner, 3 Oct 2026):** the AI/ML Leap stays in W37, an ordinary week (3 tasks against an average of 3.0); the prompt's claim "fewer tasks done than average" is dropped. The case of a Leap in a low week is carried by 🎻 Violin W36 (1 session, the lowest of the eight).
+
+## Draft-5: time, reminders, lines
+
+Invented. The day is Thu 1 Oct 2026 (W40), as everywhere; the time artboards look at it at **15:00** (`Today-Time`, `MenuBarTimer`, the iPhone artboards) and at **21:40** (`TimeDay`). The calendar events and timed tasks are those of § Draft-3; at 15:00 Today's calendar fact reads `4 events · 4 h in calendar · 1 h 15 min planned · ≈ 3 h 25 min free until 22:00` (15:00–22:00 = 7 h − Violin lesson 1 h − Parents' evening 1 h 30 min − Scales 15:00–15:20 − Allemande 20:30–21:15).
+
+### Settings behind the numbers
+
+- **Work lines:** 🤖 AI/ML and 🔬 Research.
+- **Floors:** 🧘 Core practice 3 h/day and 💪 Calisthenics 1 h/day (foundation, as before); **📐 Math `floor_h_day: 0.33`**, shown `floor 20 min/day` under its `4 h / week` (the floor on a line that is not foundation; a DemoVault change for S4-2).
+- **Day portion:** 🎻 Violin 1 h, the 17:00–18:00 Violin lesson in the Music lessons calendar (mapped to 🎻).
+- **Life ops categories** (defaults): 😴 Sleep · 🍽️ Food · 🍳 Cooking · 🪥 Hygiene · 🏠 House · 🚌 Transport · 🛒 Errands · 📥 Inbox.
+- **Pinned in the palette:** 🤖 Eval toolkit, 🤖 Workshop 2026, 🔬 Drift paper draft.
+- **iPhone Lock Screen places:** 1 🤖 AI/ML · 2 🔬 Research · 3 🧘 Core practice · 4 🍽️ Food.
+
+### The tracked day, Thu 1 Oct
+
+| From  | To    | Subject                   | Project · task                                    |
+| ----- | ----- | ------------------------- | ------------------------------------------------- |
+| 00:00 | 06:40 | 😴 Sleep (from Wed 23:10) | —                                                 |
+| 06:40 | 06:50 | 🪥 Hygiene                | —                                                 |
+| 06:50 | 07:40 | 🧘 Core practice          | Daily practice · Morning session                  |
+| 07:40 | 07:55 | 💪 Calisthenics           | Daily mobility · Mobility — hips & shoulders      |
+| 07:55 | 08:10 | 🍽️ Food                   | —                                                 |
+| 08:10 | 08:35 | 🚌 Transport              | —                                                 |
+| 08:15 | 08:30 | 📐 Math, alongside        | —                                                 |
+| 08:35 | 10:00 | 🤖 AI/ML                  | Eval toolkit · Eval harness — deterministic seeds |
+| 10:00 | 12:40 | 15 short intervals, below | lines only                                        |
+| 13:00 | 13:30 | 🍽️ Food                   | —                                                 |
+| 13:30 | 14:38 | 🔬 Research               | Drift paper draft · Outline section 3 — method    |
+| 14:38 | 15:20 | 🤖 AI/ML                  | Workshop 2026 · Submit workshop abstract          |
+| 15:20 | 15:40 | 🎻 Violin                 | the line                                          |
+| 15:40 | 16:40 | 🤖 AI/ML                  | Eval toolkit · Eval harness — deterministic seeds |
+| 16:40 | 16:55 | 🚌 Transport              | —                                                 |
+| 17:00 | 18:00 | 🎻 Violin                 | the line (started from the calendar suggestion)   |
+| 18:00 | 18:25 | 🚌 Transport              | —                                                 |
+| 18:30 | 20:00 | 👨‍👩‍👧 Family                 | —                                                 |
+| 20:00 | 20:30 | 🍳 Cooking                | —                                                 |
+| 20:30 | 20:50 | 🍽️ Food                   | —                                                 |
+| 20:50 | 21:10 | 👨‍👩‍👧 Family                 | Evenings · Evening reading with the kids          |
+| 21:10 | now   | 🧘 Core practice, running | Daily practice · Evening session                  |
+
+**The 10:00–12:40 run** (minutes, in order): 🤖 12 · 🔬 8 · 🤖 15 · 📥 5 · 🤖 10 · 🔬 12 · 🤖 6 · 🔬 14 · 🤖 9 · 📥 6 · 🤖 13 · 🔬 10 · 🤖 15 · 🔬 7 · 🤖 18 = 15 intervals, 2 h 40 min: 🤖 1 h 38 min, 🔬 51 min, 📥 11 min. Not tracked: 12:40–13:00, 16:55–17:00, 18:25–18:30.
+
+**At 15:00** (🤖 running since 14:38, `0:22`): since 06:40 = 8 h 20 min; work 5 h 24 min (🤖 3 h 25 min + 🔬 1 h 59 min); everything else 2 h 36 min by the clock; not tracked 20 min; since 06:40 tracked 8 h 15 min, by the clock 8 h, in parallel 15 min (📐 beside 🚌). Day marks: 🧘 50 min of floor 3 h (2 h 10 min to it), 💪 15 min of 1 h (45 min), 📐 15 min of 20 min (5 min), 🎻 0 of the 1 h portion. Life ops since 06:40: 1 h 31 min. Next free stretch 15:20–17:00 (1 h 40 min); suggested start 🧘. Palette tiles: 🧘 50 min · 💪 15 min · 📐 15 min · 🤖 3 h 25 min · 🔬 1 h 59 min · 😴 6 h 40 min · 🍽️ 45 min · 🪥 10 min · 🚌 25 min · 📥 11 min; projects: Eval toolkit 1 h 25 min · Workshop 2026 22 min · Drift paper draft 1 h 8 min. Before 08:00: 8 h tracked (😴 🪥 🧘 💪 🍽️).
+
+**At 21:40** (🧘 running since 21:10): tracked 21 h 25 min · by the clock 21 h 10 min · in parallel 15 min · 36 intervals; since 06:40 (15 h): work 6 h 44 min, everything else 7 h 46 min, not tracked 30 min. By subject: 😴 6 h 40 min · 🪥 10 min · 🧘 1 h 20 min · 💪 15 min · 🍽️ 1 h 5 min · 🚌 1 h 5 min · 📐 15 min · 🤖 4 h 45 min · 🔬 1 h 59 min · 📥 11 min · 🎻 1 h 20 min · 👨‍👩‍👧 1 h 50 min · 🍳 30 min. 🎻's day portion was reached at 17:40.
+
+### Week 40 so far (minutes; Thu to 21:40; Fri–Sun empty)
+
+| Subject          | Mon | Tue | Wed | Thu |
+| ---------------- | --- | --- | --- | --- |
+| 🧘 Core practice | 120 | 95  | 120 | 80  |
+| 💪 Calisthenics  | 60  | 30  | 45  | 15  |
+| 🎻 Violin        | 35  | 20  | 40  | 80  |
+| 📐 Math          | 45  | 0   | 30  | 15  |
+| 🤖 AI/ML         | 340 | 365 | 310 | 285 |
+| 🔬 Research      | 90  | 120 | 150 | 119 |
+| 👨‍👩‍👧 Family        | 60  | 140 | 60  | 110 |
+| 😴 Sleep         | 420 | 400 | 410 | 400 |
+| 🍽️ Food          | 80  | 85  | 80  | 65  |
+| 🍳 Cooking       | 35  | 30  | 40  | 30  |
+| 🪥 Hygiene       | 20  | 20  | 20  | 10  |
+| 🏠 House         | 15  | 0   | 30  | 0   |
+| 🚌 Transport     | 50  | 60  | 45  | 65  |
+| 📥 Inbox         | 15  | 20  | 10  | 11  |
+| in parallel      | 20  | 10  | 0   | 15  |
+| intervals        | 31  | 28  | 26  | 36  |
+
+🇮🇹, 🇯🇵, 🎹 and 🛒 Errands have no time this week. Derived: tracked per day 1385 · 1385 · 1390 · 1285 min; by the clock 22 h 45 min · 22 h 55 min · 23 h 10 min · 21 h 10 min; not tracked 1 h 15 min · 1 h 5 min · 50 min · 30 min; work 7:10 · 8:05 · 7:40 · 6:44. Week so far: tracked 90 h 45 min · by the clock 90 h · in parallel 45 min; work 29 h 39 min; 🤖 21 h 40 min, 🔬 7 h 59 min, 🧘 6 h 55 min, 👨‍👩‍👧 6 h 10 min.
+
+**Two sources:** the workbook has 🤖 AI/ML on Mon 28 Sep = 6 h; MoonShine has 5 h 40 min (9 intervals: Eval toolkit 3 h 10 min, of it Eval harness 2 h 25 min; Paper reading 1 h; the line only 1 h 30 min). The 20 min difference is above the 10-min tolerance, so the pair is open.
+
+### Reminders (OmniFocus tasks with the reminder tag)
+
+Demo fixtures: 🧘 `Shoulders down, breathe out` · 💪 `Stand up and stretch` · 🧺 `Water the balcony plants`. States sheet only: 🎻 `Loosen the bow after practice` · 🇮🇹 `Italian radio while cooking` · 👨‍👩‍👧 `Ask the kids about their day`.
+
+### Lines (`Lines-Periods`)
+
+| Line             | Last activity     | Next actions | Estimated this week |
+| ---------------- | ----------------- | ------------ | ------------------- |
+| 🧘 Core practice | today             | 2            | ≈ 1 h est.          |
+| 💪 Calisthenics  | today             | 2            | ≈ 40 min est.       |
+| 🤖 AI/ML         | yesterday         | 4            | ≈ 4 h 10 min est.   |
+| 🔬 Research      | 2 days ago        | 3            | ≈ 1 h 15 min est.   |
+| 🎻 Violin        | today             | 9            | ≈ 6 h 40 min est.   |
+| 🇮🇹 Italian       | quiet for 29 days | 3            | —                   |
+| 🇯🇵 Japanese      | no activity yet   | 2            | ≈ 10 min est.       |
+| 📐 Math          | yesterday         | 5            | ≈ 1 h 30 min est.   |
+| 👨‍👩‍👧 Family        | today             | 3            | ≈ 35 min est.       |
+| 🎹 Piano         | 29 days ago       | 1            | —                   |
+
+**Practice lines (phase 2):** 📓 Reflection, `within: core`, `measure: entries`, targets diary 5 per week and report 1 per month; diary entries W33–W40: 5 6 4 5 5 7 5 4 (W40 so far); the September report exists, October's not yet; last entry today; streak 4 weeks (W36–W39). 🎼 Practice journal, `within: violin`, target note 3 per week; entries 3 3 1 0 2 3 3 2; last entry yesterday; streak 2 weeks (W38–W39).
+
+**Quota tasks (phase 2):** 💪 `Long walk — 90 min`, `2/нед`, done Mon and Wed → `2 of 2 ✓` (met, out of Today until Monday). 📐 `Proof practice — one theorem`, `4/нед!` (strong), done Mon → 1 of 4, 3 needed, 4 days left (Thu–Sun) → `time · 1 of 4 · by Sun`, amber. 👨‍👩‍👧 `Board game evening`, `1/нед`, none yet → `0 of 1 · this week`. These completions are inside the W40 rhythm counts above (💪 4 = two walks + today's Walk and Mobility; 📐 1 = Monday's proof).
+
+**States sheet only (`TimerStates`, 15:32):** 🎻 Scales running since 15:20, 📐 Math alongside since 15:22, 🤖 Eval harness since 11:20, `4:12` with the check mark: 4 h 12 min without a pause (Mac asleep from 13:40). The memo text on the "before" card is invented for the sheet.

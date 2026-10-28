@@ -74,3 +74,8 @@ Third `MetricCard` variant without `Chart`: `HStack` of marks in the same week c
 - [ ] No "N takes", no percentages.
 
 Also fixed in this round: the 4-week averages on the Rhythm and Progress cards are `avg 4.0` and `avg 1.0` (they showed 5.5 and 1.3, which did not match `demo-data.md`).
+
+## Draft-5 — the timer and periods
+
+- **Start a timer** (Timer (Mac), phase 2; `timer-mac.md`): a toolbar button `▶ Start timer` next to "Open in OmniFocus"; ⌘T with no row selected starts the line, with a project or next-action row selected starts that row. Project rows and next-action rows get the ▶ `TimerButton` on hover and selection; the running subject shows the running pill.
+- **A practice line** (ADR-0019) opens the practice card instead of the metric cards: entries this week and month, progress to each target, the streak of periods, the last entry's date. **Quota tasks** (ADR-0020) show their chip in the Next actions table's When column. Both are phase 2 and not drawn in this round; the Lines artboard `Lines-Periods` fixes their wording.

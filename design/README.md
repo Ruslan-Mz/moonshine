@@ -263,26 +263,82 @@ Why horizontal triangles and not vertical: the words are Forward and Back, not U
 
 Phase 1: the Lines (S4) and weekly review (S5) layouts leave room for the third track; no code for takes in phase 1 (`docs/specs/phase-1-see.md`).
 
+## Draft-5 changes — time, reminders, lines
+
+Owner's brief of 2026-10-28: he finds out only in the evening that the day went to work, and wants MoonShine to answer **during the day** where the time is going, against his budget per line. Addendum: no import from his phone tracker; capture at the moment, not afterwards; the **iPhone Lock Screen is the primary capture surface**, the Mac menu bar the second. Authored in the repository in the canvas format (`mockups/README.md`), every artboard with a `-Dark` twin. Invented data: `demo-data.md` § Draft-5.
+
+| Screen                                        | Spec                           | Artboards                                 | Builds in                         |
+| --------------------------------------------- | ------------------------------ | ----------------------------------------- | --------------------------------- |
+| Activity palette in the menu bar              | `screens/timer-mac.md`         | `MenuBarTimer`, `MenuBarTimer-RU`         | Timer (Mac), phase 2              |
+| Start points, notices, marks, nudges          | `screens/timer-mac.md`         | `TimerStates`                             | Timer (Mac)                       |
+| Today at 15:00: Today so far, Tracked lane    | `screens/today.md` § Time      | `Today-Time`, `Today-Time-RU`             | Timer (Mac)                       |
+| The day by the clock, with editing            | `screens/time.md` § Day        | `TimeDay`                                 | Timer (Mac)                       |
+| The week table, two sources                   | `screens/time.md` § Week       | `TimeWeek`                                | Timer (Mac) (question A8)         |
+| Reminders strip                               | `screens/today.md` § Reminders | `TodayReminders`                          | S4-6                              |
+| Lines: S4-2 columns, practice lines, quotas   | `screens/lines.md` § Draft-5   | `Lines-Periods`, `Lines-Periods-RU`       | S4-2; practice and quotas phase 2 |
+| iPhone Lock Screen capture                    | `screens/iphone-capture.md`    | `iPhoneLockSwitch`, `iPhoneLockSwitch-RU` | 3b, or a capture slice (A2)       |
+| iPhone capture app: Now, Day, Lock Screen set | `screens/iphone-capture.md`    | `iPhoneCapture`                           | 3b, or a capture slice (A2)       |
+
+Also: `components.md` § Time components, § Reminders strip, § Period components; `copy.md` § Time strings, § Reminders strip, § Lines (draft-5); `tone-glossary.md` § Time; `tokens.json` `workSegment`; sections in `screens/line-detail.md`, `command-palette.md`, `settings.md` (§ Time tab), `iphone-quick-log.md`.
+
+### Decisions taken in this round (each can be changed by the owner)
+
+1. **The Mac palette lives in the menu bar** (a `MenuBarExtra` popover, system-wide `⌃⌥T`), not in a window section or only in ⌘K: a switch must not cost an app switch, and the running time already lives in the menu bar (ADR-0016). ⌘K keeps `Start timer: …`.
+2. **One start affordance and one shortcut:** ▶ at the trailing edge of the row's name cell (hover, selection), ⌘T on the selection, ⌥ for alongside; on task rows, line headers, Lines rows, Line detail rows, Day-rail events and timed tasks, a memo's "before" card, the calendar suggestion. The running subject shows a pill with its elapsed time.
+3. **The day balance is in both places:** the first card of Today's rail and the bottom of the popover (and the Time view's strip). At 15:00 it states the day since waking (work · everything else · not tracked), each floor or day portion as a distance, and the next free stretch with one suggested start. No percentages, no colour for work, no judgement word.
+4. **Life ops categories** (Sleep, Food, Cooking, Hygiene, House, Transport, Errands, Inbox) are timer subjects under Life ops, never lines and never budgeted. Sleep is built in: its end is where "today so far" starts.
+5. **Short switches** are drawn as one cluster block with a count (3+ intervals under 20 min, gaps under 5 min), listed and edited in the inspector, summed in the week table with an `Intervals` row. No focus score.
+6. **iPhone:** four fixed Lock Screen places (stable for the thumb) and one changing place in the Live Activity (back to the previous activity, or the calendar suggestion); a tap switches; for 8 s the Live Activity offers `Keep running` and `Undo`, Undo away from where the thumb was.
+7. **Lines (S4-2):** a floor on a line that is not foundation is `floor 20 min/day` under its `4 h / week`; the `This period` column (practice targets, quota chips) is phase 2 and absent in S4-2.
+8. **One new colour token**, `workSegment`: the darkest step of the load hue. Work and everything else are told apart by the legend and the labels as well, since the two fills are 1.8:1 (light) and 2.4:1 (dark).
+
+### The architect's questions — answered from the design side
+
+- **A1. The minimal capture set on the phone.** Which activities: four fixed places chosen by the owner (a table of options in `screens/iphone-capture.md`) plus one labelled changing place in the Live Activity; the whole palette one tap away. How a switch is confirmed: the ring moves, the Live Activity flips at once, a haptic where the system allows. How a mis-tap is undone: `Undo` in the Live Activity for 8 s; afterwards `Change` in the Day list.
+- **A2. A minimal iPhone capture slice before 3b:** worth it from the design side (the habit already lives on the Lock Screen; three screens; nothing thrown away in 3b). Whether and how the phone's sessions reach the Mac is the architect's (ADR-0010).
+- **A3. A day full of short switches:** clusters on the rail and in the Time view, the intervals in the inspector, sums in the week table (`screens/time.md` § A day full of short switches).
+
+### Questions for the architect
+
+- **A4.** Life ops categories need a place on the time entry: `TimeEntry.subject` gains an optional category when the subject is Life ops (an ADR-0016 amendment); the category list is native data, synced like other preferences.
+- **A5.** `Undo` on the iPhone switch notice is new to ADR-0016's notice ("🎻 stopped · Keep running"); its effect is the undo of `StartTimer` the ADR already requires. Confirm, and amend the ADR's notice wording.
+- **A6.** Not checked: whether a Lock Screen widget's App Intent runs on a locked phone without unlocking, and whether it can give a haptic; whether Live Activity intents can. The design does not depend on the haptic.
+- **A7.** The system-wide palette shortcut as a registered hot key in the app target (no permission, no new dependency).
+- **A8.** Which slice ships the two-sources choice of the week table: the Excel import (phase 2's first) or Timer (Mac) (its last).
+
+### Questions for the owner
+
+- **O1.** The brief says "Keep both"; ADR-0016 says `Keep running`. The round uses `Keep running`: it reads right when one or two timers stopped, and "Keep both" already names a reconcile choice (`Keep both — different sessions`). Keep it, or change the ADR?
+- **O2.** Work = the lines checked in Settings → Time (default none, and then no Work term anywhere), rather than a block or a vault key.
+- **O3.** "Today so far" starts at the end of the night's Sleep interval; without one, at the day window's start.
+- **O4.** The Time view takes ⌘6, keeping ⌘5 for Plan; or swap them, since Time ships first.
+- **O5.** The default Life ops categories (eight, above), and whether paused lines stay without a palette tile (they are found by typing).
+- **O6.** The Lines `This period` column stays hidden until phase 2.
+
 ### Pending design rounds
 
 The mockups are generated files and are not edited by hand; where a mockup and a spec differ, the spec wins. Each item is listed under the earliest phase or slice whose spec needs it (owner, 2026-10-08). S4 follows the screen specs, which win over the mockups; its one new element is the Reminders strip (owner, 2026-10-16). Items for the designer:
 
 #### Before S4
 
-1. **Reminders strip on Today** (ADR-0017): the strip above the Anchors strip, its states (one, several, more than fit) and its height; position and states are in `screens/today.md` § Reminders. If it is not drawn in time, S4 builds it from the screen spec or cuts it.
+1. ~~**Reminders strip on Today**~~ **Drawn in draft-5** (`TodayReminders`; `screens/today.md` § Reminders).
 
 #### Before phase 2
 
 1. **Rise and Dip marks**: redraw as terrain shapes that are not arrows (a rising slope, a falling slope). Until then the triangles stay. My take is phase 2's first native slice.
 2. **Project take**: how a project take is confirmed in the weekly review.
 3. **Project page** (the Hub slice, ADR-0014): tasks, plan, with places reserved for the rendered project note and for the mentions.
-4. **Time tracking on the Mac** (the Timer slice, ADR-0016): the menu bar timer; starting from a row and from ⌘K; tracked intervals on the Today rail with editing; the week table; the reconcile list; the four nudges with the `Break` action; the check mark of a forgotten timer. Up to three timers (amendment 2026-10-16): two and three running timers in the menu bar and on the Today rail, the "Keep running" notice and the "stopped (three at most)" notice, tracked time against the clock total (`Tracked 26 h · by the clock 23 h · in parallel 3 h`).
+4. **Drawn in draft-5** (`screens/timer-mac.md`, `screens/time.md`), except the reconcile list as a whole list (the cell, its choices and the toolbar step-through are specified). Was: **Time tracking on the Mac** (the Timer slice, ADR-0016): the menu bar timer; starting from a row and from ⌘K; tracked intervals on the Today rail with editing; the week table; the reconcile list; the four nudges with the `Break` action; the check mark of a forgotten timer. Up to three timers (amendment 2026-10-16): two and three running timers in the menu bar and on the Today rail, the "Keep running" notice and the "stopped (three at most)" notice, tracked time against the clock total (`Tracked 26 h · by the clock 23 h · in parallel 3 h`).
 
 #### Before the Reminders slice
 
 1. **Reminder editor** (ADR-0017): text, line or project, pinned or scheduled, notify, quiet window, snooze; the "notifications limited on this device" mark for the iPad and iPhone.
 2. **Schedule picker**: once; daily, weekdays or chosen weekdays at a time; every N hours (1–12) inside a window.
 3. **Mac desktop widget**: reminders now and the next tasks.
+
+#### Before the Practice lines and Quotas slices
+
+1. **Line detail of a practice line** (ADR-0019): the practice card; quota tasks in Line detail (ADR-0020). Their wording is fixed by draft-5 (`screens/lines.md` § Draft-5).
 
 #### Before the Write phase
 
@@ -294,8 +350,9 @@ The mockups are generated files and are not edited by hand; where a mockup and a
 
 #### Before 3b
 
-1. **`Lines.dc.html` — Math's block**: the draft-4 mockup shows 📐 Math under the block `Foundation` and has dropped the `Science` / «Наука» block label; `demo-data.md` keeps Math in **Science** (tier unchanged: active). Restore Science.
+1. **`Lines.dc.html` — Math's block** (draft-5's `Lines-Periods` shows Math under Science; the generated file is unchanged): the draft-4 mockup shows 📐 Math under the block `Foundation` and has dropped the `Science` / «Наука» block label; `demo-data.md` keeps Math in **Science** (tier unchanged: active). Restore Science.
 2. **Names in the mockups**: Forward / Back → Rise / Dip (EN, RU, LV, IT, DE); hours `2 h of 6 h budget`.
 3. **Draft-4 items not drawn**: Split View for the take section, the take on the Today rail, RTL marks, the Mac note popover.
 4. **Draft-3 items**: the day rail on iPad and iPhone (open question 14 above); free time on Today as the rest of the window (`≈ 2 h 25 min free until 22:00` at 16:20); the deadline rule (`screens/settings.md` § Deadlines: the setting, and plain `due 20:35` text and neutral day-rail marks for due dates that are not deadlines); read-only checkboxes on the day rail.
 5. **iPad home screen widget** (ADR-0017): reminders now and the next tasks.
+6. **iPhone capture, draft-5 leftovers:** the Dynamic Island with two and three timers, StandBy, RTL of the capture app.

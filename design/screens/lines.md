@@ -72,3 +72,49 @@ The sparkline cell becomes `VStack(spacing: 2) { Chart; HStack { ForEach(weeks) 
 - [ ] Demo: 🎻 `▶ ✦ · ▶ ● ▷` in W35–W40, 📐 a dashed spark in W38, 🇮🇹 no marks and `quiet for 29 days` unchanged.
 - [ ] A Leap can be found in a row without colour (shape and size).
 - [ ] Checked in Russian (`Подъём · черновик`).
+
+## Draft-5 — S4-2 columns, a floor next to a budget, practice lines, quotas
+
+Artboards: `Lines-Periods`, `Lines-Periods-RU` (+ `-Dark`). It also restores 📐 Math to the `Science` block (`design/README.md` § Pending design rounds, Before 3b, item 1); `Lines.dc.html` itself is a generated file and stays as it is.
+
+### What S4-2 builds
+
+- **Tiers and order** as above. **Columns:** Line 214 · State 112 · Budget 124 · Last 8 weeks 176 · Last activity 150 · Next actions 76 · Estimated this week (the rest). The `This period` column (196) of the artboard is phase 2 and absent in S4-2; its width goes to Estimated this week.
+- **Budget cell:**
+
+  | Line has                               | Cell                                                         |
+  | -------------------------------------- | ------------------------------------------------------------ |
+  | `budget_h_week` only                   | `6 h / week`                                                 |
+  | `floor_h_day` on a foundation line     | `floor 3 h/day`                                              |
+  | both, on a line that is not foundation | `4 h / week` and under it `floor 20 min/day` (11, secondary) |
+  | neither                                | `—`                                                          |
+
+  This is the exact form the vault contract (`docs/discovery/vault-contract.md` § 1) and the phase-1 spec (S4) leave to the design round: the weekly budget stays the line's main number; the floor is a daily minimum under it. A floor under 1 h is written in minutes (`20 min/day`, from `floor_h_day: 0.33`, rounded to 5 min); from 1 h in hours with the locale's decimal (`1.5 h/day`, `1,5 ч/день`). The tier header sums floors of foundation lines only (`floor 4 h/day`).
+
+- **Last activity:** `today` · `yesterday` · `2 days ago` · moon + `quiet for 29 days` (active lines) · `no activity yet` · `29 days ago` (maintenance, neutral) · `paused since 14 July`.
+- **Next actions:** the count of available next actions (the rule of `components.md` § QuietLineCard). **Estimated this week:** `≈ 6 h 40 min est.` or `—`.
+- No ▶ in S4-2: the start affordance on a Lines row (`timer-mac.md`) comes with the Timer slice.
+
+### Practice lines (phase 2, Practice lines slice; ADR-0019)
+
+- A nested line is a row **directly under its parent**, whatever tier the parent is in, indented with a tree tick: name 13 semibold over `within 🧘 Core practice` (11, tertiary). A line with `measure: entries` and no `within` is an ordinary top-level row with the same cells.
+- **State:** its own state label. **Budget:** `by entries` (tertiary): it has no hours and no budget (ADR-0019).
+- **Last 8 weeks:** entries per week, one neutral series (`chipText` at 55 %), with a dashed rule at the weekly target; the current week partial as in every sparkline. Neither rhythm nor progress colour: entries are a third thing.
+- **Last activity:** `last entry today`. **Next actions:** `—`. **Estimated this week:** `—`.
+- **This period:** one line per target, `diary 4 of 5 · this week`, `report 0 of 1 · October` (the kind is the owner's word from the vault, shown as written), then the streak of periods that met their target, `4 weeks in a row`, tertiary, shown from 2. The running period never counts against it (ADR-0019).
+- **Read state:** partly read → `at least 4 of 5 · this week`; unavailable → the last known counts with their date, `4 of 5 · as of Tue`. Never 0 for a read that failed.
+- **Subtitle:** `13 lines · 2 foundation · 7 active · 2 practice · 1 maintenance · 1 paused`. Lines with `measure: entries` count once, as practice, not again under their state.
+
+### Quota chip (phase 2, Quotas slice; ADR-0020)
+
+- In `This period`, for a line with quota tasks: the **most pressing** one, its title (11, tertiary) over its chip (`QuotaChip`). Order: a strong `time` state, a strong short last period, a neutral `time`, open, met. `+1` after the chip when the line has more; the tooltip lists them.
+- Chips (ADR-0020 § Showing it): met `2 of 2 ✓` (chip fill, secondary) · open `0 of 1 · this week` · time `time · 1 of 4 · by Sun` (secondary; **amber** text on the amber fill when the quota is strong) · a period that ended short `last week: 1 of 2` (neutral: on the first day of the new period only; strong: amber until the period is met) · carried `2 of 2 ✓ (carried)`. Partly read: `at least 1 of 4`.
+- Amber here is ADR-0020's exception to rule 8: a commitment the owner chose to make loud. No red, no "missed".
+
+### Acceptance (draft-5)
+
+- [ ] S4-2: 📐 Math shows `4 h / week` over `floor 20 min/day` when the demo vault gives it `floor_h_day`; a foundation line shows only its floor; no other cell changes.
+- [ ] S4-2: Math is in the `Science` block; the `This period` column is absent.
+- [ ] Phase 2: 📓 Reflection sits under 🧘 Core practice and 🎼 Practice journal under 🎻 Violin, with `by entries`, a dashed target rule and no hours anywhere in their rows.
+- [ ] Phase 2: the 📐 Math chip `time · 1 of 4 · by Sun` is amber (strong); 💪 `2 of 2 ✓` and 👨‍👩‍👧 `0 of 1 · this week` are neutral.
+- [ ] Checked in Russian (`Lines-Periods-RU`): `4 ч / нед` over `пол 20 мин/день`, `diary 4 из 5 · эта неделя`, `пора · 1 из 4 · до вс`.
