@@ -13,7 +13,7 @@ related:
 
 # Time (draft-5)
 
-The evening and week view of ADR-0016 § The day by the clock: what the day actually was, interval by interval, next to the calendar and the planned tasks, with editing; and the week as a table of lines by days, which reads like the workbook's grid. A sidebar view **Time** (⌘6; ⌘5 stays reserved for Plan, question O4 in `design/README.md` § Draft-5) with two modes, `Day | Week`.
+The evening and week view of ADR-0016 § The day by the clock: what the day actually was, interval by interval, next to the calendar and the planned tasks, with editing; and the week as a table of lines by days, which reads like the workbook's grid. A sidebar view **Time** (⌘6; ⌘5 stays reserved for Plan; owner, 2026-10-28) with two modes, `Day | Week`.
 
 Both modes count by ADR-0016: a line's time is the full duration of its own entries; the day's clock time is the union of all intervals; **in parallel** = tracked − by the clock. Every place a day total appears names which one it is.
 
@@ -70,11 +70,19 @@ The owner switches constantly; the demo day has 15 intervals between 10:00 and 1
 - A cell whose (day, line) has native and workbook entries that differ by more than the tolerance carries a small `square.on.square` glyph. MoonShine's total is the one counted until the owner chooses; the two are never added.
 - **Selecting the cell** shows, in the inspector: the totals of both (`MoonShine (timer) 5 h 40 min` · `Workbook 6 h`), the sentence `They differ by 20 min, more than the 10-min tolerance. MoonShine’s 5 h 40 min is counted until you choose; the two are never added.`, and the choices: `Keep MoonShine` · `Keep the workbook` · `Keep both — different sessions` · `The workbook’s total is right (+20 min)` (offered only when the workbook's total is larger).
 - The toolbar shows `Two sources · N` while any pair is open; it steps through them (the reconcile list of ADR-0016).
-- Which slice ships this choice, the Excel import or Timer (Mac), is question A8 for the architect; the design is the same.
+- This choice ships in its own slice, **Time reconcile**, right after Timer (Mac) (owner, 2026-10-28; `docs/ROADMAP.md`, ADR-0016 amendment 2026-10-28). Until then the cell mark shows and MoonShine's total counts; the choices are not offered.
 
 ### Inspector (300)
 
 The selected cell: `🤖 AI/ML · Mon 28 Sep`, `5 h 40 min · 9 intervals · timer`, then by project and task (`Eval toolkit 3 h 10 min`, under it `Eval harness — deterministic seeds 2 h 25 min`; `Paper reading 1 h`; `the line only 1 h 30 min`), then Two sources when the cell has them. Keys: `↑↓←→ cell · ↩ open the day · ⌘← ⌘→ week · ⌘Z undo`.
+
+## Narrow windows
+
+`principles.md`: the window must work at 1100 × 700; the inspector stays shown and hides with ⌃⌘I (owner, 2026-10-27), and columns truncate.
+
+- **Week:** the day columns shrink from 64 to 52, Week from 92 to 80, Budget from 140 to 90 (tail truncation, the full text in a tooltip), Line from 184 to 140: 674 in all. At 1100 × 700 with the inspector hidden (864 for the table) every column shows; with it shown (564) the Line column stays pinned and the day columns scroll sideways.
+- **Day:** the Plan lane shrinks from 290 to 180 and the Tracked lane from 360 to 220; Day marks become a glyph with the text in a tooltip. That is 512 with the hours and padding, so it fits at 1100 × 700 with the inspector shown (524).
+- Nothing is dropped and no text changes; cells keep `h:mm`.
 
 ## Data
 
@@ -95,4 +103,4 @@ Day: a `ScrollView` with a fixed-height `ZStack` timeline, blocks placed with `.
 - [ ] The week table puts no word, colour or bar between the Week and Budget columns.
 - [ ] A two-sources cell counts MoonShine's total until a choice; "The workbook’s total is right" appears only when the workbook's total is larger.
 - [ ] Nested lines have no row; their time is in the parent's row.
-- [ ] Checked in Russian at 1440 × 900 and 1100 × 700 (`h:mm` cells do not change length).
+- [ ] Checked in Russian at 1440 × 900 and 1100 × 700 (`h:mm` cells do not change length): at 1100 × 700 with the inspector hidden every week column shows; with it shown, the Line column stays pinned while the days scroll.

@@ -196,23 +196,23 @@ The menu bar label: `timer` glyph when idle; emoji + `h:mm` (tabular) while one 
 
 ### SwitchNotice
 
-Non-modal, about 8 s, never takes focus. Mac: a 22 pt capsule in the centre of the status bar, `band` fill, 1 pt `cardBorder`: `🤖 stopped` · a `Keep running` button · `⌘Z` hint; variants `🤖 🔬 stopped` and `🤖 stopped (three at most)` (no button). iPhone: the Live Activity's bottom row, `🤖 stopped at 15:00 · 22 min` over `Keep running` and `Undo` (accent), Undo on the side away from the changing slot; taps ignored for its first 0.5 s.
+Non-modal, about 8 s, never takes focus. Mac: a 22 pt capsule in the centre of the status bar, `band` fill, 1 pt `cardBorder`: `🤖 stopped` · a `Keep running` button · `⌘Z` hint; variants `🤖 🔬 stopped` (two stopped), `🤖 stopped (three at most)` (three ran and the start was alongside: the oldest stopped) and `🤖 🔬 🎻 stopped (three at most)` (three ran and the start was plain: all three stopped). Both "three at most" variants have no button: Keep running would need a fourth session (ADR-0016). iPhone: the Live Activity's bottom row, `🤖 stopped at 15:00 · 22 min` over `Keep running` and `Undo` (accent), Undo on the side away from the changing slot; taps ignored for its first 0.5 s; in the "three at most" cases only `Undo`. ⌘Z (Mac) and Undo (iPhone) undo the start in every variant.
 
 ### DayBalance
 
 "Where did today go, so far." Rail card on Today (260 inner width, `card`, radius 10), compact in the menu bar popover (`band` fill, no card), and the summary strip of the Time view.
 
-- Header `Today so far` (13 semibold) · `since 06:40 · 8 h 20 min` (11.5 tertiary). "Since" = the end of today's Sleep interval; without one, the earlier of the day window's start and the first interval.
+- Header `Today so far` (13 semibold) · `since 06:40 · 8 h 20 min` (11.5 tertiary). "Since" = the end of today's Sleep interval; without one, the day window's start (owner, 2026-10-28).
 - **Bar**, 8 high, radius 4, 1 pt gaps: work (`workSegment`) · everything else (`loadSegment`) · not tracked (hatched with `hatch`), widths in proportion to "since … to now". No percentages.
 - Legend: three rows with 8 pt swatches: `Work 5 h 24 min` · `Everything else 2 h 36 min` · `Not tracked 20 min`. With no work lines chosen, the work term and its segment are absent.
-- **Day marks:** one row per line with a floor or a day portion today: emoji · name · today's time (tabular), under it `floor 3 h/day · 2 h 10 min to the floor` or `today’s 1 h is in` (11, tertiary) · a TimerButton.
+- **Day marks:** one row per line with a floor or a day portion today, **paused lines excluded** (a paused line is never shown as missing activity): emoji · name · today's time (tabular), under it `floor 3 h/day · 2 h 10 min to the floor` or `today’s 1 h is in` (11, tertiary) · a TimerButton.
 - **Other time today:** the remaining lines and Life ops with time today (11.5, secondary).
-- **Next free stretch** (from the calendar facts, `today.md` § Calendar) and one suggested start, an accent capsule `▶ 🧘 Core practice`: the line with the most left to its mark, foundation lines first. Absent when no mark is open or no free stretch is left.
+- **Next free stretch** (from the calendar facts, `today.md` § Calendar) and at most one suggested start, an accent capsule `▶ 🧘 Core practice`: among the open marks (never a paused line), foundation lines first, then the line with the most left to its mark. Absent when no mark is open or no free stretch is left.
 - Footer: `Tracked 8 h 15 min · by the clock 8 h · in parallel 15 min` (11, tertiary), over the same "since".
 
 ### TrackedBlock and SwitchCluster
 
-- **TrackedBlock:** on the Day rail (26 pt per hour, 100 wide) and in the Time view (42 pt per hour at 1×, 360 wide). Radius 3–4; fill `workSegment` or `loadSegment`; label text `segText` (on a work block in dark mode, a dark ink for contrast). Label: emoji + name + duration from 24 pt, emoji + duration from 11 pt, nothing below. Parallel sessions split the lane in two or three. Running: 1.5 pt accent outline. Selected: 2 pt accent outline + edge handles. Edited: pencil glyph; from a calendar event: calendar glyph; marked: dashed outline + `clock.badge.questionmark`.
+- **TrackedBlock:** on the Day rail (26 pt per hour, 100 wide) and in the Time view (42 pt per hour at 1×, 360 wide). Radius 3–4; fill `workSegment` or `loadSegment`; label text `segText`, on a work block `workSegmentText` (`tokens.json`). Label: emoji + name + duration from 24 pt, emoji + duration from 11 pt, nothing below. Parallel sessions split the lane in two or three. Running: 1.5 pt accent outline. Selected: 2 pt accent outline + edge handles. Edited: pencil glyph; from a calendar event: calendar glyph; marked: dashed outline + `clock.badge.questionmark`.
 - **SwitchCluster:** a run of 3 or more consecutive intervals, each under 20 min, gaps under 5 min, no parallel session: one block, one slice per interval with 1 pt between, one label on a `card` chip: the subjects' emoji by share and `15 intervals`. Selecting it lists the intervals; at 4× in the Time view it dissolves into blocks once every member is at least 11 pt.
 - **Gap:** hatched (`hatch`) between intervals after the day so far began.
 
@@ -228,7 +228,7 @@ Time view inspector and iPhone Day. Mac 23 high: time range 12 tabular · emoji 
 
 ### ReminderStrip and ReminderChip
 
-Today, above the Anchors strip (`screens/today.md` § Reminders). Strip: one row, 36 pt, `band` fill, hairline below; `bell` 12 + `Reminders` 12 semibold in `secondary`. Chip: `card` fill, 1 pt `cardBorder`, radius 6, 24 high, padding 0 × 9, line emoji 12 + text 12.5, max 240 wide. A chip never shrinks to fit: those that do not fit whole go behind `+N more` (accent text); only one reminder wider than 240 truncates. Opened: chips wrap; the last chip is `Show less`. No checkbox, count, estimate, due styling or amber.
+Today, above the Anchors strip (`screens/today.md` § Reminders). Strip: one row, 36 pt, `band` fill, hairline below; `bell` 12 + `Reminders` 12 semibold in `secondary`. Chip: `card` fill, 1 pt `cardBorder`, radius 6, 24 high, padding 0 × 9, line emoji 12 + text 12.5, max 240 wide. A chip never shrinks to fit: those that do not fit whole go behind `+N more` (accent text); only one reminder wider than 240 truncates. Opened: chips wrap; the last chip is `Show less`. `+N more` and `Show less` are ordinary focusable chips: ↵ or a click opens or closes; ←/→ only move between chips; Space does nothing. No checkbox, count, estimate, due styling or amber.
 
 ## Period components (draft-5)
 
@@ -244,4 +244,4 @@ Text, not a chip: `diary 4 of 5 · this week` (11.5), one line per target; under
 
 ### BudgetCell (draft-5)
 
-`6 h / week`; `floor 3 h/day` for a foundation line; a weekly budget with a floor on a line that is not foundation: `4 h / week` over `floor 20 min/day` (11, `secondary`); `by entries` (tertiary) for a practice line; `—` when unset.
+`6 h / week`; `floor 3 h/day` for a foundation line; a weekly budget with a floor on a line that is not foundation: `4 h / week` over `floor 20 min/day` (11, `secondary`); a floor and no weekly budget on a line that is not foundation: `floor 30 min/day` alone; `by entries` (tertiary) for a practice line; `—` when unset. Floor format: `screens/lines.md` § Draft-5.

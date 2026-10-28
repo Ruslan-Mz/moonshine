@@ -237,6 +237,8 @@ Demo fixtures: 🧘 `Shoulders down, breathe out` · 💪 `Stand up and stretch`
 
 ### Lines (`Lines-Periods`)
 
+These values **replace** the Last activity, Next actions and Estimated this week cells drawn in `Lines.dc.html` (which shows, for example, Research `yesterday` · 5 · `≈ 2 h 25 min`): the generated file is not edited and is listed as stale in `README.md` § Pending design rounds, Before 3b.
+
 | Line             | Last activity     | Next actions | Estimated this week |
 | ---------------- | ----------------- | ------------ | ------------------- |
 | 🧘 Core practice | today             | 2            | ≈ 1 h est.          |

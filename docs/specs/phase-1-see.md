@@ -82,7 +82,7 @@ Moved to the usage period after phase 1 (owner, 2026-10-28); the rules below sta
   - [ ] **S4-4c — Live source**: the store, the workbook, the mapping files and `deny-list.txt` in the data folder outside the repository, its location supplied only by the app and the `moonshine-import` entry point, and the live OmniFocus import; an app launched as the unit tests' host never chooses Live (`AppModel.source(isTestHost:)`, pinned by a test since S4-1a) (risky, ~245).
   - [ ] **S4-4d — Vault folder in the live import** (risky, ~325).
   - [ ] **S4-4e — Mass line removal** (risky, ~160).
-  - [ ] **S4-2 — Lines + Line detail** (plain, ~760).
+  - [ ] **S4-2 — Lines + Line detail** (plain, ~760). Includes two `DemoVault` edits from design draft-5 (`design/screens/lines.md` § Draft-5), so the Budget cell renders in Demo mode: 📐 Math moves to the `Science` block, and Math gets `floor_h_day: 0.33` next to its weekly budget (today 1.5 in `DemoVault`; S4-DD aligns it with the design's 4). Fixtures, not production lines.
   - [ ] **S4-3b — Day rail** (plain, Demo calendar, ~405).
   - [ ] **S4-3c — Settings window, Deadlines, the ADR-0009 language spike and its literal-string check** (plain, ~360; the catalog check moved to S4-1a, owner 2026-10-21).
   - [ ] **S4-3d — Settings → Calendars and the EventKit live check** (risky, ~390).

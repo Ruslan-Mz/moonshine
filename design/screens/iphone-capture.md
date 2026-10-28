@@ -3,7 +3,7 @@ title: iPhone — capture at the moment (Lock Screen, Live Activity, capture app
 status: draft-5
 date: 2026-10-28
 platform: iOS 26
-slice: 3b (iPhone timer, ADR-0016), or a minimal capture slice before it (question A2, design/README.md § Draft-5)
+slice: 3b (iPhone timer, ADR-0016), or a minimal capture slice before it (decided at phase-2 planning, docs/ROADMAP.md § Open questions)
 artboards:
   [
     mockups/iPhoneLockSwitch.dc.html,
@@ -35,7 +35,7 @@ Activities are the same as on the Mac (`timer-mac.md` § Activities): lines that
 
 ## Which activities are on the Lock Screen
 
-Question A1 for the architect. Options, judged by the one thing that matters on a Lock Screen: a thumb that hits the right place without looking twice.
+Question A1 of the brief. Options, judged by the one thing that matters on a Lock Screen: a thumb that hits the right place without looking twice.
 
 | Option                                     | Stable places                                  | Covers the switching pairs       | Mis-tap risk                      | Needs                                | Verdict                          |
 | ------------------------------------------ | ---------------------------------------------- | -------------------------------- | --------------------------------- | ------------------------------------ | -------------------------------- |
@@ -50,24 +50,26 @@ So: **four fixed one-tap places** under the clock, and in the Live Activity **on
 - `▶ 🎻 17:00 · 1 h` — five minutes before an event in a line-mapped calendar, the calendar suggestion of ADR-0016, with the event's length as the target. No event title on the Lock Screen.
 - Everything else is one tap away: the palette control opens the capture app on **Now**.
 
+**What a place may hold** (owner, 2026-10-28): while **Show titles on the Lock Screen** is off (the default), a place holds only a **line or a Life ops category**: their names are shown, and they never collide. A pinned project or task can be a place only while the setting is on. Turning the setting off empties any place that holds a project or task, and Settings → Lock Screen says which and asks for a line or a category; nothing falls back to an emoji alone. The same holds for the Live Activity: with titles off it names the line or category of the running session (the task or project title is hidden), and `↩ Back to` names the previous activity's line or category.
+
 ## How a switch is confirmed
 
 - The tapped widget gets the ring and its time starts at `0:00`; the previous one loses its ring.
 - The Live Activity flips at once to the new activity, `since 15:00`, and its changing slot becomes `↩ Back to 🤖 AI/ML`.
-- A haptic where the system allows it from a widget's intent (not checked yet: question A6); the visual confirmation does not depend on it.
+- A haptic where the system allows it from a widget's intent. Whether it can is a spike in the capture slice; nothing is promised before it (owner, 2026-10-28). The visual confirmation does not depend on it.
 - No sound, no banner, no unlock.
 
 ## How a mis-tap is undone
 
 - **For about eight seconds** the Live Activity's bottom row becomes the switch notice: `🤖 stopped at 15:00 · 22 min` · `Keep running` · `Undo`.
 - **Undo** removes the new session and resumes the stopped ones from the instant they stopped, with no gap: the tap never happened. It sits on the side away from the changing slot, so a second quick tap on `↩ Back to` cannot land on it, and taps on the notice are ignored for its first half second.
-- **Keep running** resumes the stopped sessions next to the new one (ADR-0016), within the cap of three.
+- **Keep running** resumes the stopped sessions next to the new one (ADR-0016), within the cap of three. With three running there is no Keep running: `🤖 🔬 🎻 stopped (three at most)` (a plain start, all three stopped) or `🤖 stopped (three at most)` (an alongside start from the app, the oldest stopped), with `Undo` only.
 - **After the notice:** the capture app's **Day** lists the interval; `Change` gives it another activity (the usual fix: the time was right, the label wrong), `Split` cuts it, `Delete` removes it and leaves a gap that `Fill…` gives to a neighbour.
-- `Undo` on the notice is new to ADR-0016's notice ("🎻 stopped · Keep running"); on the Mac the same undo is ⌘Z. Question A5 for the architect.
+- `Undo` is the undo of `StartTimer` (ADR-0013): the previous session is restored without a gap, for 8 s; after that, `Change` in the Day list (ADR-0016, amendment 2026-10-28). On the Mac the same undo is ⌘Z.
 
 ## Layout
 
-**Lock Screen** (`iPhoneLockSwitch`, 402 × 874): date and clock as the system draws them; four circular widgets 72 pt, gap 14, under the clock: emoji (rendered by the system in the Lock Screen's vibrant style, so it reads by shape) and a short name 10 semibold; running: a 3 pt ring and the elapsed time 9.5. The Live Activity (370 wide, radius 26) at the bottom: emoji badge 44 · activity name 17 semibold · `since 14:38` 14 · elapsed 34 semibold, tabular, accent; bottom row 44: the changing slot (flex) · pause · stop. Line and category names are shown; task, project and event titles are hidden unless **Show titles on the Lock Screen** is on (`iphone-widgets.md` § Privacy on the Lock Screen).
+**Lock Screen** (`iPhoneLockSwitch`, 402 × 874): date and clock as the system draws them; four circular widgets 72 pt, gap 14, under the clock: emoji (rendered by the system in the Lock Screen's vibrant style, so it reads by shape) and a short name 10 semibold; running: a 3 pt ring and the elapsed time 9.5. The Live Activity (370 wide, radius 26) at the bottom: emoji badge 44 · activity name 17 semibold · `since 14:38` 14 · elapsed 34 semibold, tabular, accent; bottom row 44: the changing slot (flex) · pause · stop. Line and category names are shown; task, project and event titles are hidden unless **Show titles on the Lock Screen** is on (`iphone-widgets.md` § Privacy on the Lock Screen), and with it off a place holds only a line or a category (§ Which activities are on the Lock Screen, "What a place may hold").
 
 **Dynamic Island**: compact = emoji · `0:22`; minimal = emoji; expanded = the Live Activity's content (`iphone-quick-log.md` § Layout).
 
@@ -75,7 +77,7 @@ So: **four fixed one-tap places** under the clock, and in the Live Activity **on
 
 - **Now:** the running card (emoji 40 · title · `AI/ML · since 14:38` · elapsed 24 · pause · stop); `Today so far` (the compact `DayBalance`); the palette: sections Lines · Projects · Life ops, tiles four per row, 72 pt high, emoji 24, name 11.5, today's time 10.5; a small lock glyph marks the four on the Lock Screen. One tap switches; a long press offers Start alongside, Pin, Put on the Lock Screen.
 - **Day:** newest first, 56 pt rows: time range · emoji · title and line · duration; the running row in accent. A short-switch run is one row (`15 intervals` · the shares) that opens to its intervals. A gap row is hatched with `Fill…`. Swipe left: `Change` (accent) · `Split` · `Delete`, both in neutral fills: **no red**, here as everywhere (CLAUDE.md rule 8).
-- **Settings → Lock Screen:** the four places in order, with drag handles and `Change places…`; toggles `Back to the previous activity`, `Events from line-mapped calendars`, `Show titles on the Lock Screen` (off by default), `Haptic on switch`.
+- **Settings → Lock Screen:** the four places in order, with drag handles and `Change places…` (lines and categories; projects and tasks too only while titles are shown, with the caption `Projects and tasks can be places only while titles are shown.`); toggles `Back to the previous activity`, `Events from line-mapped calendars`, `Show titles on the Lock Screen` (off by default), `Haptic on switch`.
 
 ## Behaviour
 
@@ -86,13 +88,13 @@ So: **four fixed one-tap places** under the clock, and in the Live Activity **on
 
 ## A minimal iPhone capture slice before 3b — the design view
 
-Question A2: whether a minimal iPhone capture (Lock Screen widgets and controls, the Live Activity, writing timer sessions) is worth a slice before the full iPhone app of 3b. **From the design side, yes**, and nothing in it is thrown away later:
+Question A2 of the brief: whether a minimal iPhone capture (Lock Screen widgets and controls, the Live Activity, writing timer sessions) is worth a slice before the full iPhone app of 3b. **From the design side, yes**, and nothing in it is thrown away later. **Decided at phase-2 planning** (owner, 2026-10-28; `docs/ROADMAP.md` § Open questions); its prerequisites are CloudKit sync per ADR-0010 and the paid Apple Developer Program.
 
 - **It is where the habit already lives.** The owner's working capture is a Lock Screen widget; Mac-only tracking would leave every switch away from the desk to memory, the failure the workbook showed.
 - **It is small.** Three screens (Now, Day, Settings → Lock Screen), four widget configurations, one Live Activity, one control. No Today, Week, Lines or review on the phone.
 - **It carries into 3b unchanged.** Now and Day become the Log tab of 3b; the quick-log sheet (`iphone-quick-log.md`) stays for logging afterwards; the practice timer sheet becomes the running card.
-- **What it needs is not a design question:** the sessions and entries written on the phone must reach the Mac (ADR-0010 sync of native records, opt-in). The architect decides that.
-- **Design risks to check in the slice:** how fast a Lock Screen widget redraws after its intent runs; whether intents run on a locked phone (question A6); the mis-tap rate in the first week (the Day list's `Change` count is the measure).
+- **What it needs is not a design question:** the sessions and entries written on the phone must reach the Mac (ADR-0010 sync of native records, opt-in), and the paid Apple Developer Program (owner, 2026-10-28).
+- **Design risks to check in the slice:** how fast a Lock Screen widget redraws after its intent runs; whether intents run on a locked phone and can give a haptic (a spike, the slice's first step); the mis-tap rate in the first week (the Day list's `Change` count is the measure).
 
 ## SwiftUI
 
@@ -103,7 +105,7 @@ Widgets: WidgetKit `accessoryCircular` with `Button(intent:)` (App Intents, `Sta
 - [ ] From the Lock Screen, one tap on a widget switches; the ring, the Live Activity and the Mac menu bar (once synced) agree.
 - [ ] `Undo` within eight seconds leaves the day exactly as before the tap, with no gap; `Keep running` leaves both running.
 - [ ] A second quick tap on `↩ Back to` never lands on `Undo`.
-- [ ] With the setting off, no task, project or event title is readable on a locked phone.
+- [ ] With the setting off, no task, project or event title is readable on a locked phone, and a project or task cannot be chosen as a place; turning the setting off empties such a place and says so.
 - [ ] Day: `Change`, `Split`, `Delete`, `Fill…` each undo; no red in the swipe actions.
 - [ ] Nested lines and paused lines are not offered on the Lock Screen; Life ops categories are.
 - [ ] Checked in Russian (`iPhoneLockSwitch-RU`): `Не останавливать` and `Отменить` fit the notice row.

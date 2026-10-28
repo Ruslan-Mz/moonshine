@@ -35,10 +35,14 @@ Data model, commands and counting rules are ADR-0016's. This spec adds the surfa
 The palette shows **activities**, the owner's word for the tiles of his phone tracker. An activity is one of:
 
 - **A line** that is neither nested (ADR-0019: time on a nested line is recorded on its parent, and the picker does not offer nested lines) nor paused. Order: tier (foundation, active, maintenance), then the vault order. A paused line has no tile; typing its name in the palette still finds it.
-- **A pinned project or task** (up to 8), with its line's emoji: `Pin to Palette` in the Timer menu or a row's context menu, and `Pin to palette: …` in ⌘K. For the projects the owner switches between all day.
-- **A Life ops category.** Life ops is not a line and has no budget (`principles.md`); its time still needs a name. Default categories: 😴 Sleep · 🍽️ Food · 🍳 Cooking · 🪥 Hygiene · 🏠 House · 🚌 Transport · 🛒 Errands · 📥 Inbox. The owner renames, reorders, adds and archives them in Settings → Time. **Sleep is built in** (it can be renamed, not removed): the end of the night's Sleep interval is where "today so far" starts (`components.md` § DayBalance). A category is never a line, never budgeted, never quiet; its time shows under Life ops (`time.md` § Week). Storing the category on a time entry is a model change: question A4 for the architect (`design/README.md` § Draft-5).
+- **A pinned project or task** (up to 8), with its line's emoji: `Pin to Palette` in the Timer menu or a row's context menu, and `Pin to palette: …` in ⌘K. For the projects the owner switches between all day. With eight pinned, `Pin to Palette` is disabled and its help reads `Eight are pinned. Unpin one first.`; nothing is replaced silently.
+- **A Life ops category.** Life ops is not a line and has no budget (`principles.md`); its time still needs a name. Default categories: 😴 Sleep · 🍽️ Food · 🍳 Cooking · 🪥 Hygiene · 🏠 House · 🚌 Transport · 🛒 Errands · 📥 Inbox. The owner renames, reorders, adds and archives them in Settings → Time. **Sleep is built in** (it can be renamed, not removed): the end of the night's Sleep interval is where "today so far" starts (`components.md` § DayBalance). A category is never a line, never budgeted, never quiet; its time shows under Life ops (`time.md` § Week). Each entry of a category carries it as `lifeCategory`, stored at capture like the line (ADR-0016, amendment 2026-10-28).
 
 Sections in the palette: Lines · Projects · Life ops (the order is a setting).
+
+## Work lines
+
+"Work" is a label the owner gives to lines: checked in Settings → Time (owner, 2026-10-28). **Asked once, on the first open** of the popover or of Today with a timer: a small sheet `Which lines are work?` lists the lines with checkboxes, `Save` and `Not now`. `Not now` leaves none checked: then no Work term appears anywhere (the day balance shows tracked against not tracked), and the question stays in Settings → Time. It is not asked again.
 
 ## Layout (popover, `MenuBarTimer`)
 
@@ -61,7 +65,7 @@ Sections in the palette: Lines · Projects · Life ops (the order is a setting).
 | marked          | `clock.badge.questionmark` after the time                                   |
 | popover open    | the system highlight                                                        |
 
-No colour in the item, ever. VoiceOver: "MoonShine timer, AI/ML, 22 minutes, 1 more running".
+With `Show in the menu bar: While a timer runs` and nothing running, the item is hidden; ⌃⌥T then shows it for as long as the popover is open, so the popover always has its anchor. No colour in the item, ever. VoiceOver: "MoonShine timer, AI/ML, 22 minutes, 1 more running".
 
 ## Starting a timer where the work already is
 
@@ -88,9 +92,9 @@ No colour in the item, ever. VoiceOver: "MoonShine timer, AI/ML, 22 minutes, 1 m
 
 ADR-0016 § Up to three running timers: **a plain start switches and never blocks**. Every running session stops at that instant; the new one starts.
 
-- **The notice** shows for about eight seconds, non-modal, never taking focus. Started from the main window it sits in the centre of the status bar: `🤖 stopped · Keep running · ⌘Z`. Started from the popover it replaces the popover's footer line. Two stopped: `🤖 🔬 stopped · Keep running`. Three were running and the start was alongside: `🤖 stopped (three at most)`, no button.
+- **The notice** shows for about eight seconds, non-modal, never taking focus. Started from the main window it sits in the centre of the status bar: `🤖 stopped · Keep running · ⌘Z`. Started from the popover it replaces the popover's footer line. Two stopped: `🤖 🔬 stopped · Keep running`. Three were running: an alongside start stops the oldest, `🤖 stopped (three at most)`; a plain start stops all three, `🤖 🔬 🎻 stopped (three at most)`. Neither has a button: Keep running would need a fourth session (ADR-0016). ⌘Z still undoes the start.
 - **Keep running** resumes the stopped sessions from the instant they stopped, with no gap, within the cap of three.
-- **⌘Z** (Edit ▸ Undo Start Timer) undoes the start itself: the new session is removed and the stopped ones resume with no gap. This is the mis-tap fix on the Mac; on the iPhone the notice carries an `Undo` button (`iphone-capture.md`). The notice wording follows the ADR (`Keep running`); the brief's "Keep both" is question O1 for the owner (`design/README.md` § Draft-5).
+- **⌘Z** (Edit ▸ Undo Start Timer) undoes the start itself: the new session is removed and the stopped ones resume with no gap. This is the mis-tap fix on the Mac; on the iPhone the notice carries an `Undo` button (`iphone-capture.md`). This is the undo of `StartTimer` that ADR-0013 requires of every command (ADR-0016, amendment 2026-10-28). The button is `Keep running`, as the ADR says (owner, 2026-10-28).
 - VoiceOver announces the notice once.
 
 ## Timer menu and keys
@@ -103,36 +107,42 @@ A **Timer** menu between View and Window:
 | Start Alongside          | ⌥⌘T  | stops nothing while fewer than three run                     |
 | Pause All / Resume All   | ⇧⌘T  | one command, the title follows the state                     |
 | Stop All                 | ⌃⌘T  | a marked session asks first (§ Check mark)                   |
-| Activity Palette         | ⌃⌥T  | system-wide; changeable in Settings → Time                   |
+| Activity Palette         | ⌃⌥T  | system-wide; a setting (Settings → Time)                     |
 | Pin to Palette / Unpin   | —    | on the selected project or task                              |
 | Show Time View           | ⌘6   | also in the sidebar (`time.md`)                              |
 
-⌘T is free in MoonShine (no tabs, no font panel). If automatic window tabbing would add New Tab, it is turned off for the main window. ⌘5 stays reserved for Plan (`design/README.md`, iPad open question 4); question O4 for the owner offers the swap.
+⌘T is free in MoonShine (no tabs, no font panel). If automatic window tabbing would add New Tab, it is turned off for the main window. Time takes ⌘6; ⌘5 stays reserved for Plan (owner, 2026-10-28; `design/README.md`, iPad open question 4).
 
 In the popover: `↩` start the selected tile · `⌥↩` alongside · `⌘1`–`⌘9` the first nine tiles in display order · arrows move · `⇧⌘T` pause or resume · `⌃⌘T` stop · `⌘Z` undo the last timer command · `esc` close.
 
 ## Check mark
 
-ADR-0016 § A forgotten timer is visible. A session that ran past its own line's limit (default 4 h) without a pause, or across Mac sleep, gets `clock.badge.questionmark` on its menu bar item, its running row and its resulting interval. Stopping it opens a small sheet: `🤖 Stop the timer from 11:20?` · `It ran 4 h 12 min without a pause. The Mac was asleep from 13:40.` · `End at 13:40` (default) · `Keep as it is`. Without sleep the first button is `Edit…`. Nothing is trimmed silently.
+ADR-0016 § A forgotten timer is visible. A session that ran past its own line's limit without a pause (the line's `check_after_h` in the budget note, else the Settings → Time default, 4 h; a Life ops category's own value in Settings → Time, Sleep 12 h), or across Mac sleep, gets `clock.badge.questionmark` on its menu bar item, its running row and its resulting interval. Stopping it opens a small sheet: `🤖 Stop the timer from 11:20?` · `It ran 4 h 12 min without a pause. The Mac was asleep from 13:40.` · `End at 13:40` (default) · `Keep as it is`. Without sleep the first button is `Edit…`. Nothing is trimmed silently.
 
 ## Nudges
 
 macOS notifications, wording as ADR-0016 § Nudges: `🤖 50 min · short break?` (`Break` · `Keep going`); `🎻 1 h reached`; `🎻 Today’s 1 h is in`; `🎻 17:00 · Start timer?` (`Start` · `Not now`). Shown in `TimerStates`.
 
+**Values per line** (owner, 2026-10-28; ADR-0016 makes both per line): the break nudge's N is the line's `break_after_min` and the check limit its `check_after_h`, both optional keys of the budget note (`docs/discovery/vault-contract.md` § 1, "Nudge values"); without them the Settings → Time defaults apply (50 min, 4 h). A Life ops category has no budget-note entry, so its values are set in Settings → Time; **Sleep has no break nudge and a 12 h check limit** by default, or every night would be marked and nudged.
+
 ## Data
 
 - Sessions and entries: ADR-0016 (`TimerSession`, `TimeEntry`), through the `CommandBus` (`StartTimer`, `PauseTimer`, `ResumeTimer`, `StopTimer`), every command undoable.
 - Tile times: today's entries per subject, full duration of each (tracked, not by the clock).
-- Pinned items, category list, section order, the palette shortcut: native settings, synced under ADR-0010 when sync is on.
+- Pinned items, category list, section order, the palette shortcut, the work lines: native settings, synced under ADR-0010 when sync is on.
+- Per-line nudge values: the budget note (`break_after_min`, `check_after_h`), read from this slice.
 
 ## SwiftUI
 
-`MenuBarExtra(content:label:)` with `.menuBarExtraStyle(.window)`; the label is a `TimelineView(.everyMinute)` text with `.monospacedDigit()`. Tiles: `LazyVGrid` of `Button`s with `.keyboardShortcut` only for ⌘1–⌘9 inside the popover. The system-wide shortcut is a registered hot key in the app target (Carbon's `RegisterEventHotKey` needs no permission; no new dependency): question A7 for the architect. The notice: a `safeAreaInset` overlay in the status bar with a timer task that clears it.
+`MenuBarExtra(content:label:)` with `.menuBarExtraStyle(.window)`; the label is a `TimelineView(.everyMinute)` text with `.monospacedDigit()`. Tiles: `LazyVGrid` of `Button`s with `.keyboardShortcut` only for ⌘1–⌘9 inside the popover. The system-wide shortcut (owner, 2026-10-28): Carbon's `RegisterEventHotKey` behind an adapter in the app target (Carbon stays out of Core, CLAUDE.md rule 3), no new dependency, no Accessibility permission; the key combination is a setting. The notice: a `safeAreaInset` overlay in the status bar with a timer task that clears it.
 
 ## Acceptance
 
 - [ ] From another app: ⌃⌥T, type `res`, ↩ starts 🔬 Research and stops the running timer; the notice offers Keep running; ⌘Z inside the popover restores the earlier state with no gap.
 - [ ] ⌥↩ runs two; a third alongside runs three; a fourth alongside stops the oldest and the notice has no button.
+- [ ] With three running, a plain start stops all three: `🤖 🔬 🎻 stopped (three at most)`, no button; ⌘Z restores all three with no gap.
+- [ ] A line with `break_after_min: 25` nudges after 25 min while another line uses the 50-min default; with both running, the smaller N applies (ADR-0016). A night of Sleep gets no break nudge and no check mark under 12 h.
+- [ ] The first open asks `Which lines are work?` once; `Not now` leaves no Work term anywhere.
 - [ ] ⌘T on a selected task row, line header, Lines row, project row, event block and timed task block starts that subject; an event in an unmapped calendar asks for a line.
 - [ ] The running pill appears on every row of the running subject and nowhere else; a click pauses and resumes.
 - [ ] Nested lines and paused lines have no tile; a paused line is found by typing.

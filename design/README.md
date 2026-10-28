@@ -267,17 +267,17 @@ Phase 1: the Lines (S4) and weekly review (S5) layouts leave room for the third 
 
 Owner's brief of 2026-10-28: he finds out only in the evening that the day went to work, and wants MoonShine to answer **during the day** where the time is going, against his budget per line. Addendum: no import from his phone tracker; capture at the moment, not afterwards; the **iPhone Lock Screen is the primary capture surface**, the Mac menu bar the second. Authored in the repository in the canvas format (`mockups/README.md`), every artboard with a `-Dark` twin. Invented data: `demo-data.md` § Draft-5.
 
-| Screen                                        | Spec                           | Artboards                                 | Builds in                         |
-| --------------------------------------------- | ------------------------------ | ----------------------------------------- | --------------------------------- |
-| Activity palette in the menu bar              | `screens/timer-mac.md`         | `MenuBarTimer`, `MenuBarTimer-RU`         | Timer (Mac), phase 2              |
-| Start points, notices, marks, nudges          | `screens/timer-mac.md`         | `TimerStates`                             | Timer (Mac)                       |
-| Today at 15:00: Today so far, Tracked lane    | `screens/today.md` § Time      | `Today-Time`, `Today-Time-RU`             | Timer (Mac)                       |
-| The day by the clock, with editing            | `screens/time.md` § Day        | `TimeDay`                                 | Timer (Mac)                       |
-| The week table, two sources                   | `screens/time.md` § Week       | `TimeWeek`                                | Timer (Mac) (question A8)         |
-| Reminders strip                               | `screens/today.md` § Reminders | `TodayReminders`                          | S4-6                              |
-| Lines: S4-2 columns, practice lines, quotas   | `screens/lines.md` § Draft-5   | `Lines-Periods`, `Lines-Periods-RU`       | S4-2; practice and quotas phase 2 |
-| iPhone Lock Screen capture                    | `screens/iphone-capture.md`    | `iPhoneLockSwitch`, `iPhoneLockSwitch-RU` | 3b, or a capture slice (A2)       |
-| iPhone capture app: Now, Day, Lock Screen set | `screens/iphone-capture.md`    | `iPhoneCapture`                           | 3b, or a capture slice (A2)       |
+| Screen                                        | Spec                           | Artboards                                 | Builds in                                                |
+| --------------------------------------------- | ------------------------------ | ----------------------------------------- | -------------------------------------------------------- |
+| Activity palette in the menu bar              | `screens/timer-mac.md`         | `MenuBarTimer`, `MenuBarTimer-RU`         | Timer (Mac), phase 2                                     |
+| Start points, notices, marks, nudges          | `screens/timer-mac.md`         | `TimerStates`                             | Timer (Mac)                                              |
+| Today at 15:00: Today so far, Tracked lane    | `screens/today.md` § Time      | `Today-Time`, `Today-Time-RU`             | Timer (Mac)                                              |
+| The day by the clock, with editing            | `screens/time.md` § Day        | `TimeDay`                                 | Timer (Mac)                                              |
+| The week table, two sources                   | `screens/time.md` § Week       | `TimeWeek`                                | Timer (Mac); its two-sources choice in Time reconcile    |
+| Reminders strip                               | `screens/today.md` § Reminders | `TodayReminders`                          | S4-6                                                     |
+| Lines: S4-2 columns, practice lines, quotas   | `screens/lines.md` § Draft-5   | `Lines-Periods`, `Lines-Periods-RU`       | S4-2; practice and quotas phase 2                        |
+| iPhone Lock Screen capture                    | `screens/iphone-capture.md`    | `iPhoneLockSwitch`, `iPhoneLockSwitch-RU` | 3b, or a capture slice (A2, decided at phase-2 planning) |
+| iPhone capture app: Now, Day, Lock Screen set | `screens/iphone-capture.md`    | `iPhoneCapture`                           | 3b, or a capture slice (A2, decided at phase-2 planning) |
 
 Also: `components.md` § Time components, § Reminders strip, § Period components; `copy.md` § Time strings, § Reminders strip, § Lines (draft-5); `tone-glossary.md` § Time; `tokens.json` `workSegment`; sections in `screens/line-detail.md`, `command-palette.md`, `settings.md` (§ Time tab), `iphone-quick-log.md`.
 
@@ -298,26 +298,31 @@ Also: `components.md` § Time components, § Reminders strip, § Period componen
 - **A2. A minimal iPhone capture slice before 3b:** worth it from the design side (the habit already lives on the Lock Screen; three screens; nothing thrown away in 3b). Whether and how the phone's sessions reach the Mac is the architect's (ADR-0010).
 - **A3. A day full of short switches:** clusters on the rail and in the Time view, the intervals in the inspector, sums in the week table (`screens/time.md` § A day full of short switches).
 
-### Questions for the architect
+### Decisions on the questions (PR #34 round 1, owner, 2026-10-28)
 
-- **A4.** Life ops categories need a place on the time entry: `TimeEntry.subject` gains an optional category when the subject is Life ops (an ADR-0016 amendment); the category list is native data, synced like other preferences.
-- **A5.** `Undo` on the iPhone switch notice is new to ADR-0016's notice ("🎻 stopped · Keep running"); its effect is the undo of `StartTimer` the ADR already requires. Confirm, and amend the ADR's notice wording.
-- **A6.** Not checked: whether a Lock Screen widget's App Intent runs on a locked phone without unlocking, and whether it can give a haptic; whether Live Activity intents can. The design does not depend on the haptic.
-- **A7.** The system-wide palette shortcut as a registered hot key in the app target (no permission, no new dependency).
-- **A8.** Which slice ships the two-sources choice of the week table: the Excel import (phase 2's first) or Timer (Mac) (its last).
+Architect:
 
-### Questions for the owner
+- **A2.** A minimal iPhone capture slice before 3b is decided at phase-2 planning; prerequisites: CloudKit sync per ADR-0010 and the paid Apple Developer Program. An open question in `docs/ROADMAP.md`.
+- **A4.** ADR-0016 is amended (dated 2026-10-28): a Life ops entry carries `lifeCategory`, stored at capture; the categories live in Settings → Time (eight defaults, editable); Sleep marks the day's start; categories never have budgets.
+- **A5.** `Undo` is the undo of `StartTimer` (ADR-0013): the previous session is restored without a gap; offered for 8 s, then `Change` in the Day list.
+- **A6.** A spike in the capture slice (intents on a locked phone, haptics); nothing is promised before it.
+- **A7.** Carbon's `RegisterEventHotKey` behind an adapter in the app target, no dependency, no Accessibility permission; the shortcut is a setting.
+- **A8.** A separate slice, **Time reconcile**, right after Timer (Mac), in `docs/ROADMAP.md`.
 
-- **O1.** The brief says "Keep both"; ADR-0016 says `Keep running`. The round uses `Keep running`: it reads right when one or two timers stopped, and "Keep both" already names a reconcile choice (`Keep both — different sessions`). Keep it, or change the ADR?
-- **O2.** Work = the lines checked in Settings → Time (default none, and then no Work term anywhere), rather than a block or a vault key.
-- **O3.** "Today so far" starts at the end of the night's Sleep interval; without one, at the day window's start.
-- **O4.** The Time view takes ⌘6, keeping ⌘5 for Plan; or swap them, since Time ships first.
-- **O5.** The default Life ops categories (eight, above), and whether paused lines stay without a palette tile (they are found by typing).
+Owner:
+
+- **O1.** `Keep running`, as ADR-0016 says.
+- **O2.** Work = the lines checked in Settings → Time, asked once on the first open of the timer.
+- **O3.** "Today so far" starts at the end of the night's Sleep; without one, at the day window's start.
+- **O4.** The Time view takes ⌘6; ⌘5 stays reserved for Plan.
+- **O5.** Eight default Life ops categories, editable; paused lines get no palette tile.
 - **O6.** The Lines `This period` column stays hidden until phase 2.
+- **Lock Screen and titles.** While "Show titles on the Lock Screen" is off, a Lock Screen place holds only a line or a Life ops category; a pinned project or task can be a place only with titles on. Project titles are hidden on the Lock Screen like event and task titles (`screens/iphone-widgets.md` § Privacy, `copy.md`).
+- **Nudge values.** Global defaults in Settings → Time, with optional per-line overrides in the budget note (`break_after_min`, `check_after_h`), as ADR-0016 makes both per line (vault contract v0.6).
 
 ### Pending design rounds
 
-The mockups are generated files and are not edited by hand; where a mockup and a spec differ, the spec wins. Each item is listed under the earliest phase or slice whose spec needs it (owner, 2026-10-08). S4 follows the screen specs, which win over the mockups; its one new element is the Reminders strip (owner, 2026-10-16). Items for the designer:
+The canvas mockups are generated files and are not edited by hand; draft-5's were authored in the repository in the same format (`mockups/README.md`). Where a mockup and a spec differ, the spec wins. Each item is listed under the earliest phase or slice whose spec needs it (owner, 2026-10-08). S4 follows the screen specs, which win over the mockups; its one new element is the Reminders strip (owner, 2026-10-16). Items for the designer:
 
 #### Before S4
 
@@ -350,7 +355,7 @@ The mockups are generated files and are not edited by hand; where a mockup and a
 
 #### Before 3b
 
-1. **`Lines.dc.html` — Math's block** (draft-5's `Lines-Periods` shows Math under Science; the generated file is unchanged): the draft-4 mockup shows 📐 Math under the block `Foundation` and has dropped the `Science` / «Наука» block label; `demo-data.md` keeps Math in **Science** (tier unchanged: active). Restore Science.
+1. **`Lines.dc.html` — Math's block and stale cells** (draft-5's `Lines-Periods` shows Math under Science, and `demo-data.md` § Draft-5 replaces its Last activity, Next actions and Estimated this week cells for 8 of 10 lines; the generated file is unchanged): the draft-4 mockup shows 📐 Math under the block `Foundation` and has dropped the `Science` / «Наука» block label; `demo-data.md` keeps Math in **Science** (tier unchanged: active). Restore Science.
 2. **Names in the mockups**: Forward / Back → Rise / Dip (EN, RU, LV, IT, DE); hours `2 h of 6 h budget`.
 3. **Draft-4 items not drawn**: Split View for the take section, the take on the Today rail, RTL marks, the Mac note popover.
 4. **Draft-3 items**: the day rail on iPad and iPhone (open question 14 above); free time on Today as the rest of the window (`≈ 2 h 25 min free until 22:00` at 16:20); the deadline rule (`screens/settings.md` § Deadlines: the setting, and plain `due 20:35` text and neutral day-rail marks for due dates that are not deadlines); read-only checkboxes on the day rail.
