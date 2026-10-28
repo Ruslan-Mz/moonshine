@@ -93,7 +93,7 @@ public enum SnapshotValidator {
     }
     if let times = document.defaultTimes {
       for (name, time) in [("due", times.due), ("defer", times.defer), ("planned", times.planned)]
-      where time.map({ $0.wholeMatch(of: /([01]\d|2[0-3]):[0-5]\d/) == nil }) == true {
+      where time.map({ $0.wholeMatch(of: SnapshotMapper.timeShape) == nil }) == true {
         found.append(.init("defaultTimes.\(name)", "is not HH:mm"))
       }
     }
@@ -190,6 +190,12 @@ public enum SnapshotMapper {
     return TaskSourceSnapshot(
       provider: .omnifocus, generatedAt: try date(document.generatedAt, at: "generatedAt"),
       timeZone: timeZone,
+      defaultTimes: try document.defaultTimes.map { times in
+        DefaultTimeSettings(
+          due: try timeOfDay(times.due, at: "defaultTimes.due"),
+          defer: try timeOfDay(times.defer, at: "defaultTimes.defer"),
+          planned: try times.planned.map { try timeOfDay($0, at: "defaultTimes.planned") })
+      },
       modifiedSince: try document.modifiedSince.map { try date($0, at: "modifiedSince") },
       tags: document.tags.map {
         SourceTag(externalId: $0.id, name: $0.name, parentExternalId: $0.parentId)
@@ -228,6 +234,19 @@ public enum SnapshotMapper {
   /// is immutable and only matched against.
   nonisolated(unsafe) static let dateShape =
     /\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])T([01]\d|2[0-3]):[0-5]\d:[0-5]\d(\.\d+)?(Z|[+-]([01]\d|2[0-3]):?[0-5]\d)/
+
+  /// `HH:mm` from 00:00 to 23:59, ASCII digits only: `\d` would also match `٩` or `０`, which
+  /// `Int` does not parse.
+  nonisolated(unsafe) static let timeShape = /([01][0-9]|2[0-3]):[0-5][0-9]/
+
+  /// The validator has already checked the shape; this throw is the defence behind it.
+  static func timeOfDay(_ string: String, at path: String) throws -> TimeOfDay {
+    guard string.wholeMatch(of: timeShape) != nil,
+      let hour = Int(string.prefix(2)), let minute = Int(string.suffix(2)),
+      let time = TimeOfDay(hour: hour, minute: minute)
+    else { throw SnapshotError.badValue(path: path) }
+    return time
+  }
 
   /// `Date.ISO8601FormatStyle` rolls over out-of-range fields (`25:61` parses), so the
   /// shape and ranges are checked first.

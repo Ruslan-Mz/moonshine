@@ -129,4 +129,14 @@ import Testing
     #expect(next.timeZone == tokyo)
     #expect(next.issues == [.unknownLineKey("cello", in: "a26-09")])
   }
+
+  @Test func mergingTakesTheIncomingDefaultTimesAndTheWorkspacePassesThemOn() {
+    let old = DefaultTimeSettings(due: TimeOfDay(hour: 18, minute: 0))
+    let new = DefaultTimeSettings(
+      due: TimeOfDay(hour: 17, minute: 0), planned: TimeOfDay(hour: 9, minute: 0))
+    let stored = StoredWorkspace(timeZone: TestWorld.timeZone, defaultTimeSettings: old)
+      .merging(Workspace(timeZone: TestWorld.timeZone, defaultTimeSettings: new), at: first)
+    #expect(stored.defaultTimeSettings == new)
+    #expect(stored.workspace.defaultTimeSettings == new)
+  }
 }

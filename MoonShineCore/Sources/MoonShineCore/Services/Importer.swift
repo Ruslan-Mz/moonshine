@@ -150,9 +150,15 @@ public struct Importer: Sendable {
           project: task.projectExternalId.flatMap { contexts[$0] }))
     }
 
+    // Absent default times mean the provider could not read them (snapshot-contract.md § Default
+    // times): the stored ones stay, as stored lines do, and the issue says why (owner,
+    // 2026-10-28). A missing `planned` alone is an older OmniFocus and is taken as it is.
+    if source.defaultTimes == nil { issues.append(.defaultTimesNotRead) }
     return Workspace(
-      timeZone: source.timeZone, lines: lines, artifacts: artifacts, notes: notes,
-      projects: projects, tasks: tasks, tags: tags, issues: issues)
+      timeZone: source.timeZone,
+      defaultTimeSettings: source.defaultTimes ?? stored.defaultTimeSettings, lines: lines,
+      artifacts: artifacts, notes: notes, projects: projects, tasks: tasks, tags: tags,
+      issues: issues)
   }
 
   /// The artifacts read, plus the stored ones the read could not see: those of a carried note

@@ -12,6 +12,7 @@ import Testing
     func snapshot(modifiedSince: Date?) async throws -> TaskSourceSnapshot {
       TaskSourceSnapshot(
         provider: .omnifocus, generatedAt: Date(timeIntervalSince1970: 0), timeZone: moscow,
+        defaultTimes: DefaultTimeSettings(),
         tags: [], projects: [], tasks: [SourceTask(externalId: "x", name: "Scales")])
     }
   }

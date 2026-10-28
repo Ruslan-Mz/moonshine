@@ -243,6 +243,16 @@ func fixtureDocument() throws -> SnapshotDocument {
       ])
   }
 
+  @Test func defaultTimesTakeOnlyASCIIDigits() throws {
+    var document = try fixtureDocument()
+    document.defaultTimes = .init(due: "0٩:00", defer: "1０:00", planned: "09:0٠")
+    #expect(
+      SnapshotValidator.violations(in: document) == [
+        .init("defaultTimes.due", "is not HH:mm"), .init("defaultTimes.defer", "is not HH:mm"),
+        .init("defaultTimes.planned", "is not HH:mm"),
+      ])
+  }
+
   @Test func completionBeforeTheWindowIsAViolation() throws {
     var document = try fixtureDocument()
     let index = try #require(document.tasks.firstIndex { $0.status == "completed" })
@@ -296,6 +306,34 @@ func fixtureDocument() throws -> SnapshotDocument {
     let partial = try SnapshotMapper.map(document)
     #expect(partial.modifiedSince == Date(timeIntervalSince1970: 1_790_787_600))
     #expect(partial.tasks.map(\.status) == [.dropped])
+  }
+
+  @Test func defaultTimesMapToTimesOfDay() throws {
+    #expect(
+      source.defaultTimes
+        == DefaultTimeSettings(
+          due: TimeOfDay(hour: 17, minute: 0), defer: TimeOfDay(hour: 6, minute: 0),
+          planned: TimeOfDay(hour: 9, minute: 0)))
+  }
+
+  @Test func aMissingPlannedTimeIsAbsentAndMissingDefaultTimesAreNotRead() throws {
+    var document = try fixtureDocument()
+    document.defaultTimes?.planned = nil
+    let withoutPlanned = try SnapshotMapper.map(document).defaultTimes
+    #expect(withoutPlanned?.planned == nil)
+    #expect(withoutPlanned?.due == TimeOfDay(hour: 17, minute: 0))
+    document.defaultTimes = nil
+    #expect(try SnapshotMapper.map(document).defaultTimes == nil)
+  }
+
+  @Test func theTimeParserRejectsWhatTheValidatorWould() throws {
+    #expect(try SnapshotMapper.timeOfDay("00:00", at: "t") == TimeOfDay(hour: 0, minute: 0))
+    #expect(try SnapshotMapper.timeOfDay("23:59", at: "t") == TimeOfDay(hour: 23, minute: 59))
+    for bad in ["24:00", "0:00", "+1:00", "0٩:00", "1０:00", "09:60", "", "09:00 "] {
+      #expect(throws: SnapshotError.badValue(path: "defaultTimes.due")) {
+        try SnapshotMapper.timeOfDay(bad, at: "defaultTimes.due")
+      }
+    }
   }
 
   @Test func repeatOfIsCarriedThrough() throws {

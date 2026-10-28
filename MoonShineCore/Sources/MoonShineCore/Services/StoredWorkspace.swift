@@ -18,6 +18,7 @@ public struct Stored<Entity: Hashable & Sendable>: Hashable, Sendable {
 /// Every `Store` commits through `merging(_:at:)`, so all stores share one retention rule.
 public struct StoredWorkspace: Hashable, Sendable {
   public var timeZone: TimeZone
+  public var defaultTimeSettings: DefaultTimeSettings
   public var lines: [Stored<Line>]
   public var artifacts: [Stored<Artifact>]
   public var notes: [Stored<NoteRef>]
@@ -27,11 +28,13 @@ public struct StoredWorkspace: Hashable, Sendable {
   public var issues: [ImportIssue]
 
   public init(
-    timeZone: TimeZone, lines: [Stored<Line>] = [], artifacts: [Stored<Artifact>] = [],
+    timeZone: TimeZone, defaultTimeSettings: DefaultTimeSettings = DefaultTimeSettings(),
+    lines: [Stored<Line>] = [], artifacts: [Stored<Artifact>] = [],
     notes: [Stored<NoteRef>] = [], projects: [Stored<Project>] = [],
     tasks: [Stored<TaskItem>] = [], tags: [Stored<Tag>] = [], issues: [ImportIssue] = []
   ) {
     self.timeZone = timeZone
+    self.defaultTimeSettings = defaultTimeSettings
     self.lines = lines
     self.artifacts = artifacts
     self.notes = notes
@@ -44,9 +47,10 @@ public struct StoredWorkspace: Hashable, Sendable {
   /// What services read: every entity not removed, in stored order.
   public var workspace: Workspace {
     Workspace(
-      timeZone: timeZone, lines: Self.visible(lines), artifacts: Self.visible(artifacts),
-      notes: Self.visible(notes), projects: Self.visible(projects), tasks: Self.visible(tasks),
-      tags: Self.visible(tags), issues: issues)
+      timeZone: timeZone, defaultTimeSettings: defaultTimeSettings, lines: Self.visible(lines),
+      artifacts: Self.visible(artifacts), notes: Self.visible(notes),
+      projects: Self.visible(projects), tasks: Self.visible(tasks), tags: Self.visible(tags),
+      issues: issues)
   }
 
   /// Applies a full import. Incoming entities replace stored ones by id, in import order.
@@ -65,7 +69,8 @@ public struct StoredWorkspace: Hashable, Sendable {
       return incoming.map { Stored($0) } + retained
     }
     return StoredWorkspace(
-      timeZone: incoming.timeZone, lines: merge(lines, incoming.lines),
+      timeZone: incoming.timeZone, defaultTimeSettings: incoming.defaultTimeSettings,
+      lines: merge(lines, incoming.lines),
       artifacts: merge(artifacts, incoming.artifacts), notes: merge(notes, incoming.notes),
       projects: merge(projects, incoming.projects),
       tasks: merge(tasks, incoming.tasks) { $0.status == .completed },

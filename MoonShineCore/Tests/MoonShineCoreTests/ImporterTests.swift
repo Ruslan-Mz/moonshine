@@ -29,9 +29,13 @@ import Testing
         scale: .year)
     ], unread: .nothing)
 
-  func snapshot(_ tasks: [SourceTask], projects: [SourceProject] = []) -> TaskSourceSnapshot {
+  func snapshot(
+    _ tasks: [SourceTask], projects: [SourceProject] = [],
+    defaultTimes: DefaultTimeSettings? = DefaultTimeSettings()
+  ) -> TaskSourceSnapshot {
     TaskSourceSnapshot(
       provider: .omnifocus, generatedAt: now, timeZone: TimeZone(identifier: "Europe/Moscow")!,
+      defaultTimes: defaultTimes,
       tags: [
         SourceTag(externalId: "t-violin", name: "violin"),
         SourceTag(externalId: "t-cycle", name: "Цикл"),
@@ -44,10 +48,17 @@ import Testing
       projects: projects, tasks: tasks)
   }
 
-  func run(_ source: TaskSourceSnapshot, identities: inout IdentityMap) -> Workspace {
+  func run(
+    _ source: TaskSourceSnapshot, identities: inout IdentityMap,
+    stored: Workspace = Workspace(timeZone: .gmt)
+  ) -> Workspace {
     Importer().makeWorkspace(
-      tasks: source, vault: vault, stored: Workspace(timeZone: .gmt), identities: &identities,
-      now: now)
+      tasks: source, vault: vault, stored: stored, identities: &identities, now: now)
+  }
+
+  func run(_ source: TaskSourceSnapshot, stored: Workspace) -> Workspace {
+    var identities = IdentityMap()
+    return run(source, identities: &identities, stored: stored)
   }
 
   func run(_ source: TaskSourceSnapshot) -> Workspace {
@@ -173,5 +184,62 @@ import Testing
         ExternalRef(provider: .obsidian, externalId: "violin", lastSeen: now)
       ])
     #expect(ws.timeZone.identifier == "Europe/Moscow")
+  }
+
+  // MARK: Default times (S4-3a; owner, 2026-10-28)
+
+  let readTimes = DefaultTimeSettings(
+    due: TimeOfDay(hour: 17, minute: 0), defer: TimeOfDay(hour: 6, minute: 0),
+    planned: TimeOfDay(hour: 9, minute: 0))
+  let storedTimes = DefaultTimeSettings(
+    due: TimeOfDay(hour: 18, minute: 0), defer: TimeOfDay(hour: 0, minute: 0),
+    planned: TimeOfDay(hour: 8, minute: 30))
+
+  @Test func readDefaultTimesReplaceTheStoredOnes() {
+    let ws = run(
+      snapshot([], defaultTimes: readTimes),
+      stored: Workspace(timeZone: .gmt, defaultTimeSettings: storedTimes))
+    #expect(ws.defaultTimeSettings == readTimes)
+    #expect(!ws.issues.contains(.defaultTimesNotRead))
+  }
+
+  @Test func unreadDefaultTimesKeepTheStoredOnesAndSaySo() {
+    let ws = run(
+      snapshot([], defaultTimes: nil),
+      stored: Workspace(timeZone: .gmt, defaultTimeSettings: storedTimes))
+    #expect(ws.defaultTimeSettings == storedTimes)
+    #expect(ws.issues.filter { $0 == .defaultTimesNotRead }.count == 1)
+  }
+
+  @Test func unreadDefaultTimesWithNoneStoredLeaveOnlyMidnightDateOnly() throws {
+    let ws = run(snapshot([], defaultTimes: nil), stored: Workspace(timeZone: .gmt))
+    #expect(ws.defaultTimeSettings == DefaultTimeSettings())
+    #expect(ws.issues.contains(.defaultTimesNotRead))
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = ws.timeZone
+    let day = try #require(calendar.date(from: DateComponents(year: 2026, month: 10, day: 1)))
+    #expect(ws.defaultTimes.isDateOnly(day, kind: .due))
+    #expect(!ws.defaultTimes.isDateOnly(day.addingTimeInterval(17 * 3600), kind: .due))
+  }
+
+  @Test func aMissingPlannedTimeAloneIsTakenAsItIs() {
+    let read = DefaultTimeSettings(due: readTimes.due, defer: readTimes.defer)
+    let ws = run(
+      snapshot([], defaultTimes: read),
+      stored: Workspace(timeZone: .gmt, defaultTimeSettings: storedTimes))
+    #expect(ws.defaultTimeSettings == read)
+    #expect(ws.defaultTimeSettings.planned == nil)
+    #expect(!ws.issues.contains(.defaultTimesNotRead))
+  }
+
+  @Test func defaultTimesAreReadInTheWorkspaceZone() throws {
+    let ws = run(snapshot([], defaultTimes: readTimes))
+    #expect(ws.defaultTimes.timeZone == ws.timeZone)
+    #expect(ws.defaultTimes.timeZone.identifier == "Europe/Moscow")
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = ws.timeZone
+    let five = try #require(
+      calendar.date(from: DateComponents(year: 2026, month: 10, day: 1, hour: 17)))
+    #expect(ws.defaultTimes.isDateOnly(five, kind: .due))
   }
 }
