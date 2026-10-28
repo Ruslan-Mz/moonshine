@@ -191,7 +191,7 @@ The draft-2 artboards are unchanged in appearance; the calendar variants are the
 
 ### Contract change for timed tasks
 
-The task model needs the time part of the due date and a planned date-time (`plannedAt`), plus a flag for "date only". **"Date only" = a time equal to OmniFocus' default time** for that date kind (when `defaultTimes` or that key is absent: only 00:00); the bridge exports those defaults (`defaultTimes`, `docs/discovery/snapshot-contract.md` § Default times). Known limit, stated there: a task deliberately planned or due exactly at the default time is indistinguishable from a date-only one and is treated as date-only.
+The task model needs the time part of the due date and a planned date-time (`plannedAt`), plus a flag for "date only". **"Date only" = a time equal to OmniFocus' default time** for that date kind (when that key is absent: only 00:00; when the whole `defaultTimes` object is absent, the stored times stay and the import reports `defaultTimesNotRead`, with 00:00 only when nothing is stored yet; owner, 2026-10-28); the bridge exports those defaults (`defaultTimes`, `docs/discovery/snapshot-contract.md` § Default times). Known limit, stated there: a task deliberately planned or due exactly at the default time is indistinguishable from a date-only one and is treated as date-only.
 
 ## Draft-4 changes — my take
 
