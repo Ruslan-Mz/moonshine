@@ -424,11 +424,21 @@ import Testing
       "Years/Q2_2026_focus.md", type: "quarter_focus", scale: .quarter, period: quarter(2026, 5))
     // Another type with a quarter period sorts first and never wins.
     world.note("Months/A_plan.md", type: "month_plan", scale: .quarter, period: quarter(2026, 8))
+    // Quarter-focus notes with a year or a month period sort first and never win either: the
+    // reader keeps a year period's list (the card would read Q1) and refuses a month's.
+    let year2026 = world.note(
+      "Years/A_focus.md", type: "quarter_focus", scale: .year,
+      period: Horizon.containing(now, scale: .year, calendar: W.calendar))
+    let month = world.note(
+      "Years/B_focus.md", type: "quarter_focus", scale: .month,
+      period: Horizon.containing(now, scale: .month, calendar: W.calendar))
     let first = world.note(
       "Years/Q3_focus_a.md", type: "quarter_focus", scale: .quarter, period: quarter(2026, 8))
     world.note(
       "Years/Q3_focus_b.md", type: "quarter_focus", scale: .quarter, period: quarter(2026, 8))
     world.artifact("year item", lines: [violin], note: year.id)
+    world.artifact("year-period item", lines: [violin], note: year2026.id)
+    world.artifact("month item", lines: [violin], note: month.id)
     let b = world.artifact("b", lines: [violin], status: .done, note: first.id)
     world.artifact("q2 item", lines: [violin], note: q2.id)
     let a = world.artifact("a", lines: [violin], note: first.id)

@@ -362,10 +362,11 @@ func fixtureDocument() throws -> SnapshotDocument {
       uniqueKeysWithValues: workspace.projects.map { ($0.title, lineKey($0.line, in: workspace)) })
     #expect(
       mapping == [
-        // Project tag, task tag (Recital prep), project name (🤖), top-level folder (📐, 👨‍👩‍👧).
+        // Project tag, project name (🤖), top-level folder (📐, 👨‍👩‍👧); Household, untagged in
+        // the Home folder, falls to Life ops.
         "Daily practice": "core", "Daily mobility": "calisthenics",
         "Pull-up progression": "calisthenics", "Daily technique": "violin",
-        "Bach Partita No. 2": "violin", "Études": "violin", "Recital prep": "life-ops",
+        "Bach Partita No. 2": "violin", "Études": "violin", "Recital prep": "violin",
         "Linear algebra textbook": "math", "Definitions deck": "math", "Eval toolkit": "ai",
         "Paper reading": "ai", "Workshop 2026": "ai", "Drift paper draft": "research",
         "Evenings": "family", "Weekends": "family", "Kids": "family", "Family projects": "family",

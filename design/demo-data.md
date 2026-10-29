@@ -169,7 +169,7 @@ Invented. The day is Thu 1 Oct 2026 (W40), as everywhere; the time artboards loo
 ### Settings behind the numbers
 
 - **Work lines:** 🤖 AI/ML and 🔬 Research.
-- **Floors:** 🧘 Core practice 3 h/day and 💪 Calisthenics 1 h/day (foundation, as before); **📐 Math `floor_h_day: 0.33`**, shown `floor 20 min/day` under its `4 h / week` (the floor on a line that is not foundation; a DemoVault change for S4-2).
+- **Floors:** 🧘 Core practice 3 h/day and 💪 Calisthenics 1 h/day (foundation, as before); **📐 Math `floor_h_day: 0.33`**, shown `floor 20 min/day` under its `4 h / week` (the floor on a line that is not foundation; made in `DemoVault` by S4-DD, owner 2026-10-29).
 - **Day portion:** 🎻 Violin 1 h, the 17:00–18:00 Violin lesson in the Music lessons calendar (mapped to 🎻).
 - **Life ops categories** (defaults): 😴 Sleep · 🍽️ Food · 🍳 Cooking · 🪥 Hygiene · 🏠 House · 🚌 Transport · 🛒 Errands · 📥 Inbox.
 - **Pinned in the palette:** 🤖 Eval toolkit, 🤖 Workshop 2026, 🔬 Drift paper draft.

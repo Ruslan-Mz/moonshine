@@ -145,7 +145,7 @@ private struct QuarterFocusCard: View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
           Image(systemName: row.isDone ? "checkmark.circle" : "circle")
             .foregroundStyle(.secondary)
-            .accessibilityLabel(row.isDone ? Text("done") : Text("not done"))
+            .accessibilityLabel(row.isDone ? Text("Completed") : Text("Not completed"))
           if let emoji = row.emoji { Text(verbatim: emoji) }
           Text(verbatim: row.title).font(.system(size: 12.5)).lineLimit(2)
         }

@@ -761,22 +761,6 @@
         }
       }
     },
-    "done": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "done"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "сделано"
-          }
-        }
-      }
-    },
     "due %@": {
       "localizations": {
         "en": {
@@ -821,22 +805,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "нет следующего шага"
-          }
-        }
-      }
-    },
-    "not done": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "not done"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "не сделано"
           }
         }
       }

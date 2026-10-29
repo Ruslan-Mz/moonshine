@@ -290,11 +290,14 @@ public struct Overview: Sendable {
   }
 
   /// The first quarter note by path whose quarter holds `now`, chosen by type as the Tracer
-  /// chooses year notes; its artifacts in source order, dropped ones left out.
+  /// chooses year notes, and only with a quarter period: the reader keeps a `quarter_focus`
+  /// note with any period, and the card's quarter comes from it. Its artifacts in source
+  /// order, dropped ones left out.
   private func quarterFocus() -> QuarterFocus? {
     guard
       let note = workspace.notes.first(where: {
-        $0.type == "quarter_focus" && $0.period?.contains(now) == true
+        $0.type == "quarter_focus" && $0.period?.scale == .quarter
+          && $0.period?.contains(now) == true
       })
     else { return nil }
     let artifacts = workspace.artifacts.filter { $0.noteID == note.id && $0.status != .dropped }

@@ -77,8 +77,7 @@ const projectList = [
   { key: "technique", id: "prj-0004", name: "Daily technique", folder: "fld-0007", tags: ["violin"] },
   { key: "partita", id: "prj-0005", name: "Bach Partita No. 2", folder: "fld-0007", tags: ["violin"] },
   { key: "etudes", id: "prj-0006", name: "Études", folder: "fld-0007", tags: ["violin"], sequential: true },
-  // No project tag: its tasks carry `violin` themselves (the task-tag route).
-  { key: "recital", id: "prj-0007", name: "Recital prep", folder: "fld-0007", tags: [] },
+  { key: "recital", id: "prj-0007", name: "Recital prep", folder: "fld-0007", tags: ["violin"] },
   { key: "textbook", id: "prj-0008", name: "Linear algebra textbook", folder: "fld-0011", tags: [] },
   { key: "deck", id: "prj-0009", name: "Definitions deck", folder: "fld-0011", tags: [] },
   // The 🤖 line maps these three by project name.

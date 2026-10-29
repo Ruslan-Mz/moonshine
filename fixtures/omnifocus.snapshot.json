@@ -282,7 +282,9 @@
    "status": "active",
    "sequential": false,
    "singleActions": false,
-   "tagIds": [],
+   "tagIds": [
+    "tag-0004"
+   ],
    "deferDate": null,
    "dueDate": null,
    "plannedDate": null,
