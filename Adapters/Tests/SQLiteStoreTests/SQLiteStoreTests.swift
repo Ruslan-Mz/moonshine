@@ -97,6 +97,20 @@ import Testing
     }
   }
 
+  @Test func anUnknownStoredValueThrowsNamingOnlyItsColumn() throws {
+    let planted = "planted-secret-7f3a"
+    let errors: [(any Error)?] = [
+      #expect(throws: SQLiteStoreError.self) { let _: LineState = try decode(planted, "line.state") },
+      #expect(throws: SQLiteStoreError.self) { try NoteRecord.decode(planted) },
+    ]
+    for (error, column) in zip(errors, ["line.state", "note.scale"]) {
+      let error = try #require(error as? SQLiteStoreError)
+      #expect(error == .unknownValue(column: column))
+      #expect(!String(describing: error).contains(planted))
+      #expect(!String(reflecting: error).contains(planted))
+    }
+  }
+
   @Test func aLineStoredBeforeTheVersionPointTwoKeysReadsWithoutThem() throws {
     let attrs = Data(#"{"parentLink":null,"tags":["a"],"folders":[],"projects":[]}"#.utf8)
     let decoded = try JSONDecoder().decode(LineRecord.Attrs.self, from: attrs)
