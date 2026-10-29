@@ -67,7 +67,9 @@ private func demo() async throws -> (Overview, TodayScreen) {
       screen.top + screen.sections.flatMap(\.rows) + screen.fromEarlier + screen.lifeOps
       + screen.doneToday
     let items = today.items
-    try #require(rows.count == items.count)
+    // Every item once: in a list, or as a chip of the Anchors strip.
+    try #require(rows.count + screen.anchors.count == items.count)
+    try #require(Set(rows.map(\.id) + screen.anchors.map(\.id)) == Set(items.map(\.task.id)))
     let urgent = Set(items.filter(\.isUrgent).map(\.task.id))
     try #require(!urgent.isEmpty)
     #expect(Set(rows.filter(\.isUrgent).map(\.id)) == urgent)
@@ -260,8 +262,8 @@ private func demo() async throws -> (Overview, TodayScreen) {
   @Test func doneTodayHoldsTheTasksCompletedOnTheDayMostRecentFirstAndNothingElse() async throws {
     let (overview, screen) = try await demo()
     let today = overview.today()
-    // The fixture completes two tasks on Thu 1 Oct.
-    #expect(screen.doneToday.count == 2)
+    // The fixture completes six tasks on Thu 1 Oct; three of them are done anchors in the strip.
+    #expect(screen.doneToday.count == 3)
     #expect(screen.doneToday.map(\.id) == today.doneToday.map(\.task.id))
     #expect(screen.doneToday.allSatisfy { $0.isDone && !$0.isUrgent })
     let completed = screen.doneToday.compactMap { row in
@@ -271,7 +273,7 @@ private func demo() async throws -> (Overview, TodayScreen) {
     let elsewhere =
       screen.top + screen.sections.flatMap(\.rows) + screen.fromEarlier + screen.lifeOps
     #expect(!elsewhere.contains { $0.isDone })
-    #expect(screen.totals.done == 2)
+    #expect(screen.totals.done == 6)
   }
 
   @Test func topThreeShowsThreeFlaggedTasksOnceAndShowAllShowsEveryCandidate() async throws {
@@ -288,14 +290,16 @@ private func demo() async throws -> (Overview, TodayScreen) {
     #expect(allBelow.isDisjoint(with: all.top.map(\.id)))
   }
 
-  @Test func totalsComeFromCoreAndTheDemoHasNoAnchorsYet() async throws {
+  @Test func totalsComeFromCoreAndTheStripHoldsTheDemoAnchors() async throws {
     let (overview, screen) = try await demo()
     #expect(screen.totals == overview.today().totals)
     let open = screen.top + screen.sections.flatMap(\.rows) + screen.fromEarlier + screen.lifeOps
-    #expect(screen.totals.open == open.count)
-    // The fixture gets `anchor` tags in S4-DD; until then the strip is absent.
-    #expect(screen.anchors.isEmpty)
-    #expect(screen.anchorsTotal == 0)
+    let openAnchors = screen.anchors.filter { !$0.isDone }
+    #expect(screen.totals.open == open.count + openAnchors.count)
+    // `design/demo-data.md` § Draft-2: `3 of 5 done`.
+    #expect(screen.anchors.count == 5)
+    #expect(screen.anchorsTotal == 5)
+    #expect(screen.anchorsDone == 3)
   }
 
   /// Invented: six anchors, one done, one in Life ops.
@@ -366,9 +370,9 @@ private func demo() async throws -> (Overview, TodayScreen) {
       let rows = on.sections.first { $0.id == section.id }?.rows ?? []
       #expect(rows.map(\.id) == kept(section.rows))
     }
-    // Demo's From earlier has one task, not flagged, in both modes.
-    #expect(off.fromEarlier.count == 1)
-    #expect(on.fromEarlier.count == 1)
+    // Demo's From earlier has three tasks, none flagged, in both modes.
+    #expect(off.fromEarlier.count == 3)
+    #expect(on.fromEarlier.count == 3)
   }
 
   /// Invented: five tasks done today and three or four flagged ones.
@@ -416,10 +420,9 @@ private func demo() async throws -> (Overview, TodayScreen) {
     func key(_ id: LineID) -> LineKey? { lines.first { $0.id == id }?.key }
     let italian = try #require(screen.quiet.first)
     #expect(screen.quiet.compactMap { key($0.id) } == ["italian"])
-    // The fixture's last Italian completion is 1 September, so Thursday 1 October reads 30
-    // days; the design's `quiet for 29 days · Last: 2 September` waits for S4-DD.
+    // `quiet for 29 days · Last: 2 September` (owner, 2026-10-24).
     let last = try #require(
-      DemoVault.calendar.date(from: DateComponents(year: 2026, month: 9, day: 1, hour: 8)))
+      DemoVault.calendar.date(from: DateComponents(year: 2026, month: 9, day: 2, hour: 19)))
     #expect(italian.lastDate == last)
     let calendar = overview.calendar
     #expect(
@@ -427,7 +430,8 @@ private func demo() async throws -> (Overview, TodayScreen) {
         == calendar.dateComponents(
           [.day], from: calendar.startOfDay(for: last), to: calendar.startOfDay(for: screen.day)
         ).day)
-    #expect(italian.days == 30)
+    #expect(italian.days == 29)
+    #expect(screen.noActivity.compactMap { key($0.id) } == ["japanese"])
     let quietOrNew = Set(screen.quiet.map(\.id) + screen.noActivity.map(\.id))
     for line in lines where line.state != .active {
       #expect(!quietOrNew.contains(line.id))
@@ -452,6 +456,34 @@ private func demo() async throws -> (Overview, TodayScreen) {
     #expect(italian.next?.title == next.title)
     #expect(italian.next?.estimateMinutes == next.estimateMinutes)
     #expect(!screen.railIsEmpty)
+    // `Q4 focus · 2 of 5 done`, each artifact with its line's emoji.
+    let focus = try #require(screen.quarterFocus)
+    #expect(focus.quarter == 4)
+    #expect(focus.done == 2)
+    #expect(focus.rows.map(\.emoji) == ["🎻", "🤖", "🔬", "📐", "💪"])
+    #expect(focus.rows.map(\.isDone) == [true, false, false, true, false])
+  }
+
+  /// Invented: a quarter note with one artifact and no lines; the card alone keeps the rail
+  /// from its "Nothing on the rail today" line, and the quarter comes from the note's period.
+  @Test func aQuarterFocusAloneIsNotAnEmptyRail() throws {
+    let zone = try #require(TimeZone(identifier: "Europe/Moscow"))
+    let calendar = Calendar.iso8601(in: zone)
+    let now = calendar.date(from: DateComponents(year: 2026, month: 5, day: 12, hour: 12))!
+    let note = NoteRef(
+      id: .generate(), refs: [], path: "Q2.md", title: "Q2", type: "quarter_focus",
+      scale: .quarter, period: Horizon.containing(now, scale: .quarter, calendar: calendar),
+      parentLink: nil, lineKey: nil, status: nil)
+    let artifact = Artifact(
+      id: .generate(), refs: [], key: "q2-01", title: "First recital", lineIDs: [],
+      status: .planned, priority: false, noteID: note.id)
+    let screen = TodayScreen(
+      Overview(
+        workspace: Workspace(timeZone: zone, artifacts: [artifact], notes: [note]), now: now))
+    #expect(!screen.railIsEmpty)
+    #expect(screen.quarterFocus?.quarter == 2)
+    #expect(screen.quarterFocus?.rows.map(\.emoji) == [nil])
+    #expect(screen.quarterFocus?.done == 0)
   }
 
   /// Invented: an active line with no tasks has no first step, so its card reads

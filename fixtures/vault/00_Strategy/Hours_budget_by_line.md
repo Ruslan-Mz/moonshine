@@ -98,6 +98,7 @@ lines:
     block: Science
     state: active
     budget_h_week: 4
+    floor_h_day: 0.33
     parent: "[[Artifacts_2026]]"
     omnifocus:
       folders: [Study]
@@ -115,16 +116,16 @@ lines:
 
 Synthetic fixture (`design/demo-data.md`). The YAML block above is authoritative for MoonShine; this table is for humans and may drift.
 
-| Line             | Block      | h/week      | State             |
-| ---------------- | ---------- | ----------- | ----------------- |
-| 🧘 Core practice | Foundation | floor 3/day | foundation        |
-| 💪 Calisthenics  | Foundation | floor 1/day | foundation        |
-| 🤖 AI/ML         | Profession | 6           | active            |
-| 🔬 Research      | Profession | 3           | active            |
-| 🎻 Violin        | Creative   | 6           | active            |
-| 🎹 Piano         | Creative   | 1           | maintenance       |
-| ✒️ Calligraphy   | Creative   | —           | paused on purpose |
-| 🇮🇹 Italian       | Languages  | 2           | active            |
-| 🇯🇵 Japanese      | Languages  | 1           | active            |
-| 📐 Math          | Science    | 4           | active            |
-| 👨‍👩‍👧 Family        | Life       | —           | active            |
+| Line             | Block      | h/week            | State             |
+| ---------------- | ---------- | ----------------- | ----------------- |
+| 🧘 Core practice | Foundation | floor 3/day       | foundation        |
+| 💪 Calisthenics  | Foundation | floor 1/day       | foundation        |
+| 🤖 AI/ML         | Profession | 6                 | active            |
+| 🔬 Research      | Profession | 3                 | active            |
+| 🎻 Violin        | Creative   | 6                 | active            |
+| 🎹 Piano         | Creative   | 1                 | maintenance       |
+| ✒️ Calligraphy   | Creative   | —                 | paused on purpose |
+| 🇮🇹 Italian       | Languages  | 2                 | active            |
+| 🇯🇵 Japanese      | Languages  | 1                 | active            |
+| 📐 Math          | Science    | 4, floor 0.33/day | active            |
+| 👨‍👩‍👧 Family        | Life       | —                 | active            |

@@ -20,10 +20,10 @@ func fixtureDocument() throws -> SnapshotDocument {
     #expect(document.schemaVersion == 1)
     #expect(document.mode == "full")
     #expect(document.defaultTimes?.planned == "09:00")
-    #expect(document.folders.count == 12)
-    #expect(document.tags.count == 23)
-    #expect(document.projects.count == 13)
-    #expect(document.tasks.count == 169)
+    #expect(document.folders.count == 13)
+    #expect(document.tags.count == 14)
+    #expect(document.projects.count == 22)
+    #expect(document.tasks.count == 350)
   }
 
   @Test func fixtureSatisfiesEveryContractInvariant() throws {
@@ -273,13 +273,13 @@ func fixtureDocument() throws -> SnapshotDocument {
 
   @Test func folderPathStartsAtTheTopLevel() throws {
     let project = try #require(source.projects.first { $0.externalId == "prj-0046" })
-    #expect(project.folderPath == ["Work", "Clients", "Client North"])
+    #expect(project.folderPath == ["Profession", "AI", "Workshops"])
     #expect(project.status == .active)
   }
 
   @Test func datesKeepTheirInstant() throws {
     let task = try #require(source.tasks.first { $0.externalId == "tsk-0167" })
-    #expect(task.dueAt == Date(timeIntervalSince1970: 1_790_776_800))  // 2026-09-30T17:00+03:00
+    #expect(task.dueAt == Date(timeIntervalSince1970: 1_790_888_340))  // 2026-10-01T23:59+03:00
     #expect(task.effectiveDueAt == task.dueAt)
     #expect(task.flagged)
     #expect(source.timeZone.identifier == "Europe/Moscow")
@@ -291,10 +291,10 @@ func fixtureDocument() throws -> SnapshotDocument {
     let inheritsDue = try #require(source.tasks.first { $0.externalId == "tsk-0097" })
     #expect(inheritsDue.dueAt == nil)
     #expect(inheritsDue.effectiveDueAt == Date(timeIntervalSince1970: 1_792_159_200))
-    // Inherits its group's planned date, 2026-10-01T09:00+03:00.
+    // Inherits its group's planned date, 2026-10-05T09:00+03:00.
     let inheritsPlanned = try #require(source.tasks.first { $0.externalId == "tsk-0172" })
     #expect(inheritsPlanned.plannedAt == nil)
-    #expect(inheritsPlanned.effectivePlannedAt == Date(timeIntervalSince1970: 1_790_834_400))
+    #expect(inheritsPlanned.effectivePlannedAt == Date(timeIntervalSince1970: 1_791_180_000))
   }
 
   @Test func anIncrementalDocumentMapsToAPartialSnapshotWithDroppedTasks() throws {
@@ -362,12 +362,15 @@ func fixtureDocument() throws -> SnapshotDocument {
       uniqueKeysWithValues: workspace.projects.map { ($0.title, lineKey($0.line, in: workspace)) })
     #expect(
       mapping == [
-        "Partita — first movement": "violin", "Violin technique": "violin",
-        "Piano upkeep": "piano", "Brush lettering basics": "calligraphy",
-        "Italiano B1": "italian", "Linear algebra course": "math",
-        "Задачник по вероятности": "math", "Pull-up progression": "calisthenics",
-        "Paper draft on spaced repetition": "research", "Reading list — methods": "research",
-        "Client North — mobile release": "work", "Work ops": "work", "Household": "life-ops",
+        // Project tag, task tag (Recital prep), project name (🤖), top-level folder (📐, 👨‍👩‍👧).
+        "Daily practice": "core", "Daily mobility": "calisthenics",
+        "Pull-up progression": "calisthenics", "Daily technique": "violin",
+        "Bach Partita No. 2": "violin", "Études": "violin", "Recital prep": "life-ops",
+        "Linear algebra textbook": "math", "Definitions deck": "math", "Eval toolkit": "ai",
+        "Paper reading": "ai", "Workshop 2026": "ai", "Drift paper draft": "research",
+        "Evenings": "family", "Weekends": "family", "Kids": "family", "Family projects": "family",
+        "Italian B1": "italian", "Japanese basics": "japanese", "Repertoire upkeep": "piano",
+        "Brush lettering basics": "calligraphy", "Household": "life-ops",
       ])
     #expect(workspace.issues == [])
   }
@@ -382,8 +385,8 @@ func fixtureDocument() throws -> SnapshotDocument {
   @Test func rhythmAndProgressAreSeparable() async throws {
     let workspace = try await importFixture()
     let completed = workspace.tasks.filter { $0.status == .completed }
-    #expect(completed.count == 100)
-    #expect(completed.filter(\.isOccurrence).count == 32)
+    #expect(completed.count == 295)
+    #expect(completed.filter(\.isOccurrence).count == 217)
   }
 }
 

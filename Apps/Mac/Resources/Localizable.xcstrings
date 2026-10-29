@@ -113,6 +113,22 @@
         }
       }
     },
+    "%lld of %lld quarter artifacts done": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld of %2$lld done"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld из %2$lld сделано"
+          }
+        }
+      }
+    },
     "%lld open": {
       "localizations": {
         "en": {
@@ -489,6 +505,22 @@
         }
       }
     },
+    "Q%lld focus": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Q%lld focus"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Фокус Q%lld"
+          }
+        }
+      }
+    },
     "Quiet lines": {
       "localizations": {
         "en": {
@@ -729,6 +761,22 @@
         }
       }
     },
+    "done": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "done"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "сделано"
+          }
+        }
+      }
+    },
     "due %@": {
       "localizations": {
         "en": {
@@ -773,6 +821,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "нет следующего шага"
+          }
+        }
+      }
+    },
+    "not done": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "not done"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "не сделано"
           }
         }
       }

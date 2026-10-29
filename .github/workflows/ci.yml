@@ -73,6 +73,9 @@ jobs:
       - name: Test steps fail when no test ran
         run: node --test scripts/require-tests.test.mjs
 
+      - name: Demo snapshot is the generator's output
+        run: node --test scripts/demo-snapshot.test.mjs
+
       - name: Push and post guard (pre-push hook, gh-post, install script)
         run: node --test scripts/pre-push.test.mjs scripts/gh-post.test.mjs
 

@@ -49,7 +49,7 @@ public struct DemoVault: NoteProvider {
           budgetHoursPerWeek: 1, parentLink: parent, tags: ["japanese"], language: "ja"),
         SourceLine(
           key: "math", name: "Math", emoji: "📐", block: "Science", state: .active,
-          budgetHoursPerWeek: 4, parentLink: parent, folders: ["Study"]),
+          budgetHoursPerWeek: 4, parentLink: parent, folders: ["Study"], floorHoursPerDay: 0.33),
         SourceLine(
           key: "family", name: "Family", emoji: "👨‍👩‍👧", block: "Life", state: .active,
           parentLink: parent, folders: ["Family"]),

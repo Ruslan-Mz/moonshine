@@ -71,6 +71,21 @@ struct TodayScreen: Equatable {
     let name: String
   }
 
+  /// The Quarter focus card: the current quarter note's artifacts, dropped ones left out.
+  struct QuarterFocus: Equatable {
+    struct Row: Identifiable, Hashable {
+      let id: ArtifactID
+      let emoji: String?
+      let title: String
+      let isDone: Bool
+    }
+
+    /// 1–4, from the note's period in the workspace's time zone.
+    let quarter: Int
+    let rows: [Row]
+    var done: Int { rows.filter(\.isDone).count }
+  }
+
   let day: Date
   let week: Int
   let timeZone: TimeZone
@@ -92,10 +107,12 @@ struct TodayScreen: Equatable {
   let quiet: [Quiet]
   let noActivity: [NoActivity]
   let paused: [Paused]
+  let quarterFocus: QuarterFocus?
 
   /// With nothing to show, the rail holds one calm line (owner, 2026-10-27).
   var railIsEmpty: Bool {
-    touched.isEmpty && quiet.isEmpty && noActivity.isEmpty && paused.isEmpty
+    quarterFocus == nil && touched.isEmpty && quiet.isEmpty && noActivity.isEmpty
+      && paused.isEmpty
   }
 
   /// Done today shows the most recent ones; the rest sit behind "N more".
@@ -172,6 +189,17 @@ struct TodayScreen: Equatable {
     self.quiet = quiet
     self.noActivity = noActivity
     paused = today.pausedLines.map { Paused(id: $0.id, emoji: $0.emoji, name: $0.name) }
+    quarterFocus = today.quarterFocus.flatMap { focus in
+      guard let start = focus.note.period?.start else { return nil }
+      let month = overview.calendar.component(.month, from: start)
+      return QuarterFocus(
+        quarter: (month - 1) / 3 + 1,
+        rows: focus.artifacts.map { artifact in
+          QuarterFocus.Row(
+            id: artifact.id, emoji: artifact.lineIDs.lazy.compactMap { lines[$0]?.emoji }.first,
+            title: artifact.title, isDone: artifact.status == .done)
+        })
+    }
   }
 
   private static func row(_ item: TodayItem) -> Row {

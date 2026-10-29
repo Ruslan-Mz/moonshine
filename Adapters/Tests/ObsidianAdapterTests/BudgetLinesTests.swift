@@ -258,7 +258,7 @@ import Testing
       Array(report.suffix(4)) == [
         "lines: 11 read · 0 skipped",
         "line problems: missingKey 0 · invalidValue 0 · duplicateLineId 0 · ambiguousLink 0",
-        "foundation lines: 2 · with a floor: 2 · with a language: 2",
+        "foundation lines: 2 · with a floor: 3 · with a language: 2",
         "line parents: 10 · resolved to no note read: 0 · ambiguous: 0",
       ])
     let vault = try TemporaryVault()
