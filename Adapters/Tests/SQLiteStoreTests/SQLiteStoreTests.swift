@@ -100,7 +100,9 @@ import Testing
   @Test func anUnknownStoredValueThrowsNamingOnlyItsColumn() throws {
     let planted = "planted-secret-7f3a"
     let errors: [(any Error)?] = [
-      #expect(throws: SQLiteStoreError.self) { let _: LineState = try decode(planted, "line.state") },
+      #expect(throws: SQLiteStoreError.self) {
+        let _: LineState = try decode(planted, "line.state")
+      },
       #expect(throws: SQLiteStoreError.self) { try NoteRecord.decode(planted) },
     ]
     for (error, column) in zip(errors, ["line.state", "note.scale"]) {
