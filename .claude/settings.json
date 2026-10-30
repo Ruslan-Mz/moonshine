@@ -2,10 +2,7 @@
   "permissions": {
     "allow": [
       "Read",
-      "Bash(swift build:*)",
       "Bash(swift test:*)",
-      "Bash(xcodegen generate:*)",
-      "Bash(xcodebuild:*)",
       "Bash(git status:*)",
       "Bash(git diff:*)",
       "Bash(git log:*)",
@@ -24,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/usr/bin/python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/read-boundary.py\""
+            "command": "/usr/bin/python3 \"${CLAUDE_PROJECT_DIR}/.claude/hooks/read-boundary.py\" || exit 2"
           }
         ]
       }

@@ -16,7 +16,13 @@
       "Bash(xcodebuild -scheme MoonShineMac -destination platform=macOS,arch=arm64 -derivedDataPath DerivedData -onlyUsePackageVersionsFromResolvedFile build)"
     ],
     "deny": [
-      "Edit(./.git/config)",
+      "Edit(**/.git/config)",
+      "Edit(**/.git/hooks/**)",
+      "Edit(**/.git/commondir)",
+      "Edit(**/.git/worktrees/*/commondir)",
+      "Edit(**/.git/worktrees/*/gitdir)",
+      "Edit(./.claude/hooks/**)",
+      "Edit(./.claude/settings.json)",
       "Bash(git *fetch*--prune*)",
       "Bash(git *fetch* -p*)",
       "Bash(git *fetch*:refs/heads/*)",
@@ -26,6 +32,23 @@
       "Bash(git push *--no*)",
       "Bash(git * push *--no*)",
       "Bash(git *hooksPath*)",
+      "Bash(git *hookspath*)",
+      "Bash(git *HOOKSPATH*)",
+      "Bash(git -c *)",
+      "Bash(git -C * -c *)",
+      "Bash(git *--config-env*)",
+      "Bash(*GIT_CONFIG*)",
+      "Bash(*GIT_DIR*)",
+      "Bash(*GIT_COMMON_DIR*)",
+      "Bash(*GIT_WORK_TREE*)",
+      "Bash(git *--git-dir*)",
+      "Bash(git *--work-tree*)",
+      "Bash(git *moonshine.denyList*)",
+      "Bash(git *moonshine.denylist*)",
+      "Bash(git push *'*)",
+      "Bash(git push *\"*)",
+      "Bash(git push *\\*)",
+      "Bash(git push *$*)",
       "Bash(git push *--delete*)",
       "Bash(git * push *--delete*)",
       "Bash(git push * -d *)",
@@ -107,6 +130,33 @@
         "~/.config/git/ignore",
         "~/.nvm/versions/node"
       ]
+    }
+  },
+  "_worktreeOnly": {
+    "_note": "Only for a parallel author session's sibling worktree ../moonshine-<n>, which the owner creates (CLAUDE.md § Git). In that worktree's copy, merge these entries into permissions.deny and sandbox.filesystem, fill in the placeholders with the main checkout's path, and delete this key; in the main checkout's copy, just delete it. Never commit a real path: the owner's home path is on the deny-list.",
+    "permissions": {
+      "deny": [
+        "Edit(//Users/<you>/<repo>/.git/config)",
+        "Edit(//Users/<you>/<repo>/.git/hooks/**)",
+        "Edit(//Users/<you>/<repo>/.git/commondir)",
+        "Edit(//Users/<you>/<repo>/.git/worktrees/*/commondir)",
+        "Edit(//Users/<you>/<repo>/.git/worktrees/*/gitdir)",
+        "Edit(./.git)"
+      ]
+    },
+    "sandbox": {
+      "filesystem": {
+        "allowRead": ["<main-checkout>/.git"],
+        "allowWrite": ["<main-checkout>/.git"],
+        "denyWrite": [
+          "<main-checkout>/.git/config",
+          "<main-checkout>/.git/hooks",
+          "<main-checkout>/.git/commondir",
+          "<main-checkout>/.git/worktrees/*/commondir",
+          "<main-checkout>/.git/worktrees/*/gitdir",
+          "./.git"
+        ]
+      }
     }
   }
 }

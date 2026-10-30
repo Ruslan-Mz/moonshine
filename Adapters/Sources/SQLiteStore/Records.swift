@@ -11,7 +11,8 @@ extension Date {
 }
 
 enum SQLiteStoreError: Error, Equatable {
-  case unknownValue(column: String, value: String)
+  /// A stored text that names no known case; the value is left out.
+  case unknownValue(column: String)
   /// A stored number outside its range; the value is left out.
   case outOfRange(column: String)
 }
@@ -19,7 +20,7 @@ enum SQLiteStoreError: Error, Equatable {
 func decode<Value: RawRepresentable>(_ raw: String, _ column: String) throws -> Value
 where Value.RawValue == String {
   guard let value = Value(rawValue: raw) else {
-    throw SQLiteStoreError.unknownValue(column: column, value: raw)
+    throw SQLiteStoreError.unknownValue(column: column)
   }
   return value
 }
@@ -169,7 +170,7 @@ struct NoteRecord: EntityRecord {
     if raw.hasPrefix("years:"), let count = Int(raw.dropFirst("years:".count)) {
       return .years(count)
     }
-    throw SQLiteStoreError.unknownValue(column: "note.scale", value: raw)
+    throw SQLiteStoreError.unknownValue(column: "note.scale")
   }
 }
 
