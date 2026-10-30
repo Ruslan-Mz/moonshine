@@ -46,6 +46,16 @@ public struct TouchedLine: Hashable, Sendable {
   public let counts: WeekCounts
 }
 
+/// The current quarter's focus: its quarter note and that note's artifacts, dropped ones left
+/// out (owner, 2026-10-28).
+public struct QuarterFocus: Hashable, Sendable {
+  public let note: NoteRef
+  /// Source order.
+  public let artifacts: [Artifact]
+
+  public var doneCount: Int { artifacts.filter { $0.status == .done }.count }
+}
+
 public struct TodayTotals: Hashable, Sendable {
   public let open: Int
   public let done: Int
@@ -86,6 +96,8 @@ public struct TodayOverview: Hashable, Sendable {
   public let quietLines: [QuietLine]
   /// Lines paused on purpose, in vault order.
   public let pausedLines: [Line]
+  /// Nil without a current quarter note, or when it has no artifacts (owner, 2026-10-28).
+  public let quarterFocus: QuarterFocus?
 }
 
 // MARK: - Week
@@ -274,7 +286,22 @@ public struct Overview: Sendable {
       touchedToday: lineOrder.filter(touched.contains).map {
         TouchedLine(line: $0, counts: stats.dayCounts($0, on: now))
       },
-      quietLines: quietLines(day), pausedLines: paused)
+      quietLines: quietLines(day), pausedLines: paused, quarterFocus: quarterFocus())
+  }
+
+  /// The first quarter note by path whose quarter holds `now`, chosen by type as the Tracer
+  /// chooses year notes, and only with a quarter period: the reader keeps a `quarter_focus`
+  /// note with any period, and the card's quarter comes from it. Its artifacts in source
+  /// order, dropped ones left out.
+  private func quarterFocus() -> QuarterFocus? {
+    guard
+      let note = workspace.notes.first(where: {
+        $0.type == "quarter_focus" && $0.period?.scale == .quarter
+          && $0.period?.contains(now) == true
+      })
+    else { return nil }
+    let artifacts = workspace.artifacts.filter { $0.noteID == note.id && $0.status != .dropped }
+    return artifacts.isEmpty ? nil : QuarterFocus(note: note, artifacts: artifacts)
   }
 
   /// Active lines with no completion for `quietAfterDays`, foundation lines never (owner,

@@ -40,6 +40,8 @@ An invented dataset; no real people. "Today" = **Thursday 1 October 2026, ISO we
 
 The Violin dip in W35–W37 is the same story the forecast drift chart tells.
 
+**In the fixture (S4-DD, 2026-10-28):** `…` and `—` are 0, except 🇮🇹 and 🎹, whose "last activity 2 Sep" is a one-off on Wed 2 Sep (W36): their progress rows read `1 1 0 1 0 0 0 0` and `0 0 0 1 0 0 0 0`, so their W40 averages are rhythm 0.0 and progress 0.25 (`0.3`), not the `0.0` drawn in `mockups/Week.dc.html`. `Adapters/Tests/OmniFocusAdapterTests/DemoDataGoldenTests.swift` pins every row.
+
 ## Draft-2 additions for Today
 
 - **Anchors (5):** 🧘 Morning session (done) · 🎻 Violin 15 min (done) · 💪 Walk 30 min (done) · 👨‍👩‍👧 Evening reading with the kids · 🧘 Evening session. → `3 of 5 done`.
@@ -85,7 +87,7 @@ Totals: 29 tasks — 23 open, 6 done, ≈ 11 h 15 min est. (open tasks only). An
 
 Fri 2 Oct: 🎻 Book rehearsal room for November, **due Fri 12:00**, no `deadline` tag.
 
-**Deadlines.** The two due tasks of today carry the tag `deadline` (the task's own tag, leaf name). The Friday task does not: under the default rule "all due dates" all three are deadlines and amber; under "due date + tag" the Friday task reads `due Fri 12:00` in plain text — the neutral example. Reason for the setting (owner's live data, counts only): 61 live repeating tasks carry a due date used as a reminder. No plan tray: 12 undated tasks (see `mockups/Week.dc.html`, `TR` array).
+**Deadlines.** The two due tasks of today carry the tag `deadline` (the task's own tag, leaf name). The Friday task does not: under the default rule "all due dates" all three are deadlines and amber; under "due date + tag" the Friday task reads `due Fri 12:00` in plain text — the neutral example. Reason for the setting (owner's live data, counts only): 61 live repeating tasks carry a due date used as a reminder. No plan tray: 12 undated tasks (see `mockups/Week.dc.html`, `TR` array). **In the fixture: 8** — the 🤖 and 🔬 pairs are left out, because Draft-5's Lines table gives those lines 4 and 3 next actions, which their Today tasks already fill (owner, 2026-10-29).
 
 ## Month plan note
 
@@ -167,7 +169,7 @@ Invented. The day is Thu 1 Oct 2026 (W40), as everywhere; the time artboards loo
 ### Settings behind the numbers
 
 - **Work lines:** 🤖 AI/ML and 🔬 Research.
-- **Floors:** 🧘 Core practice 3 h/day and 💪 Calisthenics 1 h/day (foundation, as before); **📐 Math `floor_h_day: 0.33`**, shown `floor 20 min/day` under its `4 h / week` (the floor on a line that is not foundation; a DemoVault change for S4-2).
+- **Floors:** 🧘 Core practice 3 h/day and 💪 Calisthenics 1 h/day (foundation, as before); **📐 Math `floor_h_day: 0.33`**, shown `floor 20 min/day` under its `4 h / week` (the floor on a line that is not foundation; made in `DemoVault` by S4-DD, owner 2026-10-29).
 - **Day portion:** 🎻 Violin 1 h, the 17:00–18:00 Violin lesson in the Music lessons calendar (mapped to 🎻).
 - **Life ops categories** (defaults): 😴 Sleep · 🍽️ Food · 🍳 Cooking · 🪥 Hygiene · 🏠 House · 🚌 Transport · 🛒 Errands · 📥 Inbox.
 - **Pinned in the palette:** 🤖 Eval toolkit, 🤖 Workshop 2026, 🔬 Drift paper draft.

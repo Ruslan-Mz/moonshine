@@ -409,4 +409,71 @@ import Testing
     huge.task("Small", line: .lifeOps, flagged: true, estimate: 1)
     #expect(Overview(workspace: huge.workspace, now: now).today().totals.estimateMinutes == .max)
   }
+
+  // MARK: Quarter focus (S4-DD)
+
+  func quarter(_ y: Int, _ m: Int) -> Horizon? {
+    Horizon.containing(W.date(y, m, 15), scale: .quarter, calendar: W.calendar)
+  }
+
+  @Test func quarterFocusIsTheFirstQuarterNoteByPathForTheCurrentQuarter() throws {
+    var world = W()
+    let violin = world.line("violin").id
+    let year = world.yearNote(2026)
+    let q2 = world.note(
+      "Years/Q2_2026_focus.md", type: "quarter_focus", scale: .quarter, period: quarter(2026, 5))
+    // Another type with a quarter period sorts first and never wins.
+    world.note("Months/A_plan.md", type: "month_plan", scale: .quarter, period: quarter(2026, 8))
+    // Quarter-focus notes with a year or a month period sort first and never win either: the
+    // reader keeps a year period's list (the card would read Q1) and refuses a month's.
+    let year2026 = world.note(
+      "Years/A_focus.md", type: "quarter_focus", scale: .year,
+      period: Horizon.containing(now, scale: .year, calendar: W.calendar))
+    let month = world.note(
+      "Years/B_focus.md", type: "quarter_focus", scale: .month,
+      period: Horizon.containing(now, scale: .month, calendar: W.calendar))
+    let first = world.note(
+      "Years/Q3_focus_a.md", type: "quarter_focus", scale: .quarter, period: quarter(2026, 8))
+    world.note(
+      "Years/Q3_focus_b.md", type: "quarter_focus", scale: .quarter, period: quarter(2026, 8))
+    world.artifact("year item", lines: [violin], note: year.id)
+    world.artifact("year-period item", lines: [violin], note: year2026.id)
+    world.artifact("month item", lines: [violin], note: month.id)
+    let b = world.artifact("b", lines: [violin], status: .done, note: first.id)
+    world.artifact("q2 item", lines: [violin], note: q2.id)
+    let a = world.artifact("a", lines: [violin], note: first.id)
+    world.workspace.notes.sort { $0.path < $1.path }
+    let focus = try #require(Overview(workspace: world.workspace, now: now).today().quarterFocus)
+    #expect(focus.note == first)
+    #expect(focus.artifacts == [b, a])
+    #expect(focus.doneCount == 1)
+  }
+
+  @Test func droppedArtifactsAreLeftOutOfTheRowsAndTheCount() throws {
+    var world = W()
+    let violin = world.line("violin").id
+    let note = world.note(
+      "Q3.md", type: "quarter_focus", scale: .quarter, period: quarter(2026, 9))
+    let open = world.artifact("open", lines: [violin], status: .planned, note: note.id)
+    world.artifact("dropped", lines: [violin], status: .dropped, note: note.id)
+    let done = world.artifact("done", lines: [violin], status: .done, note: note.id)
+    let focus = try #require(Overview(workspace: world.workspace, now: now).today().quarterFocus)
+    #expect(focus.artifacts == [open, done])
+    #expect(focus.doneCount == 1)
+  }
+
+  @Test func noQuarterFocusWithoutACurrentQuarterNoteOrWithoutArtifacts() {
+    var world = W()
+    let violin = world.line("violin").id
+    #expect(Overview(workspace: world.workspace, now: now).today().quarterFocus == nil)
+    let next = world.note(
+      "Q4.md", type: "quarter_focus", scale: .quarter, period: quarter(2026, 11))
+    world.artifact("next quarter", lines: [violin], note: next.id)
+    #expect(Overview(workspace: world.workspace, now: now).today().quarterFocus == nil)
+    let current = world.note(
+      "Q3.md", type: "quarter_focus", scale: .quarter, period: quarter(2026, 8))
+    #expect(Overview(workspace: world.workspace, now: now).today().quarterFocus == nil)
+    world.artifact("dropped", lines: [violin], status: .dropped, note: current.id)
+    #expect(Overview(workspace: world.workspace, now: now).today().quarterFocus == nil)
+  }
 }

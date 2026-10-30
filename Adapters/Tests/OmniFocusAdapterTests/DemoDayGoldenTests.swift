@@ -64,13 +64,15 @@ import Testing
     #expect(!workspace.issues.contains(.defaultTimesNotRead))
   }
 
-  /// Over the whole snapshot, not only week 40: every other planned or due date is date only.
+  /// Over the whole snapshot, not only week 40: every other planned or due date is date only,
+  /// but Friday's `Book rehearsal room for November`, due 12:00 (`design/demo-data.md` § Week 40
+  /// extras).
   @Test func theTimedTasksOfTheSnapshotAreTheDemoDay() async throws {
     let defaults = DemoDay.defaultTimes
     let timed = try await workspace().tasks.filter { task in
       let planned = task.effectivePlannedAt.map { !defaults.isDateOnly($0, kind: .planned) }
       let due = task.effectiveDueAt.map { !defaults.isDateOnly($0, kind: .due) }
-      return planned == true || due == true
+      return (planned == true || due == true) && task.title != "Book rehearsal room for November"
     }
     let rows = timed.map(Row.init).sorted { $0.time < $1.time }
     #expect(rows == DemoDay.tasks.map(Row.init).sorted { $0.time < $1.time })

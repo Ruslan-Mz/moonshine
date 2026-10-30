@@ -27,13 +27,13 @@ import Testing
   }
 
   /// Italian (active) and Piano (maintenance) both last moved 29 days ago; only the active
-  /// line is quiet, because maintenance is never quiet.
+  /// line is quiet, because maintenance is never quiet. Japanese has no activity yet.
   @Test func activeItalianIsQuietAndMaintenancePianoIsNot() async throws {
     let overview = try await overview()
     #expect(try daysSinceLastActivity("italian", in: overview) == 29)
     #expect(try daysSinceLastActivity("piano", in: overview) == 29)
     let quiet = overview.today().quietLines
-    #expect(quiet.map(\.line.key) == ["italian"])
+    #expect(quiet.map(\.line.key) == ["italian", "japanese"])
     guard case .quiet(let days, let last) = quiet.first?.reason else {
       Issue.record("Italian is not quiet")
       return
@@ -41,7 +41,7 @@ import Testing
     #expect(days == 29)
     #expect(
       last.completedAt
-        == DemoVault.calendar.date(from: DateComponents(year: 2026, month: 9, day: 1, hour: 8)))
+        == DemoVault.calendar.date(from: DateComponents(year: 2026, month: 9, day: 2, hour: 19)))
   }
 
   @Test func everyViewRendersOnTheFixture() async throws {
@@ -51,9 +51,9 @@ import Testing
     #expect(today.groups.flatMap(\.items).filter(\.isUrgent).allSatisfy { $0.task.dueAt != nil })
     let week = overview.week()
     #expect(week.days.count == 7)
-    #expect(week.header.count == 9)
+    #expect(week.header.count == 12)
     let lines = overview.lines()
-    #expect(lines.blocks.flatMap(\.rows).count == 8)
+    #expect(lines.blocks.flatMap(\.rows).count == 11)
     #expect(lines.blocks.flatMap(\.rows).allSatisfy { $0.activity.sparkline.count == 8 })
   }
 }

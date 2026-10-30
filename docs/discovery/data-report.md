@@ -151,6 +151,6 @@ Through the MCP server (serial queue): counts over all tasks ~8 s each (date-ran
 ## What was produced
 
 - `docs/discovery/vault-contract.md`, `docs/discovery/snapshot-contract.md` (v0.1; snapshot contract updated with live findings V1, V3, V4).
-- `fixtures/omnifocus.snapshot.json`: synthetic, 8 lines' worth of data, 13 projects, 169 tasks (100 completed across ISO weeks 28–40, 69 remaining). It includes a paused line, a quiet active line (Italian, last completion 29 days ago) and a maintenance line with the same gap (Piano, never quiet), two repeating habits with 32 occurrences (ids `<liveId>.<n>`, as observed), 5 inbox tasks, a project mapped to no line, 6 real due dates, the 6 timed tasks of Thu 1 Oct (`DemoDay`, P1-DEMO-DAY), inherited dates (a project due date on 15 tasks; an action group's planned date on its 3 children via `effectivePlannedDate`), and repeated leaf tag names.
+- `fixtures/omnifocus.snapshot.json`: synthetic, the dataset of `design/demo-data.md`, written by `scripts/demo-snapshot.mjs` since S4-DD (2026-10-29), which lists the contract cases it keeps; `SnapshotTests` and `DemoDataGoldenTests` pin its counts and numbers. Until S4-DD it was a hand-made set of 169 tasks for 8 lines.
 - `fixtures/vault/`: budget note with `lines:`, 2026 artifacts, Q4 focus, October month plan, corridor, long horizons (all synthetic).
 - `data/mapping.local.yaml` (git-ignored): draft `lines:` with 24 lines; 22 have OmniFocus tags/folders/projects drafted from live data, 2 have no OmniFocus home.

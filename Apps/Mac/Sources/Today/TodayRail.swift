@@ -1,9 +1,9 @@
 import MoonShineCore
 import SwiftUI
 
-/// `design/screens/today.md` § Right rail: Touched today, Quiet lines, Paused on purpose. The
-/// Quarter focus card comes with S4-DD and the Day rail with S4-3b; "Open in OmniFocus" comes
-/// with the link opener (S4-5).
+/// `design/screens/today.md` § Right rail: Quarter focus, Touched today, Quiet lines, Paused on
+/// purpose. The Day rail comes with S4-3b; "Open in OmniFocus" and "Open quarter note" come with
+/// the link opener (S4-5).
 struct TodayRail: View {
   let screen: TodayScreen
 
@@ -13,6 +13,7 @@ struct TodayRail: View {
         if screen.railIsEmpty {
           Text("Nothing on the rail today").foregroundStyle(.secondary)
         }
+        if let focus = screen.quarterFocus { QuarterFocusCard(focus: focus) }
         if !screen.touched.isEmpty { touched }
         if !screen.quiet.isEmpty || !screen.noActivity.isEmpty { quiet }
         if !screen.paused.isEmpty { paused }
@@ -124,6 +125,35 @@ private struct CountText: View {
       case .tasks: Text("\(value) tasks").foregroundStyle(Tokens.progress)
       }
     }
+  }
+}
+
+/// `design/components.md` § QuarterFocusCard: a neutral done / not-done glyph, no bars and no
+/// percentages.
+private struct QuarterFocusCard: View {
+  let focus: TodayScreen.QuarterFocus
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      HStack(alignment: .firstTextBaseline) {
+        Text("Q\(focus.quarter) focus").font(.system(size: 13, weight: .semibold))
+        Spacer(minLength: 6)
+        Text("\(focus.done) of \(focus.rows.count) quarter artifacts done")
+          .foregroundStyle(.tertiary)
+      }
+      ForEach(focus.rows) { row in
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+          Image(systemName: row.isDone ? "checkmark.circle" : "circle")
+            .foregroundStyle(.secondary)
+            .accessibilityLabel(row.isDone ? Text("Completed") : Text("Not completed"))
+          if let emoji = row.emoji { Text(verbatim: emoji) }
+          Text(verbatim: row.title).font(.system(size: 12.5)).lineLimit(2)
+        }
+      }
+    }
+    .padding(14)
+    .background(Tokens.card, in: RoundedRectangle(cornerRadius: 10))
+    .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Tokens.cardBorder))
   }
 }
 

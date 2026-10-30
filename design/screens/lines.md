@@ -114,9 +114,9 @@ Artboards: `Lines-Periods`, `Lines-Periods-RU` (+ `-Dark`). It also restores �
 
 ### Acceptance (draft-5)
 
-- [ ] S4-2: 📐 Math shows its weekly budget over `floor 20 min/day` (`4 h / week` once S4-DD aligns the budget; DemoVault gives Math `floor_h_day: 0.33` in S4-2, `docs/specs/phase-1-see.md` → S4-2); a foundation line shows only its floor; no other cell changes.
+- [ ] S4-2: 📐 Math shows its weekly budget over `floor 20 min/day` (`4 h / week`; `DemoVault` gives Math `floor_h_day: 0.33` since S4-DD, owner 2026-10-29, `docs/specs/phase-1-see.md` → S4-2); a foundation line shows only its floor; no other cell changes.
 - [ ] S4-2: a line that is not foundation with `floor_h_day: 0.5` and no `budget_h_week` (a test fixture) shows `floor 30 min/day` alone; `floor_h_day: 0.99` shows `59 min/day` and `1.25` shows `1.25 h/day`.
-- [ ] S4-2: Math is in the `Science` block (DemoVault moves it there in S4-2); the `This period` column is absent (owner, 2026-10-28: hidden until phase 2).
+- [ ] S4-2: Math is in the `Science` block (`DemoVault` has it there since S4-DD, owner 2026-10-29); the `This period` column is absent (owner, 2026-10-28: hidden until phase 2).
 - [ ] Phase 2: 📓 Reflection sits under 🧘 Core practice and 🎼 Practice journal under 🎻 Violin, with `by entries`, a dashed target rule and no hours anywhere in their rows.
 - [ ] Phase 2: the 📐 Math chip `time · 1 of 4 · by Sun` is amber (strong); 💪 `2 of 2 ✓` and 👨‍👩‍👧 `0 of 1 · this week` are neutral.
 - [ ] Checked in Russian (`Lines-Periods-RU`): `4 ч / нед` over `пол 20 мин/день`, `diary 4 из 5 · эта неделя`, `пора · 1 из 4 · до вс`.
