@@ -5,8 +5,9 @@ The sandbox's `denyRead` limits Bash only; Claude's built-in file tools follow p
 and hooks instead. This hook has one job: nothing outside these roots.
 - this repository;
 - this session's own files: its folder and transcript under ~/.claude/projects/<project> (tool
-  results and subagents live there), and its folder under /private/tmp/claude-<uid>/<project>
-  (scratchpad, background task output);
+  results and subagents live there), and its folder under /private/tmp/claude-<uid>/<project> on
+  macOS or /tmp/claude-<uid>/<project> on Linux (a cloud session) (scratchpad, background task
+  output);
 - the project's `memory/` folder;
 - the Xcode developer folder (toolchain and SDKs).
 Earlier sessions are outside: a reviewer that can read the author's transcript is not independent.
@@ -64,6 +65,8 @@ def allowed_roots(event):
         os.path.join(project, session),
         os.path.join(project, session + ".jsonl"),
         os.path.join(f"/private/tmp/claude-{os.getuid()}", slug(repo), session),
+        # Linux; on macOS /tmp is a link to /private/tmp, so this is the root above.
+        os.path.join(f"/tmp/claude-{os.getuid()}", slug(repo), session),
     ]
     try:
         developer = subprocess.run(
