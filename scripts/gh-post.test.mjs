@@ -1,27 +1,23 @@
 // Tests for gh-post on throwaway repositories with a fake `gh`: node --test scripts/gh-post.test.mjs
-// Each test installs the guard with scripts/install-guard.sh into its own temporary HOME; git reads
-// no global or system config; the fake gh records its arguments and stdin. Every entry is invented.
+// Each test installs the guard with the repository's copy of scripts/install-guard.sh into its own
+// temporary HOME (scripts/guard-fixture.mjs); the fake gh records its arguments and stdin. Every
+// entry is invented.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, linkSync, mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, linkSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
-import { fileURLToPath } from "node:url";
+import { denyListFile, environment, install, installed, ok, repository, secret, slug, vault } from "./guard-fixture.mjs";
 
-const install = join(dirname(fileURLToPath(import.meta.url)), "install-guard.sh");
-const secret = "Zephyrine Quolltail";
-const vault = "Obsidian" + "V"; // spelled in two parts so this file passes the guard itself
-
-function setUp({ configure = true, withGh = true } = {}) {
-  const root = mkdtempSync(join(tmpdir(), "gh-post-"));
-  const home = join(root, "home");
-  const bin = join(root, "bin");
-  const work = join(root, "work");
-  const scratchRoot = join(root, "scratch");
-  const scratchpad = join(scratchRoot, "session-1", "scratchpad");
-  for (const dir of [home, bin, work, scratchpad]) mkdirSync(dir, { recursive: true });
-  const log = join(root, "gh.log");
+/// A repository on branch `slice/one` with the guard installed; `worktrees` are added (next to it)
+/// before the install, `prunable` ones removed again so that git reports them as prunable.
+function setUp({ withGh = true, worktrees = [], prunable = [] } = {}) {
+  const work = repository();
+  const scratchBase = join(work.root, "scratch");
+  work.env = { MOONSHINE_SCRATCH_BASE: scratchBase };
+  const bin = join(work.root, "bin");
+  mkdirSync(bin);
+  const log = join(work.root, "gh.log");
   if (withGh) {
     writeFileSync(join(bin, "gh"), `#!/bin/sh\nprintf '%s\\n' "$@" > '${log}'\ncat >> '${log}'\n`, { mode: 0o755 });
   } else {
@@ -29,37 +25,31 @@ function setUp({ configure = true, withGh = true } = {}) {
     symlinkSync(process.execPath, join(bin, "node"));
     symlinkSync(git, join(bin, "git"));
   }
-  const env = {
-    ...process.env,
-    HOME: home,
-    GIT_CONFIG_GLOBAL: "/dev/null",
-    GIT_CONFIG_NOSYSTEM: "1",
-    PATH: `${bin}:${process.env.PATH}`,
-    MOONSHINE_SCRATCH_ROOT: scratchRoot,
-  };
-  delete env.MOONSHINE_GUARD_DIR; // would send the install outside the temporary HOME
-  const git = (...args) => assert.equal(spawnSync("git", args, { cwd: work, env }).status, 0, args.join(" "));
-  git("init", "-q", "-b", "slice/one");
-  const installed = spawnSync("/bin/sh", [install], { cwd: work, env, encoding: "utf8" });
-  assert.equal(installed.status, 0, installed.stderr);
-  if (configure) {
-    writeFileSync(join(root, "deny-list.txt"), `${secret}\nmirelbrook\n`);
-    git("config", "moonshine.denyList", join(root, "deny-list.txt"));
-  }
+  ok(work, "switch", "-q", "-c", "slice/one");
+  for (const name of [...worktrees, ...prunable]) ok(work, "worktree", "add", "-q", join(work.root, name), "-b", name);
+  for (const name of prunable) rmSync(join(work.root, name), { recursive: true });
+  const installedResult = install(work, [denyListFile(work, `${secret}\nmirelbrook\n`)]);
+  assert.equal(installedResult.status, 0, installedResult.stderr);
+  const scratchRoot = join(scratchBase, slug(work.cwd));
+  const scratchpad = join(scratchRoot, "session-1", "scratchpad");
+  mkdirSync(scratchpad, { recursive: true });
+  const env = environment(work.home, { PATH: `${bin}:${process.env.PATH}` });
   const post = (...args) =>
-    spawnSync(join(home, ".config", "moonshine", "bin", "gh-post"), args, {
-      cwd: work,
+    spawnSync(installed(work, "bin", "gh-post"), args, {
+      cwd: work.cwd,
       // Without the fake gh, PATH holds only links to node and git: a real gh is never reachable.
       env: withGh ? env : { ...env, PATH: bin },
       encoding: "utf8",
     });
-  const file = (name, text) => {
-    const path = join(scratchpad, name);
+  const file = (name, text, folder = scratchpad) => {
+    mkdirSync(folder, { recursive: true });
+    const path = join(folder, name);
     writeFileSync(path, text);
     return path;
   };
   const sent = () => (existsSync(log) ? readFileSync(log, "utf8") : null);
-  return { root, post, file, sent, git };
+  const git = (...args) => ok(work, ...args);
+  return { root: work.root, work, scratchBase, scratchRoot, post, file, sent, git };
 }
 
 function refused(context, result, ...expected) {
@@ -119,7 +109,7 @@ test("a symlink in the scratchpad that points outside is refused", () => {
 for (const parts of [["session-1", "body.md"], ["session-1", "notes", "body.md"]]) {
   test(`a file in a session folder but outside its scratchpad (${parts.join("/")}) is refused`, () => {
     const context = setUp();
-    const path = join(context.root, "scratch", ...parts);
+    const path = join(context.scratchRoot, ...parts);
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, "clean\n");
     refused(context, context.post("comment", "27", path), "not inside a session scratchpad");
@@ -154,10 +144,57 @@ test("a bad PR number is refused", () => {
   }
 });
 
-test("a missing deny-list setting refuses", () => {
-  const context = setUp({ configure: false });
-  refused(context, context.post("comment", "27", context.file("body.md", "clean\n")), "git config moonshine.denyList");
+function editConfig(context, change) {
+  const path = installed(context.work, "guard", "config.json");
+  const value = JSON.parse(readFileSync(path, "utf8"));
+  change(value);
+  writeFileSync(path, JSON.stringify(value));
+}
+
+test("a config.json without the deny-list path refuses", () => {
+  const context = setUp();
+  editConfig(context, (value) => delete value.denyList);
+  refused(context, context.post("comment", "27", context.file("body.md", "clean\n")), "config.json names no absolute deny-list path");
 });
+
+for (const [name, roots] of [["empty", []], ["not a list", "/tmp/x"], ["relative", ["scratch/x"]]]) {
+  test(`scratchpad roots that are ${name} refuse`, () => {
+    const context = setUp();
+    editConfig(context, (value) => (value.scratchRoots = roots));
+    refused(context, context.post("comment", "27", context.file("body.md", "clean\n")), "config.json names no absolute scratchpad roots");
+  });
+}
+
+test("a file in the scratchpad of another worktree of this repository is sent", () => {
+  const context = setUp({ worktrees: ["wt-2"] });
+  const folder = join(context.scratchBase, slug(join(context.root, "wt-2")), "session-2", "scratchpad");
+  const result = context.post("comment", "27", context.file("body.md", "from the worktree\n", folder));
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(context.sent().endsWith("from the worktree\n"));
+});
+
+test("a folder that only starts with the project's name is refused", () => {
+  const context = setUp();
+  const folder = join(`${context.scratchRoot}-x`, "session-2", "scratchpad");
+  refused(context, context.post("comment", "27", context.file("body.md", "clean\n", folder)), "not inside a session scratchpad");
+});
+
+test("a prunable worktree's scratchpad is refused", () => {
+  const context = setUp({ prunable: ["wt-gone"] });
+  const folder = join(context.scratchBase, slug(join(context.root, "wt-gone")), "session-2", "scratchpad");
+  refused(context, context.post("comment", "27", context.file("body.md", "clean\n", folder)), "not inside a session scratchpad");
+});
+
+for (const [name, content, kind] of [
+  ["a NUL byte", Buffer.from("all\u0000 fixed\n"), "binary data"],
+  ["UTF-16LE", Buffer.from(`\uFEFF${secret}\n`, "utf16le"), "binary data"],
+  ["invalid UTF-8", Buffer.from("caf\u00e9\n", "latin1"), "invalid UTF-8"],
+]) {
+  test(`a body with ${name} is refused`, () => {
+    const context = setUp();
+    refused(context, context.post("comment", "27", context.file("body.md", content)), `The file holds ${kind}`);
+  });
+}
 
 test("an unknown command prints usage", () => {
   const context = setUp();

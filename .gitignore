@@ -20,8 +20,9 @@ xcuserdata/
 .claude/settings.local.json
 
 settings.local.json
-# Node tooling (prettier for markdown)
+# Node tooling (prettier for markdown); npm's cache, since the sandbox denies ~/.npm
 node_modules/
+.npm-cache/
 
 Claude outputs/
 

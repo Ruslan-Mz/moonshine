@@ -1,5 +1,5 @@
-// The read-boundary hook fails closed, and the permission rules H1a added stay in the template
-// (CLAUDE.md → Commands; H1a, 2026-10-29). Run: node --test scripts/hook-command.test.mjs
+// The read-boundary hook fails closed, and the permission rules H1a and H1b added stay in the
+// template (CLAUDE.md → Commands; H1a, 2026-10-29; H1b, 2026-10-30). Run: node --test scripts/hook-command.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -68,8 +68,8 @@ test("the template keeps the deny rules of H1a", () => {
     "Bash(*GIT_WORK_TREE*)",
     "Bash(git *--git-dir*)",
     "Bash(git *--work-tree*)",
-    "Bash(git *moonshine.denyList*)",
-    "Bash(git *moonshine.denylist*)",
+    "Bash(git *denyList*)",
+    "Bash(git *denylist*)",
     "Bash(git push *'*)",
     'Bash(git push *"*)',
     "Bash(git push *\\*)",
@@ -81,6 +81,38 @@ test("the template keeps the deny rules of H1a", () => {
   for (const rule of ["Edit(**/.git/**)", "Edit(**/.git)", "Edit(./.git)"]) {
     assert.ok(!deny.has(rule), `${rule}: the whole .git is never denied, Edit denies are sandbox write denies`);
   }
+});
+
+test("the template keeps the rules of H1b", () => {
+  const deny = new Set(template.permissions.deny);
+  for (const rule of [
+    "Bash(git tag -d*)",
+    "Bash(git update-ref -d refs/heads/*)",
+    "Bash(git update-ref -d refs/tags/*)",
+    "Bash(git update-ref -d refs/remotes/origin/*)",
+    "Bash(gh api graphql*)",
+    "Bash(git branch -D*)",
+  ]) {
+    assert.ok(deny.has(rule), rule);
+  }
+  // Widened in H1b: the narrower spellings are gone.
+  for (const rule of [
+    "Bash(git *moonshine.denyList*)",
+    "Bash(git *moonshine.denylist*)",
+    "Bash(gh api graphql *)",
+    "Bash(git branch -D *)",
+  ]) {
+    assert.ok(!deny.has(rule), `${rule} was widened`);
+  }
+  // Live runs ask every time.
+  const ask = new Set(template.permissions.ask);
+  for (const rule of ["Bash(swift run*)", "Bash(*/moonshine-import)", "Bash(*/moonshine-import *)"]) {
+    assert.ok(ask.has(rule), rule);
+  }
+  // The sandbox denies ~/.npm: npm caches inside the checkout, in a git-ignored folder.
+  assert.equal(template.env.npm_config_cache, "/Users/<you>/<repo>/.npm-cache");
+  const ignored = readFileSync(join(repository, ".gitignore"), "utf8").split("\n");
+  assert.ok(ignored.includes(".npm-cache/"));
 });
 
 test("the worktree-only block carries the main checkout's .git rules with placeholders only", () => {

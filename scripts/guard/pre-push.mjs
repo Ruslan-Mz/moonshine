@@ -3,32 +3,35 @@
 // Tests: node --test scripts/pre-push.test.mjs
 //
 // It blocks a push that updates more than one ref, targets anything outside refs/heads/, targets
-// main, deletes a ref, or rewrites (non-fast-forward) a branch other than the one HEAD is on; and a
+// main, deletes a ref, or rewrites (non-fast-forward) a branch other than the one HEAD is on; a
 // push whose ref names or commits (messages, file names, added lines) carry a deny-list line or a
-// vault path. A finding names the commit and the file and line, never the matched text. A missing
-// setting, a missing or empty deny-list, or a git error blocks the push.
+// vault path; and one that adds or changes a binary or non-UTF-8 file whose path is not on the
+// installed binary-allowlist.txt. Commits count as already on the remote only when `git ls-remote`
+// on the push URL reports them. A finding names the commit and the file and line, never the
+// matched text. A missing config, allowlist or deny-list, an empty deny-list, or a git error
+// blocks the push.
 import { spawnSync } from "node:child_process";
 import { readFileSync, realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { denyList, match, printable } from "./matcher.mjs";
+import { denyList, match, printable, unreadable } from "./matcher.mjs";
 
 const zero = /^0+$/;
 const mainRef = "refs/heads/main";
 const reportLimit = 20;
-const guardFiles = ["matcher.mjs", "pre-push.mjs", "gh-post.mjs"];
+const guardFiles = ["matcher.mjs", "pre-push.mjs", "gh-post.mjs", "binary-allowlist.txt"];
 
 function block(message) {
   process.stderr.write(`pre-push: push blocked. ${message}\n`);
   process.exit(1);
 }
 
-function run(args) {
-  return spawnSync("git", args, { encoding: "utf8", maxBuffer: 1 << 30 });
+function run(args, options = {}) {
+  return spawnSync("git", args, { encoding: "utf8", maxBuffer: 1 << 30, ...options });
 }
 
-function git(args) {
-  const result = run(args);
+function git(args, options) {
+  const result = run(args, options);
   if (result.status !== 0) block(`git ${args[0]} failed (exit ${result.status}).`);
   return result.stdout;
 }
@@ -58,8 +61,8 @@ function warnIfStale() {
   if (differs) {
     process.stderr.write(
       "pre-push: warning: the installed guard differs from this checkout's scripts/guard. " +
-        "Reinstall only after the change is merged, from an up-to-date main (scripts/install-guard.sh); " +
-        "never install from a branch.\n",
+        "Reinstall only after the change is merged, from a checkout whose scripts/guard matches origin's main " +
+        "(scripts/install-guard.sh refuses any other).\n",
     );
   }
 }
@@ -69,25 +72,57 @@ function isAncestor(older, newer) {
   return run(["merge-base", "--is-ancestor", older, newer]).status === 0;
 }
 
-/// The commits this push sends: reachable from the pushed commit, not from the remote's old tip
-/// and not from any remote-tracking ref (they are already on the remote).
-function commits(localSha, remoteSha) {
-  const exclude = ["--not", "--remotes"];
-  if (!zero.test(remoteSha) && run(["cat-file", "-e", `${remoteSha}^{commit}`]).status === 0) {
-    exclude.push(remoteSha);
-  }
-  return git(["rev-list", localSha, ...exclude])
+/// The commits the push URL's repository reports (git ls-remote) that exist here: only these count
+/// as already on the remote. A local refs/remotes/* ref never does.
+function remoteCommits(url) {
+  if (typeof url !== "string" || url === "" || url.startsWith("-")) block("git passed the hook no push URL.");
+  const ids = new Set(
+    git(["ls-remote", url])
+      .split("\n")
+      .map((line) => line.split("\t")[0])
+      .filter((id) => /^[0-9a-f]{40,64}$/.test(id)),
+  );
+  if (ids.size === 0) return [];
+  return git(["cat-file", "--batch-check=%(objectname) %(objecttype)"], { input: [...ids].join("\n") + "\n" })
+    .split("\n")
+    .map((line) => line.split(" "))
+    .filter(([, type]) => type === "commit")
+    .map(([id]) => id);
+}
+
+/// The commits this push sends: reachable from the pushed commit, not from a commit on the remote.
+function commits(localSha, onRemote) {
+  const input = [localSha, ...onRemote.map((id) => `^${id}`)].join("\n") + "\n";
+  return git(["rev-list", "--stdin"], { input })
     .split("\n")
     .filter((sha) => sha !== "");
 }
 
 const diffOptions = ["--no-commit-id", "--root", "--first-parent", "-m", "--no-renames"];
 
-/// The paths a commit changes (against its first parent), exactly as stored.
-function changedPaths(sha) {
-  return git(["diff-tree", ...diffOptions, "-r", "--name-only", "-z", sha])
-    .split("\0")
-    .filter((path) => path !== "");
+/// What a commit changes (against its first parent): each path exactly as stored, and the new
+/// blob, or null for a deletion or a submodule.
+function changes(sha) {
+  const fields = git(["diff-tree", ...diffOptions, "-r", "--raw", "-z", sha]).split("\0");
+  const result = [];
+  for (let index = 0; index + 1 < fields.length; index += 2) {
+    // ":<old mode> <new mode> <old blob> <new blob> <status>", then the path
+    const [, mode, , blob] = fields[index].slice(1).split(" ");
+    const kept = !zero.test(blob) && mode !== "160000";
+    result.push({ path: fields[index + 1], blob: kept ? blob : null });
+  }
+  return result;
+}
+
+/// The paths the installed binary-allowlist.txt names, one per line; `#` starts a comment line.
+function binaryAllowlist() {
+  let text;
+  try {
+    text = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "binary-allowlist.txt"), "utf8");
+  } catch {
+    block("No binary-allowlist.txt next to the installed guard; run scripts/install-guard.sh.");
+  }
+  return new Set(text.split(/\r?\n/).filter((line) => line !== "" && !line.startsWith("#")));
 }
 
 /// Added lines of one file in one commit, with their line numbers in that commit.
@@ -109,7 +144,7 @@ function* addedLines(sha, path) {
   }
 }
 
-function scan(sha, entries, findings) {
+function scan(sha, entries, allowed, findings) {
   const short = sha.slice(0, 9);
   git(["log", "-1", "--format=%B", sha])
     .split("\n")
@@ -117,10 +152,14 @@ function scan(sha, entries, findings) {
       const kind = match(text, entries);
       if (kind) findings.push(`commit ${short}, message line ${index + 1}: ${kind}`);
     });
-  for (const path of changedPaths(sha)) {
+  for (const { path, blob } of changes(sha)) {
     const kind = match(path, entries);
     if (kind) findings.push(`commit ${short}, a file name: ${kind}`);
     const where = printable(path, entries);
+    if (blob !== null && !allowed.has(path)) {
+      const why = unreadable(git(["cat-file", "blob", blob], { encoding: "buffer" }));
+      if (why) findings.push(`commit ${short}, ${where}: ${why}`);
+    }
     for (const added of addedLines(sha, path)) {
       const kind = match(added.text, entries);
       if (kind) findings.push(`commit ${short}, ${where}:${added.line}: ${kind}`);
@@ -147,6 +186,7 @@ for (const [, localSha, remoteRef, remoteSha] of refs) {
 }
 
 const entries = denyList(block);
+const allowed = binaryAllowlist();
 const findings = [];
 for (const [localRef, , remoteRef] of refs) {
   for (const [name, label] of [[localRef, "the local ref name"], [remoteRef, "the remote ref name"]]) {
@@ -154,12 +194,13 @@ for (const [localRef, , remoteRef] of refs) {
     if (kind) findings.push(`${label}: ${kind}`);
   }
 }
+const onRemote = refs.length > 0 ? remoteCommits(process.argv[3]) : [];
 const seen = new Set();
-for (const [, localSha, , remoteSha] of refs) {
-  for (const sha of commits(localSha, remoteSha)) {
+for (const [, localSha] of refs) {
+  for (const sha of commits(localSha, onRemote)) {
     if (seen.has(sha)) continue;
     seen.add(sha);
-    scan(sha, entries, findings);
+    scan(sha, entries, allowed, findings);
   }
 }
 
