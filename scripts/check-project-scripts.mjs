@@ -15,7 +15,8 @@
 // Keys are then checked against an allowlist per path (`schema` below), build-setting names
 // against their own; the keys of `forbiddenKeys`, build settings ending in `_EXEC` and `CC`
 // are named even if the allowlist ever lists them. A `path` value is relative, has no `..`
-// or `$` (XcodeGen expands `${VAR}`), and resolves, after symlinks, inside the repository.
+// or `$` (XcodeGen expands `${VAR}`), and resolves, after symlinks, inside the repository and
+// not to its root.
 // Usage: node scripts/check-project-scripts.mjs [file] (default `project.yml`).
 // Exit 0 clean, 1 with `file:line: reason` per finding, 2 when the file cannot be read.
 
@@ -148,11 +149,13 @@ function parse(text, fail) {
   let open = null; // a key or item whose block may follow: { indent, line, attach }
   for (const [index, raw] of body.split(/\r?\n/).entries()) {
     const line = index + 1;
-    if (/^\s*(?:#.*)?$/.test(raw)) continue;
+    if (/^ *(?:#.*)?$/.test(raw)) continue;
     if (/^(?:---|\.\.\.)(?: |$)/.test(raw)) fail(line, "a document marker");
     if (raw.startsWith("%")) fail(line, "a directive");
-    const indent = raw.length - raw.trimStart().length;
+    // libyaml indents by U+0020 only; an NBSP or another space would be content to it.
+    const indent = /^ */.exec(raw)[0].length;
     let rest = raw.slice(indent);
+    if (/^\s/.test(rest)) fail(line, "whitespace other than spaces before content");
     const item = /^-(?: |$)/.test(rest);
     if (item) rest = rest.slice(2);
 
@@ -190,7 +193,8 @@ function parse(text, fail) {
       fail(line, "a mapping key inside a sequence");
     }
     const colon = rest.search(/:(?: |$)/);
-    const key = colon < 0 ? rest : rest.slice(0, colon);
+    if (colon < 0) fail(line, "a line that is not `key: value` (libyaml would join it to a multi-line scalar)");
+    const key = rest.slice(0, colon);
     if (!plainKey.test(key)) fail(line, "a key that is not a plain key");
     if (map.entries.has(key)) fail(line, `a duplicate key ${key}`);
     const node = value(rest.slice(colon + 1).trimStart(), line, fail);
@@ -207,7 +211,7 @@ function walk(node, rule, findings, root) {
     if (node.kind !== "value" && !(rule === VALUES && node.kind === "values")) {
       report(node.line, "this key takes a single value");
     } else if (rule === PATH && !insideRepository(node.text, root)) {
-      report(node.line, "a path outside the repository (relative, no `..` or `$`, inside it after symlinks)");
+      report(node.line, "a path outside the repository (relative, no `..` or `$`, inside it after symlinks, not its root)");
     }
     return;
   }
@@ -228,8 +232,8 @@ function walk(node, rule, findings, root) {
       else if (!buildSettingNames.has(key) && !key.startsWith("INFOPLIST_KEY_")) {
         report(entry.line, `build setting ${key} is not on the allowlist`);
       } else walk(entry.node, VALUE, findings, root);
-    } else if (rule[key] ?? rule["*"]) {
-      walk(entry.node, rule[key] ?? rule["*"], findings, root);
+    } else if (Object.hasOwn(rule, key) || Object.hasOwn(rule, "*")) {
+      walk(entry.node, Object.hasOwn(rule, key) ? rule[key] : rule["*"], findings, root);
     } else {
       report(entry.line, `${key} is not allowed here`);
     }
@@ -241,7 +245,8 @@ function insideRepository(path, root) {
   try {
     const base = realpathSync(root);
     const resolved = relative(base, realpathSync(join(base, path)));
-    return resolved === "" || !(resolved === ".." || resolved.startsWith(`..${sep}`) || isAbsolute(resolved));
+    // Not the root itself: it holds `data/` and the deny-list (owner, 2026-10-30, PR #37 round 1).
+    return resolved !== "" && !(resolved === ".." || resolved.startsWith(`..${sep}`) || isAbsolute(resolved));
   } catch {
     return false;
   }

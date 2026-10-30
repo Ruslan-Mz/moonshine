@@ -51,7 +51,11 @@ test("the template keeps the deny rules of H1a", () => {
   for (const rule of [
     "Edit(**/.git/config)",
     "Edit(**/.git/hooks/**)",
+    "Edit(**/.git/commondir)",
+    "Edit(**/.git/worktrees/*/commondir)",
+    "Edit(**/.git/worktrees/*/gitdir)",
     "Edit(./.claude/hooks/**)",
+    "Edit(./.claude/settings.json)",
     "Bash(git *hooksPath*)",
     "Bash(git *hookspath*)",
     "Bash(git *HOOKSPATH*)",
@@ -59,6 +63,11 @@ test("the template keeps the deny rules of H1a", () => {
     "Bash(git -C * -c *)",
     "Bash(git *--config-env*)",
     "Bash(*GIT_CONFIG*)",
+    "Bash(*GIT_DIR*)",
+    "Bash(*GIT_COMMON_DIR*)",
+    "Bash(*GIT_WORK_TREE*)",
+    "Bash(git *--git-dir*)",
+    "Bash(git *--work-tree*)",
     "Bash(git *moonshine.denyList*)",
     "Bash(git *moonshine.denylist*)",
     "Bash(git push *'*)",
@@ -68,7 +77,10 @@ test("the template keeps the deny rules of H1a", () => {
   ]) {
     assert.ok(deny.has(rule), rule);
   }
-  assert.ok(!deny.has("Edit(**/.git/**)"), "the whole .git is never denied: Edit denies are sandbox write denies");
+  // In the main checkout `.git` is a directory; denying it would deny every git write.
+  for (const rule of ["Edit(**/.git/**)", "Edit(**/.git)", "Edit(./.git)"]) {
+    assert.ok(!deny.has(rule), `${rule}: the whole .git is never denied, Edit denies are sandbox write denies`);
+  }
 });
 
 test("the worktree-only block carries the main checkout's .git rules with placeholders only", () => {
@@ -76,10 +88,21 @@ test("the worktree-only block carries the main checkout's .git rules with placeh
   assert.deepEqual(block.permissions.deny, [
     "Edit(//Users/<you>/<repo>/.git/config)",
     "Edit(//Users/<you>/<repo>/.git/hooks/**)",
+    "Edit(//Users/<you>/<repo>/.git/commondir)",
+    "Edit(//Users/<you>/<repo>/.git/worktrees/*/commondir)",
+    "Edit(//Users/<you>/<repo>/.git/worktrees/*/gitdir)",
+    "Edit(./.git)",
   ]);
   assert.deepEqual(block.sandbox.filesystem, {
     allowRead: ["<main-checkout>/.git"],
     allowWrite: ["<main-checkout>/.git"],
-    denyWrite: ["<main-checkout>/.git/config", "<main-checkout>/.git/hooks"],
+    denyWrite: [
+      "<main-checkout>/.git/config",
+      "<main-checkout>/.git/hooks",
+      "<main-checkout>/.git/commondir",
+      "<main-checkout>/.git/worktrees/*/commondir",
+      "<main-checkout>/.git/worktrees/*/gitdir",
+      "./.git",
+    ],
   });
 });

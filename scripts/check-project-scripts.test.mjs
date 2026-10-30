@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { checkProject, forbiddenKeys } from "./check-project-scripts.mjs";
 
 const script = new URL("./check-project-scripts.mjs", import.meta.url).pathname;
@@ -80,14 +80,22 @@ test("a project in the subset with allowed keys passes", () => {
 
 test("each forbidden key is found in block style and as a list item", () => {
   for (const key of forbiddenKeys) {
-    finds(target(`    ${key}:\n      - script: cat data/x\n`), 4, key);
-    finds(target(`    dependencies:\n      - ${key}: x\n`), 5, key);
+    const reason = `${key} can run a command or read outside the repository`;
+    finds(target(`    ${key}:\n      - script: cat data/x\n`), 4, reason);
+    finds(target(`    dependencies:\n      - ${key}: x\n`), 5, reason);
   }
 });
 
 test("build settings ending in _EXEC and CC are forbidden", () => {
   for (const name of ["SWIFT_EXEC", "LD_EXEC", "CC"]) {
-    finds(`settings:\n  base:\n    ${name}: /tmp/x\n`, 3, name);
+    finds(`settings:\n  base:\n    ${name}: /tmp/x\n`, 3, `build setting ${name} names a tool to run`);
+  }
+});
+
+test("keys of Object.prototype are not allowed", () => {
+  for (const key of ["constructor", "toString", "hasOwnProperty", "__proto__"]) {
+    finds(`${key}: x\n`, 1, `${key} is not allowed here`);
+    finds(`options:\n  ${key}: x\n`, 2, `${key} is not allowed here`);
   }
 });
 
@@ -115,7 +123,7 @@ test("an unknown key is a finding at every level", () => {
 test("keys that are not plain are findings", () => {
   finds('"pre\\u0042uildScripts": x\n', 1, "plain key");
   finds("'name': x\n", 1, "plain key");
-  finds("? name\n: x\n", 1, "plain key");
+  finds("? name\n: x\n", 1, "not `key: value`");
   finds("<<: *base\n", 1, "plain key");
   finds("name : x\n", 1, "plain key");
 });
@@ -132,6 +140,16 @@ test("anchors, aliases, tags, flow mappings and block scalars are findings", () 
 
 test("a multi-line scalar is a finding", () => {
   finds("name: first\n  postGenCommand: x\n", 2, "indentation");
+  finds("options:\n  bundleIdPrefix\n  createIntermediateGroups\n", 2, "not `key: value`");
+  finds("settings:\n  base:\n    SWIFT_VERSION\n", 3, "not `key: value`");
+});
+
+test("indentation other than spaces is a finding", () => {
+  for (const space of [" ", "　"]) {
+    finds(`options:\n${space}${space}bundleIdPrefix: x\n`, 2, "whitespace other than spaces");
+    finds(target(`  ${space}${space}settings:\n    type: application\n`), 4, "whitespace other than spaces");
+    finds(`name: x\n${space}#: y\n`, 2, "whitespace other than spaces");
+  }
 });
 
 test("line breaks libyaml knows beyond LF and CRLF are findings", () => {
@@ -174,18 +192,27 @@ test("structure: duplicates, compact sequences, values under a leaf", () => {
   finds(target("    sources:\n      - Sources\n"), 5, "mapping");
 });
 
+// Each rejected path below exists inside the root, so only the rule under test rejects it.
 test("a path must be relative, without .. or $, and resolve inside the repository", () => {
   withRoot((root) => {
+    for (const dir of ["~", "${HOME}"]) mkdirSync(join(root, dir));
     const at = (path) => target(`    sources:\n      - path: ${path}\n`);
     assert.deepEqual(check(at("Sources"), root), []);
-    finds(at("/Users/someone/vault"), 5, "path");
-    finds(at("~/vault"), 5, "path");
-    finds(at("Sources/../../vault"), 5, "path");
-    finds(at("${HOME}/vault"), 5, "path");
-    finds(at("missing"), 5, "path");
-    finds(`packages:\n  Core:\n    path: ../Core\n`, 3, "path");
+    assert.deepEqual(check(at("Core"), root), []);
+    finds(at("/Sources"), 5, "path", root);
+    finds(at("~"), 5, "path", root);
+    finds(at("Sources/../Core"), 5, "path", root);
+    finds(at("${HOME}"), 5, "path", root);
+    finds(at("missing"), 5, "path", root);
+    finds(`packages:\n  Core:\n    path: ../${basename(root)}/Core\n`, 3, "path", root);
     symlinkSync(tmpdir(), join(root, "Sources", "link"));
-    finds(at("Sources/link"), 5, "path");
+    finds(at("Sources/link"), 5, "path", root);
+  });
+});
+
+test("the repository root is not a path (owner, 2026-10-30)", () => {
+  withRoot((root) => {
+    for (const path of [".", "./"]) finds(target(`    sources:\n      - path: ${path}\n`), 5, "not its root", root);
   });
 });
 
