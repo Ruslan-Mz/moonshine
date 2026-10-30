@@ -37,7 +37,7 @@ import Testing
       #expect(output.omniFocusTime == .milliseconds(1234))
       #expect(runner.arguments == [["-l", "JavaScript", "/repo/bridge/snapshot.js", "full"]])
       let source = try await bridge(runner).snapshot(modifiedSince: nil)
-      #expect(source.tasks.count == 169)
+      #expect(source.tasks.count == 350)
       #expect(try await bridge(runner).document(.full).omniFocusTime == .milliseconds(1234))
     }
 
