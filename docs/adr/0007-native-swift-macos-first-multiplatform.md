@@ -1,6 +1,6 @@
 ---
 title: "0007 — Native Swift, macOS first, SwiftUI multiplatform"
-status: proposed
+status: accepted
 date: 2026-09-30
 deciders: Ruslan Mozhaev
 consulted: Claude

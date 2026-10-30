@@ -30,20 +30,21 @@ The owner's figures, read from the method log:
 - **Slow scenario:** 0.6 of the pace from January (less owner time).
 - **Memos and practice lines (2026-10-19, ADR-0018, ADR-0019):** P1 ~400 and Practice lines ~350 production lines estimated, ~750 × 1.62 ≈ 1,215, at about 250 a day ≈ 5 days; phase 2 and every stage after it move 5 days later. The slow column keeps its months: 5 days do not change them.
 - **Timebox review after S4-1b (owner, 2026-10-28):** factor 1.47; phase 1 ends ~2026-11-20 (was 2026-11-03, 10-30 to 11-12), with live data first and the Month view and the README moved to the usage period after it (`docs/specs/phase-1-see.md`); the stages after phase 1 are not re-forecast here.
+- **Publication (owner, 2026-10-30):** the README moved from the usage period into PUB, inside phase 1 and before the live-data slices; PUB's documentation PR has no production lines, and its code PR (the CI guard) is counted like any other slice. Cut now: the calendar's line mapping + Upcoming and the weekly review mode of S5 (`docs/specs/phase-1-see.md`).
 - **Quotas and the Library module (2026-10-26, ADR-0020, ADR-0021):** production lines estimated × 1.63: Quotas ~300 ≈ 489, Library L1 ~350 ≈ 571, Library L2 ~250 ≈ 408, ≈ 1,467 in all, at about 250 a day ≈ 6 days (Quotas ≈ 2 in phase 2, Library ≈ 4 after Hub; the two risky slices are above about 400, so their plans split them); phase 2 ends 2 days later, Hub moves 2 days, every stage after Library 6 days. The slow column keeps its months.
 
 ## Stages
 
-| Stage                                  | Base                        | Slow (0.6× from January) | Actual |
-| -------------------------------------- | --------------------------- | ------------------------ | ------ |
-| Phase 1 See                            | ~2026-11-20; was 2026-11-03 | same                     |        |
-| Usage period: R1, README, design, spec | 11-03 to 11-17              | same                     |        |
-| Phase 2 Plan, Timer (Mac) last         | 11-17 to 12-22              | same                     |        |
-| Hub (in phase 2's usage period)        | 12-22 to 12-29              | same                     |        |
-| Library L1 and L2 (after Hub)          | 12-29 to 2027-01-02         | same                     |        |
-| Phase 3 Board                          | 2027-01-16 to 01-29         | January to February      |        |
-| Write                                  | 02-12 to 03-04              | March                    |        |
-| 3b iPad and iPhone                     | 03-18 to early May          | April to June            |        |
-| Phase 4 Ask                            | about 05-26 to 06-16        | July                     |        |
-| Phase 5 Act                            | about 06-26 to 07-16        | August to September      |        |
-| Phase 6 Zoom out                       | August to early September   | autumn 2027              |        |
+| Stage                           | Base                        | Slow (0.6× from January) | Actual |
+| ------------------------------- | --------------------------- | ------------------------ | ------ |
+| Phase 1 See                     | ~2026-11-20; was 2026-11-03 | same                     |        |
+| Usage period: R1, design, spec  | 11-03 to 11-17              | same                     |        |
+| Phase 2 Plan, Timer (Mac) last  | 11-17 to 12-22              | same                     |        |
+| Hub (in phase 2's usage period) | 12-22 to 12-29              | same                     |        |
+| Library L1 and L2 (after Hub)   | 12-29 to 2027-01-02         | same                     |        |
+| Phase 3 Board                   | 2027-01-16 to 01-29         | January to February      |        |
+| Write                           | 02-12 to 03-04              | March                    |        |
+| 3b iPad and iPhone              | 03-18 to early May          | April to June            |        |
+| Phase 4 Ask                     | about 05-26 to 06-16        | July                     |        |
+| Phase 5 Act                     | about 06-26 to 07-16        | August to September      |        |
+| Phase 6 Zoom out                | August to early September   | autumn 2027              |        |

@@ -1,6 +1,6 @@
 ---
 title: "0001 — Own domain model with ports and adapters"
-status: proposed
+status: accepted
 date: 2026-09-30
 deciders: Ruslan Mozhaev
 consulted: Claude

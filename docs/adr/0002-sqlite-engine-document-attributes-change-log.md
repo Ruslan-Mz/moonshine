@@ -1,6 +1,6 @@
 ---
 title: "0002 — SQLite (GRDB) as the engine, document-style attributes, append-only change log"
-status: proposed
+status: accepted
 date: 2026-09-30
 deciders: Ruslan Mozhaev
 consulted: Claude

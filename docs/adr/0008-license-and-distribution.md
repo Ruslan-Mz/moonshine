@@ -1,6 +1,6 @@
 ---
 title: "0008 — License and distribution: AGPL-3.0 with sole copyright; direct distribution now, App Store later"
-status: proposed
+status: accepted
 date: 2026-09-30
 deciders: Ruslan Mozhaev
 consulted: Claude
