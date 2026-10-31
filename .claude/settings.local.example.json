@@ -19,8 +19,6 @@
       "Edit(**/.git/config)",
       "Edit(**/.git/hooks/**)",
       "Edit(**/.git/commondir)",
-      "Edit(**/.git/worktrees/*/commondir)",
-      "Edit(**/.git/worktrees/*/gitdir)",
       "Edit(./.claude/hooks/**)",
       "Edit(./.claude/settings.json)",
       "Bash(git *fetch*--prune*)",
@@ -149,8 +147,6 @@
         "Edit(//Users/<you>/<repo>/.git/config)",
         "Edit(//Users/<you>/<repo>/.git/hooks/**)",
         "Edit(//Users/<you>/<repo>/.git/commondir)",
-        "Edit(//Users/<you>/<repo>/.git/worktrees/*/commondir)",
-        "Edit(//Users/<you>/<repo>/.git/worktrees/*/gitdir)",
         "Edit(./.git)"
       ]
     },
@@ -162,8 +158,6 @@
           "<main-checkout>/.git/config",
           "<main-checkout>/.git/hooks",
           "<main-checkout>/.git/commondir",
-          "<main-checkout>/.git/worktrees/*/commondir",
-          "<main-checkout>/.git/worktrees/*/gitdir",
           "./.git"
         ]
       }

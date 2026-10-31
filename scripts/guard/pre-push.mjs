@@ -1,5 +1,5 @@
 // Pre-push guard (CLAUDE.md rule 5 and "Asking the owner"). Git runs the installed copy (scripts/
-// install-guard.sh) with the remote name and URL as arguments and one line per pushed ref on stdin.
+// install-guard.sh, from main) with the remote name and URL as arguments and one line per pushed ref on stdin.
 // Tests: node --test scripts/pre-push.test.mjs
 //
 // It blocks a push that updates more than one ref, targets anything outside refs/heads/, targets
@@ -61,8 +61,7 @@ function warnIfStale() {
   if (differs) {
     process.stderr.write(
       "pre-push: warning: the installed guard differs from this checkout's scripts/guard. " +
-        "Reinstall only after the change is merged, from a checkout whose scripts/guard matches origin's main " +
-        "(scripts/install-guard.sh refuses any other).\n",
+        "Reinstall after the change is merged (CLAUDE.md → Commands → Guard); the installer always installs main's guard.\n",
     );
   }
 }
@@ -73,7 +72,8 @@ function isAncestor(older, newer) {
 }
 
 /// The commits the push URL's repository reports (git ls-remote) that exist here: only these count
-/// as already on the remote. A local refs/remotes/* ref never does.
+/// as already on the remote. A local refs/remotes/* ref never does. `missing` counts the reported
+/// ids this checkout lacks (the remote moved after the last fetch).
 function remoteCommits(url) {
   if (typeof url !== "string" || url === "" || url.startsWith("-")) block("git passed the hook no push URL.");
   const ids = new Set(
@@ -82,12 +82,15 @@ function remoteCommits(url) {
       .map((line) => line.split("\t")[0])
       .filter((id) => /^[0-9a-f]{40,64}$/.test(id)),
   );
-  if (ids.size === 0) return [];
-  return git(["cat-file", "--batch-check=%(objectname) %(objecttype)"], { input: [...ids].join("\n") + "\n" })
+  if (ids.size === 0) return { present: [], missing: 0 };
+  const objects = git(["cat-file", "--batch-check=%(objectname) %(objecttype)"], { input: [...ids].join("\n") + "\n" })
     .split("\n")
-    .map((line) => line.split(" "))
-    .filter(([, type]) => type === "commit")
-    .map(([id]) => id);
+    .filter((line) => line !== "")
+    .map((line) => line.split(" "));
+  return {
+    present: objects.filter(([, type]) => type === "commit").map(([id]) => id),
+    missing: objects.filter(([, type]) => type === "missing").length,
+  };
 }
 
 /// The commits this push sends: reachable from the pushed commit, not from a commit on the remote.
@@ -120,7 +123,7 @@ function binaryAllowlist() {
   try {
     text = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "binary-allowlist.txt"), "utf8");
   } catch {
-    block("No binary-allowlist.txt next to the installed guard; run scripts/install-guard.sh.");
+    block("No binary-allowlist.txt next to the installed guard; reinstall the guard (CLAUDE.md → Commands → Guard).");
   }
   return new Set(text.split(/\r?\n/).filter((line) => line !== "" && !line.startsWith("#")));
 }
@@ -194,10 +197,10 @@ for (const [localRef, , remoteRef] of refs) {
     if (kind) findings.push(`${label}: ${kind}`);
   }
 }
-const onRemote = refs.length > 0 ? remoteCommits(process.argv[3]) : [];
+const onRemote = refs.length > 0 ? remoteCommits(process.argv[3]) : { present: [], missing: 0 };
 const seen = new Set();
 for (const [, localSha] of refs) {
-  for (const sha of commits(localSha, onRemote)) {
+  for (const sha of commits(localSha, onRemote.present)) {
     if (seen.has(sha)) continue;
     seen.add(sha);
     scan(sha, entries, allowed, findings);
@@ -207,5 +210,9 @@ for (const [, localSha] of refs) {
 if (findings.length > 0) {
   const shown = findings.slice(0, reportLimit).map((finding) => `  ${finding}`);
   const more = findings.length > reportLimit ? [`  … and ${findings.length - reportLimit} more`] : [];
-  block(`${findings.length} match(es); remove them and push again:\n${[...shown, ...more].join("\n")}`);
+  const hint =
+    onRemote.missing > 0
+      ? "\nThe remote has commits this checkout lacks, so these may be on it already: run git fetch origin, then push again."
+      : "";
+  block(`${findings.length} match(es); remove them and push again:\n${[...shown, ...more].join("\n")}${hint}`);
 }

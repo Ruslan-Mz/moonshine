@@ -1,11 +1,17 @@
 // Tests for scripts/install-guard.sh on throwaway repositories: node --test scripts/install-guard.test.mjs
-// Each test runs the repository's own copy of the installer into a temporary HOME
-// (scripts/guard-fixture.mjs).
+// Each test runs the installer under test from outside the throwaway repository, as origin's main copy
+// runs, into a temporary HOME (scripts/guard-fixture.mjs).
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { test } from "node:test";
-import { commit, denyListFile, git, install, installed, ok, repository, slug } from "./guard-fixture.mjs";
+import { fileURLToPath } from "node:url";
+import { commit, denyListFile, environment, git, install, installed, ok, repository, slug } from "./guard-fixture.mjs";
+
+const repo = join(dirname(fileURLToPath(import.meta.url)), "..");
+const github = "https://github.com/Ruslan-Mz/moonshine.git";
+const guardFiles = ["binary-allowlist.txt", "gh-post.mjs", "matcher.mjs", "pre-push.mjs"];
 
 function setUp() {
   const work = repository();
@@ -87,28 +93,62 @@ test("a missing deny-list file is refused", () => {
   refused(work, install(work, [join(work.root, "none.txt")]), "not a readable file");
 });
 
-test("an uncommitted change in scripts/guard is refused", () => {
+/// The guard files as the fixture's main holds them.
+function mainGuard(work) {
+  return Object.fromEntries(guardFiles.map((name) => [name, ok(work, "show", `main:scripts/guard/${name}`)]));
+}
+
+function installedGuard(work) {
+  return Object.fromEntries(guardFiles.map((name) => [name, readFileSync(installed(work, "guard", name), "utf8")]));
+}
+
+/// The install command CLAUDE.md documents, with the fixture's bare repository for the GitHub one.
+function documented(work) {
+  const line = /`(git fetch origin && m=[^`]+)`/.exec(readFileSync(join(repo, "CLAUDE.md"), "utf8"))?.[1];
+  assert.ok(line?.includes(github), "CLAUDE.md documents the install command");
+  writeFileSync(join(work.cwd, "deny-list.txt"), "zephyrine\n");
+  return spawnSync("bash", ["-c", line.replaceAll(github, work.remote)], {
+    cwd: work.cwd,
+    env: environment(work.home, { MOONSHINE_ORIGIN_URL: work.remote, ...work.env }),
+    encoding: "utf8",
+  });
+}
+
+test("the documented command installs main's guard, whatever the checkout's guard and installer hold", () => {
   const work = setUp();
+  const expected = mainGuard(work);
+  ok(work, "switch", "-q", "-c", "edited");
+  commit(work, "scripts/guard/pre-push.mjs", "// replaced\n", "edit the guard");
+  commit(work, "scripts/install-guard.sh", `touch '${join(work.root, "ran")}'\n`, "edit the installer");
   appendFileSync(join(work.cwd, "scripts", "guard", "matcher.mjs"), "\n// edited\n");
-  refused(work, install(work, [work.denyList]), "differs from origin's main");
-});
-
-test("a committed change in scripts/guard that is not on origin's main is refused", () => {
-  const work = setUp();
-  commit(work, "scripts/guard/matcher.mjs", "// replaced\n", "edit the guard");
-  refused(work, install(work, [work.denyList]), "differs from origin's main");
-});
-
-test("a change to the installer itself is refused", () => {
-  const work = setUp();
-  commit(work, "scripts/install-guard.sh", `${readFileSync(join(work.cwd, "scripts", "install-guard.sh"), "utf8")}\n# edited\n`, "edit");
-  refused(work, install(work, [work.denyList]), "differs from origin's main");
-});
-
-test("an untracked file in scripts/guard is refused", () => {
-  const work = setUp();
   writeFileSync(join(work.cwd, "scripts", "guard", "extra.mjs"), "// extra\n");
-  refused(work, install(work, [work.denyList]), "not on origin's main");
+  const result = documented(work);
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(installedGuard(work), expected);
+  assert.ok(!existsSync(join(work.root, "ran")), "the checkout's installer must not run");
+  assert.ok(!existsSync(installed(work, "guard", "extra.mjs")));
+});
+
+for (const flag of ["--skip-worktree", "--assume-unchanged"]) {
+  test(`a guard file edited under ${flag} is installed as main holds it`, () => {
+    const work = setUp();
+    const expected = mainGuard(work);
+    ok(work, "update-index", flag, "scripts/guard/matcher.mjs");
+    appendFileSync(join(work.cwd, "scripts", "guard", "matcher.mjs"), "\n// hidden edit\n");
+    assert.equal(ok(work, "status", "--porcelain"), "", "the edit is hidden from git status");
+    const result = install(work, [work.denyList]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(installedGuard(work), expected);
+  });
+}
+
+test("a moved local origin/main does not stand in for the remote's", () => {
+  const work = setUp();
+  const expected = mainGuard(work);
+  commit(work, "scripts/guard/matcher.mjs", "// replaced\n", "edit the guard");
+  ok(work, "update-ref", "refs/remotes/origin/main", "HEAD");
+  assert.equal(install(work, [work.denyList]).status, 0);
+  assert.equal(installedGuard(work)["matcher.mjs"], expected["matcher.mjs"]);
 });
 
 test("a stale local origin/main is refused: the remote's main is not here yet", () => {
@@ -120,23 +160,35 @@ test("a stale local origin/main is refused: the remote's main is not here yet", 
   refused(work, install(work, [work.denyList]), "git fetch origin");
 });
 
-test("a moved local origin/main does not stand in for the remote's", () => {
-  const work = setUp();
-  commit(work, "scripts/guard/matcher.mjs", "// replaced\n", "edit the guard");
-  ok(work, "update-ref", "refs/remotes/origin/main", "HEAD");
-  refused(work, install(work, [work.denyList]), "differs from origin's main");
-});
-
 test("a remote without main is refused", () => {
   const work = setUp();
   ok({ ...work, cwd: work.remote }, "update-ref", "-d", "refs/heads/main");
   refused(work, install(work, [work.denyList]), "origin has no main");
 });
 
-test("running the installer from another repository is refused", () => {
+test("a checkout whose origin is another repository is refused", () => {
+  const work = setUp();
+  const other = join(work.root, "other.git");
+  ok({ ...work, cwd: work.root }, "clone", "-q", "--bare", work.remote, other);
+  ok(work, "remote", "set-url", "origin", other);
+  refused(work, install(work, [work.denyList]), "origin is not");
+});
+
+test("a push URL to another repository is refused", () => {
+  const work = setUp();
+  ok(work, "remote", "set-url", "--push", "origin", join(work.root, "other.git"));
+  refused(work, install(work, [work.denyList]), "origin is not");
+});
+
+test("running it outside any checkout is refused", () => {
   const work = setUp();
   const elsewhere = join(work.root, "elsewhere");
   mkdirSync(elsewhere);
-  ok({ ...work, cwd: elsewhere }, "init", "-q");
-  refused(work, install(work, [work.denyList], elsewhere), "the repository that holds it");
+  refused(work, install(work, [work.denyList], elsewhere), "inside a checkout of this repository");
+});
+
+test("running it from a subfolder of the checkout installs", () => {
+  const work = setUp();
+  assert.equal(install(work, [work.denyList], join(work.cwd, "scripts")).status, 0);
+  assert.equal(ok(work, "config", "--get", "core.hooksPath").trim(), installed(work, "hooks"));
 });

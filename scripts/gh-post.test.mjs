@@ -196,6 +196,17 @@ for (const [name, content, kind] of [
   });
 }
 
+test("a body with tab, form feed and CRLF is sent", () => {
+  const context = setUp();
+  const result = context.post("comment", "27", context.file("body.md", "a\tb\r\nc\fd\r\n"));
+  assert.equal(result.status, 0, result.stderr);
+});
+
+test("a body with a vertical tab is refused", () => {
+  const context = setUp();
+  refused(context, context.post("comment", "27", context.file("body.md", "a\u000bb\n")), "The file holds binary data");
+});
+
 test("an unknown command prints usage", () => {
   const context = setUp();
   const result = context.post("merge", "27");

@@ -33,6 +33,10 @@ for (const [name, text] of [
   ["upper case", "ZEPHYRINE QUOLLTAIL"],
   ["е in the text for ё in the entry", "Мирон Елкин"],
   ["a decomposed ё", "мирон е\u0308лкин"],
+  ["a zero-width space before a combining mark", "мирон е\u200B\u0308лкин"],
+  ["a soft hyphen before a combining mark", "мирон е\u00AD\u0308лкин"],
+  ["a combining grapheme joiner before a combining mark", "мирон е\u034F\u0308лкин"],
+  ["a next line (NEL)", "Zephyrine\u0085Quolltail"],
 ]) {
   test(`an entry is found through ${name}`, () => {
     assert.equal(match(`note: ${text} here`, entries), "a deny-list entry");
@@ -41,6 +45,10 @@ for (const [name, text] of [
 
 test("ё in the text matches е in the entry", () => {
   assert.equal(match("сёлки", parseDenyList("селки\n", fail)), "a deny-list entry");
+});
+
+test("an invisible character before a combining accent does not hide a precomposed entry", () => {
+  assert.equal(match("le cafe\u200B\u0301 noir", parseDenyList("café noir\n", fail)), "a deny-list entry");
 });
 
 test("fold collapses Unicode spaces and maps ё to е", () => {

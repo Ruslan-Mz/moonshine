@@ -52,8 +52,6 @@ test("the template keeps the deny rules of H1a", () => {
     "Edit(**/.git/config)",
     "Edit(**/.git/hooks/**)",
     "Edit(**/.git/commondir)",
-    "Edit(**/.git/worktrees/*/commondir)",
-    "Edit(**/.git/worktrees/*/gitdir)",
     "Edit(./.claude/hooks/**)",
     "Edit(./.claude/settings.json)",
     "Bash(git *hooksPath*)",
@@ -104,6 +102,10 @@ test("the template keeps the rules of H1b", () => {
   ]) {
     assert.ok(!deny.has(rule), `${rule} was widened`);
   }
+  // Dropped in PR #38 round 1 (owner, 2026-10-31): git worktree add writes these (CLAUDE.md § Git).
+  for (const rule of ["Edit(**/.git/worktrees/*/commondir)", "Edit(**/.git/worktrees/*/gitdir)"]) {
+    assert.ok(!deny.has(rule), `${rule} was dropped`);
+  }
   // Live runs ask every time.
   const ask = new Set(template.permissions.ask);
   for (const rule of ["Bash(swift run*)", "Bash(*/moonshine-import)", "Bash(*/moonshine-import *)"]) {
@@ -121,8 +123,6 @@ test("the worktree-only block carries the main checkout's .git rules with placeh
     "Edit(//Users/<you>/<repo>/.git/config)",
     "Edit(//Users/<you>/<repo>/.git/hooks/**)",
     "Edit(//Users/<you>/<repo>/.git/commondir)",
-    "Edit(//Users/<you>/<repo>/.git/worktrees/*/commondir)",
-    "Edit(//Users/<you>/<repo>/.git/worktrees/*/gitdir)",
     "Edit(./.git)",
   ]);
   assert.deepEqual(block.sandbox.filesystem, {
@@ -132,8 +132,6 @@ test("the worktree-only block carries the main checkout's .git rules with placeh
       "<main-checkout>/.git/config",
       "<main-checkout>/.git/hooks",
       "<main-checkout>/.git/commondir",
-      "<main-checkout>/.git/worktrees/*/commondir",
-      "<main-checkout>/.git/worktrees/*/gitdir",
       "./.git",
     ],
   });

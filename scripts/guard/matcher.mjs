@@ -18,13 +18,19 @@ const vaultPaths = [
   /obsidian:[/][/]vault[/][^/\s]+[/]\S/,
 ];
 
-/// Entries and text alike: NFKC, lower case, no invisible characters, one kind of space, е for ё.
+const invisible = /[\p{Default_Ignorable_Code_Point}\p{Cf}]/gu;
+
+/// Entries and text alike: no invisible characters, NFKC, lower case, one kind of space, е for ё.
+/// Invisible characters go before NFKC, so one between a letter and its combining mark does not
+/// stop the composition, and again after it, in case NFKC produces one (no code point outside the
+/// class maps into it in Node's current Unicode tables; the second pass covers later tables).
 export function fold(text) {
   return text
+    .replace(invisible, "")
     .normalize("NFKC")
+    .replace(invisible, "")
     .toLowerCase()
-    .replace(/[\p{Default_Ignorable_Code_Point}\p{Cf}]/gu, "")
-    .replace(/\s+/gu, " ")
+    .replace(/\p{White_Space}+/gu, " ")
     .replace(/ё/g, "е");
 }
 
@@ -40,13 +46,13 @@ export function config(stop) {
   try {
     value = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "config.json"), "utf8"));
   } catch {
-    stop("No readable config.json next to the guard; run scripts/install-guard.sh.");
+    stop("No readable config.json next to the guard; reinstall the guard (CLAUDE.md → Commands → Guard).");
   }
   const absolute = (path) => typeof path === "string" && isAbsolute(path);
-  if (!absolute(value?.denyList)) stop("config.json names no absolute deny-list path; run scripts/install-guard.sh.");
+  if (!absolute(value?.denyList)) stop("config.json names no absolute deny-list path; reinstall the guard (CLAUDE.md → Commands → Guard).");
   const roots = value.scratchRoots;
   if (!Array.isArray(roots) || roots.length === 0 || !roots.every(absolute)) {
-    stop("config.json names no absolute scratchpad roots; run scripts/install-guard.sh.");
+    stop("config.json names no absolute scratchpad roots; reinstall the guard (CLAUDE.md → Commands → Guard).");
   }
   return value;
 }

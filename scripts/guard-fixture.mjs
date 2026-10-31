@@ -1,7 +1,7 @@
 // Throwaway repositories for the guard tests (pre-push, gh-post, install-guard). Each has a bare
-// `origin` whose `main` holds copies of scripts/guard/ and scripts/install-guard.sh, so the
-// installer's check against origin's main passes. git reads no global or system config. Every
-// deny-list entry in the tests is invented.
+// `origin` whose `main` holds copies of scripts/guard/ and scripts/install-guard.sh, which the
+// installer installs from. git reads no global or system config. Every deny-list entry in the tests
+// is invented.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { cpSync, mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
@@ -24,6 +24,7 @@ export function environment(home, extra = {}) {
   // Either would send the install outside the temporary HOME.
   if (!("MOONSHINE_GUARD_DIR" in extra)) delete env.MOONSHINE_GUARD_DIR;
   if (!("MOONSHINE_SCRATCH_BASE" in extra)) delete env.MOONSHINE_SCRATCH_BASE;
+  if (!("MOONSHINE_ORIGIN_URL" in extra)) delete env.MOONSHINE_ORIGIN_URL;
   return env;
 }
 
@@ -75,11 +76,13 @@ export function denyListFile(work, text) {
   return path;
 }
 
-/// Runs the repository's own copy of the installer, from `cwd` (the repository by default).
+/// Runs the installer under test (the one the fixture's main holds a copy of) from `cwd`, the
+/// repository by default, as main's installer runs: from outside the checkout. The fixture's bare
+/// repository stands in for the GitHub one.
 export function install(work, args, cwd = work.cwd) {
-  return spawnSync("/bin/sh", [join(work.cwd, "scripts", "install-guard.sh"), ...args], {
+  return spawnSync("/bin/sh", [join(scripts, "install-guard.sh"), ...args], {
     cwd,
-    env: environment(work.home, work.env),
+    env: environment(work.home, { MOONSHINE_ORIGIN_URL: work.remote, ...work.env }),
     encoding: "utf8",
   });
 }

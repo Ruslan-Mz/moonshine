@@ -226,7 +226,7 @@ test("an installed guard that differs from the checkout's warns but does not blo
   commit(work, "b.md", "clean\n", "clean");
   const stale = push(work);
   passes(stale);
-  assert.match(stale.stderr, /installed guard differs .* after the change is merged, from a checkout whose scripts\/guard matches origin's main/);
+  assert.match(stale.stderr, /installed guard differs .* after the change is merged .*installs main's guard/);
 });
 
 test("a config.json without the deny-list path blocks", () => {
@@ -271,6 +271,23 @@ for (const [name, content, kind] of [
     const work = setUp();
     commit(work, "a.bin", content, "binary");
     blocked(push(work), `"a.bin": ${kind}`);
+  });
+}
+
+test("tab, form feed and CRLF pass the binary check", () => {
+  const work = setUp();
+  commit(work, "a.txt", "one\ttwo\r\nthree\fpage\r\n", "text");
+  passes(push(work));
+});
+
+for (const [name, content] of [
+  ["a vertical tab", "one\u000btwo\n"],
+  ["an escape", "one\u001b[1mtwo\n"],
+]) {
+  test(`${name} counts as binary data`, () => {
+    const work = setUp();
+    commit(work, "a.txt", content, "control");
+    blocked(push(work), '"a.txt": binary data');
   });
 }
 
@@ -322,4 +339,28 @@ test("commits on the fetch URL do not count for another push URL", () => {
   ok(work, "config", "remote.origin.pushurl", other);
   commit(work, "b.md", "clean\n", "new");
   blocked(push(work), '"a.md":1');
+});
+
+test("a remote main that moved after the fetch adds the fetch hint to a block", () => {
+  const work = setUp();
+  ok(work, "switch", "-q", "main");
+  commit(work, "a.md", `${secret}\n`, "old, already public");
+  ok(work, "push", "-q", "--no-verify", "origin", "main");
+  ok(work, "fetch", "-q", "origin");
+  ok(work, "switch", "-q", "-c", "fresh");
+  commit(work, "b.md", "clean\n", "new");
+  const other = { ...work, cwd: join(work.root, "other") };
+  ok({ ...work, cwd: work.root }, "clone", "-q", work.remote, other.cwd);
+  commit(other, "c.md", "later\n", "merged elsewhere");
+  ok(other, "push", "-q", "origin", "main");
+  const moved = push(work, "fresh");
+  blocked(moved, '"a.md":1', "run git fetch origin, then push again");
+  ok(work, "fetch", "-q", "origin");
+  passes(push(work, "fresh"));
+});
+
+test("a block with nothing missing locally has no fetch hint", () => {
+  const work = setUp();
+  commit(work, "a.md", `${secret}\n`, "add");
+  assert.doesNotMatch(push(work).stderr, /git fetch origin/);
 });

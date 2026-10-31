@@ -1,16 +1,17 @@
 #!/bin/sh
-# Installs the push and post guard outside the checkout (CLAUDE.md → Commands). The owner runs it from
-# the repository root, once per clone, after every merged change to scripts/guard/ and after creating
-# a worktree:
-#   scripts/install-guard.sh <absolute path of the deny-list>
-# It refuses, before writing anything, unless scripts/guard/ and this script are exactly as on
-# origin's main (asked with git ls-remote, not read from the local origin/main) and that commit is
-# here. Then it builds the guard folder (scripts/guard/ and a config.json naming the deny-list and
-# the scratchpad root of every worktree) under a temporary name and swaps it in, writes the git hook
-# and the gh-post command that run it, and points core.hooksPath (this repository only) at the
-# absolute hook folder last, so a checkout without the guard, or with an edited one, cannot change
-# what runs. MOONSHINE_GUARD_DIR and MOONSHINE_SCRATCH_BASE override the two locations (tests use
-# them).
+# Installs the push and post guard outside the checkout (CLAUDE.md → Commands → Guard). The owner
+# runs origin's main copy of this script, never the working tree's, as a stream from any checkout of
+# this repository, once per clone, after every merged change to scripts/guard/ and after creating a
+# worktree (the exact command is in CLAUDE.md). It finds the repository from the current folder,
+# refuses unless origin is this GitHub repository, asks origin for main's commit with git ls-remote
+# (never trusting the local origin/main) and requires that commit here. It installs the guard's
+# files from that commit, never from the working tree, so neither an edit nor an index flag
+# (--skip-worktree, --assume-unchanged) in the checkout reaches the installed copy. Then it builds
+# the guard folder (and a config.json naming the deny-list and the scratchpad root of every
+# worktree) under a temporary name and swaps it in, writes the git hook and the gh-post command that
+# run it, and points core.hooksPath (this repository only) at the absolute hook folder last.
+# MOONSHINE_GUARD_DIR, MOONSHINE_SCRATCH_BASE and MOONSHINE_ORIGIN_URL override the two locations
+# and the expected origin (tests use them).
 set -eu
 
 fail() {
@@ -18,10 +19,11 @@ fail() {
   exit 1
 }
 
-[ $# -eq 1 ] || fail "usage: scripts/install-guard.sh <absolute path of the deny-list>"
+[ $# -eq 1 ] || fail "usage: run origin's main copy of the installer with the absolute path of the deny-list (CLAUDE.md → Commands → Guard)."
 deny_list=$1
 dir=${MOONSHINE_GUARD_DIR:-$HOME/.config/moonshine}
 base=${MOONSHINE_SCRATCH_BASE:-/private/tmp/claude-$(id -u)}
+expected=${MOONSHINE_ORIGIN_URL:-https://github.com/Ruslan-Mz/moonshine.git}
 
 # The guard folder is written into generated scripts: refuse characters that would need quoting.
 for path in "$dir" "$base" "$deny_list"; do
@@ -35,25 +37,24 @@ for path in "$dir" "$base" "$deny_list"; do
 done
 [ -f "$deny_list" ] && [ -r "$deny_list" ] || fail "the deny-list is not a readable file."
 
-scripts_dir=$(cd "$(dirname "$0")" && pwd)
-top=$(git rev-parse --show-toplevel)
-[ "$(cd "$scripts_dir" && git rev-parse --show-toplevel)" = "$top" ] ||
-  fail "run it from the repository that holds it."
+top=$(git rev-parse --show-toplevel 2> /dev/null) || fail "run it inside a checkout of this repository."
 cd "$top"
+# The URLs git really uses (insteadOf applied), for fetching and for pushing.
+[ "$(git remote get-url origin 2> /dev/null)" = "$expected" ] &&
+  [ "$(git remote get-url --push origin 2> /dev/null)" = "$expected" ] ||
+  fail "origin is not $expected; run it inside a checkout of this repository."
 
 heads=$(git ls-remote origin refs/heads/main) || fail "origin cannot be reached."
 main=$(printf '%s\n' "$heads" | awk -F '\t' '$2 == "refs/heads/main" { print $1 }')
 [ -n "$main" ] || fail "origin has no main."
 git cat-file -e "$main^{commit}" 2> /dev/null || fail "origin's main is not here yet; run git fetch origin first."
-git diff --quiet "$main" -- scripts/guard scripts/install-guard.sh ||
-  fail "scripts/guard or the installer differs from origin's main; install from a checkout that matches it."
-[ -z "$(git ls-files --others -- scripts/guard)" ] || fail "scripts/guard holds files that are not on origin's main."
 
 mkdir -p "$dir/hooks" "$dir/bin"
 stage=$(mktemp -d "$dir/guard.new.XXXXXX")
 trap 'rm -rf "$stage" "$stage.old"' EXIT
 for file in matcher.mjs pre-push.mjs gh-post.mjs binary-allowlist.txt; do
-  cp "scripts/guard/$file" "$stage/$file"
+  git cat-file blob "$main:scripts/guard/$file" > "$stage/$file" ||
+    fail "origin's main has no scripts/guard/$file; the old guard is unchanged."
 done
 chmod 755 "$stage"
 
