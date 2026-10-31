@@ -14,6 +14,8 @@ It is also a worked example of **shipping through coding agents and measuring th
 
 More in [`docs/VISION.md`](docs/VISION.md) and [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
+![Today in Demo mode](docs/assets/today.png)
+
 ## Status
 
 Phase 1, **See**: a read-only macOS app. Today runs in Demo mode on invented data; the live OmniFocus and Obsidian import comes next. Nothing is ever written to OmniFocus, the vault or the calendar in this phase.
