@@ -7,15 +7,15 @@
 //   gh-post pr-create <title> <file>       a PR from the current branch into main
 //   gh-post pr-edit <pr> <file> [<title>]  a new PR body (and title)
 //
-// The file must resolve (after symlinks) to a file inside a session scratchpad of this project. Its
-// text, the title and the branch name are scanned with the deny-list and vault-path matcher; a match
-// refuses the post and prints kinds and line numbers only. gh gets the bytes that were scanned, on
-// stdin, so the file cannot change in between.
+// The file must resolve (after symlinks) to a file inside a session scratchpad of this repository:
+// of its main checkout or of a worktree the installer listed. It must be UTF-8 text (no binary
+// data). Its text, the title and the branch name are scanned with the deny-list and vault-path
+// matcher; a match refuses the post and prints kinds and line numbers only. gh gets the bytes that
+// were scanned, on stdin, so the file cannot change in between.
 import { spawnSync } from "node:child_process";
 import { closeSync, constants, fstatSync, openSync, readFileSync, realpathSync } from "node:fs";
-import { dirname, join, relative, sep } from "node:path";
-import { fileURLToPath } from "node:url";
-import { denyList, match } from "./matcher.mjs";
+import { relative, sep } from "node:path";
+import { config, denyList, match, unreadable } from "./matcher.mjs";
 
 const maxBytes = 1 << 20;
 const maxTitle = 256;
@@ -44,23 +44,19 @@ function checkTitle(title) {
   return title;
 }
 
-/// The scratchpad root this copy was installed for: /private/tmp/claude-<uid>/<project slug>.
-function scratchRoot() {
-  let config;
-  try {
-    config = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "config.json"), "utf8"));
-  } catch {
-    refuse("No config.json next to gh-post; run scripts/install-guard.sh.");
-  }
-  if (typeof config?.scratchRoot !== "string" || config.scratchRoot === "") refuse("config.json names no scratchRoot.");
-  try {
-    return realpathSync(config.scratchRoot);
-  } catch {
-    refuse("The scratchpad root in config.json does not exist.");
-  }
+/// The scratchpad roots this copy was installed for, one per worktree
+/// (/private/tmp/claude-<uid>/<project slug>), that exist.
+function scratchRoots() {
+  return config(refuse).scratchRoots.flatMap((root) => {
+    try {
+      return [realpathSync(root)];
+    } catch {
+      return []; // no session has run in that worktree yet
+    }
+  });
 }
 
-/// The file's text, if it lies in <root>/<session>/scratchpad/.
+/// The file's text, if it lies in <root>/<session>/scratchpad/ of one of the roots.
 function scratchpadText(file) {
   if (typeof file !== "string" || file === "") usage();
   let real;
@@ -69,10 +65,11 @@ function scratchpadText(file) {
   } catch {
     refuse("The file does not exist.");
   }
-  const parts = relative(scratchRoot(), real).split(sep);
-  if (parts[0] === ".." || parts.length < 3 || parts[0] === "" || parts[1] !== "scratchpad") {
-    refuse("The file is not inside a session scratchpad of this project.");
-  }
+  const inside = scratchRoots().some((root) => {
+    const parts = relative(root, real).split(sep);
+    return parts[0] !== ".." && parts.length >= 3 && parts[0] !== "" && parts[1] === "scratchpad";
+  });
+  if (!inside) refuse("The file is not inside a session scratchpad of this project.");
   // Read through one descriptor, opened without following a link: a hard link has no path of its
   // own to check, so a file with more than one link is refused.
   let fd;
@@ -86,7 +83,10 @@ function scratchpadText(file) {
     if (!info.isFile()) refuse("The path is not a regular file.");
     if (info.nlink !== 1) refuse("The file has more than one hard link.");
     if (info.size > maxBytes) refuse("The file is larger than 1 MB.");
-    return readFileSync(fd, "utf8");
+    const bytes = readFileSync(fd);
+    const why = unreadable(bytes);
+    if (why) refuse(`The file holds ${why}.`);
+    return bytes.toString("utf8");
   } finally {
     closeSync(fd);
   }

@@ -1,5 +1,5 @@
-// The read-boundary hook fails closed, and the permission rules H1a added stay in the template
-// (CLAUDE.md → Commands; H1a, 2026-10-29). Run: node --test scripts/hook-command.test.mjs
+// The read-boundary hook fails closed, and the permission rules H1a and H1b added stay in the
+// template (CLAUDE.md → Commands; H1a, 2026-10-29; H1b, 2026-10-30). Run: node --test scripts/hook-command.test.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -52,8 +52,6 @@ test("the template keeps the deny rules of H1a", () => {
     "Edit(**/.git/config)",
     "Edit(**/.git/hooks/**)",
     "Edit(**/.git/commondir)",
-    "Edit(**/.git/worktrees/*/commondir)",
-    "Edit(**/.git/worktrees/*/gitdir)",
     "Edit(./.claude/hooks/**)",
     "Edit(./.claude/settings.json)",
     "Bash(git *hooksPath*)",
@@ -68,8 +66,8 @@ test("the template keeps the deny rules of H1a", () => {
     "Bash(*GIT_WORK_TREE*)",
     "Bash(git *--git-dir*)",
     "Bash(git *--work-tree*)",
-    "Bash(git *moonshine.denyList*)",
-    "Bash(git *moonshine.denylist*)",
+    "Bash(git *denyList*)",
+    "Bash(git *denylist*)",
     "Bash(git push *'*)",
     'Bash(git push *"*)',
     "Bash(git push *\\*)",
@@ -83,14 +81,48 @@ test("the template keeps the deny rules of H1a", () => {
   }
 });
 
+test("the template keeps the rules of H1b", () => {
+  const deny = new Set(template.permissions.deny);
+  for (const rule of [
+    "Bash(git tag -d*)",
+    "Bash(git update-ref -d refs/heads/*)",
+    "Bash(git update-ref -d refs/tags/*)",
+    "Bash(git update-ref -d refs/remotes/origin/*)",
+    "Bash(gh api graphql*)",
+    "Bash(git branch -D*)",
+  ]) {
+    assert.ok(deny.has(rule), rule);
+  }
+  // Widened in H1b: the narrower spellings are gone.
+  for (const rule of [
+    "Bash(git *moonshine.denyList*)",
+    "Bash(git *moonshine.denylist*)",
+    "Bash(gh api graphql *)",
+    "Bash(git branch -D *)",
+  ]) {
+    assert.ok(!deny.has(rule), `${rule} was widened`);
+  }
+  // Dropped in PR #38 round 1 (owner, 2026-10-31): git worktree add writes these (CLAUDE.md § Git).
+  for (const rule of ["Edit(**/.git/worktrees/*/commondir)", "Edit(**/.git/worktrees/*/gitdir)"]) {
+    assert.ok(!deny.has(rule), `${rule} was dropped`);
+  }
+  // Live runs ask every time.
+  const ask = new Set(template.permissions.ask);
+  for (const rule of ["Bash(swift run*)", "Bash(*/moonshine-import)", "Bash(*/moonshine-import *)"]) {
+    assert.ok(ask.has(rule), rule);
+  }
+  // The sandbox denies ~/.npm: npm caches inside the checkout, in a git-ignored folder.
+  assert.equal(template.env.npm_config_cache, "/Users/<you>/<repo>/.npm-cache");
+  const ignored = readFileSync(join(repository, ".gitignore"), "utf8").split("\n");
+  assert.ok(ignored.includes(".npm-cache/"));
+});
+
 test("the worktree-only block carries the main checkout's .git rules with placeholders only", () => {
   const block = template._worktreeOnly;
   assert.deepEqual(block.permissions.deny, [
     "Edit(//Users/<you>/<repo>/.git/config)",
     "Edit(//Users/<you>/<repo>/.git/hooks/**)",
     "Edit(//Users/<you>/<repo>/.git/commondir)",
-    "Edit(//Users/<you>/<repo>/.git/worktrees/*/commondir)",
-    "Edit(//Users/<you>/<repo>/.git/worktrees/*/gitdir)",
     "Edit(./.git)",
   ]);
   assert.deepEqual(block.sandbox.filesystem, {
@@ -100,8 +132,6 @@ test("the worktree-only block carries the main checkout's .git rules with placeh
       "<main-checkout>/.git/config",
       "<main-checkout>/.git/hooks",
       "<main-checkout>/.git/commondir",
-      "<main-checkout>/.git/worktrees/*/commondir",
-      "<main-checkout>/.git/worktrees/*/gitdir",
       "./.git",
     ],
   });

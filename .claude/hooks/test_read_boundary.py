@@ -14,6 +14,9 @@ PROJECT = os.path.join(os.path.expanduser("~/.claude/projects"), SLUG)
 SESSION = "11111111-2222-3333-4444-555555555555"
 OTHER = "99999999-8888-7777-6666-555555555555"
 TMP_SESSION = f"/private/tmp/claude-{os.getuid()}/{SLUG}/{SESSION}"
+# A Linux session's scratchpad root (a cloud session). On macOS /tmp is a link to /private/tmp.
+LINUX_TMP = f"/tmp/claude-{os.getuid()}/{SLUG}"
+LINUX_TMP_SESSION = f"{LINUX_TMP}/{SESSION}"
 
 
 class ReadBoundaryTests(unittest.TestCase):
@@ -96,6 +99,36 @@ class ReadBoundaryTests(unittest.TestCase):
         finally:
             os.unlink(os.path.join(scratch, "link"))
             os.rmdir(scratch)
+
+    # The Linux temp root: the same shape and the same rule as the macOS one
+
+    def test_the_linux_temp_root_of_this_session(self):
+        self.assertAllowed(self.call("Read", file_path=os.path.join(LINUX_TMP_SESSION, "scratchpad", "a.txt")))
+        self.assertAllowed(self.call("Glob", pattern="*.md", path=os.path.join(LINUX_TMP_SESSION, "scratchpad")))
+
+    def test_another_sessions_linux_temp_folder(self):
+        self.assertDenied(self.call("Read", file_path=os.path.join(LINUX_TMP, OTHER, "scratchpad", "a.txt")))
+        self.assertDenied(self.call("Grep", pattern="x", path=LINUX_TMP))
+        self.assertDenied(self.call("Read", file_path=f"/tmp/claude-{os.getuid()}/other/a.txt"))
+
+    def test_dot_dot_out_of_the_linux_temp_session(self):
+        escape = os.path.join(LINUX_TMP_SESSION, "..", OTHER, "scratchpad", "a.txt")
+        self.assertDenied(self.call("Read", file_path=escape))
+        self.assertDenied(self.call("Read", file_path=os.path.join(LINUX_TMP_SESSION, "scratchpad", "..", "..", "x")))
+
+    def test_a_symlink_in_the_linux_temp_session_pointing_out(self):
+        created = not os.path.exists(LINUX_TMP_SESSION)
+        os.makedirs(LINUX_TMP_SESSION, exist_ok=True)
+        scratch = tempfile.mkdtemp(dir=LINUX_TMP_SESSION, prefix="read-boundary-test-")
+        try:
+            os.symlink("/etc", os.path.join(scratch, "link"))
+            self.assertDenied(self.call("Read", file_path=os.path.join(scratch, "link", "hosts")))
+            self.assertDenied(self.call("Grep", pattern="x", path=os.path.join(scratch, "link")))
+        finally:
+            os.unlink(os.path.join(scratch, "link"))
+            os.rmdir(scratch)
+            if created:
+                os.rmdir(LINUX_TMP_SESSION)
 
     def test_grep_path_outside(self):
         self.assertDenied(self.call("Grep", pattern="x", path="~"))
