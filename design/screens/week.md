@@ -26,6 +26,8 @@ Toolbar: `Week 40`, subtitle `28 September – 4 October 2026 · ISO week`; ‹ 
 
 ## Weekly review mode (draft-2, S5, first to cut)
 
+**Cut from phase 1 (owner, 2026-10-30;** `docs/specs/phase-1-see.md`, Goal**).** Kept here as the design for a later phase.
+
 The owner's Sunday review, inside Week. Toggle `Weekly review` (toolbar, ⇧⌘R). The day grid shrinks to the top half; the bottom half becomes a checklist of facts, each with "Open":
 
 1. Quiet lines (active, ≥ 14 days) — with the suggested next step.

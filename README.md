@@ -58,7 +58,7 @@ The store is MoonShine's own: imports write to it, and every view reads from it.
 
 ## How this was built
 
-Agents write the code; the owner directs and reviews. Each slice of work is planned against a spec, critiqued by a plan-critic agent, reviewed in a separate session, and logged with its size, review findings and time.
+Agents write the code; the owner directs and reviews. Each slice of work is planned against a spec, reviewed in a separate session, and logged with its size, review findings and time. Since 2026-10-17 a plan-critic agent also critiques the plan of every risky slice and of larger plain ones ([`CLAUDE.md`](CLAUDE.md) § Plans).
 
 - [`CLAUDE.md`](CLAUDE.md): the rules the agents work by.
 - [`docs/specs/`](docs/specs/): what each phase builds.
@@ -84,7 +84,10 @@ Then open `MoonShine.xcodeproj` and run the `MoonShineMac` scheme. Demo mode wor
 
 ## Privacy
 
-The repository holds no real data. Every fixture is invented; the owner's tasks, notes and calendars never enter commits, pull requests or logs, and a pre-push hook checks every push against a private deny-list.
+- Nothing from the owner's live sources (OmniFocus, the Obsidian vault, the calendar, the local data folder) is committed.
+- The fixtures and the Demo data are invented.
+- A local pre-push guard checks commits and pull-request texts against a private deny-list; a CI guard does the same once PUB-3 lands.
+- The known, accepted exceptions are listed in the PUB row of [`docs/specs/phase-1-see.md`](docs/specs/phase-1-see.md).
 
 ## Licence and contributions
 

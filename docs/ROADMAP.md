@@ -55,7 +55,7 @@ The planning engine is the part that helps plans actually get done, and it is Mo
 
 ## Showcase checkpoints
 
-- From PUB (phase 1, `docs/specs/phase-1-see.md`): public repo, README, ADRs, method log; the Demo GIF before any application that links the repository.
+- From PUB (phase 1, `docs/specs/phase-1-see.md`): public repo, README, ADRs, method log; the Today screenshot covers applications that link the repository; the Demo GIF comes once Demo shows more than Today (owner, 2026-11-01).
 - After phase 1: Profile README, CV keywords.
 - After phase 2: forecasting engine with seeded/property tests, drift chart → applications (A.Team etc.).
 - After phase 3: blog post "Planning 15 lines of life with min/normal/max effort and Monte Carlo" (Sci-Social pillar candidate).

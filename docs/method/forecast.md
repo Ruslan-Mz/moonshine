@@ -35,16 +35,16 @@ The owner's figures, read from the method log:
 
 ## Stages
 
-| Stage                           | Base                        | Slow (0.6× from January) | Actual |
-| ------------------------------- | --------------------------- | ------------------------ | ------ |
-| Phase 1 See                     | ~2026-11-20; was 2026-11-03 | same                     |        |
-| Usage period: R1, design, spec  | 11-03 to 11-17              | same                     |        |
-| Phase 2 Plan, Timer (Mac) last  | 11-17 to 12-22              | same                     |        |
-| Hub (in phase 2's usage period) | 12-22 to 12-29              | same                     |        |
-| Library L1 and L2 (after Hub)   | 12-29 to 2027-01-02         | same                     |        |
-| Phase 3 Board                   | 2027-01-16 to 01-29         | January to February      |        |
-| Write                           | 02-12 to 03-04              | March                    |        |
-| 3b iPad and iPhone              | 03-18 to early May          | April to June            |        |
-| Phase 4 Ask                     | about 05-26 to 06-16        | July                     |        |
-| Phase 5 Act                     | about 06-26 to 07-16        | August to September      |        |
-| Phase 6 Zoom out                | August to early September   | autumn 2027              |        |
+| Stage                                      | Base                        | Slow (0.6× from January) | Actual |
+| ------------------------------------------ | --------------------------- | ------------------------ | ------ |
+| Phase 1 See                                | ~2026-11-20; was 2026-11-03 | same                     |        |
+| Usage period: R1, Month view, design, spec | 11-03 to 11-17              | same                     |        |
+| Phase 2 Plan, Timer (Mac) last             | 11-17 to 12-22              | same                     |        |
+| Hub (in phase 2's usage period)            | 12-22 to 12-29              | same                     |        |
+| Library L1 and L2 (after Hub)              | 12-29 to 2027-01-02         | same                     |        |
+| Phase 3 Board                              | 2027-01-16 to 01-29         | January to February      |        |
+| Write                                      | 02-12 to 03-04              | March                    |        |
+| 3b iPad and iPhone                         | 03-18 to early May          | April to June            |        |
+| Phase 4 Ask                                | about 05-26 to 06-16        | July                     |        |
+| Phase 5 Act                                | about 06-26 to 07-16        | August to September      |        |
+| Phase 6 Zoom out                           | August to early September   | autumn 2027              |        |
