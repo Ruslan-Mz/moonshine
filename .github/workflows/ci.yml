@@ -16,8 +16,9 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# Two jobs: macOS minutes count ×10 in a private repository, so the Swift job runs only when a
-# change can affect Swift code or its fixtures; the cheap checks run on Linux every time.
+# The cheap checks run on Linux every time; the Swift jobs (macOS, and Core on Linux, ADR-0007) run
+# only when a change can affect Swift code or its fixtures. A job skipped by its condition counts as
+# passed for a required check, so a docs-only pull request can merge. The guard in CI is guard.yml.
 jobs:
   docs:
     runs-on: ubuntu-latest
@@ -84,8 +85,8 @@ jobs:
       - name: Demo snapshot is the generator's output
         run: node --test scripts/demo-snapshot.test.mjs
 
-      - name: Push and post guard (pre-push hook, gh-post, install script)
-        run: node --test scripts/matcher.test.mjs scripts/pre-push.test.mjs scripts/gh-post.test.mjs scripts/install-guard.test.mjs
+      - name: Push and post guard (pre-push hook, gh-post, install script) and the guard in CI (scan, workflow rules)
+        run: node --test scripts/matcher.test.mjs scripts/pre-push.test.mjs scripts/gh-post.test.mjs scripts/install-guard.test.mjs scripts/guard-scan.test.mjs scripts/guard-workflow.test.mjs
 
       - name: Markdown format check
         run: |
@@ -96,6 +97,26 @@ jobs:
         run: |
           node --test scripts/check-refs.test.mjs
           node scripts/check-refs.mjs
+
+  # Core builds and tests on Linux (ADR-0007). The official Swift image, pinned by digest
+  # (swift:6.3-noble = 6.3.3, pushed 2026-10-27); Core has no package dependencies, so the container
+  # runs without a network. The image has no node, so the test count is read on the runner.
+  core-linux:
+    needs: docs
+    if: ${{ !cancelled() && needs.docs.outputs.swift == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SWIFT_IMAGE: swift:6.3-noble@sha256:1038d54c80063f5cdfabc4560990c30af64b5de8ebf28161deb22ca4ad5db866
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Core tests on Linux
+        shell: bash
+        run: |
+          docker run --rm --network none -v "$PWD:/w" -w /w "$SWIFT_IMAGE" \
+            swift test --package-path MoonShineCore 2>&1 | tee "$RUNNER_TEMP/core-linux-tests.log"
+          node scripts/require-tests.mjs "$RUNNER_TEMP/core-linux-tests.log" Core-Linux
 
   swift:
     needs: docs

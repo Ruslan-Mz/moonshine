@@ -11,7 +11,7 @@ import { commit, denyListFile, environment, git, install, installed, ok, reposit
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..");
 const github = "https://github.com/Ruslan-Mz/moonshine.git";
-const guardFiles = ["binary-allowlist.txt", "gh-post.mjs", "matcher.mjs", "pre-push.mjs"];
+const guardFiles = ["binary-allowlist.txt", "commit-scan.mjs", "gh-post.mjs", "matcher.mjs", "pre-push.mjs"];
 
 function setUp() {
   const work = repository();
@@ -33,6 +33,7 @@ test("a good install writes the guard, the config and the hook, and sets core.ho
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(readdirSync(installed(work, "guard")).sort(), [
     "binary-allowlist.txt",
+    "commit-scan.mjs",
     "config.json",
     "gh-post.mjs",
     "matcher.mjs",
@@ -102,12 +103,18 @@ function installedGuard(work) {
   return Object.fromEntries(guardFiles.map((name) => [name, readFileSync(installed(work, "guard", name), "utf8")]));
 }
 
-/// The install command CLAUDE.md documents, with the fixture's bare repository for the GitHub one.
-function documented(work) {
+/// The install command CLAUDE.md documents.
+function documentedLine() {
   const line = /`(git fetch origin && m=[^`]+)`/.exec(readFileSync(join(repo, "CLAUDE.md"), "utf8"))?.[1];
   assert.ok(line?.includes(github), "CLAUDE.md documents the install command");
+  return line;
+}
+
+/// The documented command run by `shell`, with the fixture's bare repository for the GitHub one.
+function documented(work, shell = ["bash", "-c"]) {
+  const line = documentedLine();
   writeFileSync(join(work.cwd, "deny-list.txt"), "zephyrine\n");
-  return spawnSync("bash", ["-c", line.replaceAll(github, work.remote)], {
+  return spawnSync(shell[0], [...shell.slice(1), line.replaceAll(github, work.remote)], {
     cwd: work.cwd,
     env: environment(work.home, { MOONSHINE_ORIGIN_URL: work.remote, ...work.env }),
     encoding: "utf8",
@@ -127,6 +134,22 @@ test("the documented command installs main's guard, whatever the checkout's guar
   assert.deepEqual(installedGuard(work), expected);
   assert.ok(!existsSync(join(work.root, "ran")), "the checkout's installer must not run");
   assert.ok(!existsSync(installed(work, "guard", "extra.mjs")));
+});
+
+// zsh, the owner's shell, reads `$m:s…` as a substitution modifier ("bad substitution"): the
+// variable is written `${m}` before every `:` (owner, 2026-11-01).
+test("the documented command writes ${m} before every colon", () => {
+  const line = documentedLine();
+  assert.ok(!/\$m:/.test(line), "`$m:` breaks in zsh; write `${m}:`");
+  assert.equal(line.split("${m}:").length - 1, 2);
+});
+
+test("the documented command installs main's guard in zsh", { skip: !existsSync("/bin/zsh") && "no /bin/zsh" }, () => {
+  const work = setUp();
+  const expected = mainGuard(work);
+  const result = documented(work, ["/bin/zsh", "-f", "-c"]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(installedGuard(work), expected);
 });
 
 for (const flag of ["--skip-worktree", "--assume-unchanged"]) {

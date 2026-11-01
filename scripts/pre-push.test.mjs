@@ -320,6 +320,15 @@ test("a missing installed allowlist blocks", () => {
   blocked(push(work), "binary-allowlist.txt");
 });
 
+test("an installed guard without commit-scan.mjs fails the push", () => {
+  const work = setUp();
+  rmSync(installed(work, "guard", "commit-scan.mjs"));
+  commit(work, "a.md", `note by ${secret}\n`, "match");
+  const result = push(work);
+  assert.notEqual(result.status, 0, result.stderr);
+  assert.ok(!result.stderr.toLowerCase().includes("quolltail"), result.stderr);
+});
+
 // A4: only what the remote reports counts as already there
 
 test("a local remote-tracking ref does not hide a commit", () => {
