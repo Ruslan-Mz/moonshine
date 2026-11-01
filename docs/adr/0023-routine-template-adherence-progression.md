@@ -168,7 +168,7 @@ How the states are decided:
 - **A week adherence table:** blocks by days, each day's state as a fact (`6:52 · 22 min after 6:30`, `30 of 45 min`, `not tracked`, `no data`), and the metrics against their targets.
 - **Line charts:** plan, template and fact on one axis per line and week (P2-RC, after the plans exist).
 - **Day checkpoints** (ADR-0022) gain the kind `routineBlockOpen`. It covers a flexible or protected block, or an anchor on a line, of today, whose time has not ended and which is not held yet: `🎻 Violin · 0 of 45 min · 17:00–21:00`. It is offered on a tracked day, and not while today's version is partial.
-- **The tone glossary** gains "skipped" among the English banned words with the phase-2 spec's PR (2026-11-02; «пропущено» was already banned), so `scripts/check-catalog.mjs` enforces it.
+- **The tone glossary** gains "skipped" among the English banned words with the phase-2 spec's PR (2026-11-01; «пропущено» was already banned), so `scripts/check-catalog.mjs` enforces it.
 
 ### The move to MoonShine (the migration path)
 
@@ -258,7 +258,7 @@ The import comes after the routine views and a design round for the editor, not 
 - **Not checked yet:**
   - how many blocks the owner's real routine has; the 64 KiB cap and P2-R1's caps assume a few hundred at most;
   - whether the owner's day ends after midnight often enough that 06:00 should be another hour.
-- **Questions for the owner** (`docs/specs/phase-2-plan.md`), decided as proposed (owner, 2026-11-02):
+- **Questions for the owner** (`docs/specs/phase-2-plan.md`), decided as proposed (owner, 2026-11-01):
   - 25, the frontmatter cap;
   - 26, where "away" comes from;
   - 27, when the import happens;

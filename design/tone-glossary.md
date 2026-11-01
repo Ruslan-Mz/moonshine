@@ -65,4 +65,4 @@ Exception everywhere: the "due" word is allowed only for a real external due dat
 - A floor or a day portion not reached is a distance while the day runs (`2 h 10 min to the floor` / `до пола 2 ч 10 мин`) and nothing afterwards; never "missed" / «пропущено».
 - RU: «занятие» is a rhythm session (`1 занятие`); a palette tile is «активность». «Напоминание» is ADR-0017's reminder; ADR-0016's nudges are «подсказки».
 - `Work` / «Работа» is the owner's label on lines, never a verdict: no "only", "just", "already" / «всего», «уже» next to it.
-- The routine (ADR-0023; owner, 2026-11-02): a block is held, shifted by N min, shortened to N of M min, not tracked, or no data; never "skipped" / «пропущено», which are banned above.
+- The routine (ADR-0023; owner, 2026-11-01): a block is held, shifted by N min, shortened to N of M min, not tracked, or no data; never "skipped" / «пропущено», which are banned above.

@@ -203,7 +203,7 @@ A held checkpoint that has a `deadlineDue` item sends that item alone at once, a
   - whether a custom dismiss action (`UNNotificationCategoryOptions.customDismissAction`) reports a notification cleared from Notification Center on macOS;
   - whether a time-sensitive interruption level for `deadlineDue` needs an entitlement that a free development identity can have (L1 uses the default level).
 - This ADR lands with the phase-2 spec's PR, with its row in `docs/adr/README.md` and the DC row in `docs/ROADMAP.md`.
-- Questions for the owner (`docs/specs/phase-2-plan.md`, questions 3–6), decided as proposed (owner, 2026-11-02):
+- Questions for the owner (`docs/specs/phase-2-plan.md`, questions 3–6), decided as proposed (owner, 2026-11-01):
   1. Fixed times (13:00, 16:00), or times relative to the day's start? Proposed: fixed, with a checkpoint moved to the day's start + 3 h on a late day.
   2. Which kinds count? Proposed: all six, each with its own switch; `workShare` only once the owner sets its share.
   3. What may L2 send to the model? Proposed: only the facts of the delivered notification and the line names, under the consent for cloud AI; no task notes, no entries, no calendar.

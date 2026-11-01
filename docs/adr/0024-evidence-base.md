@@ -57,7 +57,7 @@ A result that holds on average across people need not hold for one person. Group
 
 **Proposed: option 1.** The owner already curates notes in Obsidian, and the format reuses the vault reader's guards. A fixed catalogue of data rules keeps the personal check deterministic and testable. Citing a principle makes every suggestion traceable.
 
-**Revision (owner, 2026-11-02; `docs/specs/phase-2-plan.md` § Decided, Q30).** The first draft graded a principle with one label on a scale the owner kept in Settings. The owner's corpus grades evidence by design, status and level, for a named outcome; the format below takes that grading. The two levels, the agreement computed from the interval, nothing executed from the vault, citations verified only with the owner's date and the first use in phase 4 are unchanged.
+**Revision (owner, 2026-11-01; `docs/specs/phase-2-plan.md` § Decided, Q30).** The first draft graded a principle with one label on a scale the owner kept in Settings. The owner's corpus grades evidence by design, status and level, for a named outcome; the format below takes that grading. The two levels, the agreement computed from the interval, nothing executed from the vault, citations verified only with the owner's date and the first use in phase 4 are unchanged.
 
 ### A principle note
 
@@ -132,9 +132,9 @@ evidence:
 
 Each rule turns the owner's own stored data into an observational comparison. It returns an effect, n, the period and an interval (bootstrap over days or weeks), or "not enough data". A rule whose `needs` are absent says "not enough data yet" without running.
 
-These are the rules the owner's first principles name. Each is added in code by the slice whose data it needs, with tests on invented histories, never earlier:
+These are the rules the owner's first principles name. **They are built in phase 4** (owner, 2026-11-01), each in code with tests on invented histories. The last column names the earliest point a rule can be built, once its data exists; nothing from the catalogue lands inside a phase-2 slice:
 
-| Rule                                                                                         | Needs                          | Slice that can bring it                                                                      |
+| Rule                                                                                         | Needs                          | Earliest it can be built                                                                     |
 | -------------------------------------------------------------------------------------------- | ------------------------------ | -------------------------------------------------------------------------------------------- |
 | `sleep_regularity`                                                                           | Health sleep                   | after H                                                                                      |
 | `short_night_next_day`                                                                       | Health sleep, routine, entries | after H and P2-R2                                                                            |
@@ -171,7 +171,7 @@ A suggestion that cites a principle shows, in this order, never blended:
 
 - **The reader** is the `moonshine` key scanner of vault contract §6 (P1, or whichever slice brings it first), with its 8 KiB frontmatter cap: a principle is short.
 - **To the model** (owner, 2026-11-01): the whole corpus of principle notes may be sent, as part of the standing context (ADR-0013 § Standing context). The rules that still hold:
-  - the consent for cloud AI of the chosen provider is still required (ADR-0005, amendment 2026-11-02);
+  - the consent for cloud AI of the chosen provider is still required (ADR-0005, amendment 2026-11-01);
   - a note with `moonshine_ai: false` is never sent (ADR-0013, amendment 2026-10-06);
   - the owner's personal results are sent only under ADR-0013's rules for his data.
 - **Content stays outside the repository.** Fixtures and examples are invented, with placeholder DOIs (`10.0000/invented.N`).
@@ -229,10 +229,10 @@ A suggestion that cites a principle shows, in this order, never blended:
 - Background for the two levels:
   - Molenaar, "A manifesto on psychology as idiographic science: bringing the person back into scientific psychology, this time forever", _Measurement_ 2(4), 2004;
   - Fisher, Medaglia and Jeronimus, "Lack of group-to-individual generalizability is a threat to human subjects research", _PNAS_ 115(27), 2018.
-- The first draft's rules `session_spacing`, `bed_time_spread` and `switches_per_hour` became `practice_days_vs_minutes`, `sleep_regularity` and a later rule (owner, 2026-11-02).
-- Questions for the owner (`docs/specs/phase-2-plan.md`, question 30), decided on 2026-11-02:
+- The first draft's rules `session_spacing`, `bed_time_spread` and `switches_per_hour` became `practice_days_vs_minutes`, `sleep_regularity` and a later rule (owner, 2026-11-01).
+- Questions for the owner (`docs/specs/phase-2-plan.md`, question 30), decided on 2026-11-01:
   1. the grade: replaced by the evidence block, with vocabularies fixed in code;
   2. citation verification: the owner's date only;
-  3. the rule catalogue: fixed, in code, each rule brought by the slice whose data it needs;
+  3. the rule catalogue: fixed, in code, built in phase 4; the table names the earliest point each rule can be built;
   4. when principles are first read: the first phase-4 slice that uses them.
 - Open: a session kind on time entries (`docs/specs/phase-2-plan.md`, question 37), decided at TM1's planning.

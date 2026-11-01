@@ -1,6 +1,6 @@
 # Phase 2 — Plan (until ~2027-01-27)
 
-Revision 2 of 2026-11-01, decided by the owner on 2026-11-02 (§ Decided). Every example is invented (CLAUDE.md rule 5). Revision 2 takes the owner's decisions of 2026-11-01: time capture first, DC inside the phase after TM2, F6 and N1 cut for P2-R1 and P2-R2, the Health bridge H, no iPhone capture before 3b; and the new requirements: the routine template (ADR-0023) and the evidence base (ADR-0024).
+Revision 2 of 2026-11-01, decided by the owner on 2026-11-01 (§ Decided). Every example is invented (CLAUDE.md rule 5). Revision 2 takes the owner's decisions of 2026-11-01: time capture first, DC inside the phase after TM2, F6 and N1 cut for P2-R1 and P2-R2, the Health bridge H, no iPhone capture before 3b; and the new requirements: the routine template (ADR-0023) and the evidence base (ADR-0024).
 
 The slice plans drafted with this revision are not committed: each slice's plan is written and critiqued when the slice starts (CLAUDE.md § Plans), and the raw estimates below are those drafts' estimates.
 
@@ -40,7 +40,7 @@ Time reconcile (300) is a slice outside the phase, built right after it.
 | Every phase-2 slice                          | 9,671          | 14,410 | 57.6 → 58   | 2027-01-31              | 2027-02-19               |
 | After cut candidates 1–2 (P2-RC, P1: 700)    | 8,971          | 13,367 | 53.5 → 54   | **2027-01-27**          | 2027-02-12               |
 | Then TR, outside the phase                   | 300            | 447    | 1.8 → 2     | + 2 days                | + 3 days                 |
-| After the cuts, with AP2 (owner, 2026-11-02) | 9,091          | 13,546 | 54.2 → 55   | 2027-01-28              | 2027-02-13               |
+| After the cuts, with AP2 (owner, 2026-11-01) | 9,091          | 13,546 | 54.2 → 55   | 2027-01-28              | 2027-02-13               |
 
 The slow column works like this: December (12-04 to 12-31, 28 days) carries 28 × 250 = 7,000 lines, and the rest goes at 150 a day.
 
@@ -48,10 +48,10 @@ The slow column works like this: December (12-04 to 12-31, 28 days) carries 28 �
 - Full scope: (14,410 − 7,000) / 150 = 49.4 → 50 days → 02-19.
 - After the cuts, with AP2: (13,546 − 7,000) / 150 = 43.6 → 44 days → 02-13.
 
-**Timebox: until ~2027-01-27, with cut candidates 1–2 taken now** (owner, 2026-11-02; questions 1 and 2).
+**Timebox: until ~2027-01-27, with cut candidates 1–2 taken now** (owner, 2026-11-01; questions 1 and 2).
 
 - Revision 1 proposed ~01-15. The difference is real scope: the Health bridge, P2-R1, P2-R2 and P2-RV, and DC moving into the phase. F6, N1 and X6 come out. The four critic runs of revision 2 grew P2-R1, P2-R2 and H by about 220 raw lines.
-- **AP2 and LT3's configurability** (owner, 2026-11-02, § Decided) came after the arithmetic above: AP2 is about 120 raw lines, one day at the base pace; LT3's provider list, per-feature models and eval command are sized at LT3's planning. The timebox stays ~2027-01-27; the timebox review after LT4 decides whether that day comes from the cut list.
+- **AP2 and LT3's configurability** (owner, 2026-11-01, § Decided) came after the arithmetic above: AP2 is about 120 raw lines, one day at the base pace; LT3's provider list, per-feature models and eval command are sized at LT3's planning. The timebox stays ~2027-01-27; the timebox review after LT4 decides whether that day comes from the cut list.
 - The ROADMAP's "3 weekends" and the forecast's stage row "Phase 2 Plan, Timer (Mac) last · 11-17 to 12-22" were replaced with this spec's PR (`docs/method/forecast.md` § Stages).
 - **Timebox review** after LT4 merges (the first usable slice, the 7th PR), with the measured pace, as phase 1 had one after S4-1b.
 
@@ -64,10 +64,11 @@ What the ROADMAP's phase-2 row asks for (`docs/ROADMAP.md:9`), the Time reconcil
    - The model only extracts, as literal spans: activities; start, duration or end; "then" links.
    - Code computes the times from the anchor and the local date, maps activities through the owner's alias file, and checks overlaps and gaps.
    - The owner confirms a list with inline edits: one `confirm` command (ADR-0013) with undo, source `dictation`.
-   - **Provider and model are configurable** (owner, 2026-11-02; ADR-0005, amendment 2026-11-02): other users will want other models. The `AIProvider` port is provider-neutral, Settings → Assistant keeps a model per feature, and LT3 ships the Claude adapter, AP2 an OpenAI-compatible one (§ Decided, Q8).
+   - **Provider and model are configurable** (owner, 2026-11-01; ADR-0005, amendment 2026-11-01): other users will want other models. The `AIProvider` port is provider-neutral, Settings → Assistant keeps a model per feature, and LT3 ships the Claude adapter, AP2 an OpenAI-compatible one (§ Decided, Q8).
 2. **Time entries** with the ADR-0016 fields that phase-2 sources fill, from their first slice (X2): day, optional clock times with the time zone at capture, minutes, subject, source, edited. `session` comes with TM1 and `step` with F2 (question 17).
    - Sources:
-     - `timer` · `manual` · `excel` · `calendar` · `dictation` (stated, like `manual`);
+     - `timer` · `excel` · `dictation` (stated);
+     - `manual` and `calendar` stay reserved source values, not built in phase 2 (owner, 2026-11-01; Non-goals);
      - **`health`** (measured; owner, 2026-11-01);
      - `omnifocusEstimate` (derived, computed, never stored).
    - The ADR-0016 amendments land with this spec's PR.
@@ -86,13 +87,13 @@ What the ROADMAP's phase-2 row asks for (`docs/ROADMAP.md:9`), the Time reconcil
    - **the routine note**: a vault note `moonshine: routine` (P2-R1), with versions stored;
    - **adherence per block, and ladders** that suggest advancing or stepping back, by rules, in Core (P2-R2);
    - **the views**: ghosts on the day rail and a week adherence table (P2-RV);
-   - **line charts** of plan, template and fact on one axis (P2-RC, cut from phase 2 on 2026-11-02);
+   - **line charts** of plan, template and fact on one axis (P2-RC, cut from phase 2 on 2026-11-01);
    - **the move into a native entity**: after phase 2 (question 27).
 7. **The Health bridge** (owner, 2026-11-01; slice H).
    - An iOS Shortcuts automation writes a daily CSV of the previous day to iCloud Drive; the Mac reads it read-only, under the same kind of guards as the workbook.
    - Sleep gives the day's wake and bed boundaries.
    - Workouts become entries with source `health`; steps become a `Measurement`.
-   - The CSV format is open until the owner tests the shortcut (question 12). HealthKit comes in 3b, and the bridge goes then.
+   - The CSV format is open until the owner tests the shortcut (question 12). Whether HealthKit replaces the bridge is an open item for 3b's planning (open question 38); the bridge stays until it is decided.
 8. **Workbook hours import with label mapping** ("decision 2026-10-01: forecast calibration needs the hours"; `docs/discovery/excel-contract.md`), now after the Health bridge, still before the forecast engine that needs the hours.
    - "Column mapping" in the ROADMAP means two things. The day columns are found by structure (layout A or B) and checked against the sheet's month. Item labels map to lines through a mapping file in the data folder.
    - The time view's week table (X5) shows its hours with the other sources.
@@ -101,7 +102,7 @@ What the ROADMAP's phase-2 row asks for (`docs/ROADMAP.md:9`), the Time reconcil
    - Capacity per week.
    - Native measurements for `metric` steps.
 10. **Forecast engine:** calibration (bias, adherence per line) and Monte Carlo (p10 / p50 / p90), modes Actual pace and Scenario (Inverse is phase 3, `docs/ROADMAP.md:18`), and weekly snapshots (F5). **The project forecast view with the drift chart (F6) is cut** (owner, 2026-11-01). F5's snapshots keep the history for it.
-11. **Practice lines, then Quotas**, last in the phase. The ROADMAP placed Memos on Today (P1) before them; P1 is cut from phase 2 (owner, 2026-11-02), so Practice lines brings the `moonshine` scanner itself (`docs/ROADMAP.md:9`). Quotas use Practice lines' period, streak and read-state code (ADR-0019, amendment of 2026-10-26).
+11. **Practice lines, then Quotas**, last in the phase. The ROADMAP placed Memos on Today (P1) before them; P1 is cut from phase 2 (owner, 2026-11-01), so Practice lines brings the `moonshine` scanner itself (`docs/ROADMAP.md:9`). Quotas use Practice lines' period, streak and read-state code (ADR-0019, amendment of 2026-10-26).
 12. **Time reconcile** (`docs/ROADMAP.md:10`): a slice outside the phase, right after it.
 
 ## Non-goals
@@ -110,8 +111,8 @@ What the ROADMAP's phase-2 row asks for (`docs/ROADMAP.md:9`), the Time reconcil
 - **Later phases:**
   - the Planning board, scenarios A/B and the inverse mode (phase 3);
   - the iPad and iPhone apps and sync (3b);
-  - **a minimal iPhone capture before 3b: no** (owner, 2026-11-02; question 13);
-  - HealthKit (3b; it replaces the bridge).
+  - **a minimal iPhone capture before 3b: no** (owner, 2026-11-01; question 13);
+  - HealthKit on the iPhone (3b planning decides it, open question 38; the bridge stays until then).
 - **The assistant** beyond Log by text's extraction: read tools, "what if", plan drafting, voice `auto` commands, MCP (phase 4). Day checkpoints L2 (phase 4) and L3 (phase 5); P2-R3, the assistant's routine ladders (phase 4); the evidence base's use (ADR-0024, phase 4).
 - **Writes:** any write to OmniFocus, the vault or a calendar (CLAUDE.md rule 6). Time entries, measurements, boundaries, routine versions, day marks, plans and captures are MoonShine-native and never written out.
 - **Not built:**
@@ -119,7 +120,10 @@ What the ROADMAP's phase-2 row asks for (`docs/ROADMAP.md:9`), the Time reconcil
   - editors for the mapping and alias files (hand-edited YAML in the data folder);
   - native reminders and P2–P4; the Hub and Library slices;
   - capacity exceptions from the workbook's context rows;
-  - idle detection, a watch, standalone countdown timers.
+  - idle detection, a watch, standalone countdown timers;
+  - **`manual` and `calendar` entries** (owner, 2026-11-01): the quick log and a time entry confirmed from an ended event, and with them the calendar-based nudges and the day portion from a line's calendar (ADR-0016), which need the calendar's line mapping cut in phase 1. Both stay reserved source values; Log by text replaces the quick log in phase 2;
+  - **the data rules of ADR-0024's catalogue** (owner, 2026-11-01): built in phase 4; nothing from the catalogue lands inside a phase-2 slice;
+  - **a session kind captured by dictation** (owner, 2026-11-01; open question 37).
 
 ## Rules this phase adds
 
@@ -136,8 +140,8 @@ What the ROADMAP's phase-2 row asks for (`docs/ROADMAP.md:9`), the Time reconcil
   - A value only the model could read is shown as such (question 19).
   - Times on the clock are computed by code.
   - A subject comes from the alias file or a line or category name. Only when none matches is the model's proposal used, and it is shown as a proposal (ADR-0013 § Conditions for `auto`, applied to a `confirm` command).
-  - **Safety does not depend on the model** (owner, 2026-11-02): LT1 checks every span and value whatever the provider, so a weaker model gives more blocking problems, never wrong data.
-- **Provider-neutral Core** (owner, 2026-11-02): nothing in Core names an AI vendor or a model id; the network API is allowed only in the AI adapter target.
+  - **What guards the data is the owner's confirmation** (owner, 2026-11-01). Every value is a checked span, shown beside its span highlighted in the owner's text; spans out of order against their activities are flagged (`spansOutOfOrder`); nothing is stored without the owner's confirmation. A weaker model costs more corrections, whatever the provider. LT1's checks do not prove that a value belongs to its activity: swapped minutes between two activities pass the span check, and the confirmation is the guard.
+- **Provider-neutral Core** (owner, 2026-11-01): nothing in Core names an AI vendor or a model id; the network API is allowed only in the AI adapter target.
 - **Logs, problems, live checks and PRs** carry kinds and counts only: no label, mapping key, sheet name, month, date, dictated word, block name, workout name, step count, id or entry (CLAUDE.md rule 5; `docs/discovery/excel-contract.md` header). Health data is the most sensitive of these.
 
 ## Slices (one PR each), in the order of question 1
@@ -146,7 +150,7 @@ The owner's order, with the architect's two additions: P2-RV right after P2-R2, 
 
 **Naming:** in the repository, the routine slices are written P2-R1, P2-R2, P2-RV, P2-RC and P2-R3. The bare "R1" stays the Quarterly review (`docs/ROADMAP.md:11`; the vault contract's "read from R1").
 
-X2 → LT1 → LT2 → LT3 → LT4 → AP2 → TM1 → TM2 → DC → TM3 → P2-R1 → P2-R2 → P2-RV → H → X1 → X3 → X4 → X5 → TM4 → TM5 → TM6 → F1 … F5 → PL → Q (P2-RC and P1 cut, owner 2026-11-02); then TR, outside the phase.
+X2 → LT1 → LT2 → LT3 → LT4 → AP2 → TM1 → TM2 → DC → TM3 → P2-R1 → P2-R2 → P2-RV → H → X1 → X3 → X4 → X5 → TM4 → TM5 → TM6 → F1 … F5 → PL → Q (P2-RC and P1 cut, owner 2026-11-01); then TR, outside the phase.
 
 LT4, the first usable slice, is the 7th PR. Sizes are each plan's raw estimate × 1.49; a plan re-sizes and splits before coding (CLAUDE.md rule 2). The limits are about 400 for a risky slice and about 800 for a plain one.
 
@@ -178,7 +182,7 @@ LT4, the first usable slice, is the 7th PR. Sizes are each plan's raw estimate �
 - [ ] **LT3 — The model call** (risky: the assistant, network, a secret, outside data; ~265 × 1.49 ≈ 395 before the configurability of Q8, re-sized and likely split at its planning; the cut and the eval command may change then, the configurability may not).
   - The `AIProvider` port in Core (`docs/ARCHITECTURE.md:24`), provider-neutral: a request with a JSON-schema output, and a typed reply. Nothing in Core names a vendor.
   - A Claude adapter over `POST /v1/messages` with URLSession (there is no official Swift SDK), with a JSON-schema output (`output_config.format`). The only adapter this slice ships.
-  - **Settings → Assistant** lists the providers and keeps a model id per feature: Log by text now; checkpoints L2 and the routine assistant in phase 4. Each provider has its own key in the Mac's Keychain (not synchronizable) and its own consent text; consent for cloud AI is off by default. A local endpoint is labelled "stays on this Mac". What is sent per question 7.
+  - **Settings → Assistant** lists the providers and keeps a model id per feature: Log by text now; checkpoints L2 and the routine assistant in phase 4. Each provider has its own key in the Mac's Keychain (not synchronizable) and its own consent text; consent for cloud AI is off by default. An endpoint is labelled "stays on this Mac" only for a loopback host after resolution (`localhost`, `127.0.0.0/8`, `::1`); any other host is labelled with its host name. A non-loopback base URL must be HTTPS; plain HTTP is allowed for loopback only (owner, 2026-11-01). What is sent per question 7.
   - **Default models** per question 8: `claude-opus-5-5` at low effort, with `claude-haiku-5-5` as the cheaper choice. LT3 runs them on an eval of about 20 invented dictations (accuracy against cost) and records the result in its PR; if they don't do well, the default changes.
   - **The eval set and `moonshine-import eval-dictation --provider … --model …`** (counts only) run against any configured model, so a user can check his choice.
   - The alias file reader: bounded YAML with the vault's pre-parse guards. It also maps Health workout names, from H.
@@ -188,8 +192,8 @@ LT4, the first usable slice, is the 7th PR. Sizes are each plan's raw estimate �
   - The list with inline edits, which go through LT1's `recheck`.
   - `Confirm` (⌘↩), undo (⌘Z).
   - For an activity with no alias, the YAML line to add.
-- [ ] **AP2 — An OpenAI-compatible provider** (owner, 2026-11-02; risky: the assistant, network, a secret; ~120 × 1.49 ≈ 179, sized at its planning). Right after LT4.
-  - An adapter for the OpenAI-compatible chat API with a configurable base URL, in the AI adapter target, behind the same `AIProvider` port. It also covers local servers such as Ollama or LM Studio, labelled "stays on this Mac".
+- [ ] **AP2 — An OpenAI-compatible provider** (owner, 2026-11-01; risky: the assistant, network, a secret; ~120 × 1.49 ≈ 179, sized at its planning). Right after LT4.
+  - An adapter for the OpenAI-compatible chat API with a configurable base URL, in the AI adapter target, behind the same `AIProvider` port. It also covers local servers such as Ollama or LM Studio. The label and the URL rule of LT3 apply: labelled "stays on this Mac" only for a loopback host after resolution (`localhost`, `127.0.0.0/8`, `::1`); any other host is labelled with its host name. A non-loopback base URL must be HTTPS; plain HTTP is allowed for loopback only (owner, 2026-11-01).
   - Its own key in the Keychain and its own consent text in Settings → Assistant.
   - `eval-dictation` runs against it like any configured model.
 
@@ -252,7 +256,7 @@ LT4, the first usable slice, is the 7th PR. Sizes are each plan's raw estimate �
     - The main sleep → wake and bed through LT2b's boundary-day function.
     - `Measurement` in ARCHITECTURE's shape.
     - Keys that survive duplicates.
-    - Retention by day, deciding a day over every file that covers it.
+    - Retention by day: a day is read only when every file covering it is readable (owner, 2026-11-01). A covered day with steps 0, no sleep rows and no workouts is `notRead(emptyDay)` and deletes nothing: a run on a locked phone looks exactly like that.
     - Workout labels stored and re-resolved when the alias file changes; an unavailable alias file keeps everything.
     - The ledger's Health rule (question 11).
     - Settings → Sources → Health; its own 60-minute timer.
@@ -290,11 +294,11 @@ LT4, the first usable slice, is the 7th PR. Sizes are each plan's raw estimate �
 - [ ] **F3 — Plan editor** (plain; ~450 × 1.49 ≈ 670). It needs a design round.
 - [ ] **F4 — Forecast engine: calibration and Monte Carlo** (plain, Core; ~400 × 1.49 ≈ 596). ADR-0006 § The engine and § Confirmation.
 - [ ] **F5 — Forecast snapshots, weekly** (risky: storage; ~150 × 1.49 ≈ 224).
-- [ ] **P2-RC — Line charts: plan, template and fact** (plain; ~300 × 1.49 ≈ 447; cut candidate 1, cut on 2026-11-02). One axis per line and week (ADR-0023 § Views).
+- [ ] **P2-RC — Line charts: plan, template and fact** (plain; ~300 × 1.49 ≈ 447; cut candidate 1, cut on 2026-11-01). One axis per line and week (ADR-0023 § Views).
 
 **Vault-backed, last**
 
-- [ ] **P1 — Memos on Today** (risky: parses vault notes; ~400 × 1.49 ≈ 596, two PRs; ADR-0018; cut candidate 2, cut on 2026-11-02). Cut, so Practice lines brings the `moonshine` scanner itself.
+- [ ] **P1 — Memos on Today** (risky: parses vault notes; ~400 × 1.49 ≈ 596, two PRs; ADR-0018; cut candidate 2, cut on 2026-11-01). Cut, so Practice lines brings the `moonshine` scanner itself.
 - [ ] **PL — Practice lines** (risky; ~350 × 1.49 ≈ 522, two PRs; ADR-0019). These paths follow nested lines to their parent:
   - a workbook row, an alias or a Health workout mapped to a nested line is recorded on its parent, with `excelRowMovedToParent` for the workbook (ADR-0019);
   - the line lists of Log by text, the timer and the routine skip nested lines;
@@ -308,6 +312,8 @@ LT4, the first usable slice, is the 7th PR. Sizes are each plan's raw estimate �
   - Nothing is lost while it waits: the native entries count and the pairs stay open (ADR-0016, amendment 2026-10-28).
 
 ## Cut list (first to cut first)
+
+**A cut item is out of phase 2** (owner, 2026-11-01). It comes back only through phase 3's planning, or through the timebox review if there is room.
 
 1. **P2-RC, line charts of plan, template and fact** (raw 300). The week adherence table (P2-RV) and the hours table (X5) already show the facts.
 2. **P1, Memos on Today** (raw 400). Practice lines then brings the scanner.
@@ -324,7 +330,7 @@ Next if the timebox review needs more: 3. Q (300), then PL (350), to after the p
 - **Before P2-RC** (cut from phase 2): the charts of plan, template and fact.
 - The existing items of `design/README.md` § Pending design rounds, "Before phase 2" (`design/README.md:331-336`; its items 1 and 2 are My take's, cut from phase 2) and "Before the Practice lines and Quotas slices" (`:344-346`).
 
-## Changes to other documents, made with this spec's PR (dated 2026-11-02)
+## Changes to other documents, made with this spec's PR (dated 2026-11-01)
 
 - **ADR-0005:** a dated amendment: provider and model are configurable; the port is provider-neutral; a model per feature; a key and a consent text per provider; the CI network rule per AI adapter target (§ Decided, Q8).
 - **`docs/ROADMAP.md`, phase 2's row:** the timebox and the order; Log by text first and the first native slice; DC in the phase; the routine, Health and P2-RV slices; F6 and N1 cut; the iPhone capture question (`docs/ROADMAP.md:31`) answered.
@@ -358,6 +364,7 @@ Next if the timebox review needs more: 3. Q (300), then PL (350), to after the p
   - a day without data reads as "no data", never as a lapse.
 - **Health:**
   - a week of the owner's day files reads;
+  - the owner runs the shortcut once with the phone locked, and the result changes nothing that is stored (H's live check; owner, 2026-11-01);
   - wake and bed match his phone's sleep view for those days;
   - a second import writes no `changes` row.
 - **The workbook:**
@@ -375,32 +382,40 @@ Next if the timebox review needs more: 3. Q (300), then PL (350), to after the p
   - Core imports none of CoreXLSX, ZIPFoundation, XMLCoder, Security or UserNotifications (`scripts/check-core-imports.sh` gains them).
 - **Tone:** the rules of CLAUDE.md rule 8 pass a copy review in English and Russian.
 
-## Decided (owner, 2026-11-02)
+## Decided (owner, 2026-11-01)
 
 The 36 questions below are accepted as proposed, with these exceptions:
 
 - **Q8, the model.**
   - **Defaults.** The proposed models are the starting defaults. LT3 runs them on an eval of about 20 invented dictations (accuracy against cost) and records the result in its PR. If they don't do well, the default changes.
-  - **The main requirement is that provider and model are configurable**, because other users will want other models (ADR-0005, amendment 2026-11-02). The cut and the eval command may change at LT3's planning; the configurability may not.
+  - **The main requirement is that provider and model are configurable**, because other users will want other models (ADR-0005, amendment 2026-11-01). The cut and the eval command may change at LT3's planning; the configurability may not.
     - The `AIProvider` port in Core is provider-neutral: a request with a JSON-schema output, and a typed reply. Nothing in Core names a vendor.
-    - Settings → Assistant lists the providers and keeps a model id per **feature** (Log by text now; checkpoints L2 and the routine assistant in phase 4). Each provider has its own key in the Keychain, and its own consent text. A local endpoint is labelled "stays on this Mac".
+    - Settings → Assistant lists the providers and keeps a model id per **feature** (Log by text now; checkpoints L2 and the routine assistant in phase 4). Each provider has its own key in the Keychain, and its own consent text. An endpoint is labelled "stays on this Mac" only for a loopback host after resolution (`localhost`, `127.0.0.0/8`, `::1`); any other host is labelled with its host name. A non-loopback base URL must be HTTPS; plain HTTP is allowed for loopback only (owner, 2026-11-01).
     - LT3 ships one adapter, the Claude API. A small slice right after LT4, **AP2**, adds an OpenAI-compatible adapter with a configurable base URL. That also covers local servers such as Ollama or LM Studio.
-    - Safety does not depend on the model: LT1 checks every span and value whatever the provider, so a weaker model gives more blocking problems, never wrong data.
+    - Not "a weaker model never gives wrong data": swapped minutes between two activities pass the span check (critic, 2026-11-01). Every value is a checked span, shown beside its span highlighted in the owner's text; spans out of order against their activities are flagged (`spansOutOfOrder`); nothing is stored without the owner's confirmation. A weaker model costs more corrections, whatever the provider. LT1's checks do not prove that a value belongs to its activity: swapped minutes between two activities pass the span check, and the confirmation is the guard.
     - The eval set and a CLI command (`moonshine-import eval-dictation --provider … --model …`, counts only) run against any configured model, so a user can check his choice.
     - CI's network rule allows the network API in the AI adapter target only, not in one file.
 - **Q30, the evidence base:** ADR-0024 takes the owner's revised format.
   - Evidence with design, status, level and outcome replaces the single grade; claim and conditions stay in frontmatter; citations are structured and verified only by the owner's date.
-  - The rule catalogue: each rule is brought by the slice whose data it needs (ADR-0024 § The data-rule catalogue).
-  - The session kind is a new open question (37, below), decided at TM1's planning.
+  - The rule catalogue (ADR-0024 § The data-rule catalogue) is built in phase 4. Its "after H", "after X2" mean the earliest a rule can be built, not when it is built; nothing from the catalogue lands inside a phase-2 slice.
+  - The session kind is a new open question (37, below), decided at TM1's planning; dictation does not capture it in phase 2.
+- **The critic's owner items (2026-11-01):**
+  - Health on a locked phone: a day is read only when every file covering it is readable; a covered day with steps 0, no sleep rows and no workouts is `notRead(emptyDay)` and deletes nothing; H's live checks include one run with the phone locked, which changes nothing stored.
+  - `manual` and `calendar`: out of phase 2, kept as reserved source values, with the calendar-based nudges (Non-goals).
+  - ADR-0024's data rules: phase 4.
+  - The session kind: decided at TM1's planning; dictation does not capture it in phase 2, so LT1a's schema stays as planned.
+  - HealthKit: open item 38.
+  - AP2 and the timebox: the timebox stays ~2027-01-27; the review after LT4 decides.
 - **Q1, Q2, Q13: confirmed.** The order "time capture first" stands. The timebox runs until ~2027-01-27, with cuts P2-RC and P1. No iPhone capture before 3b.
 
 ## Open questions
 
-37. **A session kind on time entries** (retrieval, reading, struggle; owner, 2026-11-02). Two of the owner's principles need it (ADR-0024 § The data-rule catalogue: `retrieval_share`, `hard_block_reading_share`). Should the timer and the dictation capture it? It could be a field on `TimeEntry`, a tag, or left out. Proposed: decided at TM1's planning, and left out of X2.
+37. **A session kind on time entries** (retrieval, reading, struggle; owner, 2026-11-01). Two of the owner's principles need it (ADR-0024 § The data-rule catalogue: `retrieval_share`, `hard_block_reading_share`). Should the timer and the dictation capture it? It could be a field on `TimeEntry`, a tag, or left out. Decided at TM1's planning, and left out of X2. Dictation does not capture it in phase 2, so LT1a's extraction schema stays as planned (owner, 2026-11-01).
+38. **HealthKit in 3b** (owner, 2026-11-01). In 3b the iPhone app reads HealthKit, and its records sync to the Mac. That makes Health the first source imported on a device other than the Mac, against ADR-0010's "the Mac is the only importer". An open item for 3b's planning, with an ADR-0010 amendment then; the Health bridge stays until it is decided.
 
 ## The questions of revision 2, with their proposals
 
-All decided on 2026-11-02 as proposed, except as § Decided says.
+All decided on 2026-11-01 as proposed, except as § Decided says.
 
 1. **The order** — proposed: the owner's order above, plus P2-RV right after P2-R2 and P2-RC after F5, with TR after the phase. Confirm.
 2. **The timebox** — proposed: until ~2027-01-27 with cuts P2-RC and P1; TR after the phase.
