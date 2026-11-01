@@ -19,8 +19,6 @@
       "Edit(**/.git/config)",
       "Edit(**/.git/hooks/**)",
       "Edit(**/.git/commondir)",
-      "Edit(**/.git/worktrees/*/commondir)",
-      "Edit(**/.git/worktrees/*/gitdir)",
       "Edit(./.claude/hooks/**)",
       "Edit(./.claude/settings.json)",
       "Bash(git *fetch*--prune*)",
@@ -43,8 +41,8 @@
       "Bash(*GIT_WORK_TREE*)",
       "Bash(git *--git-dir*)",
       "Bash(git *--work-tree*)",
-      "Bash(git *moonshine.denyList*)",
-      "Bash(git *moonshine.denylist*)",
+      "Bash(git *denyList*)",
+      "Bash(git *denylist*)",
       "Bash(git push *'*)",
       "Bash(git push *\"*)",
       "Bash(git push *\\*)",
@@ -81,7 +79,7 @@
       "Bash(gh api *--raw-field*)",
       "Bash(gh api *@*)",
       "Bash(gh api *merge*)",
-      "Bash(gh api graphql *)",
+      "Bash(gh api graphql*)",
       "Bash(gh api *--method DELETE*)",
       "Bash(gh api *--method PUT*)",
       "Bash(gh api *--method PATCH*)",
@@ -91,19 +89,29 @@
       "Bash(gh api *--method=*)",
       "Bash(gh api *-X*)",
       "Bash(gh repo *)",
-      "Bash(git branch -D *)",
+      "Bash(git branch -D*)",
       "Bash(git branch * -D *)",
       "Bash(git branch *--force*)",
       "Bash(git branch -f *)",
       "Bash(git branch * -f *)",
+      "Bash(git tag -d*)",
+      "Bash(git update-ref -d refs/heads/*)",
+      "Bash(git update-ref -d refs/tags/*)",
+      "Bash(git update-ref -d refs/remotes/origin/*)",
       "Bash(xcodebuild *-allowProvisioning*)",
       "Bash(xcodebuild *rchive*)",
       "Bash(xcodebuild *otariz*)"
     ],
-    "ask": ["Bash(dangerouslyDisableSandbox:true)"]
+    "ask": [
+      "Bash(dangerouslyDisableSandbox:true)",
+      "Bash(swift run*)",
+      "Bash(*/moonshine-import)",
+      "Bash(*/moonshine-import *)"
+    ]
   },
   "env": {
-    "PATH": "/usr/bin:/bin:/usr/sbin:/sbin:/Users/<you>/.nvm/versions/node/<node-version>/bin:/opt/homebrew/bin"
+    "PATH": "/usr/bin:/bin:/usr/sbin:/sbin:/Users/<you>/.nvm/versions/node/<node-version>/bin:/opt/homebrew/bin",
+    "npm_config_cache": "/Users/<you>/<repo>/.npm-cache"
   },
   "sandbox": {
     "enabled": true,
@@ -133,14 +141,12 @@
     }
   },
   "_worktreeOnly": {
-    "_note": "Only for a parallel author session's sibling worktree ../moonshine-<n>, which the owner creates (CLAUDE.md § Git). In that worktree's copy, merge these entries into permissions.deny and sandbox.filesystem, fill in the placeholders with the main checkout's path, and delete this key; in the main checkout's copy, just delete it. Never commit a real path: the owner's home path is on the deny-list.",
+    "_note": "Only for a parallel author session's sibling worktree ../moonshine-<n>, which the owner creates (CLAUDE.md § Git). In that worktree's copy, merge these entries into permissions.deny and sandbox.filesystem, fill in the placeholders with the main checkout's path (except `<repo>` in env.npm_config_cache, which is the checkout this file lives in: the worktree may write only its own folder), and delete this key; in the main checkout's copy, just delete it. Never commit a real path: the owner's home path is on the deny-list.",
     "permissions": {
       "deny": [
         "Edit(//Users/<you>/<repo>/.git/config)",
         "Edit(//Users/<you>/<repo>/.git/hooks/**)",
         "Edit(//Users/<you>/<repo>/.git/commondir)",
-        "Edit(//Users/<you>/<repo>/.git/worktrees/*/commondir)",
-        "Edit(//Users/<you>/<repo>/.git/worktrees/*/gitdir)",
         "Edit(./.git)"
       ]
     },
@@ -152,8 +158,6 @@
           "<main-checkout>/.git/config",
           "<main-checkout>/.git/hooks",
           "<main-checkout>/.git/commondir",
-          "<main-checkout>/.git/worktrees/*/commondir",
-          "<main-checkout>/.git/worktrees/*/gitdir",
           "./.git"
         ]
       }

@@ -85,7 +85,7 @@ jobs:
         run: node --test scripts/demo-snapshot.test.mjs
 
       - name: Push and post guard (pre-push hook, gh-post, install script)
-        run: node --test scripts/pre-push.test.mjs scripts/gh-post.test.mjs
+        run: node --test scripts/matcher.test.mjs scripts/pre-push.test.mjs scripts/gh-post.test.mjs scripts/install-guard.test.mjs
 
       - name: Markdown format check
         run: |
