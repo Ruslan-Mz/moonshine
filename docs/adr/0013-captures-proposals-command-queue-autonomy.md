@@ -90,6 +90,8 @@ The classes are fixed defaults now. A per-class setting in Settings comes later 
 
 **Amendment (2026-10-19, ADR-0018).** `RecordMemoOutcome`, `ChooseOtherVariant` and `DismissMemo` are native `auto` commands, logged and undoable.
 
+**Amendment (2026-11-02, owner; `docs/specs/phase-2-plan.md`).** A capture is interpreted before the Ask phase, for one feature: Log by text (phase 2). The owner dictates or pastes what he did; the `Capture` is stored on the Mac before any network call; the model returns only literal spans, which the app checks and turns into times; the owner confirms the list as one `LogEntries` command of the `confirm` class, with undo. Consent for cloud AI is required from LT3, per provider (ADR-0005, amendment 2026-11-02). Nothing in this path is `auto`. `AddCapacityException` and `RemoveCapacityException` of kind `away` (ADR-0023) are native `auto` commands, with undo: the one exception to "capacity changes" in the `confirm` class above. An away mark may be set from today up to 400 days ahead, and back to the running and the previous ISO week (spec question 34).
+
 ### Where the assistant runs
 
 On each device, against that device's replicated store, through the typed read tools of ADR-0005. The provider key is stored in that device's Keychain. Without a network the capture stays `new` and is interpreted when a connection returns.
