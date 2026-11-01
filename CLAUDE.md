@@ -78,6 +78,7 @@ Never chain an unsandboxed command (`git fetch origin`, `git push origin`, `gh`,
   - a size overrun is stated in the PR and in the method-log row.
 - **Review**: the owner runs `/review-pr <n>` in a **new** session (`.claude/skills/review-pr/`). The session that wrote the PR never reviews it.
 - **After a review is posted**, the author session reads it from the PR itself (`gh pr view <n> --comments`), fixes the `author` findings, answers with **one** PR comment that lists every finding and what was done with it, and asks the owner only about the `owner` findings. It pushes the fixes and posts the comment with `gh-post comment`, by its absolute path, without asking ("Asking the owner"). No reply per thread: one comment keeps the answer in one place (owner, 2026-10-08). The owner does not copy review text between sessions.
+- Never suggest a raw gh write command (gh pr edit, gh pr comment, gh api with a body); give the owner the gh-post command and the scratchpad file (owner, 2026-11-01).
 - **Rounds** — one rule for every PR, docs-only included: round 1 is a full `/review-pr`. If round N had a confirmed High, run round N+1 after the fixes, on the changes since round N. Otherwise no further round. From round 2 on only High findings must be fixed, the rest are listed in the PR as deferred; at most three rounds, then the owner decides.
 
 ## Definition of done
