@@ -1,6 +1,6 @@
 ---
 title: "0012 — Calendar: EventKit read-only on each device; events are never stored or synced"
-status: proposed
+status: accepted
 date: 2026-10-02
 deciders: Ruslan Mozhaev
 consulted: Claude

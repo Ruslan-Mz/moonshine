@@ -1,6 +1,6 @@
 ---
 title: "0002 — SQLite (GRDB) as the engine, document-style attributes, append-only change log"
-status: proposed
+status: accepted
 date: 2026-09-30
 deciders: Ruslan Mozhaev
 consulted: Claude
@@ -39,6 +39,8 @@ MoonShine keeps a local cache of provider data (OmniFocus, Obsidian) and native 
 ## Decision Outcome
 
 **Chosen option: "1"**, because the dominant queries are relational aggregations over time, which SQL engines do well and document stores do poorly; JSON columns give document-style flexibility where needed; GRDB's typed query interface means no hand-written SQL in app code; and a change log gives history, undo and a sync feed. CRDT documents (option 6) are re-evaluated when sync starts (phase 7, new ADR).
+
+**Amendment (2026-11-01, owner; ADR-0010).** Sync starts in phase 3b, not phase 7: ADR-0010 chose CloudKit with the Mac as the only importer, and `docs/ROADMAP.md` puts the iPad and iPhone in 3b. The CRDT question is settled there, not in a new ADR.
 
 ### Consequences
 

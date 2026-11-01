@@ -32,7 +32,7 @@ A tab in the native `Settings` scene (General · Data · **Calendars** · Refres
 
    Demo mode shows invented calendars and a `Demo data` badge next to the label.
 
-2. **Calendars** (only when connected), grouped by account (`iCloud`, `Work · Exchange`, `Subscribed`). Columns: Calendar (`CalendarDot` + name) · **Show** (switch) · **Counts as busy** (switch) · **Line** (`Picker(.menu)`: None or one line, e.g. `Music lessons` → `🎻 Violin`). A calendar with Show off is greyed; Counts as busy can be off while Show is on (e.g. public holidays).
+2. **Calendars** (only when connected), grouped by account (`iCloud`, `Work · Exchange`, `Subscribed`). Columns: Calendar (`CalendarDot` + name) · **Show** (switch) · **Counts as busy** (switch) · **Line** (`Picker(.menu)`: None or one line, e.g. `Music lessons` → `🎻 Violin`; the line mapping is cut from phase 1, owner 2026-10-30, `docs/specs/phase-1-see.md` Goal: phase 1 ships no Line column). A calendar with Show off is greyed; Counts as busy can be off while Show is on (e.g. public holidays).
 3. **Day window** (configurable — decided 2 Oct 2026): two time pickers, default `08:00`–`22:00`, end after start, 15-minute steps. It defines the span of the day rail on Today, which items are pinned above or below it, and the free-time fact. Caption: `Free time = day window − time in calendars that count as busy − tasks with a planned time and an estimate. Today counts from now to the end of the window. Overlaps count once. Tentative, all-day and free events are shown but not counted; declined, delegated and cancelled events are hidden.`
 4. Footer note: `Events stay on this device. They are not synced by MoonShine.`
 
@@ -57,9 +57,9 @@ Not connected / denied: the list is replaced by one neutral placeholder line (`C
 ## Behaviour
 
 - `Connect calendars…` triggers the system prompt once. After a denial the button becomes `Open System Settings` (deep link to Privacy & Security → Calendars).
-- Toggling Show / Counts as busy / Line applies immediately everywhere; no restart.
+- Toggling Show / Counts as busy / Line (Line: cut from phase 1, owner 2026-10-30) applies immediately everywhere; no restart.
 - Calendar changes arrive through `EKEventStoreChanged`; views refresh without the importer.
-- A mapped calendar adds the line emoji to its events and feeds "Upcoming" in Line detail and the quick-log suggestion on iPhone.
+- Cut from phase 1 (owner, 2026-10-30): a mapped calendar adds the line emoji to its events and feeds "Upcoming" in Line detail and the quick-log suggestion on iPhone.
 
 ## SwiftUI
 

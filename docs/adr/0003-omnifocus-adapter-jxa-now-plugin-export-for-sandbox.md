@@ -1,6 +1,6 @@
 ---
 title: "0003 — OmniFocus adapter: JXA bridge now, plug-in export for sandboxed builds"
-status: proposed
+status: accepted
 date: 2026-09-30
 deciders: Ruslan Mozhaev
 consulted: Claude

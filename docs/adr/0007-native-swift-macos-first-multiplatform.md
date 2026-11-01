@@ -1,6 +1,6 @@
 ---
 title: "0007 — Native Swift, macOS first, SwiftUI multiplatform"
-status: proposed
+status: accepted
 date: 2026-09-30
 deciders: Ruslan Mozhaev
 consulted: Claude
@@ -44,3 +44,5 @@ The app must be very convenient and powerful on Mac (dense timelines, Gantt, key
 ### Confirmation
 
 Core builds and tests on Linux (`swift test`); app target builds in CI on macOS runner.
+
+**Amendment (2026-11-01, owner).** The Linux half is not yet checked in CI: `.github/workflows/ci.yml` runs Swift on macOS only. A Linux `swift test` job for Core is added in PUB-3 (`docs/specs/phase-1-see.md`, PUB), which edits CI anyway; Linux runners are free once the repository is public.

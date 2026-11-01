@@ -1,6 +1,6 @@
 ---
 title: "0004 — Obsidian adapter; lines in frontmatter; notes stay markdown files"
-status: proposed
+status: accepted
 date: 2026-09-30
 deciders: Ruslan Mozhaev
 consulted: Claude

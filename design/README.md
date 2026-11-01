@@ -43,7 +43,7 @@ related:
 | Settings + status bar        | `screens/settings.md`             | 1 (S4)                                                   | `Settings`, `Settings-Dark`           |
 | Project forecast             | `screens/forecast.md`             | **future** (2–3)                                         | `Forecast`, `Forecast-Dark`           |
 | Planning board               | `screens/planning-board.md`       | **future** (2–3)                                         | `Board`, `Board-Dark`                 |
-| Weekly review (mode of Week) | `screens/week.md` § Weekly review | 1 (S5, first to cut)                                     | `Week-Review`, `Week-Review-Dark`     |
+| Weekly review (mode of Week) | `screens/week.md` § Weekly review | 1 (S5); cut from phase 1 (owner, 2026-10-30)             | `Week-Review`, `Week-Review-Dark`     |
 | Quarterly review             | `screens/quarterly-review.md`     | **R1** — own slice, before the Q4 review (by 2026-12-28) | `QuarterReview`, `QuarterReview-Dark` |
 
 Each `*-Dark` artboard is a wrapper that renders the light one with `dark = true`. The real values are in the light file's `theme()` function.
