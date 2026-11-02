@@ -215,19 +215,21 @@ test("a fast-forward update of another branch is allowed", () => {
   passes(push(work, "HEAD:refs/heads/other"));
 });
 
-test("an installed guard that differs from the checkout's warns but does not block", () => {
-  const work = setUp();
-  commit(work, "a.md", "clean\n", "clean");
-  const same = push(work);
-  passes(same);
-  assert.doesNotMatch(same.stderr, /differs/);
+for (const file of ["matcher.mjs", "commit-scan.mjs", "pre-push.mjs", "gh-post.mjs", "binary-allowlist.txt"]) {
+  test(`an installed ${file} that differs from the checkout's warns but does not block`, () => {
+    const work = setUp();
+    commit(work, "a.md", "clean\n", "clean");
+    const same = push(work);
+    passes(same);
+    assert.doesNotMatch(same.stderr, /differs/);
 
-  appendFileSync(installed(work, "guard", "gh-post.mjs"), "\n// changed\n");
-  commit(work, "b.md", "clean\n", "clean");
-  const stale = push(work);
-  passes(stale);
-  assert.match(stale.stderr, /installed guard differs .* after the change is merged .*installs main's guard/);
-});
+    appendFileSync(installed(work, "guard", file), "\n// changed\n");
+    commit(work, "b.md", "clean\n", "clean");
+    const stale = push(work);
+    passes(stale);
+    assert.match(stale.stderr, /installed guard differs .* after the change is merged .*installs main's guard/);
+  });
+}
 
 test("a config.json without the deny-list path blocks", () => {
   const work = setUp();

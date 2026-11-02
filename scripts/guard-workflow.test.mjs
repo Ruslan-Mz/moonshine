@@ -1,6 +1,7 @@
 // Pins the rules that make .github/workflows/guard.yml safe to run with a secret on pull requests
 // (pull_request_target): main's code only, no credentials kept, the deny-list only through the
-// `guard` environment, and nothing from the event inside a `run:` line. A pull request cannot
+// `guard` environment, nothing from the event inside a `run:` line, the PR's text never in `env:`
+// (the runner prints it in the public log), and no concurrency group. A pull request cannot
 // change the workflow its own guard run uses, so these rules are kept by review and by this test.
 // node --test scripts/guard-workflow.test.mjs
 import assert from "node:assert/strict";
@@ -49,13 +50,15 @@ test("the only permission is reading contents, for the whole workflow", () => {
   assert.equal(all.filter(({ key }) => key === "permissions").length, 1);
 });
 
-test("one job, in the guard environment, with runs never cancelled", () => {
+test("one job, in the guard environment, with no concurrency group, so no run is cancelled", () => {
   assert.deepEqual(
     all.filter(({ keys }) => keys.length === 1 && keys[0] === "jobs").map(({ key }) => key),
     ["guard"],
   );
   assert.ok(under("jobs", "guard").some(({ line }) => line === "environment: guard"));
-  assert.ok(under("concurrency").some(({ line }) => line === "cancel-in-progress: false"));
+  // A group keeps one pending run and cancels it when a newer one arrives, whatever
+  // cancel-in-progress says, so any group can leave a range of main unscanned.
+  assert.ok(!all.some(({ key, line }) => key === "concurrency" || /\bconcurrency\b/.test(line)));
 });
 
 test("the checkout is main's, pinned by commit, without kept credentials", () => {
@@ -71,8 +74,7 @@ test("values from the event and the secret reach the steps through env only", ()
   for (const { line, keys } of all) {
     if (!line.includes("${{")) continue;
     const inEnv = keys.at(-1) === "env";
-    const allowed = inEnv || keys[0] === "concurrency";
-    assert.ok(allowed, `\${{ }} outside env: ${line}`);
+    assert.ok(inEnv, `\${{ }} outside env: ${line}`);
   }
   for (const { line, keys } of all) {
     if (/github\.event\.pull_request\.head|secrets\./.test(line)) assert.equal(keys.at(-1), "env", line);
@@ -84,11 +86,22 @@ test("values from the event and the secret reach the steps through env only", ()
   );
 });
 
-test("no run line installs or executes anything from the pull request", () => {
-  const runs = all.filter(({ key }) => key === "run").map(({ line }) => line);
-  assert.ok(runs.length > 0);
-  for (const line of runs) {
-    assert.ok(!/\bnpm\b|\bnpx\b|checkout|\$\{\{/.test(line), line);
-    assert.ok(/^- run: |^run: /.test(line) && !line.endsWith("|"), `one-line run steps only: ${line}`);
-  }
+test("the PR's branch name, title and body never reach env, whose values the log prints", () => {
+  assert.ok(!/github\.event\.pull_request\.(?:title|body|head\.ref|head\.label)\b|PR_TITLE|PR_BODY|HEAD_REF/.test(text));
+  const scanEnv = all
+    .filter(({ keys }) => keys.at(-1) === "env")
+    .map(({ key }) => key)
+    .filter((key) => key !== "PR");
+  assert.deepEqual(scanEnv, ["EVENT", "BASE", "HEAD", "HEAD_REPO", "REPOSITORY", "BEFORE", "AFTER", "DENY_LIST"]);
+  assert.ok(all.some(({ line }) => line === "BASE: refs/remotes/origin/main"));
+});
+
+test("the run lines are exactly the fetch as data and main's scan, with no block scalars", () => {
+  // Pinned whole: any other command (a reset or switch to the fetched head, a restore from it)
+  // would let the next step run the PR's own files with the secret in their environment.
+  assert.deepEqual(
+    all.filter(({ key }) => key === "run").map(({ line }) => line),
+    ['run: git fetch --no-tags origin "+refs/pull/$PR/head:refs/remotes/pr/head"', "run: node scripts/ci/guard-scan.mjs"],
+  );
+  for (const { line } of all) assert.ok(!/:\s*[|>][-+0-9]*\s*$/.test(line), `no block scalars: ${line}`);
 });

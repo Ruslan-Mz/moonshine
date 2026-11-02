@@ -22,6 +22,7 @@ Until this step, the `guard` check fails on every pull request ("DENY_LIST is no
 3. Only now: **Environment secrets** → **Add environment secret** → **Name:** `DENY_LIST`, **Value:** the whole text of the deny-list file → **Add secret**. A secret holds at most 48 KB; a longer deny-list stops here.
 4. **Settings** → **Secrets and variables** → **Actions** → **Repository secrets**: no `DENY_LIST` there (and none among the account's organisation secrets, if any). A repository secret is readable by any workflow on any branch, past the environment's policy.
 5. Check: on an open pull request from a branch of this repository, **Checks** → **Guard** → **Re-run all jobs**. It passes, and its log names commits and files only, never an entry.
+6. Pushes to `main` between the merge of PUB-3 and this step failed with "DENY_LIST is not set", and nothing re-runs them: **Actions** → **Guard** → filter **Branch:** `main` → each failed run → **Re-run all jobs**. A re-run scans the same range of `main` as the first run.
 
 ## Step 6: branch protection on `main`
 

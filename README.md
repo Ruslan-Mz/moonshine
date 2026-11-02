@@ -86,7 +86,7 @@ Then open `MoonShine.xcodeproj` and run the `MoonShineMac` scheme. Demo mode wor
 
 - Nothing from the owner's live sources (OmniFocus, the Obsidian vault, the calendar, the local data folder) is committed.
 - The fixtures and the Demo data are invented.
-- A local pre-push guard checks commits and pull-request texts against a private deny-list; a CI guard does the same once PUB-3 lands.
+- A local pre-push guard checks commits and pull-request texts against a private deny-list. The guard in CI runs the same commit scan on every pull request, its branch name, title and body, and every push to `main`: it keeps a match off `main` and flags it on the pull request, but it cannot keep a pushed commit off GitHub (CLAUDE.md → Commands → Guard).
 - The known, accepted exceptions are listed in the PUB row of [`docs/specs/phase-1-see.md`](docs/specs/phase-1-see.md).
 
 ## Licence and contributions

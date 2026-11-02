@@ -13,6 +13,8 @@ const script = join(dirname(fileURLToPath(import.meta.url)), "ci", "guard-scan.m
 const denyList = `${secret}\n\nmirelbrook\n`;
 const leaks = ["quolltail", "zephyrine", "mirelbrook"];
 
+const base = "refs/remotes/origin/main";
+
 /// A repository whose `main` holds one commit, on branch `feature`.
 function setUp() {
   const work = repository();
@@ -24,23 +26,40 @@ function head(work) {
   return ok(work, "rev-parse", "HEAD").trim();
 }
 
-function prEnv(work, extra = {}) {
+/// The event of a PR from `feature`: commit ids in the environment, and the branch name, title and
+/// body in an event file, as the workflow passes them. `origin/main` is set to `main` here, as the
+/// workflow's checkout fetches it.
+function prEnv(work, extra = {}, pr = {}) {
+  ok(work, "update-ref", base, "main");
+  const event = join(work.root, "event.json");
+  const pull = { title: "A title", body: "A body\nwith two lines", head: { ref: "feature" }, ...pr };
+  writeFileSync(event, JSON.stringify({ pull_request: pull }));
   return {
     EVENT: "pull_request_target",
-    BASE: "main",
+    BASE: base,
     HEAD: head(work),
-    PR_TITLE: "A title",
-    PR_BODY: "A body\nwith two lines",
-    HEAD_REF: "feature",
     HEAD_REPO: "owner/repo",
     REPOSITORY: "owner/repo",
+    GITHUB_EVENT_PATH: event,
     DENY_LIST: denyList,
     ...extra,
   };
 }
 
+/// The scan run from a checkout of `main`, as the workflow runs it, so that a scan which read the
+/// checkout's HEAD instead of the event's head would find nothing to scan.
 function scanned(work, env, options = {}) {
-  return guardScan({ env, cwd: work.cwd, gitEnv: environment(work.home, work.env), ...options });
+  const branch = ok(work, "branch", "--show-current").trim();
+  ok(work, "switch", "-q", "--detach", "main");
+  try {
+    return guardScan({ env, cwd: work.cwd, gitEnv: environment(work.home, work.env), ...options });
+  } finally {
+    try {
+      ok(work, "switch", "-q", branch);
+    } catch {
+      // A test that removed an object of the branch cannot switch back; it scans once.
+    }
+  }
 }
 
 function noLeak(result) {
@@ -58,9 +77,10 @@ function found(result, ...expected) {
 test("a clean PR passes and says how many commits it scanned", () => {
   const work = setUp();
   commit(work, "docs/a.md", "one\ntwo\n", "clean");
+  commit(work, "docs/b.md", "three\n", "also clean");
   const result = scanned(work, prEnv(work));
   assert.equal(result.status, 0, result.lines.join("\n"));
-  assert.deepEqual(result.lines, ["guard: 1 commit(s) scanned, no match."]);
+  assert.deepEqual(result.lines, ["guard: 2 commit(s) scanned, no match."]);
 });
 
 test("an entry in an added line is reported with file and line, not the text", () => {
@@ -86,9 +106,38 @@ test("the head branch name, the PR title and a body line are scanned", () => {
   commit(work, "docs/a.md", "one\n", "clean");
   const result = scanned(
     work,
-    prEnv(work, { HEAD_REF: "fix-mirelbrook", PR_TITLE: `For ${secret}`, PR_BODY: "first\nsecond mirelbrook" }),
+    prEnv(work, {}, { head: { ref: "fix-mirelbrook" }, title: `For ${secret}`, body: "first\nsecond mirelbrook" }),
   );
   found(result, "the head branch name: a deny-list entry", "PR title: a deny-list entry", "PR body line 2: a deny-list entry");
+});
+
+test("the PR text comes from the event file, never from the environment", () => {
+  const work = setUp();
+  commit(work, "docs/a.md", "one\n", "clean");
+  const ignored = { HEAD_REF: "fix-mirelbrook", PR_TITLE: `For ${secret}`, PR_BODY: "mirelbrook" };
+  assert.equal(scanned(work, prEnv(work, ignored, { body: null })).status, 0);
+});
+
+test("a missing or malformed event file stops", () => {
+  const work = setUp();
+  commit(work, "docs/a.md", "one\n", "clean");
+  const malformed = [{ GITHUB_EVENT_PATH: join(work.root, "missing.json") }, {}];
+  for (const [index, pr] of [{}, { title: 7 }, { head: {} }, { body: ["x"] }].entries()) {
+    const env = index === 0 ? prEnv(work, malformed[0]) : prEnv(work, {}, pr);
+    const result = scanned(work, env);
+    assert.equal(result.status, 2, JSON.stringify(pr));
+    assert.deepEqual(result.lines, ["The event file is missing or malformed."]);
+  }
+});
+
+test("a tag named like the base does not shadow it", () => {
+  const work = setUp();
+  commit(work, "docs/a.md", "by mirelbrook\n", "add");
+  ok(work, "tag", "origin/main", "HEAD");
+  found(scanned(work, prEnv(work)), '"docs/a.md":1: a deny-list entry');
+  for (const short of ["origin/main", "main", "refs/heads/main", "refs/remotes/../main"]) {
+    assert.equal(scanned(work, prEnv(work, { BASE: short })).status, 2, short);
+  }
 });
 
 test("a vault path in an added line is reported", () => {
@@ -122,7 +171,8 @@ test("commits already on main are not scanned again", () => {
   ok(work, "switch", "-q", "feature");
   ok(work, "reset", "-q", "--hard", "main");
   commit(work, "docs/a.md", "one\n", "clean");
-  assert.equal(scanned(work, prEnv(work)).status, 0);
+  const result = scanned(work, prEnv(work));
+  assert.deepEqual(result.lines, ["guard: 1 commit(s) scanned, no match."]);
 });
 
 for (const [name, headRepo] of [["another repository", "someone/repo"], ["a deleted fork", ""]]) {
@@ -165,7 +215,7 @@ test("the commit cap passes at the limit and fails above it", () => {
   assert.match(result.lines.join("\n"), /too large to scan/);
 });
 
-test("the byte cap passes at the limit and fails one byte below what the scan reads", () => {
+test("the diff budget passes at the limit and fails one byte below what the scan reads", () => {
   const work = setUp();
   commit(work, "docs/a.md", "one\n".repeat(50), "one");
   const full = scanned(work, prEnv(work));
@@ -176,12 +226,57 @@ test("the byte cap passes at the limit and fails one byte below what the scan re
   assert.match(result.lines.join("\n"), /too large to scan/);
 });
 
-test("a push to main scans the range after the previous head", () => {
+test("a large file that changes by a few lines counts its diff, not its content", () => {
   const work = setUp();
-  const before = ok(work, "rev-parse", "main").trim();
+  const large = "a line of an invented log, long enough to add up\n".repeat(30_000);
+  assert.ok(large.length > 1024 * 1024 && large.length < defaultLimits.fileBytes);
+  for (let index = 0; index < 8; index += 1) commit(work, "docs/log.md", `${large}row ${index}\n`, `row ${index}`);
+  const result = scanned(work, prEnv(work));
+  assert.equal(result.status, 0, result.lines.join("\n"));
+  assert.ok(8 * large.length > defaultLimits.bytes, "the contents alone would exceed the diff budget");
+  assert.ok(result.bytes < defaultLimits.fileBytes, `diff bytes: ${result.bytes}`);
+});
+
+test("the per-file cap passes a file at the limit and fails one above it", () => {
+  const work = setUp();
+  ok(work, "switch", "-q", "main");
+  commit(work, "docs/log.md", "an invented row\n".repeat(200), "a large file on main");
+  ok(work, "switch", "-q", "feature");
+  ok(work, "reset", "-q", "--hard", "main");
+  commit(work, "docs/log.md", "an invented row\n".repeat(200) + "one more\n", "a few lines more");
+  const size = Number(ok(work, "cat-file", "-s", "HEAD:docs/log.md").trim());
+  assert.equal(scanned(work, prEnv(work), { limits: { ...defaultLimits, fileBytes: size } }).status, 0);
+  const result = scanned(work, prEnv(work), { limits: { ...defaultLimits, fileBytes: size - 1 } });
+  assert.equal(result.status, 1);
+  assert.deepEqual(result.lines, ["too large to scan; the owner scans it locally."]);
+});
+
+test("a patch above the per-file cap fails though the file is below it", () => {
+  const work = setUp();
+  ok(work, "switch", "-q", "main");
+  commit(work, "docs/a.md", "an invented row\n".repeat(200), "on main");
+  ok(work, "switch", "-q", "feature");
+  ok(work, "reset", "-q", "--hard", "main");
+  commit(work, "docs/a.md", "another made-up\n".repeat(200), "every line replaced");
+  const size = Number(ok(work, "cat-file", "-s", "HEAD:docs/a.md").trim());
+  const limits = { ...defaultLimits, fileBytes: size + 500 };
+  const result = scanned(work, prEnv(work), { limits });
+  assert.equal(result.status, 1);
+  assert.deepEqual(result.lines, ["too large to scan; the owner scans it locally."]);
+});
+
+test("a push to main scans the range after the previous head, and nothing before it", () => {
+  const work = setUp();
+  commit(work, "docs/old.md", "by mirelbrook\n", "older, already on main");
+  const before = head(work);
   commit(work, "docs/a.md", "by mirelbrook\n", "add");
   const env = { EVENT: "push", BEFORE: before, AFTER: head(work), DENY_LIST: denyList };
-  found(scanned(work, env), '"docs/a.md":1: a deny-list entry');
+  const result = scanned(work, env);
+  found(result, '"docs/a.md":1: a deny-list entry');
+  assert.ok(!result.lines.join("\n").includes("docs/old.md"), result.lines.join("\n"));
+  commit(work, "docs/b.md", "clean\n", "clean");
+  const clean = scanned(work, { ...env, BEFORE: env.AFTER, AFTER: head(work) });
+  assert.deepEqual(clean.lines, ["guard: 1 commit(s) scanned, no match."]);
 });
 
 test("a push whose previous head is unknown or not an ancestor fails", () => {

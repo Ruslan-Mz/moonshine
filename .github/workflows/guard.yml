@@ -4,8 +4,11 @@ name: Guard
 # file and scripts/ci/guard-scan.mjs as main holds them, so a pull request that edits either changes
 # nothing until it is merged. No file of the pull request is checked out or run: its commits are
 # fetched as data and scanned. The deny-list comes from the `guard` environment, whose deployment
-# branch policy admits main only; every value from the event reaches the script through `env:`,
-# never through a `run:` line. scripts/guard-workflow.test.mjs pins these rules.
+# branch policy admits main only. Commit ids and repository names reach the script through `env:`,
+# never through a `run:` line; the PR's branch name, title and body it reads from the event file,
+# because the runner prints a step's `env:` values in the public log. No concurrency group: a group
+# keeps one pending run and cancels it for a newer one, which would leave that run's range of main
+# unscanned. scripts/guard-workflow.test.mjs pins these rules.
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, edited]
@@ -14,11 +17,6 @@ on:
 
 permissions:
   contents: read
-
-# A cancelled run would leave a pushed head or a range of main unscanned, so runs queue instead.
-concurrency:
-  group: guard-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: false
 
 jobs:
   guard:
@@ -41,13 +39,10 @@ jobs:
       - name: Scan for deny-list entries, vault paths and binary files (kinds only, never the text)
         env:
           EVENT: ${{ github.event_name }}
-          BASE: origin/main
+          BASE: refs/remotes/origin/main
           HEAD: ${{ github.event.pull_request.head.sha }}
-          HEAD_REF: ${{ github.event.pull_request.head.ref }}
           HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
           REPOSITORY: ${{ github.repository }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
           BEFORE: ${{ github.event.before }}
           AFTER: ${{ github.event.after }}
           DENY_LIST: ${{ secrets.DENY_LIST }}
