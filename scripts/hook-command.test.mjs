@@ -22,6 +22,16 @@ function readHook() {
   return entries[0].hooks[0];
 }
 
+test("/review-pr reads a fork PR's diff only, before any worktree is created (PUB-3 round 1)", () => {
+  const skill = readFileSync(join(repository, ".claude/skills/review-pr/SKILL.md"), "utf8");
+  const rule = skill.indexOf("**Fork PRs are read-only**");
+  assert.ok(rule > 0, "the fork rule is in SKILL.md");
+  assert.ok(rule < skill.indexOf("git worktree add <scratchpad>/review/pr-<n>"), "it comes before the worktree");
+  assert.match(skill, /headRepository,headRepositoryOwner,isCrossRepository/);
+  assert.match(skill, /nothing from the PR is built, tested or run/);
+  assert.match(skill, /\*\*Read-only review: the head is in another repository; nothing from this PR was built, tested or run\.\*\*/);
+});
+
 test("the read-boundary hook command is pinned and ends in || exit 2", () => {
   assert.deepEqual(readHook(), { type: "command", command });
 });
