@@ -251,18 +251,60 @@ test("the per-file cap passes a file at the limit and fails one above it", () =>
   assert.deepEqual(result.lines, ["too large to scan; the owner scans it locally."]);
 });
 
-test("a patch above the per-file cap fails though the file is below it", () => {
-  const work = setUp();
+/// Commits `content` to `path` on `main`, then branches `feature` from it again.
+function onMain(work, path, content) {
   ok(work, "switch", "-q", "main");
-  commit(work, "docs/a.md", "an invented row\n".repeat(200), "on main");
+  commit(work, path, content, "on main");
   ok(work, "switch", "-q", "feature");
   ok(work, "reset", "-q", "--hard", "main");
-  commit(work, "docs/a.md", "another made-up\n".repeat(200), "every line replaced");
-  const size = Number(ok(work, "cat-file", "-s", "HEAD:docs/a.md").trim());
-  const limits = { ...defaultLimits, fileBytes: size + 500 };
-  const result = scanned(work, prEnv(work), { limits });
-  assert.equal(result.status, 1);
-  assert.deepEqual(result.lines, ["too large to scan; the owner scans it locally."]);
+}
+
+test("a fully re-padded file counts its added lines against the per-file cap, not its removed ones", () => {
+  const work = setUp();
+  const rows = 45_000;
+  onMain(work, "docs/log.md", "| an invented row of a padded table |\n".repeat(rows));
+  commit(work, "docs/log.md", "| an invented row of a padded table   |\n".repeat(rows), "every row re-padded");
+  const size = Number(ok(work, "cat-file", "-s", "HEAD:docs/log.md").trim());
+  assert.ok(size > 1.5 * 1024 * 1024 && size < 2 * 1024 * 1024, `size: ${size}`);
+  const result = scanned(work, prEnv(work));
+  assert.equal(result.status, 0, result.lines.join("\n"));
+  assert.ok(result.bytes > 3 * 1024 * 1024, `the patch holds every old and new line: ${result.bytes}`);
+  // A cap of the file's own size passes: the removed half of the patch is not counted.
+  assert.equal(scanned(work, prEnv(work), { limits: { ...defaultLimits, fileBytes: size } }).status, 0);
+});
+
+test("a file on the binary allowlist is never read and counts toward no cap, but its name is scanned", () => {
+  const work = setUp();
+  const gif = Buffer.alloc(3 * 1024 * 1024, 0x47);
+  gif[0] = 0;
+  commit(work, "assets/demo.gif", gif, "the demo");
+  const allowlist = join(work.root, "allowlist.txt");
+  writeFileSync(allowlist, "assets/demo.gif\nassets/mirelbrook.gif\n");
+  const tight = { ...defaultLimits, fileBytes: 1024 * 1024 };
+  const result = scanned(work, prEnv(work), { allowlist, limits: tight });
+  assert.equal(result.status, 0, result.lines.join("\n"));
+  assert.ok(result.bytes < 4096, `diff bytes: ${result.bytes}`);
+  commit(work, "assets/mirelbrook.gif", gif, "a second");
+  found(scanned(work, prEnv(work), { allowlist }), "a file name: a deny-list entry");
+});
+
+test("a 3 MB binary that is not on the allowlist is still refused as binary data", () => {
+  const work = setUp();
+  const gif = Buffer.alloc(3 * 1024 * 1024, 0x47);
+  gif[0] = 0;
+  commit(work, "assets/demo.gif", gif, "the demo");
+  found(scanned(work, prEnv(work)), '"assets/demo.gif": binary data');
+});
+
+test("sizes are counted in raw bytes, before decoding", () => {
+  const work = setUp();
+  // 0xff is invalid UTF-8; decoded, each byte would count three (U+FFFD).
+  const raw = Buffer.concat(Array.from({ length: 200 }, () => Buffer.from([...Array(15).fill(0xff), 0x0a])));
+  commit(work, "docs/raw.txt", raw, "add");
+  const limits = { ...defaultLimits, fileBytes: raw.length };
+  found(scanned(work, prEnv(work), { limits }), '"docs/raw.txt": invalid UTF-8');
+  const full = scanned(work, prEnv(work));
+  assert.ok(full.bytes < 2 * raw.length, `diff bytes: ${full.bytes}`);
 });
 
 test("a push to main scans the range after the previous head, and nothing before it", () => {

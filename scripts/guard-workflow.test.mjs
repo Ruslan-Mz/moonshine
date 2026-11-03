@@ -23,9 +23,11 @@ function lines() {
     const indent = raw.length - raw.trimStart().length;
     while (stack.length > 0 && stack.at(-1).indent >= indent) stack.pop();
     const line = raw.trim();
-    const key = /^(?:- )?([A-Za-z_][\w-]*):/.exec(line)?.[1];
+    // Any spacing after a list dash: `-   run:` is a step too.
+    const dash = /^-\s+/.exec(line)?.[0] ?? "";
+    const key = /^([A-Za-z_][\w-]*):/.exec(line.slice(dash.length))?.[1];
     result.push({ line, keys: stack.map((entry) => entry.key), key });
-    if (key) stack.push({ indent: indent + (line.startsWith("- ") ? 2 : 0), key });
+    if (key) stack.push({ indent: indent + dash.length, key });
   }
   return result;
 }
@@ -87,13 +89,37 @@ test("values from the event and the secret reach the steps through env only", ()
 });
 
 test("the PR's branch name, title and body never reach env, whose values the log prints", () => {
-  assert.ok(!/github\.event\.pull_request\.(?:title|body|head\.ref|head\.label)\b|PR_TITLE|PR_BODY|HEAD_REF/.test(text));
-  const scanEnv = all
-    .filter(({ keys }) => keys.at(-1) === "env")
-    .map(({ key }) => key)
-    .filter((key) => key !== "PR");
-  assert.deepEqual(scanEnv, ["EVENT", "BASE", "HEAD", "HEAD_REPO", "REPOSITORY", "BEFORE", "AFTER", "DENY_LIST"]);
-  assert.ok(all.some(({ line }) => line === "BASE: refs/remotes/origin/main"));
+  // Every env line pinned whole, key and value: no other expression can put the PR's text there.
+  assert.deepEqual(
+    all.filter(({ keys }) => keys.at(-1) === "env").map(({ line }) => line),
+    [
+      "PR: ${{ github.event.pull_request.number }}",
+      "EVENT: ${{ github.event_name }}",
+      "BASE: refs/remotes/origin/main",
+      "HEAD: ${{ github.event.pull_request.head.sha }}",
+      "HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}",
+      "REPOSITORY: ${{ github.repository }}",
+      "BEFORE: ${{ github.event.before }}",
+      "AFTER: ${{ github.event.after }}",
+      "DENY_LIST: ${{ secrets.DENY_LIST }}",
+    ],
+  );
+  assert.ok(!/head_ref|toJSON\(|PR_TITLE|PR_BODY|HEAD_REF/i.test(text));
+});
+
+test("every line of the steps has a known key, so no step escapes the pins", () => {
+  // A quoted key, a flow mapping or an unknown key would hide a step from the parser above.
+  const known = {
+    steps: ["name", "if", "env", "run", "uses", "with"],
+    with: ["ref", "persist-credentials", "fetch-depth"],
+    env: ["PR", "EVENT", "BASE", "HEAD", "HEAD_REPO", "REPOSITORY", "BEFORE", "AFTER", "DENY_LIST"],
+  };
+  const steps = under("jobs", "guard", "steps");
+  assert.ok(steps.length > 0);
+  for (const { line, keys, key } of steps) {
+    assert.ok(key, `a line the parser cannot key: ${line}`);
+    assert.ok(known[keys.at(-1)]?.includes(key), `unknown key under ${keys.at(-1)}: ${line}`);
+  }
 });
 
 test("the run lines are exactly the fetch as data and main's scan, with no block scalars", () => {

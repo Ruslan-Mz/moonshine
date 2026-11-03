@@ -21,7 +21,7 @@ Until this step, the `guard` check fails on every pull request ("DENY_LIST is no
 2. **Deployment branches and tags** → **Selected branches and tags** → **Add deployment branch or tag rule** → **Ref type: Branch**, **Name pattern:** `main` → **Add rule**. No other rule. No **Required reviewers** (they would hold every run until someone approves it).
 3. Only now: **Environment secrets** → **Add environment secret** → **Name:** `DENY_LIST`, **Value:** the whole text of the deny-list file → **Add secret**. A secret holds at most 48 KB; a longer deny-list stops here.
 4. **Settings** → **Secrets and variables** → **Actions** → **Repository secrets**: no `DENY_LIST` there (and none among the account's organisation secrets, if any). A repository secret is readable by any workflow on any branch, past the environment's policy.
-5. Check: on an open pull request from a branch of this repository, **Checks** → **Guard** → **Re-run all jobs**. It passes, and its log names commits and files only, never an entry.
+5. Check: on an open pull request from a branch of this repository, **Checks** → **Guard** → **Re-run all jobs**. It passes, and its findings name commits and files only, never an entry. The log never shows the pull request's title or body; the checkout step lists the repository's branch names, which are public once pushed.
 6. Pushes to `main` between the merge of PUB-3 and this step failed with "DENY_LIST is not set", and nothing re-runs them: **Actions** → **Guard** → filter **Branch:** `main` → each failed run → **Re-run all jobs**. A re-run scans the same range of `main` as the first run.
 
 ## Step 6: branch protection on `main`
@@ -43,6 +43,14 @@ A job skipped by its condition counts as passed: a docs-only pull request, whose
 4. A test pull request that adds a `pull_request` job with `environment: guard`, printing only whether the secret is set (`[ -n "$X" ] && echo present || echo absent`, never its value): the job is refused the environment. Close the pull request unmerged.
 5. A pull request from a fork (a second account, if there is one): `guard` fails with "fork PR: not scanned".
 6. In zsh, the guard's reinstall command (CLAUDE.md → Commands → Guard) runs and installs `commit-scan.mjs`.
+
+## A pull request from a fork
+
+`guard` fails it unscanned, and `/review-pr` reviews it read-only: it reads the diff and builds, tests and runs nothing from it (`.claude/skills/review-pr/SKILL.md`, §1). To take it further, the owner:
+
+1. scans its commits locally (the pre-push hook does this on the push below);
+2. re-pushes its head here as a branch named `fork/<pr>-<slug>`: `<pr>` the fork PR's number, `<slug>` a few words of its own, `git push origin HEAD:refs/heads/fork/<pr>-<slug>`;
+3. opens a pull request from that branch. `guard` scans it as usual; `/review-pr` treats a head branch starting `fork/` as read-only too, like a cross-repository head, since its code is still a stranger's.
 
 ## What the guard in CI does not do
 

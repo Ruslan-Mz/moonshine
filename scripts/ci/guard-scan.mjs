@@ -5,12 +5,12 @@
 // lines) for the commits not yet on main, plus the PR's head branch name, title and body. Commit ids
 // and names come from the environment, never from the workflow's `run:` lines; the branch name, the
 // title and the body come from the event file ($GITHUB_EVENT_PATH), because the runner prints a
-// step's `env:` values in the public log.
+// step's `env:` values in the public log, which never prints the PR's title or body.
 // Tests: node --test scripts/guard-scan.test.mjs
 //
 // A finding names the commit and the file and line, never the matched text: the log is public. A
 // PR from another repository (a fork) fails unscanned; the owner scans it locally and re-pushes it
-// as a branch here. A range above the limits, or a push whose previous head is not an ancestor,
+// here as a branch fork/<pr>-<slug>, which /review-pr reviews read-only. A range above the limits, or a push whose previous head is not an ancestor,
 // fails: the owner scans it locally. Exit 0 clean, 1 findings or not scanned, 2 setup or git error.
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -21,9 +21,10 @@ import { match, parseDenyList } from "../guard/matcher.mjs";
 
 export const defaultAllowlist = join(dirname(fileURLToPath(import.meta.url)), "..", "guard", "binary-allowlist.txt");
 /// `bytes` bounds the diff output of the whole scan (messages, file lists, patches); `fileBytes`
-/// bounds one file: its content, read whole for the binary check and not counted in `bytes`, and its
-/// patch.
-export const defaultLimits = { commits: 2000, bytes: 10 * 1024 * 1024, fileBytes: 2 * 1024 * 1024 };
+/// bounds one file: its content, read whole for the binary check and not counted in `bytes`, and the
+/// added lines of its patch (removed lines are never scanned, so a re-padded table counts once).
+/// Both count raw bytes, before decoding. A file on the binary allowlist is not read at all.
+export const defaultLimits = { commits: 2000, bytes: 10 * 1024 * 1024, fileBytes: 4 * 1024 * 1024 };
 const reportLimit = 20;
 const commitId = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
 const remoteRef = /^refs\/remotes\/[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)+$/;
@@ -39,6 +40,21 @@ class Stop extends Error {
 
 function stop(status, message) {
   throw new Stop(status, message);
+}
+
+/// The bytes of a patch's added lines: those starting with `+` after its first hunk header.
+function addedBytes(patch) {
+  let total = 0;
+  let inHunk = false;
+  let start = 0;
+  while (start < patch.length) {
+    let end = patch.indexOf(0x0a, start);
+    if (end === -1) end = patch.length;
+    if (patch[start] === 0x40 && patch[start + 1] === 0x40) inHunk = true;
+    else if (inHunk && patch[start] === 0x2b) total += end - start;
+    start = end + 1;
+  }
+  return total;
 }
 
 /// The PR's head branch name, title and body lines from the event file, each with its label.
@@ -67,27 +83,28 @@ function prTexts(path) {
 export function guardScan({ env, cwd, gitEnv = process.env, allowlist = defaultAllowlist, limits = defaultLimits }) {
   let bytes = 0;
 
-  /// git with its output bounded: a file's content by `fileBytes` alone, a file's patch by
-  /// `fileBytes` and the rest of `bytes`, everything else by the rest of `bytes`. stderr is never
-  /// printed.
+  /// git with its output bounded in raw bytes, before decoding: a file's content by `fileBytes`
+  /// alone, everything else by the rest of `bytes`, and a file's patch also by `fileBytes` of added
+  /// lines. stderr is never printed.
   function run(args, options = {}) {
     const content = args[0] === "cat-file" && args[1] === "blob";
     const patch = args[0] === "diff-tree" && args.includes("-p");
-    const rest = limits.bytes - bytes;
-    const budget = content ? limits.fileBytes : patch ? Math.min(limits.fileBytes, rest) : rest;
+    const budget = content ? limits.fileBytes : limits.bytes - bytes;
     const result = spawnSync("git", args, {
       cwd,
       env: gitEnv,
-      encoding: "utf8",
       maxBuffer: Math.max(budget, 1),
       ...options,
+      ...(typeof options.input === "string" ? { input: Buffer.from(options.input) } : {}),
+      encoding: "buffer",
       stdio: ["pipe", "pipe", "ignore"],
     });
     if (result.error?.code === "ENOBUFS") stop(1, tooLarge);
-    const size = Buffer.byteLength(result.stdout ?? "");
-    if (size > budget) stop(1, tooLarge);
-    if (!content) bytes += size;
-    return result;
+    const output = result.stdout ?? Buffer.alloc(0);
+    if (output.length > budget) stop(1, tooLarge);
+    if (!content) bytes += output.length;
+    if (patch && addedBytes(output) > limits.fileBytes) stop(1, tooLarge);
+    return { status: result.status, stdout: options.encoding === "buffer" ? output : output.toString("utf8") };
   }
 
   function git(args, options) {
@@ -106,7 +123,7 @@ export function guardScan({ env, cwd, gitEnv = process.env, allowlist = defaultA
     const event = env.EVENT;
     if (event !== "pull_request_target" && event !== "push") stop(2, "EVENT is neither pull_request_target nor push.");
     if (event === "pull_request_target" && (!env.REPOSITORY || env.HEAD_REPO !== env.REPOSITORY)) {
-      stop(1, "fork PR: not scanned. The owner scans it locally and re-pushes it as a branch of this repository.");
+      stop(1, "fork PR: not scanned. The owner scans it locally and re-pushes it here as a branch fork/<pr>-<slug>.");
     }
     if (!env.DENY_LIST?.trim()) stop(2, "DENY_LIST is not set: docs/setup/github.md, step 5.");
     const entries = parseDenyList(env.DENY_LIST, (message) => stop(2, message));

@@ -1,7 +1,8 @@
 // One commit's scan, shared by the pre-push hook (pre-push.mjs) and the CI guard
 // (scripts/ci/guard-scan.mjs), so both look at a commit the same way: its message lines, the names
 // of the files it changes, binary or non-UTF-8 files not on the allowlist, and its added lines. A
-// finding names the commit and the file and line, never the matched text. The caller passes its
+// file on the reviewed allowlist is not read at all: only its name is scanned. A finding names the
+// commit and the file and line, never the matched text. The caller passes its
 // own `git(args, options)`, which returns stdout and must not return on a failure.
 import { readFileSync } from "node:fs";
 import { match, printable, unreadable } from "./matcher.mjs";
@@ -66,8 +67,9 @@ export function scan(git, sha, entries, allowed, findings) {
   for (const { path, blob } of changes(git, sha)) {
     const kind = match(path, entries);
     if (kind) findings.push(`commit ${short}, a file name: ${kind}`);
+    if (allowed.has(path)) continue;
     const where = printable(path, entries);
-    if (blob !== null && !allowed.has(path)) {
+    if (blob !== null) {
       const why = unreadable(git(["cat-file", "blob", blob], { encoding: "buffer" }));
       if (why) findings.push(`commit ${short}, ${where}: ${why}`);
     }

@@ -300,6 +300,15 @@ test("a binary file on the installed allowlist passes", () => {
   passes(push(work));
 });
 
+test("a file on the installed allowlist is never read, but its name is still scanned", () => {
+  const work = setUp();
+  appendFileSync(installed(work, "guard", "binary-allowlist.txt"), `assets/a.bin\nassets/${secret}.bin\n`);
+  commit(work, "assets/a.bin", Buffer.from(`\u0000 ${secret}\n`), "binary with text");
+  passes(push(work));
+  commit(work, `assets/${secret}.bin`, Buffer.from([0, 1, 2]), "binary");
+  blocked(push(work), "a file name: a deny-list entry");
+});
+
 test("a binary file whose name matches prints the placeholder", () => {
   const work = setUp();
   commit(work, `notes/${secret}.bin`, Buffer.from([0, 1, 2]), "binary");
