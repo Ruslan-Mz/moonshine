@@ -33,7 +33,9 @@ struct RootView: View {
   }
 }
 
-/// Source and freshness. The minute's tick only redraws; the time is the model's clock.
+/// Source and freshness. The minute's tick only redraws; the time is the model's clock. The
+/// tick falls on the clock's whole minutes, so a step can show up to a minute late: the text
+/// counts in minutes. A finished import redraws at once: the body reads `lastImport`.
 struct StatusBar: View {
   let model: AppModel
   @Environment(\.locale) private var locale
@@ -41,7 +43,7 @@ struct StatusBar: View {
   var body: some View {
     HStack {
       Text("Demo data")
-      if case .loaded(let overview) = model.state {
+      if case .loaded(let overview) = model.state, model.lastImport != nil {
         TimelineView(.everyMinute) { _ in
           if let freshness = model.freshness() {
             text(freshness, timeZone: overview.workspace.timeZone)

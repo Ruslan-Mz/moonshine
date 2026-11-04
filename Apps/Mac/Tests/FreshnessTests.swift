@@ -24,6 +24,17 @@ import Testing
     #expect(after(24 * 3_600) == .day(finished))
   }
 
+  /// `Updated on <day>` names the year only when it is not the current one.
+  @Test func theDayNamesTheYearOnlyWhenItIsNotTheCurrentOne() {
+    let english = Locale(identifier: "en_GB")
+    func day(today: Date) -> String {
+      TodayFormat.lastDate(
+        finished, today: today, timeZone: DemoVault.calendar.timeZone, locale: english)
+    }
+    #expect(day(today: finished.addingTimeInterval(30 * 86_400)) == "1 October")
+    #expect(day(today: finished.addingTimeInterval(120 * 86_400)) == "1 October 2026")
+  }
+
   /// The catalog's Russian forms, looked up in the app's `ru.lproj`.
   @Test func russianFormsResolveFromTheCatalog() throws {
     let path = try #require(Bundle.main.path(forResource: "ru", ofType: "lproj"))
