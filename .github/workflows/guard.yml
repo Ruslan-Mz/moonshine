@@ -1,0 +1,50 @@
+name: Guard
+
+# The guard in CI (CLAUDE.md → Commands → Guard; docs/setup/github.md). pull_request_target runs this
+# file and scripts/ci/guard-scan.mjs as main holds them, so a pull request that edits either changes
+# nothing until it is merged. No file of the pull request is checked out or run: its commits are
+# fetched as data and scanned. The deny-list comes from the `guard` environment, whose deployment
+# branch policy admits main only. Commit ids and repository names reach the script through `env:`,
+# never through a `run:` line; the PR's title, body and head branch name it reads from the event
+# file, because the runner prints a step's `env:` values in the public log, which never prints the
+# PR's title or body. Branch names are public once pushed; the checkout lists them. No concurrency
+# group: a group keeps one pending run and cancels it for a newer one, which would leave that run's
+# range of main unscanned. scripts/guard-workflow.test.mjs pins these rules.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, edited]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: guard
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: main
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Fetch the pull request's commits as data
+        if: github.event_name == 'pull_request_target'
+        env:
+          PR: ${{ github.event.pull_request.number }}
+        run: git fetch --no-tags origin "+refs/pull/$PR/head:refs/remotes/pr/head"
+
+      - name: Scan for deny-list entries, vault paths and binary files (kinds only, never the text)
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: refs/remotes/origin/main
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPOSITORY: ${{ github.repository }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
+          DENY_LIST: ${{ secrets.DENY_LIST }}
+        run: node scripts/ci/guard-scan.mjs

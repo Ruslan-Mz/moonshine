@@ -118,11 +118,15 @@ import Testing
         try await ProcessScriptRunner().run(
           sh, arguments: ["-c", "sleep 5"], timeout: .milliseconds(200))
       }
-      #expect(clock.now - started < .seconds(3))
+      // Below the child's 5 s sleep, which a call that did not terminate it would wait out; not
+      // tighter, since shared CI runners took 3.6 s (PUB-3).
+      #expect(clock.now - started < .seconds(4))
     }
 
     /// A child that ignores SIGTERM, with a grandchild holding the pipes open: the call still
-    /// returns the typed timeout within timeout + grace (TERM) + grace (KILL) + a margin.
+    /// returns the typed timeout well before the child's 10 s sleep, which a call that did not
+    /// kill it would wait out. Not timeout + grace + grace + 1 s: shared CI runners took 4.4 s
+    /// (PUB-3).
     @Test func aChildThatIgnoresTermIsKilledAndTheCallReturns() async throws {
       // The child writes its pid to a file: a timed-out call returns no output.
       let pidFile = FileManager.default.temporaryDirectory.appending(path: "child-\(UUID()).pid")
@@ -134,7 +138,7 @@ import Testing
           sh, arguments: ["-c", "trap '' TERM; echo $$ > '\(pidFile.path())'; sleep 10"],
           timeout: .milliseconds(200))
       }
-      #expect(clock.now - started < .milliseconds(200 + 500 + 500 + 1000))
+      #expect(clock.now - started < .seconds(6))
       // The child ignored SIGTERM, so only SIGKILL can have ended it (and Process reaped it).
       let pid = try #require(
         Int32(

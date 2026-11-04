@@ -9,17 +9,18 @@
 // installed binary-allowlist.txt. Commits count as already on the remote only when `git ls-remote`
 // on the push URL reports them. A finding names the commit and the file and line, never the
 // matched text. A missing config, allowlist or deny-list, an empty deny-list, or a git error
-// blocks the push.
+// blocks the push. The commit scan itself is commit-scan.mjs, shared with the CI guard.
 import { spawnSync } from "node:child_process";
 import { readFileSync, realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { denyList, match, printable, unreadable } from "./matcher.mjs";
+import { binaryAllowlist, scan } from "./commit-scan.mjs";
+import { denyList, match } from "./matcher.mjs";
 
 const zero = /^0+$/;
 const mainRef = "refs/heads/main";
 const reportLimit = 20;
-const guardFiles = ["matcher.mjs", "pre-push.mjs", "gh-post.mjs", "binary-allowlist.txt"];
+const guardFiles = ["matcher.mjs", "commit-scan.mjs", "pre-push.mjs", "gh-post.mjs", "binary-allowlist.txt"];
 
 function block(message) {
   process.stderr.write(`pre-push: push blocked. ${message}\n`);
@@ -101,75 +102,6 @@ function commits(localSha, onRemote) {
     .filter((sha) => sha !== "");
 }
 
-const diffOptions = ["--no-commit-id", "--root", "--first-parent", "-m", "--no-renames"];
-
-/// What a commit changes (against its first parent): each path exactly as stored, and the new
-/// blob, or null for a deletion or a submodule.
-function changes(sha) {
-  const fields = git(["diff-tree", ...diffOptions, "-r", "--raw", "-z", sha]).split("\0");
-  const result = [];
-  for (let index = 0; index + 1 < fields.length; index += 2) {
-    // ":<old mode> <new mode> <old blob> <new blob> <status>", then the path
-    const [, mode, , blob] = fields[index].slice(1).split(" ");
-    const kept = !zero.test(blob) && mode !== "160000";
-    result.push({ path: fields[index + 1], blob: kept ? blob : null });
-  }
-  return result;
-}
-
-/// The paths the installed binary-allowlist.txt names, one per line; `#` starts a comment line.
-function binaryAllowlist() {
-  let text;
-  try {
-    text = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "binary-allowlist.txt"), "utf8");
-  } catch {
-    block("No binary-allowlist.txt next to the installed guard; reinstall the guard (CLAUDE.md → Commands → Guard).");
-  }
-  return new Set(text.split(/\r?\n/).filter((line) => line !== "" && !line.startsWith("#")));
-}
-
-/// Added lines of one file in one commit, with their line numbers in that commit.
-function* addedLines(sha, path) {
-  const diff = git([
-    "diff-tree", ...diffOptions, "-p", "--unified=0", "--no-color", "--no-ext-diff", "--text", sha,
-    "--", `:(literal)${path}`,
-  ]);
-  let line = 0;
-  let inHunk = false;
-  for (const text of diff.split("\n")) {
-    if (text.startsWith("@@ ")) {
-      inHunk = true;
-      line = Number(/\+(\d+)/.exec(text.slice(3))?.[1] ?? 0);
-    } else if (inHunk && text.startsWith("+")) {
-      yield { line, text: text.slice(1) };
-      line += 1;
-    }
-  }
-}
-
-function scan(sha, entries, allowed, findings) {
-  const short = sha.slice(0, 9);
-  git(["log", "-1", "--format=%B", sha])
-    .split("\n")
-    .forEach((text, index) => {
-      const kind = match(text, entries);
-      if (kind) findings.push(`commit ${short}, message line ${index + 1}: ${kind}`);
-    });
-  for (const { path, blob } of changes(sha)) {
-    const kind = match(path, entries);
-    if (kind) findings.push(`commit ${short}, a file name: ${kind}`);
-    const where = printable(path, entries);
-    if (blob !== null && !allowed.has(path)) {
-      const why = unreadable(git(["cat-file", "blob", blob], { encoding: "buffer" }));
-      if (why) findings.push(`commit ${short}, ${where}: ${why}`);
-    }
-    for (const added of addedLines(sha, path)) {
-      const kind = match(added.text, entries);
-      if (kind) findings.push(`commit ${short}, ${where}:${added.line}: ${kind}`);
-    }
-  }
-}
-
 warnIfStale();
 
 const refs = readFileSync(0, "utf8")
@@ -189,7 +121,9 @@ for (const [, localSha, remoteRef, remoteSha] of refs) {
 }
 
 const entries = denyList(block);
-const allowed = binaryAllowlist();
+const allowed = binaryAllowlist(join(dirname(fileURLToPath(import.meta.url)), "binary-allowlist.txt"), () =>
+  block("No binary-allowlist.txt next to the installed guard; reinstall the guard (CLAUDE.md → Commands → Guard)."),
+);
 const findings = [];
 for (const [localRef, , remoteRef] of refs) {
   for (const [name, label] of [[localRef, "the local ref name"], [remoteRef, "the remote ref name"]]) {
@@ -203,7 +137,7 @@ for (const [, localSha] of refs) {
   for (const sha of commits(localSha, onRemote.present)) {
     if (seen.has(sha)) continue;
     seen.add(sha);
-    scan(sha, entries, allowed, findings);
+    scan(git, sha, entries, allowed, findings);
   }
 }
 

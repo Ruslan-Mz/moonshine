@@ -52,7 +52,7 @@ git cat-file -e "$main^{commit}" 2> /dev/null || fail "origin's main is not here
 mkdir -p "$dir/hooks" "$dir/bin"
 stage=$(mktemp -d "$dir/guard.new.XXXXXX")
 trap 'rm -rf "$stage" "$stage.old"' EXIT
-for file in matcher.mjs pre-push.mjs gh-post.mjs binary-allowlist.txt; do
+for file in matcher.mjs commit-scan.mjs pre-push.mjs gh-post.mjs binary-allowlist.txt; do
   git cat-file blob "$main:scripts/guard/$file" > "$stage/$file" ||
     fail "origin's main has no scripts/guard/$file; the old guard is unchanged."
 done
