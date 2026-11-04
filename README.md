@@ -62,7 +62,7 @@ Agents write the code; the owner directs and reviews. Each slice of work is plan
 
 - [`CLAUDE.md`](CLAUDE.md): the rules the agents work by.
 - [`docs/specs/`](docs/specs/): what each phase builds.
-- [`docs/method/log.md`](docs/method/log.md): one row per pull request, with honest numbers.
+- [`docs/method/log.md`](docs/method/log.md): one row per pull request, with honest numbers, one file per month.
 - [`docs/method/forecast.md`](docs/method/forecast.md): how slice sizes are estimated and corrected by the measured size factor.
 - [`docs/method/calibration/`](docs/method/calibration/): trials of the plan critic.
 

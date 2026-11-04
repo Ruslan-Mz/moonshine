@@ -24,7 +24,7 @@ The durations below are forecasts at the measured pace, not timeboxes. A phase's
 
 The owner's figures, read from the method log:
 
-- **Pace:** 2026-10-05 to 2026-10-08, about 250 production lines and one merged PR a day (`docs/method/log.md`).
+- **Pace:** 2026-10-05 to 2026-10-08, about 250 production lines and one merged PR a day (`docs/method/log/2026-10.md`).
 - **Factor:** 1.55, actual production lines against the plan's estimate (the figure of 2026-10-09; the size factor above replaces it for sizing).
 - **Size by risk:** risky slices up to about 400 production lines after the factor, plain slices up to about 800 (`CLAUDE.md` rule 2).
 - **Slow scenario:** 0.6 of the pace from January (less owner time).
