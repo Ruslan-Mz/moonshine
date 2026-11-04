@@ -1,8 +1,9 @@
 // What the push and post guard looks for (CLAUDE.md rule 5): a line of the owner's deny-list, or a
 // path inside the vault; and text it cannot scan (binary data, invalid UTF-8). Shared by
-// pre-push.mjs and gh-post.mjs; scripts/install-guard.sh copies the guard folder outside the
-// checkout, with a config.json naming the deny-list and the scratchpad roots. A result is a kind,
-// never the matched text: guard output reaches the terminal and session logs.
+// pre-push.mjs, commit-scan.mjs and gh-post.mjs, and by the guard in CI (scripts/ci/guard-scan.mjs);
+// scripts/install-guard.sh copies the guard folder outside the checkout, with a config.json naming
+// the deny-list and the scratchpad roots. A result is a kind, never the matched text: guard output
+// reaches the terminal, session logs and the public CI log.
 import { readFileSync } from "node:fs";
 import { dirname, isAbsolute, join } from "node:path";
 import { fileURLToPath } from "node:url";

@@ -215,19 +215,21 @@ test("a fast-forward update of another branch is allowed", () => {
   passes(push(work, "HEAD:refs/heads/other"));
 });
 
-test("an installed guard that differs from the checkout's warns but does not block", () => {
-  const work = setUp();
-  commit(work, "a.md", "clean\n", "clean");
-  const same = push(work);
-  passes(same);
-  assert.doesNotMatch(same.stderr, /differs/);
+for (const file of ["matcher.mjs", "commit-scan.mjs", "pre-push.mjs", "gh-post.mjs", "binary-allowlist.txt"]) {
+  test(`an installed ${file} that differs from the checkout's warns but does not block`, () => {
+    const work = setUp();
+    commit(work, "a.md", "clean\n", "clean");
+    const same = push(work);
+    passes(same);
+    assert.doesNotMatch(same.stderr, /differs/);
 
-  appendFileSync(installed(work, "guard", "gh-post.mjs"), "\n// changed\n");
-  commit(work, "b.md", "clean\n", "clean");
-  const stale = push(work);
-  passes(stale);
-  assert.match(stale.stderr, /installed guard differs .* after the change is merged .*installs main's guard/);
-});
+    appendFileSync(installed(work, "guard", file), "\n// changed\n");
+    commit(work, "b.md", "clean\n", "clean");
+    const stale = push(work);
+    passes(stale);
+    assert.match(stale.stderr, /installed guard differs .* after the change is merged .*installs main's guard/);
+  });
+}
 
 test("a config.json without the deny-list path blocks", () => {
   const work = setUp();
@@ -298,6 +300,15 @@ test("a binary file on the installed allowlist passes", () => {
   passes(push(work));
 });
 
+test("a file on the installed allowlist is never read, but its name is still scanned", () => {
+  const work = setUp();
+  appendFileSync(installed(work, "guard", "binary-allowlist.txt"), `assets/a.bin\nassets/${secret}.bin\n`);
+  commit(work, "assets/a.bin", Buffer.from(`\u0000 ${secret}\n`), "binary with text");
+  passes(push(work));
+  commit(work, `assets/${secret}.bin`, Buffer.from([0, 1, 2]), "binary");
+  blocked(push(work), "a file name: a deny-list entry");
+});
+
 test("a binary file whose name matches prints the placeholder", () => {
   const work = setUp();
   commit(work, `notes/${secret}.bin`, Buffer.from([0, 1, 2]), "binary");
@@ -318,6 +329,15 @@ test("a missing installed allowlist blocks", () => {
   rmSync(installed(work, "guard", "binary-allowlist.txt"));
   commit(work, "a.md", "clean\n", "clean");
   blocked(push(work), "binary-allowlist.txt");
+});
+
+test("an installed guard without commit-scan.mjs fails the push", () => {
+  const work = setUp();
+  rmSync(installed(work, "guard", "commit-scan.mjs"));
+  commit(work, "a.md", `note by ${secret}\n`, "match");
+  const result = push(work);
+  assert.notEqual(result.status, 0, result.stderr);
+  assert.ok(!result.stderr.toLowerCase().includes("quolltail"), result.stderr);
 });
 
 // A4: only what the remote reports counts as already there
