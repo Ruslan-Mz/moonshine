@@ -42,7 +42,7 @@ LV/IT/DE columns are **AI drafts** (wave 2) — not shipped until reviewed.
 
 | Language | Banned                                                                                                                                   |
 | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| EN       | overdue · failed · behind · late · missed · streak broken · you should · warning                                                         |
+| EN       | overdue · failed · behind · late · missed · skipped · streak broken · you should · warning                                               |
 | RU       | просрочено · провал / провалено · отстаёшь / отставание · опоздал · пропущено · серия прервана · ты должен / нужно было · предупреждение |
 | LV       | nokavēts · neizdevās · atpaliec · palaists garām · tev vajadzēja                                                                         |
 | IT       | in ritardo · fallito · sei indietro · mancato · avresti dovuto                                                                           |
@@ -65,3 +65,4 @@ Exception everywhere: the "due" word is allowed only for a real external due dat
 - A floor or a day portion not reached is a distance while the day runs (`2 h 10 min to the floor` / `до пола 2 ч 10 мин`) and nothing afterwards; never "missed" / «пропущено».
 - RU: «занятие» is a rhythm session (`1 занятие`); a palette tile is «активность». «Напоминание» is ADR-0017's reminder; ADR-0016's nudges are «подсказки».
 - `Work` / «Работа» is the owner's label on lines, never a verdict: no "only", "just", "already" / «всего», «уже» next to it.
+- The routine (ADR-0023; owner, 2026-11-01): a block is held, shifted by N min, shortened to N of M min, not tracked, or no data; never "skipped" / «пропущено», which are banned above.

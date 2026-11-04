@@ -100,7 +100,7 @@ The weekly review gains a section **How did each line go?** where the owner sets
 - A confirmed take needs a direction; a note without one stays a draft.
 - **Set only by the owner** means the content comes from the owner's own words. The assistant (phase 4) may file a dictated note as a draft; it never chooses a direction the owner did not say, and never confirms (ADR-0013).
 - A project take is independent of the line take: it never rolls up to the line and never replaces it.
-- Both are MoonShine-native data (not OmniFocus, not the vault) and sync like other native data (ADR-0010: draft notes merge append-only; a confirmed take is last-writer-wins per (subject, week)). Storage arrives in the first native slice of phase 2; phase 1 has no code for takes. They are never computed, suggested, averaged or counted.
+- Both are MoonShine-native data (not OmniFocus, not the vault) and sync like other native data (ADR-0010: draft notes merge append-only; a confirmed take is last-writer-wins per (subject, week)). Storage arrives with My take's own slice, cut from phase 2 (owner, 2026-11-01); phase 1 has no code for takes. They are never computed, suggested, averaged or counted.
 - A week has no take, drafts only, or one confirmed take. No take is a valid state and stays blank.
 - Rows come from the line list (tier, vault order); facts from the Stats service (this week and the mean of the previous four ISO weeks).
 

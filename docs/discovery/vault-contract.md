@@ -1,4 +1,4 @@
-# Vault contract (Obsidian → MoonShine), v0.6
+# Vault contract (Obsidian → MoonShine), v0.7
 
 Status: **draft from phase-0 discovery** (see `data-report.md`). Implements ADR-0004: YAML frontmatter is the machine-readable truth; markdown bodies stay human text and are read for links and tags only, never for values (from the Hub slice; ADR-0014). Two exceptions (v0.4): a memo's two sections are read (§6.1), and an entry note's body is never read (§6.3).
 
@@ -23,6 +23,8 @@ v0.4 (2026-10-19, ADR-0018, ADR-0019, owner): note kinds by the `moonshine` key 
 v0.5 (2026-10-26, ADR-0020, ADR-0021, owner): the optional line key `quota_emphasis` (§1, "Quota emphasis", read from the Quotas slice); module note kinds found by the owner's own `type` key, the Library module first (§7, read from Library L1).
 
 v0.6 (2026-10-28, ADR-0016, owner, design draft-5): the optional line keys `break_after_min` and `check_after_h` (§1, "Nudge values", read from the Timer slice): a line's own break-nudge minutes and check limit, over the defaults in Settings → Time.
+
+v0.7 (2026-11-01, ADR-0023, ADR-0024, owner): `moonshine: routine` and `moonshine: principle` reserved (§5). The routine note is read from P2-R1, which writes §6.4 (its frontmatter under §3's 64 KiB cap, not §6's 8 KiB); principles from phase 4.
 
 Scope: what the phase-1 `ObsidianAdapter` reads. It never writes (no vault writes before the Write phase; ADR-0015).
 
@@ -72,7 +74,7 @@ Rules
 - `state: paused` = "paused on purpose" in the UI. It is never shown as missing activity.
 - Tasks that match no line belong to **Life ops** (not a line; see `snapshot-contract.md`).
 - A task maps to **at most one** line. Precedence: task tag → project tag → project name → folder. Two lines claiming the same tag/folder → banner naming both line ids; first in list wins.
-- Hours shown for a line come only from real time data or from numbers the owner set himself: the vault values `budget_h_week`, `floor_h_day` and `portion_h_day`, and the length of events in the line's calendar (the day portion of ADR-0016; owner, 2026-10-08) — CLAUDE.md rule 8 / ADR-0006.
+- Hours shown for a line come only from real time data or from numbers the owner set himself: the vault values `budget_h_week`, `floor_h_day` and `portion_h_day`, the length of events in the line's calendar (the day portion of ADR-0016; owner, 2026-10-08), and the block durations of the routine template (ADR-0023; owner, 2026-11-01) — CLAUDE.md rule 8 / ADR-0006.
 - The markdown table in the note may stay; the YAML block is authoritative for MoonShine (ADR-0004).
 
 Validation of `lines:` (owner, 2026-10-07 and 2026-10-08):
@@ -415,7 +417,7 @@ Rules
 
 ## 5. Reserved keys and values
 
-- **`moonshine:`** — values `budget` (§1), `project` (§4), `memo`, `programme` and `entry` (§6). Until the scanner of §6 ships (P1), a note with any other value is not a problem and gives no banner; from then on it is `noteKindUnknown` (§6).
+- **`moonshine:`** — values `budget` (§1), `project` (§4), `memo`, `programme` and `entry` (§6); `routine` (reserved; read from P2-R1, whose PR writes §6.4; ADR-0023) and `principle` (reserved; read from the first phase-4 slice that uses it, its format in ADR-0024) (owner, 2026-11-01). Until the scanner of §6 ships (P1), a note with any other value is not a problem and gives no banner; from then on it is `noteKindUnknown` (§6).
 - **`within`, `measure`, `targets`** on a line (§1, "Practice lines"; read from the Practice lines slice, ADR-0019).
 - **`portion_h_day`** on a line (§1; read from the Timer slice, ADR-0016).
 - **`break_after_min`, `check_after_h`** on a line (§1, "Nudge values"; read from the Timer slice, ADR-0016; owner, 2026-10-28).
@@ -430,7 +432,7 @@ Rules
 - **One scanner** finds them across the vault under the rules of §3 (hidden folders, symbolic links, limits). It reads only the frontmatter: at most the first 8 KiB, stopping at the closing `---`. Bytes after it are discarded unparsed. This cap is stricter than the 64 KiB of §3 on purpose.
 - **Frontmatter not closed within 8 KiB:** when those 8 KiB hold a top-level `moonshine: memo`, `programme` or `entry` line (the lexical rule of the budget marker, §1), the note gets `frontmatterTooLarge` with its path, whatever its kind, and is not read as that kind. The same holds for a top-level `type:` line whose value is a note kind of an enabled module (§7; owner, 2026-10-27), so a module note with long frontmatter is listed under its problem, never dropped. A `moonshine` key placed after 8 KiB of other keys is not seen (known gap, like §1's).
 - An unknown value (a typo such as `memmo`) yields the problem `noteKindUnknown` with the path.
-- The scanner arrives with P1 (phase 2); entry notes are read from the Practice lines slice, programmes from P4.
+- The scanner arrives with P1, or with the Practice lines slice while P1 is cut from phase 2 (owner, 2026-11-01); entry notes are read from the Practice lines slice, programmes from P4.
 
 ### 6.1 Memo notes (read from P1; ADR-0018)
 

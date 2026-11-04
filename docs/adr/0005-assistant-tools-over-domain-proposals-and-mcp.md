@@ -39,6 +39,15 @@ The assistant must answer questions (summaries, "where is X", plan checks) and p
 
 **Amendment (2026-10-03, ADR-0013).** Every write is a proposal confirmed by the owner, **except commands of the `auto` class** defined in ADR-0013 (simple, unambiguous, undoable changes that follow from the owner's own utterance and pass its checks). `auto` commands are applied at once, logged in the activity log and undoable; everything else stays a confirmed proposal.
 
+**Amendment (2026-11-01, owner; `docs/specs/phase-2-plan.md` § Decided, Q8).** Provider and model are configurable, because other users will want other models; this is a requirement, not a later option.
+
+- The `AIProvider` port in Core is provider-neutral: a request with a JSON-schema output, and a typed reply. Nothing in Core names a vendor or a model id.
+- Settings → Assistant lists the providers and keeps a model id per **feature**: Log by text from phase 2; day checkpoints L2 (ADR-0022) and the routine assistant (ADR-0023) in phase 4. Each provider has its own key in the Keychain and its own consent text. Every provider, local ones included, asks the same one-time consent when it is configured, never one per request. The host is parsed from the base URL each time a request is built, never looked up in DNS. Loopback is only the literal `localhost`, an IPv4 literal in `127.0.0.0/8`, or `::1`, and only loopback may use plain HTTP; a loopback endpoint is labelled "Sent to a server on this Mac (`host:port`). MoonShine can't see where that server sends it." Every other host must use HTTPS and is labelled with its host name (owner, 2026-11-04; PR #41 review round 1).
+- Phase 2 ships the Claude API adapter (LT3), then an OpenAI-compatible adapter with a configurable base URL (AP2), which also covers local servers such as Ollama or LM Studio.
+- What guards the data is the owner's confirmation, not the model: every value is a checked span, shown beside its span highlighted in the owner's text; spans out of order against their activities are flagged (`spansOutOfOrder`); nothing is stored without the owner's confirmation (ADR-0013 § Conditions for `auto`). A weaker model costs more corrections. The span check alone does not prove that a value belongs to its activity: swapped minutes between two activities pass it.
+- The eval set and a CLI command (`moonshine-import eval-dictation --provider … --model …`, counts only) run against any configured model, so a user can check his choice. The proposed models are defaults, kept only if they do well on that eval.
+- CI allows the network API in the AI adapter target only.
+
 ### Consequences
 
 - Good — one tool schema for UI actions, assistant and MCP.

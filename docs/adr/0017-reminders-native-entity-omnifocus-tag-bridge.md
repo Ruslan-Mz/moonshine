@@ -73,6 +73,7 @@ All go through the `CommandBus`, land in the activity log and can be undone: `Cr
 - Wording is a fact (`🎻 Scales · 10:00`), never "missed". On a locked screen, notification text follows the system's preview setting for MoonShine on every platform; MoonShine has no setting of its own for it (owner, 2026-10-17).
 
 - **Amendment (2026-10-19, owner; ADR-0018).** The notification planner also schedules memo moments: the moments of a memo note before, at and after an event or a task, with the memo's text, or only the item's title when the memo is private.
+- **Amendment (2026-11-04, owner; ADR-0022).** The notification planner also delivers day checkpoints (slice DC, phase 2): a kind whose content is computed when it is sent, not scheduled ahead, under its own daily limit, and held while a focus session runs.
 
 ### Where reminders are shown
 

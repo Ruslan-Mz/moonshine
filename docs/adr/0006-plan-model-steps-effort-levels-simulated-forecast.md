@@ -52,6 +52,8 @@ The owner wants a forecast for **any** project, not only "hours to master a piec
 - **Scenario** = one chosen level (or value) per project. Several scenarios can be saved and compared.
 - **Evidence**: time entries, session logs, metric measurements, step completions.
 
+**Amendment (2026-11-01, owner; ADR-0023).** The Board's weekly capacity per line starts from the routine template's flexible and protected minutes for that line (phase 3). The budget's `budget_h_week` stays the default `normal` level; the line's template minutes per week are shown beside it as a fact, and the two are never reconciled automatically. A day the owner marks away is a capacity exception of kind `away`, the same record as the trips above, set by `AddCapacityException` (ADR-0013).
+
 ### The engine
 
 1. **Calibrate** (per line, from history): estimation bias = actual ÷ estimated effort of completed steps; adherence = realised ÷ planned weekly effort. Defaults of 1.0 until data exists (evidence-based scheduling).

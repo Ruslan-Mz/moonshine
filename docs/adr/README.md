@@ -23,5 +23,8 @@
 | [0019](0019-practice-lines-nested-lines-measured-by-entries.md)               | Practice lines: nested lines measured by entries in the vault                                                                                  | accepted |
 | [0020](0020-period-quotas-n-times-per-week-or-month.md)                       | Period quotas: a repeating task done N times per week or month                                                                                 | accepted |
 | [0021](0021-modules-and-the-library-module.md)                                | Modules: built-in features over the owner's own note kinds; the Library module first                                                           | accepted |
+| [0022](0022-proactive-day-checkpoints.md)                                     | Proactive day checkpoints: facts at set times, few, decided by rules on the device                                                             | proposed |
+| [0023](0023-routine-template-adherence-progression.md)                        | Routine template: blocks in a vault note now, a native entity later; adherence and progression by rules                                        | proposed |
+| [0024](0024-evidence-base.md)                                                 | Evidence base: principles as vault notes, population evidence beside the owner's own data                                                      | proposed |
 
 An accepted ADR changes only by a dated amendment in its own file (**Amendment (date, owner)**, as in ADR-0019), or is replaced by a new ADR that supersedes it (owner, 2026-10-30). ADRs 0001, 0002, 0003, 0004, 0007, 0008 and 0012 were accepted on 2026-10-30 (owner), before the repository went public.
