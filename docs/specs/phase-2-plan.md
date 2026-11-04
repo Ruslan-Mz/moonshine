@@ -14,7 +14,7 @@ The ROADMAP gave phase 2 "3 weekends" until this spec; a phase's timebox is re-b
 
 - **Size factor 1.49** (`docs/method/forecast.md:9`).
 - **Pace about 250 production lines a day** (`docs/method/forecast.md` § Basis).
-  - Checked against the latest merged code slices, dated 2026-10-20 to 2026-10-30 in `docs/method/log.md`, net lines at their final heads: S4-1a 829, S4-1b-1 401, S4-1b-2 363, S4-3a 104 (its only head in the log), S4-DD 472, H1a 270, H1b 160.
+  - Checked against the latest merged code slices, dated 2026-10-20 to 2026-10-30 in `docs/method/log/2026-10.md`, net lines at their final heads: S4-1a 829, S4-1b-1 401, S4-1b-2 363, S4-3a 104 (its only head in the log), S4-DD 472, H1a 270, H1b 160.
   - That is 2,599 lines in 11 days ≈ 236 a day, so 250 holds within 6 %.
 - **Slow scenario:** 0.6 of the pace from January, 150 a day (`docs/method/forecast.md` § Basis).
 

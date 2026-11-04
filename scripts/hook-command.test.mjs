@@ -160,3 +160,24 @@ test("the worktree-only block carries the main checkout's .git rules with placeh
     ],
   });
 });
+
+test("the template allows read-only gh api on this repository and keeps every write deny (owner, 2026-11-04)", () => {
+  assert.ok(template.permissions.allow.includes("Bash(gh api repos/Ruslan-Mz/moonshine/*)"));
+  const deny = new Set(template.permissions.deny);
+  for (const rule of [
+    "Bash(gh api *--method post*)",
+    "Bash(gh api *--method POST*)",
+    "Bash(gh api *--method=*)",
+    "Bash(gh api *-X*)",
+    "Bash(gh api *-f *)",
+    "Bash(gh api *-F *)",
+    "Bash(gh api *--input*)",
+    "Bash(gh api *--field*)",
+    "Bash(gh api *--raw-field*)",
+    "Bash(gh api *@*)",
+    "Bash(gh api *merge*)",
+    "Bash(gh api graphql*)",
+  ]) {
+    assert.ok(deny.has(rule), rule);
+  }
+});
