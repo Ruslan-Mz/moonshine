@@ -106,7 +106,7 @@ The round rule is stated once, in `CLAUDE.md` → "Pull requests". Round 1 revie
 
 ## For the method log
 
-End with a block the author can paste into the PR's row in `docs/method/log.md`: round number, mode, number of reviewers and verifiers, findings per severity and per decision (`author` / `owner`), confirmed / refuted counts, the classes found, which lens found each `High`, and the subagents' reported token totals. Session cost is what the owner pastes from `/cost`; `n/a` otherwise.
+End with a block the author can paste into the PR's row in the method log (the month file in `docs/method/log/` that holds it; index `docs/method/log.md`): round number, mode, number of reviewers and verifiers, findings per severity and per decision (`author` / `owner`), confirmed / refuted counts, the classes found, which lens found each `High`, and the subagents' reported token totals. Session cost is what the owner pastes from `/cost`; `n/a` otherwise.
 
 ## Keeping the lenses sharp
 
