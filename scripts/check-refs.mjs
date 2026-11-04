@@ -19,8 +19,9 @@ import { pathToFileURL } from "node:url";
 export const ALLOWLIST = [];
 
 // Files where rule 4 does not apply: specs name files still to be created, and the
-// append-only method log names files that were renamed or deleted later.
-const PATH_RULE_EXEMPT = [/^docs\/specs\//, /^docs\/method\/log\.md$/];
+// append-only method log (its index and one file per month) names files that were renamed or
+// deleted later.
+const PATH_RULE_EXEMPT = [/^docs\/specs\//, /^docs\/method\/log(\.md|\/\d{4}-\d{2}\.md)$/];
 
 /**
  * @param {string[]} tracked repository-relative paths of all tracked files

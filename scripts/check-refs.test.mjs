@@ -64,10 +64,14 @@ test("specs and the method log are exempt from the path rule only", () => {
   const { hits } = run({
     "docs/specs/phase.md": "`docs/to-be-created.md` [x](gone.md)",
     "docs/method/log.md": "`Adapters/Old.swift` ADR-0097",
+    "docs/method/log/2026-11.md": "`docs/old.md` ADR-0098",
+    "docs/method/log/notes.md": "`docs/old.md`",
   });
   assert.deepEqual(hits, [
     "docs/specs/phase.md:1  link  gone.md",
     "docs/method/log.md:1  adr  ADR-0097",
+    "docs/method/log/2026-11.md:1  adr  ADR-0098",
+    "docs/method/log/notes.md:1  path  docs/old.md",
   ]);
 });
 
