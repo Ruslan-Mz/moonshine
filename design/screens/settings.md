@@ -57,7 +57,7 @@ Buttons (sheet variant only): Cancel, Done (default, accent). The Settings scene
 
 ## Status bar
 
-`.safeAreaInset(edge: .bottom)` HStack, 28 high: "Demo data" capsule (Demo only) · `Updated 3 min ago` (relative, refreshes every minute) · while importing: a small `ProgressView` + `Importing…` (never blocks the UI) · shortcut hints on the right.
+`.safeAreaInset(edge: .bottom)` HStack, 28 high: "Demo data" capsule (Demo only) · `Updated 3 min ago` (relative, refreshes every minute, counted from the last committed import's end: `Updated just now` under a minute, `Updated N min ago` under an hour, `Updated N h ago` under a day, then `Updated on 3 October`; owner, 2026-10-28) · while importing: a small `ProgressView` + `Importing…` (never blocks the UI) · shortcut hints on the right.
 
 ## Acceptance
 

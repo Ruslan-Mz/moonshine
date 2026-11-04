@@ -415,3 +415,78 @@ struct WorkspaceRecord: Codable, FetchableRecord, PersistableRecord {
     }
   }
 }
+
+/// A row of `imports`: one recorded import (ADR-0011). Durations in ms, NULL when not measured.
+struct ImportRecord: Codable, FetchableRecord, PersistableRecord {
+  static let databaseTableName = "imports"
+  static let databaseColumnDecodingStrategy = DatabaseColumnDecodingStrategy.convertFromSnakeCase
+  static let databaseColumnEncodingStrategy = DatabaseColumnEncodingStrategy.convertToSnakeCase
+  static let committed = "committed"
+
+  /// The row counts.
+  struct Attrs: Codable, Equatable {
+    var lines: Int
+    var notes: Int
+    var artifacts: Int
+    var projects: Int
+    var tasks: Int
+    var tags: Int
+  }
+  var id: Int64?
+  var trigger: String
+  var startedAt: Millis
+  var finishedAt: Millis
+  var waitedMs: Int64?
+  var durationMs: Int64?
+  var heldMs: Int64?
+  var outcome: String
+  var attrs: Attrs
+
+  init(_ run: ImportRun) {
+    let counts: ImportCounts
+    switch run.outcome {
+    case .committed(let committed): counts = committed
+    }
+    trigger = run.trigger.rawValue
+    startedAt = run.startedAt.millis
+    finishedAt = run.finishedAt.millis
+    waitedMs = run.waited.map(Self.millis)
+    durationMs = run.duration.map(Self.millis)
+    heldMs = run.providerHeld.map(Self.millis)
+    outcome = Self.committed
+    attrs = Attrs(
+      lines: counts.lines, notes: counts.notes, artifacts: counts.artifacts,
+      projects: counts.projects, tasks: counts.tasks, tags: counts.tags)
+  }
+
+  private static func millis(_ duration: Duration) -> Int64 {
+    duration.components.seconds * 1000 + duration.components.attoseconds / 1_000_000_000_000_000
+  }
+
+  /// Every column is checked: an unknown text or a negative number throws, naming only it.
+  func run() throws -> ImportRun {
+    func duration(_ ms: Int64?, _ column: String) throws -> Duration? {
+      guard let ms else { return nil }
+      guard ms >= 0 else { throw SQLiteStoreError.outOfRange(column: "imports.\(column)") }
+      return .milliseconds(ms)
+    }
+    guard outcome == Self.committed else {
+      throw SQLiteStoreError.unknownValue(column: "imports.outcome")
+    }
+    let counts = [
+      attrs.lines, attrs.notes, attrs.artifacts, attrs.projects, attrs.tasks, attrs.tags,
+    ]
+    guard counts.allSatisfy({ $0 >= 0 }) else {
+      throw SQLiteStoreError.outOfRange(column: "imports.attrs")
+    }
+    return ImportRun(
+      trigger: try decode(trigger, "imports.trigger"), startedAt: Date(millis: startedAt),
+      finishedAt: Date(millis: finishedAt), waited: try duration(waitedMs, "waited_ms"),
+      duration: try duration(durationMs, "duration_ms"),
+      providerHeld: try duration(heldMs, "held_ms"),
+      outcome: .committed(
+        ImportCounts(
+          lines: attrs.lines, notes: attrs.notes, artifacts: attrs.artifacts,
+          projects: attrs.projects, tasks: attrs.tasks, tags: attrs.tags)))
+  }
+}

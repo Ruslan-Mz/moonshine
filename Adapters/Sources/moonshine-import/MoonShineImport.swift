@@ -104,8 +104,10 @@ import SQLiteStore
           tasks: source, vault: .notRead(), stored: try await store.workspace(),
           identities: &identities.map, now: Date())
         marks.append(clock.now)
+        // The measurement records its own phases; it adds no row to `imports`.
         try await store.commit(
-          workspace, identities: identities.map, expectedVersion: identities.version, at: Date())
+          workspace, identities: identities.map, expectedVersion: identities.version, at: Date(),
+          run: nil)
         marks.append(clock.now)
         let steps = zip(marks.dropFirst(), marks).map { $0 - $1 }
         phases.append(steps + [marks[marks.count - 1] - marks[0], output.omniFocusTime])

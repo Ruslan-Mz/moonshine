@@ -223,6 +223,8 @@ public actor ImportService {
   public let notes: any NoteProvider
   public let store: any Store
   public let importer: Importer
+  /// The import path's only clock; a signal's time is read from it too.
+  public let clock: ImportClock
   private var current: Task<Workspace, any Error>?
   private var followUp: Task<Workspace, any Error>?
   /// Requests waiting on the queued follow-up run (observable by tests).
@@ -230,20 +232,22 @@ public actor ImportService {
 
   public init(
     tasks: any TaskProvider, notes: any NoteProvider, store: any Store,
-    importer: Importer = Importer()
+    importer: Importer = Importer(), clock: ImportClock = .system
   ) {
     self.tasks = tasks
     self.notes = notes
     self.store = store
     self.importer = importer
+    self.clock = clock
   }
 
   /// Full import. An incremental merge is decided after the S3a-1 measurements (S3a-2).
   /// Single-flight: imports run one at a time (identity map → workspace → commit is not atomic
   /// otherwise); requests arriving during an import share at most one follow-up run, which
-  /// starts when the current one ends, so the latest provider state is still read.
+  /// starts when the current one ends, so the latest provider state is still read. The follow-up
+  /// records the request that queued it, and reads the clock when it starts.
   @discardableResult
-  public func run(now: Date = Date()) async throws -> Workspace {
+  public func run(_ request: ImportRequest) async throws -> Workspace {
     let task: Task<Workspace, any Error>
     if let followUp {
       task = followUp
@@ -252,12 +256,12 @@ public actor ImportService {
       task = Task { [current] in
         _ = await current.result
         promoteFollowUp()
-        return try await importOnce(now: now)
+        return try await importOnce(request)
       }
       followUp = task
       followUpRequests = 1
     } else {
-      task = Task { try await importOnce(now: now) }
+      task = Task { try await importOnce(request) }
       current = task
     }
     let result = await task.result
@@ -271,7 +275,9 @@ public actor ImportService {
     followUpRequests = 0
   }
 
-  private func importOnce(now: Date) async throws -> Workspace {
+  private func importOnce(_ request: ImportRequest) async throws -> Workspace {
+    let now = clock.wall()
+    let started = clock.monotonic()
     async let taskSnapshot = tasks.snapshot(modifiedSince: nil)
     async let vaultSnapshot = notes.vault()
     let (source, vault) = try await (taskSnapshot, vaultSnapshot)
@@ -281,8 +287,12 @@ public actor ImportService {
     let stored = try await store.workspace()
     let workspace = importer.makeWorkspace(
       tasks: source, vault: vault, stored: stored, identities: &identities.map, now: now)
+    let run = PendingImportRun(
+      request: request, startedAt: now, started: started, providerHeld: source.heldFor,
+      counts: ImportCounts(workspace), clock: clock)
     try await store.commit(
-      workspace, identities: identities.map, expectedVersion: identities.version, at: now)
+      workspace, identities: identities.map, expectedVersion: identities.version, at: now,
+      run: run)
     return workspace
   }
 }

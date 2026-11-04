@@ -305,12 +305,14 @@ import Testing
   @Test func theServiceKeepsAStoredNoteAndItsArtifactsWhenTheNoteCannotBeRead() async throws {
     let unread = VaultUnread(paths: [Self.year], artifactLists: [], notRecognised: [])
     let store = InMemoryStore(timeZone: TestWorld.timeZone)
+    let time = SettableClock(first)
     let service = ImportService(
       tasks: Tasks(source: source),
       notes: Vaults([vault([yearNote()], [artifact("a")]), vault([], [], unread: unread)]),
-      store: store)
-    let before = try await service.run(now: first)
-    try await service.run(now: second)
+      store: store, clock: time.clock)
+    let before = try await service.run(ImportRequest(trigger: .manual))
+    time.set(second)
+    try await service.run(ImportRequest(trigger: .manual))
     let stored = await store.stored()
     #expect(stored.notes.map(\.entity) == before.notes)
     #expect(stored.artifacts.map(\.entity) == before.artifacts)

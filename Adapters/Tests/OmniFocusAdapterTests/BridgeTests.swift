@@ -41,6 +41,13 @@ import Testing
       #expect(try await bridge(runner).document(.full).omniFocusTime == .milliseconds(1234))
     }
 
+    @Test func theBridgeReportsTheHeldTimeOfItsMarker() async throws {
+      let runner = FakeRunner(
+        stdout: try Data(contentsOf: fixtureURL), stderr: "moonshine-bridge omnifocus_ms=2718\n")
+      let source = try await bridge(runner).snapshot(modifiedSince: nil)
+      #expect(source.heldFor == .milliseconds(2718))
+    }
+
     @Test func aMissingOrMalformedTimingMarkerIsAMalformedResult() async throws {
       for stderr in ["", "moonshine-bridge omnifocus_ms=abc\n", "omnifocus_ms=12\n"] {
         let runner = FakeRunner(stdout: try Data(contentsOf: fixtureURL), stderr: stderr)

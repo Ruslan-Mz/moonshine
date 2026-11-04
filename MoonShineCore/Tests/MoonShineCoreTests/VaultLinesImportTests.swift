@@ -114,10 +114,12 @@ import Testing
 
   @Test func theServiceKeepsTheStoredLinesWhenTheVaultCannotReadThem() async throws {
     let store = InMemoryStore(timeZone: TestWorld.timeZone)
+    let time = SettableClock(earlier)
     let service = ImportService(
-      tasks: OneTask(source: source), notes: FlakyVault(piano), store: store)
-    try await service.run(now: earlier)
-    try await service.run(now: now)
+      tasks: OneTask(source: source), notes: FlakyVault(piano), store: store, clock: time.clock)
+    try await service.run(ImportRequest(trigger: .manual))
+    time.set(now)
+    try await service.run(ImportRequest(trigger: .manual))
     let workspace = try await store.workspace()
     #expect(workspace.lines.map(\.key) == ["piano"])
     #expect(workspace.tasks.first?.line == .line(try #require(workspace.lines.first).id))

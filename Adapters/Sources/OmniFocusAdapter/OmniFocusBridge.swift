@@ -126,8 +126,12 @@ public protocol ScriptRunner: Sendable {
 
   extension OmniFocusBridge: TaskProvider {
     public func snapshot(modifiedSince: Date?) async throws -> TaskSourceSnapshot {
-      try SnapshotMapper.map(
-        try await document(modifiedSince.map { .incremental(since: $0) } ?? .full).value)
+      let measured = try await document(modifiedSince.map { .incremental(since: $0) } ?? .full)
+      let source = try SnapshotMapper.map(measured.value)
+      return TaskSourceSnapshot(
+        provider: source.provider, generatedAt: source.generatedAt, timeZone: source.timeZone,
+        defaultTimes: source.defaultTimes, modifiedSince: source.modifiedSince, tags: source.tags,
+        projects: source.projects, tasks: source.tasks, heldFor: measured.omniFocusTime)
     }
   }
 

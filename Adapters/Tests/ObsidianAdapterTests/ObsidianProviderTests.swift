@@ -33,17 +33,18 @@ import Testing
   ) {
     let vault = try TemporaryVault()
     let store = InMemoryStore(timeZone: moscow)
+    let time = SettableClock(Date(timeIntervalSince1970: 1_790_000_000))
     let service = ImportService(
-      tasks: OneTask(), notes: ObsidianVault(root: vault.root, timeZone: moscow), store: store)
+      tasks: OneTask(), notes: ObsidianVault(root: vault.root, timeZone: moscow), store: store,
+      clock: time.clock)
     var runs: [Workspace] = []
     for (index, state) in states.enumerated() {
+      time.set(Date(timeIntervalSince1970: 1_790_000_000 + 86_400 * Double(index)))
       try vault.write("budget.md", note(Self.budget))
       for (path, text) in state {
         try vault.write(path, text.hasPrefix("raw:") ? String(text.dropFirst(4)) : note(text))
       }
-      runs.append(
-        try await service.run(
-          now: Date(timeIntervalSince1970: 1_790_000_000 + 86_400 * Double(index))))
+      runs.append(try await service.run(ImportRequest(trigger: .manual)))
     }
     return (runs, await store.stored())
   }
