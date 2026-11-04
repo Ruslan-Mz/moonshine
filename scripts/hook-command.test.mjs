@@ -28,9 +28,23 @@ test("/review-pr reads a fork PR's diff only, before any worktree is created (PU
   assert.ok(rule > 0, "the fork rule is in SKILL.md");
   assert.ok(rule < skill.indexOf("git worktree add <scratchpad>/review/pr-<n>"), "it comes before the worktree");
   assert.match(skill, /headRepository,headRepositoryOwner,isCrossRepository/);
+  assert.match(skill, /or `headRefName` starts with `fork\/`/);
   assert.match(skill, /nothing from the PR is built, tested or run/);
-  assert.match(skill, /\*\*Read-only review: the head is in another repository; nothing from this PR was built, tested or run\.\*\*/);
+  assert.match(skill, /\*\*Read-only review: the head is a fork's code; nothing from this PR was built, tested or run\.\*\*/);
+  const cleanUp = skill.slice(skill.indexOf("## 6. Clean up"));
+  assert.match(cleanUp, /^A read-only review \(§1, step 1\) created no worktree and no probe worktree: run only `git worktree prune`\./m);
 });
+
+for (const [agent, rule] of [
+  ["pr-reviewer.md", /\*\*Read-only review \(a fork PR\)\.\*\* When the orchestrator says the review is read-only, or gives you no worktree/],
+  ["review-verifier.md", /\*\*Read-only review \(a fork PR\)\.\*\* When the orchestrator says the review is read-only, or gives you no worktree/],
+]) {
+  test(`${agent} states the read-only fork rule in its own instructions (PUB-3 round 2)`, () => {
+    const text = readFileSync(join(repository, ".claude/agents", agent), "utf8");
+    assert.match(text, rule);
+    assert.match(text, /no `swift`, `xcodebuild`, `node` or `npm`, no script/);
+  });
+}
 
 test("the read-boundary hook command is pinned and ends in || exit 2", () => {
   assert.deepEqual(readHook(), { type: "command", command });
