@@ -2,7 +2,7 @@
 title: Timer on the Mac — menu bar, activity palette, start points
 status: draft-5
 date: 2026-10-28
-slice: Timer (Mac), the last slice of phase 2 (ADR-0016)
+slice: Timer (Mac), phase 2 slices TM1–TM3 (docs/specs/phase-2-plan.md; ADR-0016)
 artboards:
   [
     mockups/MenuBarTimer.dc.html,

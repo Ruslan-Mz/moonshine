@@ -119,7 +119,7 @@ data_rule: { rule: practice_days_vs_minutes, needs: [entries], window_days: 84 }
 evidence:
   design: cohort # rct-clinical | rct-intermediate | meta-analysis | experiment | cohort | cross-sectional | mechanism | review | method
   status: established # established | contested | null-confirmed | open | single-study
-  level: II # the corpus's levels for a cognitive or dementia outcome: I | II | III | n/a
+  level: II # the corpus's evidence levels: I | II | III | n/a
   outcome: "..." # the outcome the evidence is about, in the owner's words
   effect: "..." # the effect as the source states it, with its interval
 ```

@@ -251,7 +251,7 @@ Why horizontal triangles and not vertical: the words are Forward and Back, not U
 4. **Dated notes on confirm.** Kept as data under the take and shown when the take-history row is opened.
 5. **A note for a week that is already confirmed.** Stored under that take; the take stays confirmed.
 6. **Past drafts in later reviews.** Not listed; reachable from the take history and the quarterly review.
-7. **Storage, slice and ADR.** Storage in the first native slice of phase 2; no separate ADR. ADR-0010's conflict rules gain: draft notes merge (append-only); a confirmed take is last-writer-wins per (subject, week). Writing confirmed takes to the vault is decided in the Act phase spec.
+7. **Storage, slice and ADR.** Storage in My take's own slice, cut from phase 2 (owner, 2026-11-01; `docs/specs/phase-2-plan.md` § Non-goals); no separate ADR. ADR-0010's conflict rules gain: draft notes merge (append-only); a confirmed take is last-writer-wins per (subject, week). Writing confirmed takes to the vault is decided in the Act phase spec.
 8. **Project take vs line take.** Independent; no roll-up.
 9. **Hours wording.** `2 h of 6 h budget` / «2 ч из 6 ч бюджета».
 10. **Quiet rule detail.** Any take or note resets the quiet count from its date (the date the note was written or the take was set, never a future date).
@@ -330,7 +330,7 @@ The canvas mockups are generated files and are not edited by hand; draft-5's wer
 
 #### Before phase 2
 
-1. **Rise and Dip marks**: redraw as terrain shapes that are not arrows (a rising slope, a falling slope). Until then the triangles stay. My take is phase 2's first native slice.
+1. **Rise and Dip marks**: redraw as terrain shapes that are not arrows (a rising slope, a falling slope). Until then the triangles stay. My take is cut from phase 2 (owner, 2026-11-01).
 2. **Project take**: how a project take is confirmed in the weekly review.
 3. **Project page** (the Hub slice, ADR-0014): tasks, plan, with places reserved for the rendered project note and for the mentions.
 4. **Drawn in draft-5** (`screens/timer-mac.md`, `screens/time.md`), except the reconcile list as a whole list (the cell, its choices and the toolbar step-through are specified). Was: **Time tracking on the Mac** (the Timer slice, ADR-0016): the menu bar timer; starting from a row and from ⌘K; tracked intervals on the Today rail with editing; the week table; the reconcile list; the four nudges with the `Break` action; the check mark of a forgotten timer. Up to three timers (amendment 2026-10-16): two and three running timers in the menu bar and on the Today rail, the "Keep running" notice and the "stopped (three at most)" notice, tracked time against the clock total (`Tracked 26 h · by the clock 23 h · in parallel 3 h`).

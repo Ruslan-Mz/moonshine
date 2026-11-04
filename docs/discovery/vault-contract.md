@@ -74,7 +74,7 @@ Rules
 - `state: paused` = "paused on purpose" in the UI. It is never shown as missing activity.
 - Tasks that match no line belong to **Life ops** (not a line; see `snapshot-contract.md`).
 - A task maps to **at most one** line. Precedence: task tag → project tag → project name → folder. Two lines claiming the same tag/folder → banner naming both line ids; first in list wins.
-- Hours shown for a line come only from real time data or from numbers the owner set himself: the vault values `budget_h_week`, `floor_h_day` and `portion_h_day`, and the length of events in the line's calendar (the day portion of ADR-0016; owner, 2026-10-08) — CLAUDE.md rule 8 / ADR-0006.
+- Hours shown for a line come only from real time data or from numbers the owner set himself: the vault values `budget_h_week`, `floor_h_day` and `portion_h_day`, the length of events in the line's calendar (the day portion of ADR-0016; owner, 2026-10-08), and the block durations of the routine template (ADR-0023; owner, 2026-11-01) — CLAUDE.md rule 8 / ADR-0006.
 - The markdown table in the note may stay; the YAML block is authoritative for MoonShine (ADR-0004).
 
 Validation of `lines:` (owner, 2026-10-07 and 2026-10-08):

@@ -37,16 +37,16 @@ Time reconcile (300) is a slice outside the phase, built right after it.
 
 | Scope                                        | Estimate (raw) | × 1.49 | Days at 250 | Ends (base, from 12-04) | Ends (slow from January) |
 | -------------------------------------------- | -------------- | ------ | ----------- | ----------------------- | ------------------------ |
-| Every phase-2 slice                          | 9,671          | 14,410 | 57.6 → 58   | 2027-01-31              | 2027-02-19               |
-| After cut candidates 1–2 (P2-RC, P1: 700)    | 8,971          | 13,367 | 53.5 → 54   | **2027-01-27**          | 2027-02-12               |
+| Every phase-2 slice                          | 9,671          | 14,410 | 57.6 → 58   | 2027-01-31              | 2027-02-20               |
+| After cut candidates 1–2 (P2-RC, P1: 700)    | 8,971          | 13,367 | 53.5 → 54   | **2027-01-27**          | 2027-02-13               |
 | Then TR, outside the phase                   | 300            | 447    | 1.8 → 2     | + 2 days                | + 3 days                 |
-| After the cuts, with AP2 (owner, 2026-11-01) | 9,091          | 13,546 | 54.2 → 55   | 2027-01-28              | 2027-02-13               |
+| After the cuts, with AP2 (owner, 2026-11-01) | 9,091          | 13,546 | 54.2 → 55   | 2027-01-28              | 2027-02-14               |
 
-The slow column works like this: December (12-04 to 12-31, 28 days) carries 28 × 250 = 7,000 lines, and the rest goes at 150 a day.
+Both columns count the same way: the end is the start + N days, so 12-04 + 54 days is 01-27. The slow column works like this: December's 28 days (12-04 to 12-31, ending on 01-01) carry 28 × 250 = 7,000 lines, and the rest goes at 150 a day from 01-01.
 
-- After the cuts: (13,367 − 7,000) / 150 = 42.4 → 43 days → 02-12.
-- Full scope: (14,410 − 7,000) / 150 = 49.4 → 50 days → 02-19.
-- After the cuts, with AP2: (13,546 − 7,000) / 150 = 43.6 → 44 days → 02-13.
+- After the cuts: (13,367 − 7,000) / 150 = 42.4 → 43 days → 02-13.
+- Full scope: (14,410 − 7,000) / 150 = 49.4 → 50 days → 02-20.
+- After the cuts, with AP2: (13,546 − 7,000) / 150 = 43.6 → 44 days → 02-14.
 
 **Timebox: until ~2027-01-27, with cut candidates 1–2 taken now** (owner, 2026-11-01; questions 1 and 2).
 
@@ -90,7 +90,8 @@ What the ROADMAP's phase-2 row asks for (`docs/ROADMAP.md:9`), the Time reconcil
    - **line charts** of plan, template and fact on one axis (P2-RC, cut from phase 2 on 2026-11-01);
    - **the move into a native entity**: after phase 2 (question 27).
 7. **The Health bridge** (owner, 2026-11-01; slice H).
-   - An iOS Shortcuts automation writes a daily CSV of the previous day to iCloud Drive; the Mac reads it read-only, under the same kind of guards as the workbook.
+   - An iOS Shortcuts automation overwrites a fixed set of CSV files in iCloud Drive with a rolling window, so nothing accumulates there (owner, 2026-11-04); the Mac reads them read-only, under the same kind of guards as the workbook.
+   - H1's setup doc says the files are end-to-end encrypted only with Advanced Data Protection, and that this is the owner's choice.
    - Sleep gives the day's wake and bed boundaries.
    - Workouts become entries with source `health`; steps become a `Measurement`.
    - The CSV format is open until the owner tests the shortcut (question 12). Whether HealthKit replaces the bridge is an open item for 3b's planning (open question 38); the bridge stays until it is decided.
@@ -133,7 +134,8 @@ What the ROADMAP's phase-2 row asks for (`docs/ROADMAP.md:9`), the Time reconcil
   - a month sheet or a Health day that cannot be read, or that is absent from a read, keeps its rows;
   - a read with a skipped row removes nothing of that month or day;
   - only a clean read removes what it no longer has;
-  - a mapping or alias file that cannot be read leaves its import unavailable;
+  - a mapping or alias file that cannot be read leaves its import unavailable (an absent alias file is an empty mapping: § Precedence below);
+  - a row the read recognises and ignores on purpose (the workbook's context and indicator rows, X3) is not a skipped row;
   - a routine block without tracking evidence is "no data", never "no time".
 - **The model never supplies a time or a target on its own.**
   - Every value it returns is a span of the text, checked by code.
@@ -141,7 +143,17 @@ What the ROADMAP's phase-2 row asks for (`docs/ROADMAP.md:9`), the Time reconcil
   - Times on the clock are computed by code.
   - A subject comes from the alias file or a line or category name. Only when none matches is the model's proposal used, and it is shown as a proposal (ADR-0013 § Conditions for `auto`, applied to a `confirm` command).
   - **What guards the data is the owner's confirmation** (owner, 2026-11-01). Every value is a checked span, shown beside its span highlighted in the owner's text; spans out of order against their activities are flagged (`spansOutOfOrder`); nothing is stored without the owner's confirmation. A weaker model costs more corrections, whatever the provider. LT1's checks do not prove that a value belongs to its activity: swapped minutes between two activities pass the span check, and the confirmation is the guard.
-- **Provider-neutral Core** (owner, 2026-11-01): nothing in Core names an AI vendor or a model id; the network API is allowed only in the AI adapter target.
+- **Provider-neutral Core** (owner, 2026-11-01): nothing in Core names an AI vendor or a model id; the network API is allowed only in the AI adapter target. LT3 builds both CI checks (LT3, the last bullet).
+- **The endpoint rule** (owner, 2026-11-04; review round 1), for every AI provider (LT3, AP2):
+  - The host is parsed from the base URL each time a request is built, never looked up in DNS.
+  - Loopback is only the literal `localhost`, an IPv4 literal in `127.0.0.0/8`, or `::1`. Plain HTTP is allowed for loopback only.
+  - A loopback endpoint is labelled "Sent to a server on this Mac (`host:port`). MoonShine can't see where that server sends it."
+  - Every other host must use HTTPS and is labelled with its host name.
+  - Every provider, local ones included, asks the same one-time consent when it is configured. There is no consent per request.
+- **Precedence** (owner, 2026-11-04; review round 1):
+  - **Mapping:** an alias overrides the line mapping, and the line mapping overrides the category default.
+  - **The alias file:** an absent file is an empty mapping. A file that exists but cannot be read or parsed fails closed: nothing that needs it is imported, and the problem is shown to the owner.
+  - **Two wakes on one day:** the wake confirmed most recently wins; the earlier one stays stored and reachable through undo. The same holds for two beds.
 - **Logs, problems, live checks and PRs** carry kinds and counts only: no label, mapping key, sheet name, month, date, dictated word, block name, workout name, step count, id or entry (CLAUDE.md rule 5; `docs/discovery/excel-contract.md` header). Health data is the most sensitive of these.
 
 ## Slices (one PR each), in the order of question 1
@@ -177,23 +189,26 @@ LT4, the first usable slice, is the 7th PR. Sizes are each plan's raw estimate �
   - [ ] **LT2b — `CommandBus`, activity log, `Capture`, `LogEntries`** (~210 × 1.49 ≈ 313).
     - The `CommandBus` in Core (ADR-0013: the id as idempotency key, origin, class, state, undo data) and the activity log table.
     - `Capture`: the text as dictated, stored on the Mac before any network call.
-    - `LogEntries`: a `confirm` command for the confirmed list; its undo removes exactly its entries. Dictated wake and bed are stored as day boundaries (question 9).
+    - `LogEntries`: a `confirm` command for the confirmed list; its undo removes exactly the rows it inserted: its entries and the day boundaries dictated in the same confirmation. Dictated wake and bed are stored as day boundaries (question 9).
   - **The boundary-day function** (Core): a bed before 06:00 belongs to the day before. Every writer of boundaries uses it (LT2b, H2).
+  - **`DayBoundaries.resolve`** (Core, LT2b), the first slice that stores boundaries; DC, TM4 and P2-R2 reuse it. ADR-0022 § The day and ADR-0023 § Adherence state it in the same words: The day's wake and bed come from one Core rule, `DayBoundaries.resolve` (spec slice LT2b): Health's boundary first (measured), then the dictated one confirmed most recently (stated), then a Sleep entry with clock times, for the wake the end of the first one that ends after local midnight, so a nap later in the day never moves it; with none of these, the day starts at the day window's start. A bed before 06:00 belongs to the day before; the writer stores the day, and readers take it as stored.
 - [ ] **LT3 — The model call** (risky: the assistant, network, a secret, outside data; ~265 × 1.49 ≈ 395 before the configurability of Q8, re-sized and likely split at its planning; the cut and the eval command may change then, the configurability may not).
   - The `AIProvider` port in Core (`docs/ARCHITECTURE.md:24`), provider-neutral: a request with a JSON-schema output, and a typed reply. Nothing in Core names a vendor.
-  - A Claude adapter over `POST /v1/messages` with URLSession (there is no official Swift SDK), with a JSON-schema output (`output_config.format`). The only adapter this slice ships.
-  - **Settings → Assistant** lists the providers and keeps a model id per feature: Log by text now; checkpoints L2 and the routine assistant in phase 4. Each provider has its own key in the Mac's Keychain (not synchronizable) and its own consent text; consent for cloud AI is off by default. An endpoint is labelled "stays on this Mac" only for a loopback host after resolution (`localhost`, `127.0.0.0/8`, `::1`); any other host is labelled with its host name. A non-loopback base URL must be HTTPS; plain HTTP is allowed for loopback only (owner, 2026-11-01). What is sent per question 7.
+  - A Claude adapter over `POST /v1/messages` with URLSession (there is no official Swift SDK), with a JSON-schema output (`output_config.format`; for the cheaper model, open question 39). The only adapter this slice ships.
+  - **Settings → Assistant** lists the providers and keeps a model id per feature: Log by text now; checkpoints L2 and the routine assistant in phase 4. Each provider has its own key in the Mac's Keychain (not synchronizable) and its own consent text; consent for cloud AI is off by default. The endpoint rule applies (§ Rules this phase adds). What is sent per question 7.
   - **Default models** per question 8: `claude-opus-5-5` at low effort, with `claude-haiku-5-5` as the cheaper choice. LT3 runs them on an eval of about 20 invented dictations (accuracy against cost) and records the result in its PR; if they don't do well, the default changes.
   - **The eval set and `moonshine-import eval-dictation --provider … --model …`** (counts only) run against any configured model, so a user can check his choice.
   - The alias file reader: bounded YAML with the vault's pre-parse guards. It also maps Health workout names, from H.
-  - A CI rule allows the network API in the AI adapter target only.
+  - **Two CI checks**, added by this slice and run in CI beside `scripts/check-core-imports.sh`:
+    - the network check fails on a network API outside the AI adapter target: at least `URLSession`, `URLRequest`, `import Network`, CFNetwork and the `contentsOf:` initialisers of `Data` and `String`; LT3's plan fixes the list. A `Process` is outside it (the OmniFocus adapter starts `osascript`) and is left to review;
+    - the vendor check fails on an AI vendor's name or a model id in `MoonShineCore`.
 - [ ] **LT4 — Log by text window** (plain; ~360 × 1.49 ≈ 536). **First usable slice.** It needs a design round.
   - A text field (system dictation works in it) and `Read`.
   - The list with inline edits, which go through LT1's `recheck`.
   - `Confirm` (⌘↩), undo (⌘Z).
   - For an activity with no alias, the YAML line to add.
 - [ ] **AP2 — An OpenAI-compatible provider** (owner, 2026-11-01; risky: the assistant, network, a secret; ~120 × 1.49 ≈ 179, sized at its planning). Right after LT4.
-  - An adapter for the OpenAI-compatible chat API with a configurable base URL, in the AI adapter target, behind the same `AIProvider` port. It also covers local servers such as Ollama or LM Studio. The label and the URL rule of LT3 apply: labelled "stays on this Mac" only for a loopback host after resolution (`localhost`, `127.0.0.0/8`, `::1`); any other host is labelled with its host name. A non-loopback base URL must be HTTPS; plain HTTP is allowed for loopback only (owner, 2026-11-01).
+  - An adapter for the OpenAI-compatible chat API with a configurable base URL, in the AI adapter target, behind the same `AIProvider` port. It also covers local servers such as Ollama or LM Studio. The endpoint rule applies (§ Rules this phase adds).
   - Its own key in the Keychain and its own consent text in Settings → Assistant.
   - `eval-dictation` runs against it like any configured model.
 
@@ -227,7 +242,7 @@ LT4, the first usable slice, is the 7th PR. Sizes are each plan's raw estimate �
     - `AddCapacityException` and `RemoveCapacityException` with undo, back to the previous ISO week (question 34).
 - [ ] **P2-R2 — Adherence in Core** (plain; ~310 × 1.49 ≈ 462).
   - The day's template: version, variant order (away without an away variant, a version with a skipped variant: not judged), ladders applied.
-  - `DayBoundaries.resolve`: Health, then dictation, then a Sleep entry; the second-source mark, computed when read.
+  - LT2b's `DayBoundaries.resolve`, reused; the second-source mark, computed when read.
   - Per block and day:
     - the states;
     - tolerances, with minutes claimed by one block only (question 32);
@@ -252,6 +267,7 @@ LT4, the first usable slice, is the 7th PR. Sizes are each plan's raw estimate �
     - The strict CSV, with the covered days on line 1 and one steps row per covered day (question 12).
     - Rows floored to the minute and split at midnight.
     - `moonshine-import health`, which prints counts only.
+    - The setup doc for the shortcut: the fixed files and their rolling window, and that iCloud Drive keeps them end-to-end encrypted only with Advanced Data Protection, the owner's choice (owner, 2026-11-04).
   - [ ] **H2 — Sleep, storage and the import** (~230 × 1.49 ≈ 343).
     - The main sleep → wake and bed through LT2b's boundary-day function.
     - `Measurement` in ARCHITECTURE's shape.
@@ -270,10 +286,11 @@ LT4, the first usable slice, is the 7th PR. Sizes are each plan's raw estimate �
   - The `TimeSource` port and its typed read (`WorkbookSnapshot`, moved from X2).
   - The mapping file (bounded YAML; versions by first month; a label, optionally within a section and a group, to a line key, Life ops with an optional category, or `ignore`).
   - Row kinds by label; minute cells through `SourceTimeEntry`'s checks.
+  - Context and indicator rows are recognised and ignored (owner, 2026-11-04). Ignoring them does not make the month partial, and a recognised row that is not imported does not count as skipped under the retention rule. `docs/discovery/excel-contract.md` says so from this spec's PR.
   - `unmapped` entries (question 15); `moonshine-import workbook <file> <mapping>`.
 - [ ] **X4 — The workbook in the store and the import** (risky: changes what is stored; ~150 × 1.49 ≈ 224).
   - Replacing `excel` entries by key, in LT2a's table, under the retention rule.
-  - `ImportService` reads the workbook only when its modification time or size changed.
+  - `ImportService` reads again when the workbook or the mapping file changed; the cache is keyed on both (modification time and size of each). The trigger state is recorded only after a successful read, so a read that fails mid-save is retried.
   - Paths from the data folder (S4-4c).
 - [ ] **X5 — Time view: the week of hours** (plain; ~400 × 1.49 ≈ 596). It needs a small design round.
   - The Week mode of `design/screens/time.md` § Week, beside P2-RV's Routine mode, over every stored source.
@@ -348,6 +365,7 @@ Next if the timebox review needs more: 3. Q (300), then PL (350), to after the p
 - **`design/tone-glossary.md`:** "skipped / пропущено" among the banned words, with P2-RV.
 - **New ADRs:** ADR-0022, ADR-0023 and ADR-0024 added as proposed, with their rows in `docs/adr/README.md`.
 - **Vault contract:** `routine` and `principle` reserved in §5, §6.4 in P2-R1a, the principle format reserved for phase 4.
+- **Review round 1** (owner, 2026-11-04): `docs/discovery/excel-contract.md` (context and indicator rows ignored, X3); ADR-0017 (checkpoints in the notification planner, ADR-0022); ADR-0005 and `docs/ARCHITECTURE.md` (the endpoint rule); the screens and design notes that still called Timer (Mac) the last slice or My take the first native slice.
 
 ## Acceptance
 
@@ -357,7 +375,7 @@ Next if the timebox review needs more: 3. Q (300), then PL (350), to after the p
   - no value only the model read goes unmarked;
   - nothing reaches the model before consent;
   - the capture is stored before the request;
-  - undo removes exactly the confirmed entries.
+  - undo removes exactly the confirmed entries and the day boundaries dictated with them.
 - **The routine:**
   - the owner's routine note reads with no problems;
   - four weeks of adherence in the week table match what he remembers of those days, checked by him on his screen;
@@ -372,13 +390,12 @@ Next if the timebox review needs more: 3. Q (300), then PL (350), to after the p
   - a second import changes nothing;
   - a month that fails keeps its entries.
 - **Plans and forecast:** ADR-0006 § Confirmation.
-- **Timer (Mac):** ADR-0016 § Confirmation; the acceptance lists of `design/screens/timer-mac.md` and `time.md`; one working week tracked and compared by the owner with his workbook.
+- **Timer (Mac):** of ADR-0016 § Confirmation, the Core tests, the nudge tests, the check-mark tests and the timer-slice acceptance. The rest is tested later: the reconcile tests with Time reconcile (TR, right after the phase), the assistant tests in the Ask phase (phase 4), the calendar tests with the slice that builds `calendar` entries (reserved, § Non-goals). Also the acceptance lists of `design/screens/timer-mac.md` and `time.md`; one working week tracked and compared by the owner with his workbook.
 - **Day checkpoints:** ADR-0022 § Confirmation.
 - **Speed:** the UI renders from the local store, any view in < 1 s.
 - **Write and import checks:**
   - no write API to OmniFocus, the vault or EventKit (`scripts/check-vault-writes.mjs`);
-  - the network API only in the AI adapter target (LT3, AP2);
-  - nothing in Core names an AI vendor or a model id;
+  - the network API only in the AI adapter target, and nothing in Core names an AI vendor or a model id (LT3's two CI checks; AP2 passes them);
   - Core imports none of CoreXLSX, ZIPFoundation, XMLCoder, Security or UserNotifications (`scripts/check-core-imports.sh` gains them).
 - **Tone:** the rules of CLAUDE.md rule 8 pass a copy review in English and Russian.
 
@@ -390,7 +407,7 @@ The 36 questions below are accepted as proposed, with these exceptions:
   - **Defaults.** The proposed models are the starting defaults. LT3 runs them on an eval of about 20 invented dictations (accuracy against cost) and records the result in its PR. If they don't do well, the default changes.
   - **The main requirement is that provider and model are configurable**, because other users will want other models (ADR-0005, amendment 2026-11-01). The cut and the eval command may change at LT3's planning; the configurability may not.
     - The `AIProvider` port in Core is provider-neutral: a request with a JSON-schema output, and a typed reply. Nothing in Core names a vendor.
-    - Settings → Assistant lists the providers and keeps a model id per **feature** (Log by text now; checkpoints L2 and the routine assistant in phase 4). Each provider has its own key in the Keychain, and its own consent text. An endpoint is labelled "stays on this Mac" only for a loopback host after resolution (`localhost`, `127.0.0.0/8`, `::1`); any other host is labelled with its host name. A non-loopback base URL must be HTTPS; plain HTTP is allowed for loopback only (owner, 2026-11-01).
+    - Settings → Assistant lists the providers and keeps a model id per **feature** (Log by text now; checkpoints L2 and the routine assistant in phase 4). Each provider has its own key in the Keychain, and its own consent text. The endpoint's label and URL rule decided here were changed in review round 1 (owner, 2026-11-04): § Rules this phase adds, the endpoint rule.
     - LT3 ships one adapter, the Claude API. A small slice right after LT4, **AP2**, adds an OpenAI-compatible adapter with a configurable base URL. That also covers local servers such as Ollama or LM Studio.
     - Not "a weaker model never gives wrong data": swapped minutes between two activities pass the span check (critic, 2026-11-01). Every value is a checked span, shown beside its span highlighted in the owner's text; spans out of order against their activities are flagged (`spansOutOfOrder`); nothing is stored without the owner's confirmation. A weaker model costs more corrections, whatever the provider. LT1's checks do not prove that a value belongs to its activity: swapped minutes between two activities pass the span check, and the confirmation is the guard.
     - The eval set and a CLI command (`moonshine-import eval-dictation --provider … --model …`, counts only) run against any configured model, so a user can check his choice.
@@ -412,6 +429,7 @@ The 36 questions below are accepted as proposed, with these exceptions:
 
 37. **A session kind on time entries** (retrieval, reading, struggle; owner, 2026-11-01). Two of the owner's principles need it (ADR-0024 § The data-rule catalogue: `retrieval_share`, `hard_block_reading_share`). Should the timer and the dictation capture it? It could be a field on `TimeEntry`, a tag, or left out. Decided at TM1's planning, and left out of X2. Dictation does not capture it in phase 2, so LT1a's extraction schema stays as planned (owner, 2026-11-01).
 38. **HealthKit in 3b** (owner, 2026-11-01). In 3b the iPhone app reads HealthKit, and its records sync to the Mac. That makes Health the first source imported on a device other than the Mac, against ADR-0010's "the Mac is the only importer". An open item for 3b's planning, with an ADR-0010 amendment then; the Health bridge stays until it is decided.
+39. **`output_config.format` for the Haiku model** (review round 1, 2026-11-04). The default model ids match Anthropic's current model list; whether the cheaper one takes the JSON-schema output field is checked when the assistant's provider slices are planned (LT3, AP2). If it does not, its default changes.
 
 ## The questions of revision 2, with their proposals
 
@@ -438,20 +456,20 @@ All decided on 2026-11-01 as proposed, except as § Decided says.
     - against his own minutes-only capture of the same unit, the larger counts, never the sum;
     - against the workbook, ADR-0016's two-sources rule applies, with Health on the native side.
 12. **The Health CSV** — proposed format (open until the owner tests his shortcut):
-    - one file per run, named after the last day it covers;
+    - a fixed set of files that each run overwrites with a rolling window, so nothing accumulates in iCloud Drive (owner, 2026-11-04; was: one file per run, named after the last day it covers);
     - line 1 declares the format, its version and the covered days (up to 7; a 3-day window for late watch data);
     - exactly one steps row per covered day, so a locked-phone run deletes nothing;
     - sleep segments belong to the day of waking, by the window [D−1 18:00, D 18:00);
     - ISO 8601 times with offsets.
 13. **A minimal iPhone capture before 3b** — proposed by the owner: no. Confirm.
-14. **ZIPFoundation as a direct dependency** — proposed: yes (it is already in the graph).
+14. **ZIPFoundation as a direct dependency** — proposed: yes (CoreXLSX already depends on it; it is not in `Adapters/Package.resolved` until X1). X1's plan states a version range compatible with CoreXLSX's.
 15. **Unmapped workbook labels and workout names** — proposed: kept as `unmapped` entries with their minutes, shown as Not mapped.
 16. **The Life ops reconcile unit** — proposed: (day, category); uncategorised workbook minutes form their own unit.
 17. **`session` and `step` on `TimeEntry`** — proposed: added with TM1 and F2, by an ADR-0016 amendment.
 18. **Derived time from action groups** — proposed: a group's estimate counts only when no descendant has one.
 19. **Values only the model reads** — proposed: a fixed word table in code; any other model-read value is shown as such.
 20. **Code and model disagree on a value** — proposed: blocking; the owner picks.
-21. **The workbook contract** — proposed: amend it in X1b (reader limits; layout checked against the sheet's month).
+21. **The workbook contract** — proposed: amend it in X1b (reader limits; layout checked against the sheet's month). Its row kinds were amended with this spec's PR (owner, 2026-11-04; X3).
 22. **Starting before the spec and the gate** — proposed: no; this spec merges first, and the gate holds.
 23. **A dictation after midnight about the evening, without "yesterday"** — proposed: today's date, blocked by `endsAfterNow`.
 24. **P2-RV** — proposed: the routine views right after P2-R2, so the routine is visible early; P2-RC (charts) as cut candidate 1.

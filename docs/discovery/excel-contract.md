@@ -1,6 +1,6 @@
 # Excel hours tracker — import contract (draft)
 
-> Structure only, generalised from a structure analysis: no labels, values, names, sheet dates or exact counts from the real workbook. The workbook lives in `data/` (git-ignored); fixtures are invented. Phase 2 builds the import, at its start (`docs/ROADMAP.md`).
+> Structure only, generalised from a structure analysis: no labels, values, names, sheet dates or exact counts from the real workbook. The workbook lives in `data/` (git-ignored); fixtures are invented. Phase 2 builds the import (slices X1–X4 of `docs/specs/phase-2-plan.md`).
 
 ## Workbook shape
 
@@ -14,15 +14,15 @@
 
 ## Row kinds (detect by label, not by position — positions shift between sheets)
 
-| Kind               | How to detect (example markers)                                     | Import as                                                                                         |
-| ------------------ | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Totals             | label starts with a totals marker (e.g. `ИТОГО`)                    | skip                                                                                              |
-| Context            | label starts with a context marker (e.g. `📝`)                      | **calendar context**: free text per day (place / trip / note) → capacity exceptions (ADR-0006)    |
-| Section            | non-indented, all caps after an emoji, no values (layout B sheets)  | hierarchy level 1                                                                                 |
-| Group              | non-indented label with an emoji                                    | hierarchy level 2                                                                                 |
-| Item               | label indented with spaces                                          | **TimeEntry**(date, minutes, itemLabel, groupLabel, sectionLabel)                                 |
-| Indicators         | known labels at the bottom (e.g. wake time, bedtime, steps, travel) | **Measurement**: times as `time`; counts as int, normalised when a sheet stores them in thousands |
-| Derived indicators | formula rows (daily sums, "unknown = 24 h − logged")                | skip                                                                                              |
+| Kind               | How to detect (example markers)                                     | Import as                                                                                     |
+| ------------------ | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Totals             | label starts with a totals marker (e.g. `ИТОГО`)                    | skip                                                                                          |
+| Context            | label starts with a context marker (e.g. `📝`)                      | ignored in phase 2, not a skipped row; was: calendar context → capacity exceptions (ADR-0006) |
+| Section            | non-indented, all caps after an emoji, no values (layout B sheets)  | hierarchy level 1                                                                             |
+| Group              | non-indented label with an emoji                                    | hierarchy level 2                                                                             |
+| Item               | label indented with spaces                                          | **TimeEntry**(date, minutes, itemLabel, groupLabel, sectionLabel)                             |
+| Indicators         | known labels at the bottom (e.g. wake time, bedtime, steps, travel) | ignored in phase 2, not a skipped row; was: **Measurement** (times as `time`, counts as int)  |
+| Derived indicators | formula rows (daily sums, "unknown = 24 h − logged")                | skip                                                                                          |
 
 The markers above are examples. The importer reads markers, weekday abbreviations and indicator labels from the mapping file, never from code. Text cells inside the minute grid (e.g. `-`) are "no data", not zero.
 
@@ -45,4 +45,4 @@ The markers above are examples. The importer reads markers, weekday abbreviation
 - Two sources are compared by **(day, line)**, never summed. When a (day, line) has both native and `excel` entries and their totals differ by more than the tolerance (10 minutes), the pair goes to a **reconcile list**; within the tolerance the pair is resolved automatically as "the same session" (the native entries stand) and is not listed, but it can be reopened from the day view, where all four choices are offered (owner, 2026-10-09). Until the owner decides, the native entries are counted and the cell is marked "two sources".
 - A row mapped to a nested line (a line with `within`, vault contract §1) is recorded on its parent, with the info problem `excelRowMovedToParent`, before the comparison (ADR-0019).
 - Choices: keep MoonShine · keep the workbook · keep both (different sessions) · the workbook's total is right (the difference becomes one manual entry without clock times). Keeping the workbook marks that day's native entries for the line as not counted. "The workbook's total is right" is offered only when the workbook's total is larger; when it is smaller, the choices are keep MoonShine or keep the workbook. No entry is ever negative, and no measured entry is deleted (owner, 2026-10-09). The choice is stored for that (day, line); a re-import does not reopen it unless the workbook's value changed.
-- Context rows feed `Capacity` exceptions; indicator rows feed `Measurement`.
+- **Amendment (2026-11-04, owner; `docs/specs/phase-2-plan.md`, X3 and question 29).** Context and indicator rows are recognised and ignored in phase 2. Ignoring them does not make the month partial, and a recognised row that is not imported does not count as skipped under the retention rule. Steps come from Health, wake and bed from Health and dictation. Was: context rows feed `Capacity` exceptions; indicator rows feed `Measurement`.

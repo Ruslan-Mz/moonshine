@@ -2,7 +2,7 @@
 title: Time — the day by the clock and the week table
 status: draft-5
 date: 2026-10-28
-slice: Timer (Mac), the last slice of phase 2 (ADR-0016)
+slice: Time view, phase 2 slices P2-RV, X5 and TM5 (docs/specs/phase-2-plan.md; ADR-0016)
 artboards:
   [mockups/TimeDay.dc.html, mockups/TimeWeek.dc.html, "+ -Dark variants"]
 related:
@@ -43,16 +43,16 @@ The owner switches constantly; the demo day has 15 intervals between 10:00 and 1
 
 - **Selected cluster:** `10:00–12:40` · `2 h 40 min · 15 intervals` · the shares (`🤖 AI/ML 1 h 38 min · 🔬 Research 51 min · 📥 Inbox 11 min`) · one row per interval (time range · emoji · subject · minutes). The selected row opens an editor under it.
 - **Selected interval:** Start and End fields (↑↓ step 5 min, typing allowed), `For` (the palette's subjects; nested lines are not offered, ADR-0019), Note, `Split…`, `Delete`, and a source line (`timer · session 10:35`).
-- **Not tracked:** the day's gaps, each with `Fill…`, which opens a manual entry with the gap's bounds.
+- **Not tracked:** the day's gaps, each with `Fill…`, which opens a manual entry with the gap's bounds. `Fill…` arrives with the slice that builds `manual` entries, not in phase 2 (`docs/specs/phase-2-plan.md` § Non-goals).
 - **Nothing selected:** the full `DayBalance` (as Today's card).
 - Key hints: `↑↓ interval · ↩ edit · ⌫ delete · ⌘Z undo · ⌘+ ⌘− scale`.
 
 ### Editing
 
-- Commands of ADR-0016, each undoable with ⌘Z: `EditTimeEntry` (fields, edge drag), `SplitTimeEntry`, `DeleteTimeEntry`, `LogTime` (`Fill…`).
+- Commands of ADR-0016, each undoable with ⌘Z: `EditTimeEntry` (fields, edge drag), `SplitTimeEntry`, `DeleteTimeEntry` (TM5); `LogTime` (`Fill…`) with the slice that builds `manual` entries, after phase 2.
 - Edge drag snaps to 5 min; ⌥ drags by the minute.
 - **An edit never overlaps silently** (ADR-0016): `New end 15:30 overlaps 🎻 Violin 15:20–15:40 by 10 min.` · `Trim 🎻 Violin to 15:30–15:40` · `Cancel` (`TimerStates`).
-- Deleting leaves a gap; `Fill…` gives it to a neighbour or a new subject.
+- Deleting leaves a gap; from the slice that builds `manual` entries, `Fill…` gives it to a neighbour or a new subject.
 
 ## Week (`TimeWeek`, week 40 so far)
 

@@ -71,7 +71,7 @@ L1 is specified below; L2 and L3 get their specs in their phases. What L2 may se
 
 ### The day
 
-- **The day starts** at the day's wake boundary: Health's first (measured), else a dictated one (stated; ADR-0023 § Adherence, Health bridge H). Without a boundary, it starts at the end of the first Sleep entry that ends after local midnight, else at the day window's start. A nap later in the day never moves it. This is the "since" of `design/components.md` § DayBalance and ADR-0016's amendment of 2026-10-28, made exact.
+- **The day starts** at the day's wake. The day's wake and bed come from one Core rule, `DayBoundaries.resolve` (spec slice LT2b): Health's boundary first (measured), then the dictated one confirmed most recently (stated), then a Sleep entry with clock times, for the wake the end of the first one that ends after local midnight, so a nap later in the day never moves it; with none of these, the day starts at the day window's start. A bed before 06:00 belongs to the day before; the writer stores the day, and readers take it as stored. This is the "since" of `design/components.md` § DayBalance and ADR-0016's amendment of 2026-10-28, made exact.
 - **The day ends**, for checkpoints, at the end of the day window. Every checkpoint not sent by then, held or waiting, **expires**. After the window a floor not reached is nothing at all (`design/tone-glossary.md` § Time).
 
 ### When
@@ -96,7 +96,7 @@ L1 is specified below; L2 and L3 get their specs in their phases. What L2 may se
 | `routineBlockOpen` | a block of today's routine template (ADR-0023): flexible, protected, or an anchor on a line; its window not yet ended, and not held yet (P2-R2)                              | `🎻 Violin · 20 of 45 min · 17:00–21:00`                            |
 | `workShare`        | the work lines (`design/screens/timer-mac.md` § Work lines) took more than the share **the owner set** of the time by the clock since the day started; off until he sets one | `Since 06:40 · work 5 h 24 min of 8 h by the clock`                 |
 
-- **Tracking gate:** `top3NotStarted`, `floorOpen`, `routineBlockOpen` and `workShare` are offered only on a day with at least one entry or session that is not Life ops since the day started. A logged night of Sleep does not make "not started" true. A Health workout counts.
+- **Tracking gate:** `top3NotStarted`, `floorOpen`, `routineBlockOpen` and `workShare` are offered only on a day with at least one entry or session that is not Life ops since the day started. A logged night of Sleep does not make "not started" true. The gate takes the same evidence as "not tracked" (ADR-0023 § Adherence; spec question 31): Health workouts and derived estimates never count.
 - **One item per task or line:** a task that is both a deadline and a Top 3 task appears once, under the kind that comes first in the order below. A line that is both `floorOpen` and `routineBlockOpen` appears once too, as `floorOpen`.
 - **One or two items per notification**, in this order: `deadlineDue`, a strong `quotaTime`, `top3NotStarted`, `floorOpen` (foundation lines first), `routineBlockOpen`, a neutral `quotaTime`, `workShare`. The rest reads `+3 more on Today`. A checkpoint with no item sends nothing and does not count.
 - Wording follows the rail's: facts and distances, never a shortfall; hours only from real time data or numbers the owner set (rule 8).
@@ -124,7 +124,7 @@ A held checkpoint that has a `deadlineDue` item sends that item alone at once, a
 ### Where it runs and what it stores
 
 - **On the Mac only** in phase 2; the iPhone after 3b, with its own planner (ADR-0017 § Notifications). Mac first, because only the Mac app runs all day as a login item.
-- **On the device only.** L1's rules are a pure function of a `DayFacts` value: Top 3, deadlines, quotas with their read state, floors, today's routine blocks (P2-R2), today's entries, sessions and boundaries, the work lines and share, the read state of the last import, and the clock. They take no port. From LT3 on, a CI check allows the network API in the AI adapter target only (`docs/specs/phase-2-plan.md`, LT3), so a checkpoint cannot reach the network without failing CI.
+- **On the device only.** L1's rules are a pure function of a `DayFacts` value: Top 3, deadlines, quotas with their read state, floors, today's routine blocks (P2-R2), today's entries, sessions and boundaries, the work lines and share, the read state of the last import, and the clock. They take no port. From LT3 on, a CI check fails on the listed network APIs outside the AI adapter target (`docs/specs/phase-2-plan.md`, LT3), so a checkpoint rule that uses one fails CI; what the list leaves out, such as a `Process`, is left to review.
 - **Stored**, as native records keyed by (local day, kind), so they can sync from 3b (open question 4): the settings (times, kinds, the share, the limit), and per day the checkpoints sent (time, kinds, the items by MoonShine id, never a title), the held one, the kinds silenced and the dismissal counters. Logs carry kinds and counts only (rule 5).
 
 ### Consequences
@@ -157,13 +157,13 @@ A held checkpoint that has a `deadlineDue` item sends that item alone at once, a
   - a held or waiting checkpoint expires at the end of the day window; a wake at 23:40 sends nothing;
   - a checkpoint due while OmniFocus is frontmost waits for the resign and the import; a quota partly read is not offered;
   - a day that starts at 11:00 moves the 13:00 checkpoint to 14:00; one that starts at 14:00 merges 13:00 and 16:00 at 17:00;
-  - a nap logged as Sleep at 14:00 does not move the day's start; a Health wake at 06:41 and a dictated one at 06:50 start the day at 06:41;
+  - a nap logged as Sleep at 14:00 does not move the day's start; a Health wake at 06:41 and a dictated one at 06:50 start the day at 06:41; two dictated wakes start it at the one confirmed most recently;
   - a day with only Sleep entries offers neither `top3NotStarted` nor `floorOpen`; a paused, nested or entries line never gives `floorOpen`;
   - `workShare` uses time by the clock: two parallel work sessions 10:00–11:00 count 1 h, not 2;
   - three consecutive days dismissed raise the in-app question once; a sent and not dismissed day resets the count; a day not sent leaves it;
   - the same day gives the same result in any process time zone (the workspace zone is used).
 - **Tone check:** no red; amber only on `deadlineDue` and a strong `quotaTime`; none of "missed", "overdue", "behind", "failed" in English or Russian (`scripts/check-catalog.mjs`); no "only", "just", "already" / «всего», «уже» next to Work (`design/tone-glossary.md` § Time).
-- **Privacy:** the rules take no port; the CI network rule of LT3; logs and problem texts carry kinds and counts only; stored items are ids, never titles.
+- **Privacy:** the rules take no port; LT3's CI network check of the listed APIs; logs and problem texts carry kinds and counts only; stored items are ids, never titles.
 - **Owner acceptance:** one working week with checkpoints on. Per day, counts only, into the method log: sent, sent at a switch, sent at the 20-minute cap, held by focus, expired, `Not today`, `Later`, opened. The ADR becomes `accepted` after that week, with the defaults the week supports.
 
 ## Pros and Cons of the Options

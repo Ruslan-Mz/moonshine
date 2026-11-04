@@ -132,10 +132,7 @@ Each block on each day is in one of these states:
 How the states are decided:
 
 - **Minutes.** A line's minutes on a day come from the class the hours ledger counts for that day. That is native or the workbook, never both added (ADR-0016 § Two sources). Running timer sessions count up to now.
-- **Boundaries.** The day's wake and bed come from one rule:
-  - Health first (measured), then dictation (stated), then a Sleep entry with clock times (ADR-0016 § Records);
-  - a bed before 06:00 belongs to the day before;
-  - the writer stores the day, and adherence reads it.
+- **Boundaries.** The day's wake and bed come from one Core rule, `DayBoundaries.resolve` (spec slice LT2b): Health's boundary first (measured), then the dictated one confirmed most recently (stated), then a Sleep entry with clock times, for the wake the end of the first one that ends after local midnight, so a nap later in the day never moves it; with none of these, the day starts at the day window's start. A bed before 06:00 belongs to the day before; the writer stores the day, and readers take it as stored. (ADR-0016 § Records, amendment 2026-11-01.)
 - **No data, not "not tracked"** (spec question 31). "Not tracked" needs evidence that the owner was tracking that day: an entry he recorded himself (timer, manual, dictation, a confirmed calendar entry, the workbook) whose subject is not Life ops. For anchors and protected blocks, the entry must have clock times. Health workouts and derived estimates are never evidence: a walk the watch saw on a day he tracked nothing leaves his blocks at "no data".
 - **The workbook has no clock times.** On a day whose counted minutes for a line have no clock times, a flexible block is judged on minutes, with its position unknown. Anchors and protected blocks of that line have no data.
 - **A paused line** (spec question 33) is not judged from today on; its past days keep their states until pause history exists.
