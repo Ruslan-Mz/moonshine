@@ -463,7 +463,9 @@ struct ImportRecord: Codable, FetchableRecord, PersistableRecord {
     duration.components.seconds * 1000 + duration.components.attoseconds / 1_000_000_000_000_000
   }
 
-  /// Every column is checked: an unknown text or a negative number throws, naming only it.
+  /// Every column is checked: an unknown text, a negative number or an end before the start
+  /// throws, naming only its column. An instant is not checked against the clock: a future end
+  /// cannot be told from a clock set back, and the status bar reads both as just now.
   func run() throws -> ImportRun {
     func duration(_ ms: Int64?, _ column: String) throws -> Duration? {
       guard let ms else { return nil }
@@ -478,6 +480,9 @@ struct ImportRecord: Codable, FetchableRecord, PersistableRecord {
     ]
     guard counts.allSatisfy({ $0 >= 0 }) else {
       throw SQLiteStoreError.outOfRange(column: "imports.attrs")
+    }
+    guard finishedAt >= startedAt else {
+      throw SQLiteStoreError.outOfRange(column: "imports.finished_at")
     }
     return ImportRun(
       trigger: try decode(trigger, "imports.trigger"), startedAt: Date(millis: startedAt),

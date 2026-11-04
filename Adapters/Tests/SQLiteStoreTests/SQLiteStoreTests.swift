@@ -177,34 +177,37 @@ import Testing
 
   /// An invented row written by hand, as a damaged or future database could hold it.
   func insertImport(
-    _ store: SQLiteStore, trigger: String = "timer", waited: Int? = 0,
-    outcome: String = "committed"
+    _ store: SQLiteStore, trigger: String = "timer", finishedAt: Int = 1, waited: Int? = 0,
+    duration: Int? = 1, held: Int? = nil, outcome: String = "committed", tasks: Int = 0
   ) async throws {
     try await store.writer.write { db in
       try db.execute(
         sql: """
           INSERT INTO imports
             (trigger, started_at, finished_at, waited_ms, duration_ms, held_ms, outcome, attrs)
-          VALUES (?, 0, 1, ?, 1, NULL, ?, ?)
+          VALUES (?, 0, ?, ?, ?, ?, ?, ?)
           """,
         arguments: [
-          trigger, waited, outcome,
-          #"{"lines":0,"notes":0,"artifacts":0,"projects":0,"tasks":0,"tags":0}"#,
+          trigger, finishedAt, waited, duration, held, outcome,
+          #"{"lines":0,"notes":0,"artifacts":0,"projects":0,"tasks":\#(tasks),"tags":0}"#,
         ])
     }
   }
 
   @Test func aRowWithAnUnknownTriggerOrANegativeTimeIsRejectedByColumn() async throws {
     let planted = "planted-trigger-7f3a"
-    let unknown = try SQLiteStore()
-    try await insertImport(unknown, trigger: planted)
-    let negative = try SQLiteStore()
-    try await insertImport(negative, waited: -40)
-
-    for (store, expected) in [
-      (unknown, SQLiteStoreError.unknownValue(column: "imports.trigger")),
-      (negative, .outOfRange(column: "imports.waited_ms")),
-    ] {
+    let cases: [(SQLiteStoreError, (SQLiteStore) async throws -> Void)] = [
+      (.unknownValue(column: "imports.trigger"), { try await insertImport($0, trigger: planted) }),
+      (.outOfRange(column: "imports.waited_ms"), { try await insertImport($0, waited: -40) }),
+      (.outOfRange(column: "imports.duration_ms"), { try await insertImport($0, duration: -40) }),
+      (.outOfRange(column: "imports.held_ms"), { try await insertImport($0, held: -40) }),
+      (.outOfRange(column: "imports.attrs"), { try await insertImport($0, tasks: -40) }),
+      // Started at 0: an end before the start.
+      (.outOfRange(column: "imports.finished_at"), { try await insertImport($0, finishedAt: -40) }),
+    ]
+    for (expected, insert) in cases {
+      let store = try SQLiteStore()
+      try await insert(store)
       let error = await #expect(throws: SQLiteStoreError.self) {
         try await store.lastCommittedImport()
       }
@@ -212,6 +215,44 @@ import Testing
       #expect(!String(reflecting: try #require(error)).contains(planted))
       #expect(!String(reflecting: try #require(error)).contains("-40"))
     }
+  }
+
+  /// Records the tables a write changes and the import clock's readings, in order.
+  final class WriteOrder: TransactionObserver, @unchecked Sendable {
+    private let lock = NSLock()
+    private var entries: [String] = []
+    var recorded: [String] { lock.withLock { entries } }
+
+    func record(_ entry: String) { lock.withLock { entries.append(entry) } }
+    func observes(eventsOfKind eventKind: DatabaseEventKind) -> Bool { true }
+    func databaseDidChange(with event: DatabaseEvent) { record(event.tableName) }
+    func databaseDidCommit(_ db: Database) {}
+    func databaseDidRollback(_ db: Database) {}
+  }
+
+  /// The end is read after every row of the workspace is written, and before the run's own row.
+  @Test func theRunsEndIsReadAfterTheWorkspaceRowsAndBeforeItsOwnRow() async throws {
+    let store = try SQLiteStore()
+    let order = WriteOrder()
+    store.writer.add(transactionObserver: order)
+    let now = first
+    let clock = ImportClock(
+      wall: { now },
+      monotonic: {
+        order.record("clock")
+        return .zero
+      })
+    try await ImportService(
+      tasks: FixedTaskProvider(source: try fixtureSnapshot()), notes: DemoVault(), store: store,
+      clock: clock
+    ).run(ImportRequest(trigger: .manual))
+
+    let recorded = order.recorded
+    let end = try #require(recorded.lastIndex(of: "clock"))
+    let rows = recorded.indices.filter { !["clock", "imports"].contains(recorded[$0]) }
+    #expect(Set(rows.map { recorded[$0] }).isSuperset(of: ["task", "changes", "workspace"]))
+    #expect(rows.allSatisfy { $0 < end })
+    #expect(recorded.firstIndex(of: "imports") == end + 1)
   }
 
   @Test func lastCommittedImportSkipsANewerRowThatIsNotCommitted() async throws {
