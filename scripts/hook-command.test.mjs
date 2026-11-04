@@ -141,6 +141,29 @@ test("the template keeps the rules of H1b", () => {
   assert.ok(ignored.includes(".npm-cache/"));
 });
 
+test("the template allows read-only gh api on this repository, and no write through it", () => {
+  // Owner, 2026-11-04 (small PR 1): reads of this repository's API need no prompt; the deny rules win over the allow.
+  assert.ok(template.permissions.allow.includes("Bash(gh api repos/Ruslan-Mz/moonshine/*)"));
+  const deny = new Set(template.permissions.deny);
+  for (const rule of [
+    "Bash(gh api *--method POST*)",
+    "Bash(gh api *--method post*)",
+    "Bash(gh api *--method PUT*)",
+    "Bash(gh api *--method PATCH*)",
+    "Bash(gh api *--method DELETE*)",
+    "Bash(gh api *--method=*)",
+    "Bash(gh api *-X*)",
+    "Bash(gh api *-f *)",
+    "Bash(gh api *-F *)",
+    "Bash(gh api *--field*)",
+    "Bash(gh api *--raw-field*)",
+    "Bash(gh api *--input*)",
+    "Bash(gh api graphql*)",
+  ]) {
+    assert.ok(deny.has(rule), rule);
+  }
+});
+
 test("the worktree-only block carries the main checkout's .git rules with placeholders only", () => {
   const block = template._worktreeOnly;
   assert.deepEqual(block.permissions.deny, [
