@@ -73,6 +73,34 @@ import Testing
     let run = try #require(try await store.lastCommittedImport())
     #expect(run.trigger == .resignActive)
     #expect(run.startedAt == start.addingTimeInterval(90))
+    // A request without a signal time waits from when it reached the service.
+    #expect(run.waited == .seconds(90))
+  }
+
+  /// ADR-0011 (2026-11-04): resign-active outranks the request that queued the follow-up, so
+  /// the target's median keeps every resign-active signal.
+  @Test func aResignActiveRequestJoiningAQueuedImportIsRecordedWithItsOwnWait() async throws {
+    let provider = GatedTaskProvider()
+    let start = Date(timeIntervalSince1970: 1_790_000_000)
+    let time = SettableClock(start)
+    let store = InMemoryStore()
+    let service = ImportService(
+      tasks: provider, notes: DemoVault(), store: store, clock: time.clock)
+
+    let running = Task { try await service.run(ImportRequest(trigger: .launch)) }
+    await eventually { await provider.calls == 1 }
+    let queued = Task { try await service.run(ImportRequest(trigger: .manual)) }
+    await eventually { await service.followUpRequests == 1 }
+    time.advance(by: .seconds(10))
+    let joined = Task { try await service.run(ImportRequest(trigger: .resignActive)) }
+    await eventually { await service.followUpRequests == 2 }
+    time.advance(by: .seconds(80))
+    await provider.open()
+    for task in [running, queued, joined] { _ = try await task.value }
+
+    let run = try #require(try await store.lastCommittedImport())
+    #expect(run.trigger == .resignActive)
+    #expect(run.waited == .seconds(80))
   }
 
   @Test func aRequestAfterTheFollowUpFinishedRunsAgain() async throws {

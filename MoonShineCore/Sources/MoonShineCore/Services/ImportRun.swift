@@ -35,7 +35,8 @@ public enum ImportTrigger: String, Sendable, CaseIterable {
 
 public struct ImportRequest: Sendable, Equatable {
   public let trigger: ImportTrigger
-  /// The monotonic time of the signal; nil when the import starts at its signal.
+  /// The monotonic time of the signal; nil when the request is its own signal, and
+  /// `ImportService` then reads it when the request arrives.
   public let signalledAt: Duration?
 
   public init(trigger: ImportTrigger, signalledAt: Duration? = nil) {
@@ -113,8 +114,8 @@ public struct PendingImportRun: Sendable {
   public let startedAt: Date
   /// The monotonic reading at the start.
   public let started: Duration
-  /// From the signal to the start; zero when the import started at its signal, nil when the
-  /// signal reads after the start.
+  /// From the signal to the start; zero without a signal time, nil when the signal reads
+  /// after the start.
   public let waited: Duration?
   public let providerHeld: Duration?
   public let counts: ImportCounts

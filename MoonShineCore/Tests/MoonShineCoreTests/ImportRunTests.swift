@@ -30,6 +30,16 @@ import Testing
     }
   }
 
+  /// Takes `readTime` on the test clock to read its source.
+  struct SlowTaskProvider: TaskProvider {
+    let time: SettableClock
+    let readTime: Duration
+    func snapshot(modifiedSince: Date?) async throws -> TaskSourceSnapshot {
+      time.advance(by: readTime)
+      return try await HeldTaskProvider(heldFor: nil).snapshot(modifiedSince: nil)
+    }
+  }
+
   /// A store whose write takes `writeTime` on the test clock.
   struct SlowStore: Store {
     let inner = InMemoryStore()
@@ -80,7 +90,8 @@ import Testing
     ).run(ImportRequest(trigger: .manual))
     let run = try #require(try await store.lastCommittedImport())
     #expect(run.providerHeld == nil)
-    #expect(run.waited == .zero)
+    // No signal time: the wait counts from the request reaching the service.
+    #expect(run.waited != nil)
   }
 
   @Test func aFailedImportKeepsTheLastCommittedRun() async throws {
@@ -107,6 +118,12 @@ import Testing
     #expect(pending.waited == nil)
     #expect(pending.finished().waited == nil)
 
+    let atTheStart = PendingImportRun(
+      request: ImportRequest(trigger: .timer, signalledAt: .seconds(2)), startedAt: Self.start,
+      started: .seconds(2), providerHeld: nil, counts: pending.counts,
+      clock: .frozen(at: Self.start))
+    #expect(atTheStart.waited == .zero)
+
     let negative = ImportRun(
       trigger: .manual, startedAt: Self.start, finishedAt: Self.start, waited: .seconds(-1),
       duration: .milliseconds(-5), providerHeld: .seconds(-2),
@@ -116,7 +133,22 @@ import Testing
     #expect(negative.providerHeld == nil)
   }
 
-  @Test func theDurationIncludesTheStoresWrite() async throws {
+  /// The start is read before the providers, so the OmniFocus read counts in the duration.
+  @Test func theDurationIncludesTheProvidersRead() async throws {
+    let time = SettableClock(Self.start)
+    let store = InMemoryStore()
+    try await ImportService(
+      tasks: SlowTaskProvider(time: time, readTime: .seconds(3)), notes: DemoVault(), store: store,
+      clock: time.clock
+    ).run(ImportRequest(trigger: .manual))
+    let run = try #require(try await store.lastCommittedImport())
+    #expect(run.startedAt == Self.start)
+    #expect(run.duration == .seconds(3))
+  }
+
+  /// The store, not the service, reads the end: the time spent in `commit` counts. Where in its
+  /// write a store reads it is the store's own test (`SQLiteStoreTests`).
+  @Test func theDurationIncludesTheStoresCommit() async throws {
     let time = SettableClock(Self.start)
     let store = SlowStore(time: time, writeTime: .milliseconds(250))
     try await ImportService(
