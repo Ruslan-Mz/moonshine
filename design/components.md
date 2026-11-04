@@ -75,7 +75,7 @@ Dashed border, no fill: emoji + name + `no activity yet`; "First step: …", the
 
 ## StatusBar
 
-28 high, sidebar-coloured background, hairline above. A "Demo data" capsule (stroke `badgeBorder`, dot + text), `Updated 3 min ago` (`Text(date, style: .relative)`), shortcut hints on the right. In Live mode the badge disappears; freshness stays.
+28 high, sidebar-coloured background, hairline above. A "Demo data" capsule (stroke `badgeBorder`, dot + text), `Updated 3 min ago` (the ladder of `design/screens/settings.md` § Status bar), shortcut hints on the right. In Live mode the badge disappears; freshness stays.
 
 ## Segmented control, slider (forecast / board)
 

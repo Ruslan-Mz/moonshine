@@ -63,9 +63,11 @@ Rules that follow:
 - **Always full snapshots.** The incremental mode of contract v0.2 stays defined and unused. Only a full snapshot may soft-delete (ADR-0002 retention rule unchanged).
 - **The UI never waits.** View models observe the store; stored data is shown at once and updates when the import commits. The status bar shows "updated N min ago" and "updating…".
 - **Target**: the refresh lands ≤ 5 s after OmniFocus resigns active, measured from the signal to the refresh landing in the store (signal → landing: the wait before the import plus the import total; the import total is shown beside it, and neither is the time OmniFocus is held; owner, 2026-10-28) — provisional until measured with the real trigger in S4 (with OmniFocus frontmost: 4.0 s).
-- **`imports` table** (S4): trigger, start, duration, time OmniFocus was held, row counts. It feeds the status bar and lets the timings be watched as the database grows.
+- **`imports` table** (S4): trigger, the wait from the signal, start, end, import total, time OmniFocus was held, outcome, row counts. It feeds the status bar and lets the timings be watched as the database grows.
 - **Archiving is the owner's lever.** Moving old completed items to OmniFocus' archive shrinks the task list and the import time roughly in proportion. MoonShine keeps completed tasks in its own store, so no history is lost — provided a full import ran before archiving. MoonShine never archives by itself.
 - **OmniFocus not running**: no import; MoonShine shows the last import and says so.
+
+**Amendment (2026-11-04, owner; PR #44 round 1).** A coalesced follow-up records the request that queued it, unless a resign-active request joins it: then it records resign-active, with that request's own signal time, so the target's median keeps every resign-active signal. A request without a signal time is signalled when it reaches `ImportService`, so every recorded import has a measured wait; a Demo launch that starts at once waits 0. When S4-4b adds more signals, its planning ranks each one; until then resign-active is the only signal that outranks the first request.
 
 ### Consequences
 
