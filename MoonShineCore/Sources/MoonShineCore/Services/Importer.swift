@@ -223,41 +223,53 @@ public actor ImportService {
   public let notes: any NoteProvider
   public let store: any Store
   public let importer: Importer
+  /// The import path's only clock; a signal's time is read from it too.
+  public let clock: ImportClock
   private var current: Task<Workspace, any Error>?
-  private var followUp: Task<Workspace, any Error>?
+  /// The queued follow-up and the request it records, read when it starts.
+  private var followUp: (task: Task<Workspace, any Error>, request: ImportRequest)?
   /// Requests waiting on the queued follow-up run (observable by tests).
   private(set) var followUpRequests = 0
 
   public init(
     tasks: any TaskProvider, notes: any NoteProvider, store: any Store,
-    importer: Importer = Importer()
+    importer: Importer = Importer(), clock: ImportClock = .system
   ) {
     self.tasks = tasks
     self.notes = notes
     self.store = store
     self.importer = importer
+    self.clock = clock
   }
 
   /// Full import. An incremental merge is decided after the S3a-1 measurements (S3a-2).
   /// Single-flight: imports run one at a time (identity map → workspace → commit is not atomic
   /// otherwise); requests arriving during an import share at most one follow-up run, which
-  /// starts when the current one ends, so the latest provider state is still read.
+  /// starts when the current one ends, so the latest provider state is still read. The follow-up
+  /// records the request that queued it, unless a resign-active request joins it: then it records
+  /// that one, with its own signal time (ADR-0011, 2026-11-04). It reads the clock when it starts.
+  /// A request without a signal time is signalled when it reaches the service.
   @discardableResult
-  public func run(now: Date = Date()) async throws -> Workspace {
+  public func run(_ request: ImportRequest) async throws -> Workspace {
+    let request =
+      request.signalledAt == nil
+      ? ImportRequest(trigger: request.trigger, signalledAt: clock.monotonic()) : request
     let task: Task<Workspace, any Error>
-    if let followUp {
-      task = followUp
+    if let queued = followUp {
+      task = queued.task
       followUpRequests += 1
+      if request.trigger == .resignActive, queued.request.trigger != .resignActive {
+        followUp?.request = request
+      }
     } else if let current {
       task = Task { [current] in
         _ = await current.result
-        promoteFollowUp()
-        return try await importOnce(now: now)
+        return try await importOnce(promoteFollowUp() ?? request)
       }
-      followUp = task
+      followUp = (task, request)
       followUpRequests = 1
     } else {
-      task = Task { try await importOnce(now: now) }
+      task = Task { try await importOnce(request) }
       current = task
     }
     let result = await task.result
@@ -265,13 +277,18 @@ public actor ImportService {
     return try result.get()
   }
 
-  private func promoteFollowUp() {
-    current = followUp
+  /// Returns the request the follow-up records.
+  private func promoteFollowUp() -> ImportRequest? {
+    let request = followUp?.request
+    current = followUp?.task
     followUp = nil
     followUpRequests = 0
+    return request
   }
 
-  private func importOnce(now: Date) async throws -> Workspace {
+  private func importOnce(_ request: ImportRequest) async throws -> Workspace {
+    let now = clock.wall()
+    let started = clock.monotonic()
     async let taskSnapshot = tasks.snapshot(modifiedSince: nil)
     async let vaultSnapshot = notes.vault()
     let (source, vault) = try await (taskSnapshot, vaultSnapshot)
@@ -281,8 +298,12 @@ public actor ImportService {
     let stored = try await store.workspace()
     let workspace = importer.makeWorkspace(
       tasks: source, vault: vault, stored: stored, identities: &identities.map, now: now)
+    let run = PendingImportRun(
+      request: request, startedAt: now, started: started, providerHeld: source.heldFor,
+      counts: ImportCounts(workspace), clock: clock)
     try await store.commit(
-      workspace, identities: identities.map, expectedVersion: identities.version, at: now)
+      workspace, identities: identities.map, expectedVersion: identities.version, at: now,
+      run: run)
     return workspace
   }
 }

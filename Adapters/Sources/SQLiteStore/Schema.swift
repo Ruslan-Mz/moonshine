@@ -114,6 +114,21 @@ extension SQLiteStore {
           sql: "UPDATE external_ref SET kind = ? WHERE kind = ?", arguments: [new, old])
       }
     }
+    // One row per recorded import (ADR-0011): times in ms, a duration NULL when it could not be
+    // measured. `outcome` is `committed` until failed attempts are recorded too (S4-4c).
+    migrator.registerMigration("v3") { db in
+      try db.create(table: "imports") { t in
+        t.autoIncrementedPrimaryKey("id")
+        t.column("trigger", .text).notNull()
+        t.column("started_at", .integer).notNull()
+        t.column("finished_at", .integer).notNull()
+        t.column("waited_ms", .integer)
+        t.column("duration_ms", .integer)
+        t.column("held_ms", .integer)
+        t.column("outcome", .text).notNull()
+        t.column("attrs", .jsonText).notNull()
+      }
+    }
     return migrator
   }
 }

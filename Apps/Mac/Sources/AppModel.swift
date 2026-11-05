@@ -24,6 +24,10 @@ final class AppModel {
   private(set) var state: State = .loading
   var selection: SidebarItem? = .today
   let source: Source
+  /// The last committed import; nil before one, or when it could not be read.
+  private(set) var lastImport: ImportRun?
+  /// The clock the import was timed by, so "updated …" counts from the same origin.
+  let clock: ImportClock = DemoEnvironment.clock
   private let snapshot: URL?
 
   /// The unit tests run inside the app (`project.yml`), so every test run launches it.
@@ -51,9 +55,16 @@ final class AppModel {
       return
     }
     do {
-      state = .loaded(try await DemoEnvironment.overview(snapshot: snapshot))
+      let loaded = try await DemoEnvironment.load(snapshot: snapshot)
+      lastImport = loaded.lastImport
+      state = .loaded(loaded.overview)
     } catch {
       state = .unavailable
     }
+  }
+
+  /// Read again on every minute's tick of the status bar.
+  func freshness() -> Freshness? {
+    lastImport.map { Freshness(finishedAt: $0.finishedAt, now: clock.wall()) }
   }
 }

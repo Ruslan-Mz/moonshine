@@ -43,7 +43,8 @@ public struct SQLiteStore: Store {
   }
 
   public func commit(
-    _ workspace: Workspace, identities: IdentityMap, expectedVersion: Int, at now: Date
+    _ workspace: Workspace, identities: IdentityMap, expectedVersion: Int, at now: Date,
+    run: PendingImportRun?
   ) async throws {
     let fallback = fallbackTimeZone
     try await writer.write { db in
@@ -62,6 +63,15 @@ public struct SQLiteStore: Store {
       try Self.sync(merged.projects, as: ProjectRecord.self, db, at: at)
       try Self.sync(merged.tasks, as: TaskRecord.self, db, at: at)
       try WorkspaceRecord(merged, committedAt: at, version: version + 1).save(db)
+      // Read the clocks last: only this insert and the transaction's commit fall outside.
+      if let run { try ImportRecord(run.finished()).insert(db) }
+    }
+  }
+
+  public func lastCommittedImport() async throws -> ImportRun? {
+    try await writer.read { db in
+      try ImportRecord.filter(Column("outcome") == ImportRecord.committed)
+        .order(Column("id").desc).fetchOne(db)?.run()
     }
   }
 

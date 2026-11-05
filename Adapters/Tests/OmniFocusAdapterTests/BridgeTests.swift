@@ -41,6 +41,37 @@ import Testing
       #expect(try await bridge(runner).document(.full).omniFocusTime == .milliseconds(1234))
     }
 
+    @Test func theBridgeReportsTheHeldTimeOfItsMarker() async throws {
+      let runner = FakeRunner(
+        stdout: try Data(contentsOf: fixtureURL), stderr: "moonshine-bridge omnifocus_ms=2718\n")
+      let source = try await bridge(runner).snapshot(modifiedSince: nil)
+      #expect(source.heldFor == .milliseconds(2718))
+    }
+
+    /// The bridge adds only the held time: every other field is the mapped document's, for a
+    /// full and an incremental snapshot.
+    @Test func theBridgesSnapshotIsTheMappedDocumentWithItsHeldTime() async throws {
+      let full = try String(contentsOf: fixtureURL, encoding: .utf8)
+      let incremental = full.replacingOccurrences(
+        of: #""mode": "full","#,
+        with: #""mode": "incremental", "modifiedSince": "2026-09-30T20:00:00+03:00","#)
+      #expect(incremental != full)
+      for (json, since) in [
+        (full, nil), (incremental, Date(timeIntervalSince1970: 1_790_787_600)),
+      ] {
+        let mapped = try SnapshotMapper.map(SnapshotDocument.decode(Data(json.utf8)))
+        let expected = TaskSourceSnapshot(
+          provider: mapped.provider, generatedAt: mapped.generatedAt, timeZone: mapped.timeZone,
+          defaultTimes: mapped.defaultTimes, modifiedSince: mapped.modifiedSince,
+          tags: mapped.tags, projects: mapped.projects, tasks: mapped.tasks,
+          heldFor: .milliseconds(5))
+        let source = try await bridge(FakeRunner(stdout: Data(json.utf8)))
+          .snapshot(modifiedSince: since)
+        #expect(String(reflecting: source) == String(reflecting: expected))
+        #expect((source.modifiedSince == nil) == (since == nil))
+      }
+    }
+
     @Test func aMissingOrMalformedTimingMarkerIsAMalformedResult() async throws {
       for stderr in ["", "moonshine-bridge omnifocus_ms=abc\n", "omnifocus_ms=12\n"] {
         let runner = FakeRunner(stdout: try Data(contentsOf: fixtureURL), stderr: stderr)

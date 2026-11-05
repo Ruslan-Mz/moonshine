@@ -253,6 +253,43 @@ private func demo() async throws -> (Overview, TodayScreen) {
     #expect(isUnavailable(gone.state))
   }
 
+  @MainActor @Test func loadingTheDemoRecordsALaunchImport() async throws {
+    let model = AppModel(snapshot: trackedSnapshot)
+    await model.load()
+    let run = try #require(model.lastImport)
+    #expect(run.trigger == .launch)
+    #expect(run.finishedAt == DemoEnvironment.now)
+    #expect(model.freshness() == .justNow)
+  }
+
+  /// A store that keeps everything but cannot read its imports.
+  struct NoImportsStore: Store {
+    let inner = InMemoryStore(timeZone: DemoVault.calendar.timeZone)
+    struct Unreadable: Error {}
+
+    func identityMap() async throws -> VersionedIdentityMap { try await inner.identityMap() }
+    func commit(
+      _ workspace: Workspace, identities: IdentityMap, expectedVersion: Int, at now: Date,
+      run: PendingImportRun?
+    ) async throws {
+      try await inner.commit(
+        workspace, identities: identities, expectedVersion: expectedVersion, at: now, run: run)
+    }
+    func lastCommittedImport() async throws -> ImportRun? { throw Unreadable() }
+    func workspace() async throws -> Workspace { try await inner.workspace() }
+    func stored() async throws -> StoredWorkspace { try await inner.stored() }
+  }
+
+  @Test func aStoreThatCannotReadItsImportsStillShowsToday() async throws {
+    let loaded = try await DemoEnvironment.load(snapshot: trackedSnapshot, store: NoImportsStore())
+    #expect(loaded.lastImport == nil)
+    let sections = TodayScreen(loaded.overview).sections
+    #expect(!sections.isEmpty)
+    #expect(
+      sections.map { $0.rows.map(\.title) }
+        == (try await demo()).1.sections.map { $0.rows.map(\.title) })
+  }
+
   private func isUnavailable(_ state: AppModel.State) -> Bool {
     if case .unavailable = state { true } else { false }
   }

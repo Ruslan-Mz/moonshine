@@ -54,8 +54,8 @@ import Testing
   @Test func reimportIsIdempotent() async throws {
     let store = InMemoryStore()
     let service = ImportService(tasks: OneTaskProvider(), notes: DemoVault(), store: store)
-    let first = try await service.run()
-    let second = try await service.run()
+    let first = try await service.run(ImportRequest(trigger: .manual))
+    let second = try await service.run(ImportRequest(trigger: .manual))
     let stored = await store.workspace()
 
     #expect(first.tasks.map(\.id) == second.tasks.map(\.id))

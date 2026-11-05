@@ -347,8 +347,9 @@ func fixtureDocument() throws -> SnapshotDocument {
 @Suite struct FixtureImportTests {
   func importFixture() async throws -> Workspace {
     let service = ImportService(
-      tasks: SnapshotFileTaskProvider(url: fixtureURL), notes: DemoVault(), store: InMemoryStore())
-    return try await service.run(now: Date(timeIntervalSince1970: 1_790_791_200))
+      tasks: SnapshotFileTaskProvider(url: fixtureURL), notes: DemoVault(), store: InMemoryStore(),
+      clock: .frozen(at: Date(timeIntervalSince1970: 1_790_791_200)))
+    return try await service.run(ImportRequest(trigger: .manual))
   }
 
   func lineKey(_ assignment: LineAssignment, in workspace: Workspace) -> String {

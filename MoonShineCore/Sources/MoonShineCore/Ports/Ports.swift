@@ -19,9 +19,14 @@ public protocol Store: Sendable {
   /// Applies a full import through `StoredWorkspace.merging(_:at:)` and saves the identities.
   /// Optimistic concurrency: throws `IdentityConflict` unless the store is still at
   /// `expectedVersion` (the version `identityMap()` returned); every commit bumps the version.
+  /// `run` is finished and recorded inside the same write; a rejected commit records nothing.
+  /// Only the measurement CLI passes nil.
   func commit(
-    _ workspace: Workspace, identities: IdentityMap, expectedVersion: Int, at now: Date
+    _ workspace: Workspace, identities: IdentityMap, expectedVersion: Int, at now: Date,
+    run: PendingImportRun?
   ) async throws
+  /// The newest import that committed; nil before the first.
+  func lastCommittedImport() async throws -> ImportRun?
   /// What services read: everything not removed from its provider.
   func workspace() async throws -> Workspace
   /// Everything kept, including history its providers no longer return.
@@ -67,11 +72,13 @@ public struct TaskSourceSnapshot: Sendable {
   public let tags: [SourceTag]
   public let projects: [SourceProject]
   public let tasks: [SourceTask]
+  /// How long reading it held the source, as the provider measured it; nil = not measured.
+  public let heldFor: Duration?
 
   public init(
     provider: ProviderID, generatedAt: Date, timeZone: TimeZone,
     defaultTimes: DefaultTimeSettings?, modifiedSince: Date? = nil, tags: [SourceTag],
-    projects: [SourceProject], tasks: [SourceTask]
+    projects: [SourceProject], tasks: [SourceTask], heldFor: Duration? = nil
   ) {
     self.provider = provider
     self.generatedAt = generatedAt
@@ -81,6 +88,7 @@ public struct TaskSourceSnapshot: Sendable {
     self.tags = tags
     self.projects = projects
     self.tasks = tasks
+    self.heldFor = heldFor
   }
 }
 
