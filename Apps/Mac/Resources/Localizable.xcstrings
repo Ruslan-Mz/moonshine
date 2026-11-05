@@ -553,6 +553,22 @@
         }
       }
     },
+    "Refresh": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Обновить"
+          }
+        }
+      }
+    },
     "Rhythm": {
       "localizations": {
         "en": {
@@ -805,6 +821,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Обновлено %@"
+          }
+        }
+      }
+    },
+    "Updating…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updating…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Обновляется…"
           }
         }
       }

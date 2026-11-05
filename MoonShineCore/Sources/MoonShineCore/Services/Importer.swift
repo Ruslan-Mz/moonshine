@@ -258,9 +258,7 @@ public actor ImportService {
     if let queued = followUp {
       task = queued.task
       followUpRequests += 1
-      if request.trigger == .resignActive, queued.request.trigger != .resignActive {
-        followUp?.request = request
-      }
+      followUp?.request = queued.request.joined(by: request)
     } else if let current {
       task = Task { [current] in
         _ = await current.result

@@ -7,7 +7,7 @@ struct MoonShineApp: App {
   var body: some Scene {
     WindowGroup {
       RootView(model: model)
-        .task { await model.load() }
+        .task { model.start() }
     }
     .defaultSize(width: 1440, height: 900)
     .commands {
@@ -16,6 +16,10 @@ struct MoonShineApp: App {
         Button("Today") { model.selection = .today }
           .keyboardShortcut("1", modifiers: .command)
         Divider()
+      }
+      CommandGroup(after: .toolbar) {
+        Button("Refresh") { model.refresh() }
+          .keyboardShortcut("r", modifiers: .command)
       }
       TodayCommands()
       // Show / Hide Inspector, ⌃⌘I, in the View menu.

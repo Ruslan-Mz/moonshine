@@ -69,6 +69,13 @@ Rules that follow:
 
 **Amendment (2026-11-04, owner; PR #44 round 1).** A coalesced follow-up records the request that queued it, unless a resign-active request joins it: then it records resign-active, with that request's own signal time, so the target's median keeps every resign-active signal. A request without a signal time is signalled when it reaches `ImportService`, so every recorded import has a measured wait; a Demo launch that starts at once waits 0. When S4-4b adds more signals, its planning ranks each one; until then resign-active is the only signal that outranks the first request.
 
+**Amendment (2026-11-05, owner; S4-4b-1).**
+
+- **Ranking.** Launch, ⌘R and timer each rank below resign-active, and none outranks another: a resign-active request that joins another is recorded with its own signal time; otherwise the first request is recorded (one rule, `ImportRequest.joined(by:)`, for the coordinator and `ImportService`). A pending request that starts only because a joined ⌘R exempts it from the frontmost hold is recorded as ⌘R, with ⌘R's signal time, unless resign-active is in it; then resign-active.
+- **Coalescing.** A coordinator in Core takes the signals and holds at most one request behind the running import; it checks OmniFocus' state, and for a timer-only request the interval, when that request is about to start. `ImportService` stays single-flight, and its own follow-up is a guard the coordinator never reaches.
+- **Timer.** A tick is skipped when the last import that committed started less than the interval ago (owner, 2026-10-28, decision 3); a failed import does not count.
+- **The UI never waits** (`:64`). The app's model re-reads the store when the coordinator reports a committed import; the import path is the store's only writer.
+
 ### Consequences
 
 - Good — fresh data a few seconds after switching apps, with no perceptible freeze in normal use.

@@ -43,6 +43,13 @@ public struct ImportRequest: Sendable, Equatable {
     self.trigger = trigger
     self.signalledAt = signalledAt
   }
+
+  /// The request recorded when `later` joins this one: the first, unless `later` is the first
+  /// resign-active one, so the target's median keeps every resign-active signal (ADR-0011,
+  /// 2026-11-04 and 2026-11-05).
+  public func joined(by later: ImportRequest) -> ImportRequest {
+    later.trigger == .resignActive && trigger != .resignActive ? later : self
+  }
 }
 
 /// The rows an import brought, per entity kind (the spec's "row counts").

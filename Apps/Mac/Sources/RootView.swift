@@ -50,6 +50,10 @@ struct StatusBar: View {
           }
         }
       }
+      if model.isImporting {
+        ProgressView().controlSize(.mini)
+        Text("Updating…")
+      }
       Spacer()
     }
     .font(.caption)
