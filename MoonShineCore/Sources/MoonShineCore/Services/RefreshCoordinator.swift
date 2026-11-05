@@ -28,7 +28,8 @@ public actor RefreshCoordinator {
   private var state: OmniFocusState?
   private var importing = false
   private var pending: Pending?
-  /// The monotonic start of the last import that committed in this process.
+  /// The monotonic start of the last import that committed in this process. Not seeded from
+  /// the store: the wall clock can move, and after a relaunch the launch import commits first.
   private var lastCommittedStart: Duration?
 
   /// The requests that joined while an import ran or before the first state.
@@ -94,8 +95,8 @@ public actor RefreshCoordinator {
         continuation.yield(.omniFocusNotRunning)
       }
     case .frontmost:
-      // Held for resign-active. A joined ⌘R alone starts it, recorded as ⌘R unless
-      // resign-active is in it (owner, 2026-11-05).
+      // Dropped: resign-active brings its own request. A joined ⌘R alone starts it, recorded
+      // as ⌘R unless resign-active is in it (owner, 2026-11-05).
       guard let manual = pending.manual else { return }
       start(pending.request.trigger == .resignActive ? pending.request : manual)
     case .background:

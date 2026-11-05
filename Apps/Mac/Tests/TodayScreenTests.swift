@@ -10,10 +10,15 @@ private let trackedSnapshot = URL(fileURLWithPath: #filePath)
   .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
   .deletingLastPathComponent().appendingPathComponent("fixtures/omnifocus.snapshot.json")
 
-private func demo() async throws -> (Overview, TodayScreen) {
-  let overview = try await DemoEnvironment.overview(snapshot: trackedSnapshot)
+/// Today as the app loads it: `AppEnvironment.demo` through the model.
+@MainActor private func demo() async throws -> (Overview, TodayScreen) {
+  let model = AppModel(environment: try .demo(snapshot: trackedSnapshot))
+  await model.load()
+  guard case .loaded(let overview) = model.state else { throw NotLoaded() }
   return (overview, TodayScreen(overview))
 }
+
+private struct NotLoaded: Error {}
 
 @Suite(.serialized) struct TodayScreenTests {
   @Test func sectionsFollowTheLineGroupsFoundationFirstWithoutLifeOps() async throws {
@@ -280,10 +285,13 @@ private func demo() async throws -> (Overview, TodayScreen) {
     func stored() async throws -> StoredWorkspace { try await inner.stored() }
   }
 
-  @Test func aStoreThatCannotReadItsImportsStillShowsToday() async throws {
-    let loaded = try await DemoEnvironment.load(snapshot: trackedSnapshot, store: NoImportsStore())
-    #expect(loaded.lastImport == nil)
-    let sections = TodayScreen(loaded.overview).sections
+  @MainActor @Test func aStoreThatCannotReadItsImportsStillShowsToday() async throws {
+    let model = AppModel(
+      environment: try .demo(snapshot: trackedSnapshot, store: NoImportsStore()))
+    await model.load()
+    #expect(model.lastImport == nil)
+    guard case .loaded(let overview) = model.state else { throw NotLoaded() }
+    let sections = TodayScreen(overview).sections
     #expect(!sections.isEmpty)
     #expect(
       sections.map { $0.rows.map(\.title) }

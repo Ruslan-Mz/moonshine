@@ -11,18 +11,15 @@ private let trackedSnapshot = URL(fileURLWithPath: #filePath)
   .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
   .deletingLastPathComponent().appendingPathComponent("fixtures/omnifocus.snapshot.json")
 
-/// A store whose workspace reads fail while `failing` is set.
+/// A store whose workspace reads fail from the commit after `failAfterNextCommit()` on, so the
+/// import itself commits and only the model's re-read fails.
 final class FailingReadsStore: Store {
   let inner = InMemoryStore(timeZone: DemoVault.calendar.timeZone)
-  private let failing: Mutex<Bool>
+  private let flags = Mutex((armed: false, failing: false))
   struct Unreadable: Error {}
 
-  init(failing: Bool) {
-    self.failing = Mutex(failing)
-  }
-
-  func setFailing(_ value: Bool) {
-    failing.withLock { $0 = value }
+  func failAfterNextCommit() {
+    flags.withLock { $0.armed = true }
   }
 
   func identityMap() async throws -> VersionedIdentityMap { try await inner.identityMap() }
@@ -32,13 +29,37 @@ final class FailingReadsStore: Store {
   ) async throws {
     try await inner.commit(
       workspace, identities: identities, expectedVersion: expectedVersion, at: now, run: run)
+    flags.withLock { if $0.armed { $0.failing = true } }
   }
   func lastCommittedImport() async throws -> ImportRun? { try await inner.lastCommittedImport() }
   func workspace() async throws -> Workspace {
-    if failing.withLock({ $0 }) { throw Unreadable() }
+    if flags.withLock({ $0.failing }) { throw Unreadable() }
     return try await inner.workspace()
   }
   func stored() async throws -> StoredWorkspace { try await inner.stored() }
+}
+
+/// A store that commits without an import row, as `moonshine-import full` does.
+struct RunlessStore: Store {
+  let inner = InMemoryStore(timeZone: DemoVault.calendar.timeZone)
+
+  func identityMap() async throws -> VersionedIdentityMap { try await inner.identityMap() }
+  func commit(
+    _ workspace: Workspace, identities: IdentityMap, expectedVersion: Int, at now: Date,
+    run: PendingImportRun?
+  ) async throws {
+    try await inner.commit(
+      workspace, identities: identities, expectedVersion: expectedVersion, at: now, run: nil)
+  }
+  func lastCommittedImport() async throws -> ImportRun? { try await inner.lastCommittedImport() }
+  func workspace() async throws -> Workspace { try await inner.workspace() }
+  func stored() async throws -> StoredWorkspace { try await inner.stored() }
+}
+
+/// Fills `store` through the import path the app runs, before a model starts over it.
+private func fill(_ store: any Store) async throws {
+  let environment = try AppEnvironment.demo(snapshot: trackedSnapshot, store: store)
+  try await environment.coordinator.service.run(ImportRequest(trigger: .launch))
 }
 
 /// A source that ends without a state: OmniFocus counts as not running, so nothing imports.
@@ -83,21 +104,25 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
   }
 
   @MainActor @Test func aFailedReloadKeepsTheShownToday() async throws {
-    let store = FailingReadsStore(failing: false)
+    let store = FailingReadsStore()
     let model = AppModel(environment: try .demo(snapshot: trackedSnapshot, store: store))
     await model.load()
     #expect(isLoaded(model.state))
-    store.setFailing(true)
+    store.failAfterNextCommit()
     model.refresh()
     await waitFor { model.importOutcomes == 2 }
+    // The ⌘R import committed; only the re-read failed.
+    #expect(model.lastImport?.trigger == .manual)
     #expect(isLoaded(model.state))
     #expect(!model.isImporting)
   }
 
   @MainActor @Test func aFailedFirstReloadIsUnavailable() async throws {
-    let store = FailingReadsStore(failing: true)
+    let store = FailingReadsStore()
+    store.failAfterNextCommit()
     let model = AppModel(environment: try .demo(snapshot: trackedSnapshot, store: store))
     await model.load()
+    #expect(model.lastImport?.trigger == .launch)
     #expect(isUnavailable(model.state))
     #expect(!model.isImporting)
   }
@@ -114,7 +139,7 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
 
   @MainActor @Test func storedDataIsShownBeforeTheLaunchImport() async throws {
     let store = InMemoryStore(timeZone: DemoVault.calendar.timeZone)
-    _ = try await DemoEnvironment.load(snapshot: trackedSnapshot, store: store)
+    try await fill(store)
     // No state ever arrives, so the launch import never runs: what shows is the store's.
     let model = AppModel(
       environment: try .demo(snapshot: trackedSnapshot, store: store, source: SilentSignals()))
@@ -125,13 +150,15 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     #expect(model.importOutcomes == 0)
   }
 
-  @MainActor @Test func aStoreThatCannotReadItsImportsStillShowsTodayThroughTheModel()
-    async throws
-  {
+  @MainActor @Test func aStoreCommittedWithoutAnImportRowIsShownAtLaunch() async throws {
+    let store = RunlessStore()
+    try await fill(store)
     let model = AppModel(
-      environment: try .demo(snapshot: trackedSnapshot, store: TodayScreenTests.NoImportsStore()))
-    await model.load()
+      environment: try .demo(snapshot: trackedSnapshot, store: store, source: SilentSignals()))
+    model.start()
+    await waitFor { isLoaded(model.state) }
     #expect(isLoaded(model.state))
     #expect(model.lastImport == nil)
+    #expect(model.importOutcomes == 0)
   }
 }

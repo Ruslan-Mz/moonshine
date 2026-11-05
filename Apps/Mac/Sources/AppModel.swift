@@ -97,17 +97,13 @@ final class AppModel {
     }
   }
 
-  /// A store that never committed shows nothing yet; one that cannot read its imports still
-  /// shows its data.
+  /// A store that has committed shows its data, with or without an import row; an empty
+  /// store (version 0) shows nothing yet.
   private func showStored(_ store: any Store) async {
-    let last: ImportRun?
-    do {
-      last = try await store.lastCommittedImport()
-      if last == nil { return }
-    } catch {
-      last = nil
-    }
-    guard let workspace = try? await store.workspace(), case .loading = state else { return }
+    let version = (try? await store.identityMap().version) ?? 0
+    guard version > 0, let workspace = try? await store.workspace() else { return }
+    let last = try? await store.lastCommittedImport()
+    guard case .loading = state else { return }
     lastImport = last
     state = .loaded(Overview(workspace: workspace, now: clock.wall()))
   }

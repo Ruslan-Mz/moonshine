@@ -98,7 +98,11 @@ struct Rig {
     #expect(await rig.log.started == [.launch, .resignActive])
   }
 
-  @Test func aSignalWhileOmniFocusIsFrontmostWaitsForResignActive() async throws {
+  /// A signal while OmniFocus is frontmost is dropped, not held: resign-active brings its own
+  /// request, and a quit then reports only the state (owner, 2026-11-05).
+  @Test func aSignalWhileOmniFocusIsFrontmostIsDroppedAndResignActiveImportsOnItsOwn()
+    async throws
+  {
     let rig = Rig()
     await rig.send(.omniFocus(.frontmost), .launch, .timer)
     await rig.quiesce()
@@ -107,6 +111,14 @@ struct Rig {
     await rig.committed(1)
     #expect(try await rig.lastTrigger() == .resignActive)
     #expect(await rig.provider.calls == 1)
+
+    let quit = Rig()
+    await quit.send(
+      .omniFocus(.frontmost), .launch, .omniFocus(.notRunning), .omniFocus(.background))
+    await quit.quiesce()
+    #expect(await quit.provider.calls == 0)
+    #expect(await quit.log.count(.omniFocusNotRunning) == 0)
+    #expect(await quit.log.count(.omniFocusState(.notRunning)) == 1)
   }
 
   @Test func refreshIsAllowedWhileOmniFocusIsFrontmost() async throws {
@@ -177,15 +189,15 @@ struct Rig {
   @Test func aPendingImportDoesNotStartOnceOmniFocusIsFrontmostUnlessARefreshJoinedIt()
     async throws
   {
-    let held = Rig(open: false)
-    await held.send(.omniFocus(.background), .launch)
-    await eventually { await held.provider.calls == 1 }
-    await held.signal(.resignActive)
-    await held.send(.omniFocus(.frontmost))
-    await held.provider.open()
-    await held.committed(1)
-    await held.quiesce()
-    #expect(await held.provider.calls == 1)
+    let dropped = Rig(open: false)
+    await dropped.send(.omniFocus(.background), .launch)
+    await eventually { await dropped.provider.calls == 1 }
+    await dropped.signal(.resignActive)
+    await dropped.send(.omniFocus(.frontmost))
+    await dropped.provider.open()
+    await dropped.committed(1)
+    await dropped.quiesce()
+    #expect(await dropped.provider.calls == 1)
 
     let refreshed = Rig(open: false)
     await refreshed.send(.omniFocus(.background), .launch)
