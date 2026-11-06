@@ -24,8 +24,9 @@
 // must be a regular file inside the repository after symlinks, in printable ASCII with LF line
 // breaks, holding only blank lines, `//` comments and `NAME = value` lines for
 // CODE_SIGN_IDENTITY, CODE_SIGN_STYLE and DEVELOPMENT_TEAM, with no `$` and no condition
-// (`NAME[sdk=…]`); the tracked file may hold one `#include? "Signing.local.xcconfig"`, the local
-// file none. Its findings name a line and a kind, never a name or a value from the file: the
+// (`NAME[sdk=…]`); the tracked file may hold only `CODE_SIGN_IDENTITY = -`,
+// `CODE_SIGN_STYLE = Manual` and one `#include? "Signing.local.xcconfig"`, the local file no
+// include. Its findings name a line and a kind, never a name or a value from the file: the
 // local file holds the owner's team id. Locally this is a command, not a guard.
 // Usage: node scripts/check-project-scripts.mjs [file] (default `project.yml`).
 // Exit 0 clean, 1 with `file:line: reason` per finding, 2 when the file cannot be read.
@@ -75,6 +76,9 @@ const settings = { base: BUILD };
 export const signingConfig = "Configs/Signing.xcconfig";
 const localConfig = "Configs/Signing.local.xcconfig";
 const signingSettings = new Set(["CODE_SIGN_IDENTITY", "CODE_SIGN_STYLE", "DEVELOPMENT_TEAM"]);
+// The tracked file signs ad hoc only: a team id or another identity never lands in the public
+// repository (owner, 2026-11-06, PR #46 round 1).
+const trackedSettings = new Set(["CODE_SIGN_IDENTITY = -", "CODE_SIGN_STYLE = Manual"]);
 const schema = {
   name: VALUE,
   configFiles: { Debug: CONFIG, Release: CONFIG },
@@ -271,6 +275,8 @@ export function checkXcconfig(text, { local }) {
       findings.push({ line, message: "a line other than a comment, the include or `NAME = value` without `$`" });
     } else if (!signingSettings.has(raw.slice(0, raw.indexOf(" ")))) {
       findings.push({ line, message: "a build setting other than CODE_SIGN_IDENTITY, CODE_SIGN_STYLE, DEVELOPMENT_TEAM" });
+    } else if (!local && !trackedSettings.has(raw)) {
+      findings.push({ line, message: "in the tracked file, a line other than `CODE_SIGN_IDENTITY = -` or `CODE_SIGN_STYLE = Manual`" });
     }
   }
   return findings;

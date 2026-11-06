@@ -56,6 +56,10 @@ const allowed = {
   ],
   // The OmniFocus bridge runs `osascript`.
   "Adapters/Sources/OmniFocusAdapter/OmniFocusBridge.swift": ["let process = Process()"],
+  // Today listens for a wake from sleep, to rebuild past midnight; it opens nothing (S4-4c-1).
+  "Apps/Mac/Sources/SourceFeed.swift": [
+    "(NSWorkspace.shared.notificationCenter, NSWorkspace.didWakeNotification)",
+  ],
 };
 
 // The one file that may use EventKit, read-only.

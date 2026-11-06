@@ -274,6 +274,19 @@ test("a signing xcconfig holds comments, the three settings and the one include"
   findsIn("  DEVELOPMENT_TEAM = AB12CD34EF\n", 1, "`NAME = value`");
 });
 
+test("the tracked xcconfig signs ad hoc only: no team, no other identity or style", () => {
+  for (const line of [
+    "DEVELOPMENT_TEAM = AB12CD34EF",
+    "CODE_SIGN_IDENTITY = Apple Development",
+    "CODE_SIGN_IDENTITY = -x",
+    "CODE_SIGN_STYLE = Automatic",
+  ]) {
+    findsIn(`${tracked}${line}\n`, 5, "in the tracked file, a line other than", false);
+  }
+  // The same lines are the local file's to hold.
+  assert.deepEqual(checkXcconfig("CODE_SIGN_STYLE = Automatic\nDEVELOPMENT_TEAM = AB12CD34EF\n", { local: true }), []);
+});
+
 test("a signing xcconfig is printable ASCII with LF line breaks", () => {
   for (const [text, line] of [
     ["CODE_SIGN_STYLE = Manual\r\nDEVELOPMENT_TEAM = AB12CD34EF\n", 1],
@@ -336,18 +349,29 @@ test("a signing xcconfig that is a symbolic link out of the root, dangling or a 
   }
 });
 
-test("the command fails on a finding and on a file that is not UTF-8", () => {
-  const dir = mkdtempSync(join(tmpdir(), "check-project-scripts-"));
+/// Runs the command on `path`: its exit status and standard output.
+function run(path) {
   try {
-    const path = join(dir, "project.yml");
-    writeFileSync(path, "targets:\n  App:\n    postBuildScripts:\n      - script: echo\n");
-    assert.throws(() => execFileSync("node", [script, path], { stdio: "pipe" }), { status: 1 });
-    writeFileSync(path, Buffer.from([0x6e, 0x61, 0x6d, 0x65, 0x3a, 0x20, 0xe9, 0x0a]));
-    assert.throws(() => execFileSync("node", [script, path], { stdio: "pipe" }), { status: 1 });
-    assert.throws(() => execFileSync("node", [script, join(dir, "absent.yml")], { stdio: "pipe" }), {
-      status: 2,
-    });
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
+    return { status: 0, stdout: execFileSync("node", [script, path], { stdio: "pipe", encoding: "utf8" }) };
+  } catch (error) {
+    return { status: error.status, stdout: String(error.stdout) };
   }
+}
+
+// The root holds the clean tracked signing settings, so each exit comes from project.yml alone.
+test("the command passes clean input and fails on a finding and on a file that is not UTF-8", () => {
+  withSigning({ "Signing.xcconfig": tracked }, (root) => {
+    const path = join(root, "project.yml");
+    writeFileSync(path, "name: App\n");
+    assert.equal(run(path).status, 0, run(path).stdout);
+    writeFileSync(path, "targets:\n  App:\n    postBuildScripts:\n      - script: echo\n");
+    const found = run(path);
+    assert.equal(found.status, 1);
+    assert.ok(found.stdout.includes("project.yml:3: ") && found.stdout.includes("postBuildScripts"), found.stdout);
+    writeFileSync(path, Buffer.from([0x6e, 0x61, 0x6d, 0x65, 0x3a, 0x20, 0xe9, 0x0a]));
+    const bytes = run(path);
+    assert.equal(bytes.status, 1);
+    assert.ok(bytes.stdout.includes("project.yml:1: a file that is not UTF-8"), bytes.stdout);
+    assert.equal(run(join(root, "absent.yml")).status, 2);
+  });
 });
