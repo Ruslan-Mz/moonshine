@@ -18,7 +18,7 @@ More in [`docs/VISION.md`](docs/VISION.md) and [`docs/ROADMAP.md`](docs/ROADMAP.
 
 ## Status
 
-Phase 1, **See**: a read-only macOS app. Today runs in Demo mode on invented data; the live OmniFocus and Obsidian import comes next. Nothing is ever written to OmniFocus, the vault or the calendar in this phase.
+Phase 1, **See**: a read-only macOS app. Today runs in Demo mode on invented data, or in Live mode on the owner's OmniFocus (chosen in Settings); the Obsidian vault in Live comes next. Nothing is ever written to OmniFocus, the vault or the calendar in this phase.
 
 ## Architecture
 
