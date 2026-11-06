@@ -78,6 +78,27 @@ public struct ImportCounts: Sendable, Equatable {
   }
 }
 
+/// Why an import did not commit, by kind only: never a value, an id or a provider's text.
+/// Held in memory in S4-4c-1; S4-4c-3 records it. One writer per store, so an identity
+/// conflict cannot happen and is `other`.
+public enum ImportFailure: String, Sendable, CaseIterable {
+  case providerNotRunning
+  case permissionDenied
+  case timedOut
+  case invalidSnapshot
+  case partialSnapshot
+  case other
+}
+
+/// An error that names its kind; any other error is `other`.
+public protocol ImportFailureKind: Error {
+  var importFailure: ImportFailure { get }
+}
+
+extension PartialSnapshotError: ImportFailureKind {
+  public var importFailure: ImportFailure { .partialSnapshot }
+}
+
 /// How an import ended. Only committed runs are recorded until failures are (S4-4c).
 public enum ImportOutcome: Sendable, Equatable {
   case committed(ImportCounts)

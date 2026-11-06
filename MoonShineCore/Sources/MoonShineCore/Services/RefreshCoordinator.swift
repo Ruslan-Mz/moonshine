@@ -4,7 +4,7 @@ import Foundation
 public enum RefreshEvent: Sendable, Equatable {
   case started(ImportTrigger)
   case committed
-  case notCommitted
+  case notCommitted(ImportFailure)
   /// A ⌘R or a launch was dropped because OmniFocus is not running (ADR-0011:68).
   case omniFocusNotRunning
   /// OmniFocus' first state, and every change after it.
@@ -116,17 +116,19 @@ public actor RefreshCoordinator {
     Task {
       do {
         try await service.run(request)
-        finish(committedFrom: started)
+        finish(.committed, from: started)
       } catch {
-        finish(committedFrom: nil)
+        let kind = (error as? any ImportFailureKind)?.importFailure ?? .other
+        finish(.notCommitted(kind), from: nil)
       }
     }
   }
 
-  private func finish(committedFrom started: Duration?) {
+  /// `started` is the committed import's start.
+  private func finish(_ event: RefreshEvent, from started: Duration?) {
     importing = false
     if let started { lastCommittedStart = started }
-    continuation.yield(started == nil ? .notCommitted : .committed)
+    continuation.yield(event)
     decide()
   }
 }

@@ -20,12 +20,12 @@ import SQLiteStore
   /// prints each problem's kind, vault-relative path and line: owner only, in the owner's own
   /// terminal. An agent never runs it, and its output never goes into a log, commit or PR.
   ///
-  /// `full` imports into `data/import.local.sqlite` (git-ignored), recreated before the first run;
-  /// one run unless `runs` is given. The vault is not read here (`VaultSnapshot.notRead`), so every
-  /// task maps to Life ops.
+  /// `full` imports into its own store, `moonshine-import.sqlite` in the data folder
+  /// (`~/Library/Application Support/MoonShine/`, created if missing), recreated before the first
+  /// run; never the app's `MoonShine.sqlite` next to it. One run unless `runs` is given. The vault
+  /// is not read here (`VaultSnapshot.notRead`), so every task maps to Life ops.
   @main
   struct MoonShineImport {
-    static let storePath = "data/import.local.sqlite"
     /// 300 s for the measurement only (a full read may exceed the adapter's 30 s default).
     static let bridge = OmniFocusBridge(
       script: URL(filePath: "bridge/snapshot.js"), timeout: .seconds(300))
@@ -78,16 +78,11 @@ import SQLiteStore
     // MARK: Modes
 
     static func full(runs: Int) async throws {
-      // Only a missing file is fine: a store that cannot be removed would be measured as empty.
-      for suffix in ["", "-wal", "-shm"] {
-        do {
-          try FileManager.default.removeItem(atPath: storePath + suffix)
-        } catch let error as NSError
-          where error.domain == NSCocoaErrorDomain && error.code == NSFileNoSuchFileError
-        {
-          continue
-        }
-      }
+      // Only `full` creates the folder: `vault` writes nothing.
+      let base = try FileManager.default.url(
+        for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+      let storePath = DataFolder.measurementStorePath(in: try DataFolder.create(base: base))
+      try removeStore(at: storePath)
       let store = try SQLiteStore(path: storePath)
       let names = ["bridge", "decode+validate", "import", "commit", "total", "OmniFocus held"]
       var phases: [[Duration]] = []
@@ -182,6 +177,20 @@ import SQLiteStore
       guard paths else { return }
       print("problems (owner only; do not paste):")
       for location in read.problemLocations { print("  " + location) }
+    }
+
+    /// Removes the tool's own store file and its `-wal` / `-shm`, nothing else. Only a missing
+    /// file is fine: a store that cannot be removed would be measured as empty.
+    static func removeStore(at storePath: String) throws {
+      for suffix in ["", "-wal", "-shm"] {
+        do {
+          try FileManager.default.removeItem(atPath: storePath + suffix)
+        } catch let error as NSError
+          where error.domain == NSCocoaErrorDomain && error.code == NSFileNoSuchFileError
+        {
+          continue
+        }
+      }
     }
 
     // MARK: Report (counts only)

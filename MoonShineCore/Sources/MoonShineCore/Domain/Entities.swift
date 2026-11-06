@@ -349,6 +349,8 @@ public struct VaultProblem: Hashable, Sendable, CustomStringConvertible {
     /// A line's `parent` matches more than one note read; the shortest path was taken
     /// (ADR-0014). The line is read as usual.
     case ambiguousLink
+    /// Vault-wide: no vault is chosen yet (Live before S4-4d), so nothing was read.
+    case vaultNotChosen
   }
 
   public let kind: Kind

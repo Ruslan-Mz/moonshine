@@ -11,6 +11,7 @@ const script = join(dirname(fileURLToPath(import.meta.url)), "check-vault-writes
 const repository = dirname(dirname(fileURLToPath(import.meta.url)));
 const store = "Adapters/Sources/SQLiteStore/SQLiteStore.swift";
 const tool = "Adapters/Sources/moonshine-import/MoonShineImport.swift";
+const dataFolder = "Adapters/Sources/SQLiteStore/DataFolder.swift";
 const bridge = "Adapters/Sources/OmniFocusAdapter/OmniFocusBridge.swift";
 const adapter = "Adapters/Sources/ObsidianAdapter/A.swift";
 const app = "Apps/MoonShineMac/Sources/A.swift";
@@ -177,6 +178,10 @@ test("an allowed text passes in its own file only", () => {
   passes("try FileManager.default.removeItem(atPath: storePath + suffix)", tool);
   passes('FileHandle.standardError.write(Data((refusal + "\\n").utf8))', tool);
   passes("let process = Process()", bridge);
+  passes("try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)", dataFolder);
+  fails("try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)", store);
+  fails("try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)", tool);
+  fails("try FileManager.default.createDirectory(at: other, withIntermediateDirectories: true)", dataFolder);
   fails("try self.init(writer: DatabasePool(path: path), timeZone: timeZone)", tool);
   fails("try FileManager.default.removeItem(atPath: storePath + suffix)", store);
   fails("let process = Process()", "Adapters/Sources/ObsidianAdapter/ObsidianVault.swift");

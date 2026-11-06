@@ -12,6 +12,18 @@ public enum BridgeError: Error, Equatable, Sendable {
   case malformedOutput
 }
 
+extension BridgeError: ImportFailureKind {
+  public var importFailure: ImportFailure {
+    switch self {
+    case .notRunning: .providerNotRunning
+    case .timedOut: .timedOut
+    case .failed(_, osaError: -1743): .permissionDenied
+    case .failed: .other
+    case .malformedOutput: .invalidSnapshot
+    }
+  }
+}
+
 /// What a finished script returned.
 public struct ScriptResult: Sendable {
   public var status: Int32
@@ -63,6 +75,8 @@ public protocol ScriptRunner: Sendable {
     }
 
     public static let defaultTimeout = Duration.seconds(30)
+    /// The OmniFocus `bridge/snapshot.js` reads; the app asks macOS whether it runs.
+    public static let bundleIdentifier = "com.omnigroup.OmniFocus4"
     static let osascript = URL(filePath: "/usr/bin/osascript")
 
     public let script: URL

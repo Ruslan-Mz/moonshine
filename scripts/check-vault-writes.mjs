@@ -45,6 +45,10 @@ const optional = ["Apps"];
 const allowed = {
   // The store: MoonShine's own data.
   "Adapters/Sources/SQLiteStore/SQLiteStore.swift": ["DatabasePool(path: path)", "DatabaseQueue()"],
+  // The data folder that holds the stores (S4-4c-1).
+  "Adapters/Sources/SQLiteStore/DataFolder.swift": [
+    "FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)",
+  ],
   // The measurement tool: its own store file, and a refusal printed to standard error.
   "Adapters/Sources/moonshine-import/MoonShineImport.swift": [
     "FileManager.default.removeItem(atPath: storePath + suffix)",

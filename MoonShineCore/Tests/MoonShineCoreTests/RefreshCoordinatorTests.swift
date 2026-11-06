@@ -21,6 +21,15 @@ actor EventLog {
   }
 }
 
+extension RefreshEvent {
+  var endsAnImport: Bool {
+    switch self {
+    case .committed, .notCommitted: true
+    default: false
+    }
+  }
+}
+
 /// Yields the given signals, then ends.
 struct ListSource: ChangeSignalSource {
   let list: [ChangeSignal]
@@ -151,7 +160,7 @@ struct Rig {
     rig.time.advance(by: .seconds(10 * 60))
     await rig.provider.setFailing(true)
     await rig.send(.manual)
-    await eventually { await rig.log.count(.notCommitted) == 1 }
+    await eventually { await rig.log.count(.notCommitted(.other)) == 1 }
     await rig.provider.setFailing(false)
     rig.time.advance(by: .seconds(5 * 60))
     await rig.send(.timer)
@@ -308,6 +317,23 @@ struct Rig {
     let run = try #require(try await rig.store.lastCommittedImport())
     #expect(run.trigger == .manual)
     #expect(run.waited == .seconds(9))
+  }
+
+  /// S4-4c-1: the kind of a failed import reaches the model; an error with no kind is `other`.
+  @Test func aFailedImportReportsItsKind() async throws {
+    struct Denied: ImportFailureKind { var importFailure: ImportFailure { .permissionDenied } }
+    let rig = Rig()
+    await rig.send(.omniFocus(.background))
+    let cases: [(any Error, ImportFailure)] = [
+      (Denied(), .permissionDenied), (GatedTaskProvider.Unreadable(), .other),
+      (PartialSnapshotError(modifiedSince: Rig.start), .partialSnapshot),
+    ]
+    for (number, (error, kind)) in cases.enumerated() {
+      await rig.provider.setFailure(error)
+      await rig.send(.manual)
+      await eventually { await rig.log.events.filter(\.endsAnImport).count == number + 1 }
+      #expect(await rig.log.events.last == .notCommitted(kind))
+    }
   }
 
   @Test func joinedByIsTheRuleImportServiceApplies() {
