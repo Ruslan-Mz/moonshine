@@ -77,6 +77,12 @@ Rules that follow:
 - **Timer.** A tick is skipped when the last import that committed in this process started less than the interval ago (owner, 2026-10-28: the interval runs from the start, so a background import of about 11 s does not push the next tick a whole interval back); a failed import does not count. This supersedes "finished" in `:61`. The reference is the coordinator's in-process monotonic reading, never seeded from the store: the wall clock can move, and after a relaunch the launch import comes first anyway.
 - **The UI never waits** (`:64`). The app's model re-reads the store when the coordinator reports a committed import. The app's import path is the only writer of the app's store; the CLI writes a separate store (from 4c-1). If the CLI ever has to write the app's store, the app would re-read it on `PRAGMA data_version` when it becomes active; that needs a new decision.
 
+**Amendment (2026-11-05, owner; S4-4c-1).**
+
+- **A source switch.** Each source (Demo, Live) has its own coordinator and store for the life of the process. Its first selection starts it with a launch request; a switch back to it in Settings is the owner's action and is recorded as ⌘R (`manual`), with ⌘R's rules: allowed while OmniFocus is frontmost, dropped while it is not running.
+- **⌘R in Live, until S4-4b-2.** Live's 4c-1 source gives OmniFocus' state once, at launch. So ⌘R first reads whether OmniFocus runs: a start since a not-running state is sent as background, and a quit as not running. Frontmost → background is never sent, so no ⌘R is recorded as resign-active and the target's median stays clean.
+- **OmniFocus not running** (`:68`): with an import stored, the status bar says "OmniFocus is not running — showing the last import"; with none, Today says MoonShine has not read OmniFocus yet, and why. A quit that only a failed ⌘R import sees says the same.
+
 ### Consequences
 
 - Good — fresh data a few seconds after switching apps, with no perceptible freeze in normal use.
