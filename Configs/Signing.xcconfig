@@ -1,0 +1,6 @@
+// Signing for every build. CI and a fresh clone sign ad hoc. The git-ignored
+// Signing.local.xcconfig next to this file may name the owner's Personal Team; only the owner
+// writes it (CLAUDE.md, Commands). scripts/check-project-scripts.mjs checks both files.
+CODE_SIGN_IDENTITY = -
+CODE_SIGN_STYLE = Manual
+#include? "Signing.local.xcconfig"

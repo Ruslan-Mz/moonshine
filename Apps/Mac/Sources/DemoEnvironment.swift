@@ -35,18 +35,29 @@ struct AppEnvironment {
   let store: any Store
   let coordinator: RefreshCoordinator
   let source: any ChangeSignalSource
+  /// Live only: OmniFocus' state now, read on ⌘R (S4-4b-2's signals replace it).
+  let omniFocusReading: (@Sendable () -> OmniFocusState)?
+  /// The import path's clock, so "updated …" counts from the same origin.
+  let clock: ImportClock
 
   static func demo(
     snapshot: URL, store: (any Store)? = nil, source: any ChangeSignalSource = DemoSignals()
   ) throws -> AppEnvironment {
-    let store = try store ?? SQLiteStore(timeZone: DemoVault.calendar.timeZone)
-    let service = ImportService(
-      tasks: SnapshotFileTaskProvider(url: snapshot), notes: DemoVault(), store: store,
-      clock: DemoEnvironment.clock)
+    make(
+      tasks: SnapshotFileTaskProvider(url: snapshot), notes: DemoVault(),
+      store: try store ?? SQLiteStore(timeZone: DemoVault.calendar.timeZone),
+      clock: DemoEnvironment.clock, source: source)
+  }
+
+  static func make(
+    tasks: any TaskProvider, notes: any NoteProvider, store: any Store, clock: ImportClock,
+    source: any ChangeSignalSource, omniFocusReading: (@Sendable () -> OmniFocusState)? = nil
+  ) -> AppEnvironment {
+    let service = ImportService(tasks: tasks, notes: notes, store: store, clock: clock)
     return AppEnvironment(
       store: store,
       coordinator: RefreshCoordinator(
         service: service, timerInterval: RefreshCoordinator.minimumTimerInterval),
-      source: source)
+      source: source, omniFocusReading: omniFocusReading, clock: clock)
   }
 }

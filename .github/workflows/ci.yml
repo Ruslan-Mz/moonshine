@@ -47,7 +47,7 @@ jobs:
             echo "swift=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          pattern='\.swift$|(^|/)Package\.resolved$|^bridge/|^fixtures/|^project\.yml$|^Apps/|^scripts/(pin-app-packages\.sh|require-tests\.mjs|check-project-scripts\.mjs|check-calendar-isolation\.test\.mjs)$|^\.github/workflows/ci\.yml$'
+          pattern='\.swift$|(^|/)Package\.resolved$|^bridge/|^fixtures/|^project\.yml$|^Configs/|^Apps/|^scripts/(pin-app-packages\.sh|require-tests\.mjs|check-project-scripts\.mjs|check-calendar-isolation\.test\.mjs)$|^\.github/workflows/ci\.yml$'
           if printf '%s\n' "$changed" | grep -qE "$pattern"; then
             echo "swift=true" >> "$GITHUB_OUTPUT"
           else
@@ -74,7 +74,7 @@ jobs:
           node --test scripts/check-catalog.test.mjs
           node scripts/check-catalog.mjs
 
-      - name: project.yml runs no command and reads nothing outside the repository (XcodeGen and xcodebuild run outside the sandbox)
+      - name: project.yml and its signing settings run no command and read nothing outside the repository (XcodeGen and xcodebuild run outside the sandbox)
         run: |
           node --test scripts/check-project-scripts.test.mjs
           node scripts/check-project-scripts.mjs

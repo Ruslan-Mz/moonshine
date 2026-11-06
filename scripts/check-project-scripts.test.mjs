@@ -1,10 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { checkProject, forbiddenKeys } from "./check-project-scripts.mjs";
+import { checkProject, checkSigning, checkXcconfig, forbiddenKeys, signingConfig } from "./check-project-scripts.mjs";
 
 const script = new URL("./check-project-scripts.mjs", import.meta.url).pathname;
 
@@ -34,8 +34,14 @@ function finds(text, line, words, root) {
 
 const target = (lines) => `targets:\n  App:\n    type: application\n${lines}`;
 
-test("the repository's project.yml passes", () => {
-  execFileSync("node", [script], { stdio: "pipe" });
+// The tracked files only: the command would also read the owner's git-ignored local xcconfig
+// (CLAUDE.md rule 5).
+test("the repository's project.yml and tracked signing settings pass", () => {
+  const repository = new URL("..", import.meta.url).pathname;
+  assert.deepEqual(checkProject(readFileSync(join(repository, "project.yml"), "utf8"), repository), []);
+  const tracked = readFileSync(join(repository, signingConfig), "latin1");
+  assert.deepEqual(checkXcconfig(tracked, { local: false }), []);
+  assert.deepEqual(checkXcconfig(readFileSync(join(repository, "Configs/Signing.example.xcconfig"), "latin1"), { local: true }), []);
 });
 
 test("a project in the subset with allowed keys passes", () => {
@@ -50,9 +56,12 @@ test("a project in the subset with allowed keys passes", () => {
       "packages:",
       "  Core:",
       "    path: Core",
+      "configFiles:",
+      "  Debug: Configs/Signing.xcconfig",
+      "  Release: Configs/Signing.xcconfig",
       "settings:",
       "  base:",
-      "    CODE_SIGN_IDENTITY: '-'",
+      "    SWIFT_VERSION: '6.0'",
       "    INFOPLIST_KEY_NSAppleEventsUsageDescription: Reads tasks",
       "targets:",
       "  App:",
@@ -100,7 +109,7 @@ test("keys of Object.prototype are not allowed", () => {
 });
 
 test("configFiles, projectReferences and carthageExecutablePath are forbidden", () => {
-  finds(target("    configFiles:\n      Debug: x.xcconfig\n"), 4, "configFiles");
+  finds(target("    configFiles:\n      Debug: Configs/Signing.xcconfig\n"), 4, "configFiles is not allowed here");
   finds("projectReferences:\n  Other:\n    path: x.xcodeproj\n", 1, "projectReferences");
   finds("options:\n  carthageExecutablePath: /tmp/x\n", 2, "carthageExecutablePath");
 });
@@ -214,6 +223,117 @@ test("the repository root is not a path (owner, 2026-10-30)", () => {
   withRoot((root) => {
     for (const path of [".", "./"]) finds(target(`    sources:\n      - path: ${path}\n`), 5, "not its root", root);
   });
+});
+
+// S4-4c-1: signing through Configs/Signing.xcconfig and the owner's local file.
+
+test("configFiles names the signing settings at the top level only", () => {
+  const config = (debug, release = signingConfig) => `configFiles:\n  Debug: ${debug}\n  Release: ${release}\n`;
+  assert.deepEqual(check(config(signingConfig)), []);
+  finds(config("Configs/Other.xcconfig"), 2, `configFiles names ${signingConfig} only`);
+  finds(config(signingConfig, "Configs/Signing.local.xcconfig"), 3, "only");
+  finds(`configFiles:\n  Profile: ${signingConfig}\n`, 2, "Profile is not allowed here");
+  finds("configFiles:\n  Debug:\n    nested: x\n", 3, "takes a single value");
+  finds(`settings:\n  configFiles:\n    Debug: ${signingConfig}\n`, 2, "configFiles is not allowed here");
+});
+
+test("signing is not a build setting of project.yml", () => {
+  for (const name of ["CODE_SIGN_IDENTITY", "CODE_SIGN_STYLE", "DEVELOPMENT_TEAM"]) {
+    finds(`settings:\n  base:\n    ${name}: x\n`, 3, `build setting ${name} is not on the allowlist`);
+  }
+});
+
+const tracked = '// Signing.\nCODE_SIGN_IDENTITY = -\nCODE_SIGN_STYLE = Manual\n#include? "Signing.local.xcconfig"\n';
+const local = "CODE_SIGN_IDENTITY = Apple Development\nDEVELOPMENT_TEAM = AB12CD34EF\n";
+
+/// One finding on `line` of `text` whose message contains `words`, and never the text's values.
+function findsIn(text, line, words, isLocal = true) {
+  const findings = checkXcconfig(text, { local: isLocal });
+  assert.equal(findings.length, 1, `${JSON.stringify(text)} → ${JSON.stringify(findings)}`);
+  assert.equal(findings[0].line, line, findings[0].message);
+  assert.ok(findings[0].message.includes(words), `${findings[0].message} lacks ${words}`);
+  for (const secret of ["AB12CD34EF", "OTHER_SWIFT_FLAGS", "/tmp/x", "Elsewhere"]) {
+    assert.ok(!findings[0].message.includes(secret), findings[0].message);
+  }
+}
+
+test("a signing xcconfig holds comments, the three settings and the one include", () => {
+  assert.deepEqual(checkXcconfig(tracked, { local: false }), []);
+  assert.deepEqual(checkXcconfig(local, { local: true }), []);
+  assert.deepEqual(checkXcconfig("", { local: true }), []);
+  findsIn(`${local}OTHER_SWIFT_FLAGS = -load-plugin-executable /tmp/x\n`, 3, "a build setting other than");
+  findsIn("CC = /tmp/x\n", 1, "a build setting other than");
+  findsIn("SWIFT_EXEC = /tmp/x\n", 1, "a build setting other than");
+  findsIn("DEVELOPMENT_TEAM = $(AB12CD34EF)\n", 1, "without `$`");
+  findsIn("CODE_SIGN_IDENTITY[sdk=macosx*] = Elsewhere\n", 1, "`NAME = value`");
+  findsIn("DEVELOPMENT_TEAM=AB12CD34EF\n", 1, "`NAME = value`");
+  findsIn('#include "Elsewhere.xcconfig"\n', 1, "`NAME = value`");
+  findsIn('#include? "/tmp/x"\n', 1, "`NAME = value`");
+  findsIn('#include? "Signing.local.xcconfig"\n', 1, "an include other than", true);
+  findsIn(`${tracked}#include? "Signing.local.xcconfig"\n`, 5, "an include other than", false);
+  findsIn("  DEVELOPMENT_TEAM = AB12CD34EF\n", 1, "`NAME = value`");
+});
+
+test("a signing xcconfig is printable ASCII with LF line breaks", () => {
+  for (const [text, line] of [
+    ["CODE_SIGN_STYLE = Manual\r\nDEVELOPMENT_TEAM = AB12CD34EF\n", 1],
+    ["﻿DEVELOPMENT_TEAM = AB12CD34EF\n", 1],
+    ["// a\nDEVELOPMENT_TEAM = AB12CD34EF\u0000\n", 2],
+    ["DEVELOPMENT_TEAM = AB12CD34EF OTHER_SWIFT_FLAGS = x\n", 1],
+    ["DEVELOPMENT_TEAM = AB12CD34EF\tx\n", 1],
+    ["// é\n", 1],
+  ]) {
+    findsIn(text, line, "printable ASCII");
+  }
+});
+
+/// A temporary root holding the given files under `Configs/`.
+function withSigning(files, body) {
+  return withRoot((root) => {
+    mkdirSync(join(root, "Configs"));
+    for (const [name, text] of Object.entries(files)) writeFileSync(join(root, "Configs", name), text);
+    return body(root);
+  });
+}
+
+const signing = (root) => checkSigning(root).map((finding) => `${finding.file}:${finding.line}: ${finding.message}`);
+
+test("the command reads the tracked file and the local one when present, in a temporary root", () => {
+  withSigning({ "Signing.xcconfig": tracked }, (root) => assert.deepEqual(signing(root), []));
+  withSigning({ "Signing.xcconfig": tracked, "Signing.local.xcconfig": local }, (root) =>
+    assert.deepEqual(signing(root), []),
+  );
+  withSigning({}, (root) => assert.deepEqual(signing(root), ["Configs/Signing.xcconfig:1: the tracked signing settings are missing"]));
+  withSigning({ "Signing.xcconfig": tracked, "Signing.local.xcconfig": "CC = /tmp/x\n" }, (root) => {
+    const findings = signing(root);
+    assert.equal(findings.length, 1);
+    assert.ok(findings[0].startsWith("Configs/Signing.local.xcconfig:1: a build setting other than"), findings[0]);
+    assert.ok(!findings[0].includes("/tmp/x"), findings[0]);
+  });
+});
+
+test("a signing xcconfig that is a symbolic link out of the root, dangling or a folder is a finding", () => {
+  const outside = mkdtempSync(join(tmpdir(), "check-project-scripts-outside-"));
+  try {
+    writeFileSync(join(outside, "x.xcconfig"), local);
+    for (const make of [
+      (path) => symlinkSync(join(outside, "x.xcconfig"), path),
+      (path) => symlinkSync(join(outside, "missing.xcconfig"), path),
+      (path) => mkdirSync(path),
+    ]) {
+      withSigning({ "Signing.xcconfig": tracked }, (root) => {
+        make(join(root, "Configs", "Signing.local.xcconfig"));
+        assert.deepEqual(signing(root), ["Configs/Signing.local.xcconfig:1: not a regular file inside the repository"]);
+      });
+    }
+    // A link that stays inside the root is read like the file it names.
+    withSigning({ "Signing.xcconfig": tracked, "team.txt": local }, (root) => {
+      symlinkSync(join(root, "Configs", "team.txt"), join(root, "Configs", "Signing.local.xcconfig"));
+      assert.deepEqual(signing(root), []);
+    });
+  } finally {
+    rmSync(outside, { recursive: true, force: true });
+  }
 });
 
 test("the command fails on a finding and on a file that is not UTF-8", () => {

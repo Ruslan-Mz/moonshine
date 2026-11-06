@@ -6,6 +6,26 @@ enum SidebarItem: Hashable {
   case today
 }
 
+/// The app's settings. Tests pass their own; `StandardSettings` reads and writes nothing in a
+/// test host, whose defaults domain is the owner's app's (`dev.moonshine.mac`).
+protocol AppSettings {
+  var source: String? { get }
+  func setSource(_ value: String)
+}
+
+struct StandardSettings: AppSettings {
+  private static let sourceKey = "source"
+
+  var source: String? {
+    AppModel.isTestHost ? nil : UserDefaults.standard.string(forKey: Self.sourceKey)
+  }
+
+  func setSource(_ value: String) {
+    guard !AppModel.isTestHost else { return }
+    UserDefaults.standard.set(value, forKey: Self.sourceKey)
+  }
+}
+
 @MainActor @Observable
 final class AppModel {
   enum State {
@@ -16,44 +36,47 @@ final class AppModel {
     case unavailable
   }
 
-  /// Where Today's data comes from. Demo only until S4-4c adds Live.
-  enum Source: Equatable {
+  /// Where Today's data comes from (the setting `source`).
+  enum Source: String, CaseIterable {
     case demo
+    case live
   }
 
-  private(set) var state: State = .loading
   var selection: SidebarItem? = .today
-  let source: Source
-  /// The last committed import; nil before one, or when it could not be read.
-  private(set) var lastImport: ImportRun?
-  /// The clock the import was timed by, so "updated …" counts from the same origin.
-  let clock: ImportClock = DemoEnvironment.clock
-  /// An import is running ("Updating…").
-  private(set) var isImporting = false
-  /// Imports that ended, committed or not.
-  private(set) var importOutcomes = 0
-  /// Nil until the coordinator knows it. Live says so (S4-4c-1); Demo shows nothing.
-  private(set) var omniFocusState: OmniFocusState?
-  /// Nil when it could not be built: Today is then unavailable.
-  private let environment: AppEnvironment?
-  private var starting: Task<Void, Never>?
-  private var consumer: Task<Void, Never>?
+  private(set) var source: Source
+  private var feeds: [Source: SourceFeed] = [:]
+  private let environments: @MainActor (Source) -> AppEnvironment?
+  private let settings: any AppSettings
+  private let isTestHost: Bool
 
   /// The unit tests run inside the app (`project.yml`), so every test run launches it.
   nonisolated static var isTestHost: Bool {
     ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
   }
 
-  /// A test host always gets Demo, never a live source (CLAUDE.md rule 5). S4-4c adds Live
-  /// for any other launch whose setting says so; a test pins the test-host case.
-  nonisolated static func source(isTestHost: Bool) -> Source {
-    _ = isTestHost
-    return .demo
+  /// A test host always gets Demo, before any setting is read (CLAUDE.md rule 5); any other
+  /// launch gets Live when the setting says `live`.
+  nonisolated static func source(isTestHost: Bool, settings: any AppSettings) -> Source {
+    guard !isTestHost else { return .demo }
+    return settings.source == Source.live.rawValue ? .live : .demo
   }
 
-  init(environment: AppEnvironment?, isTestHost: Bool = AppModel.isTestHost) {
-    self.environment = environment
-    source = Self.source(isTestHost: isTestHost)
+  /// `environments` builds a source's environment on its first selection, once per process.
+  init(
+    isTestHost: Bool = AppModel.isTestHost, settings: any AppSettings,
+    environments: @escaping @MainActor (Source) -> AppEnvironment?
+  ) {
+    self.isTestHost = isTestHost
+    self.settings = settings
+    self.environments = environments
+    source = Self.source(isTestHost: isTestHost, settings: settings)
+  }
+
+  /// Demo only, with no settings.
+  convenience init(environment: AppEnvironment?, isTestHost: Bool = AppModel.isTestHost) {
+    self.init(
+      isTestHost: isTestHost, settings: NoSettings(),
+      environments: { $0 == .demo ? environment : nil })
   }
 
   convenience init(
@@ -64,83 +87,79 @@ final class AppModel {
       isTestHost: isTestHost)
   }
 
-  /// Shows what the store holds, then sends the launch and the source's signals. Idempotent.
-  /// The work runs in a task the model keeps, so a window's cancelled `.task` never loses it.
+  /// The app's own: the setting, the bundled Demo and Live in Application Support.
+  static func production() -> AppModel {
+    AppModel(settings: StandardSettings()) { source in
+      switch source {
+      case .demo:
+        DemoEnvironment.bundledSnapshot.flatMap { try? AppEnvironment.demo(snapshot: $0) }
+      case .live:
+        applicationSupport().flatMap { AppEnvironment.live(base: $0) }
+      }
+    }
+  }
+
+  /// The data folder's base; only this entry point and the CLI's name it.
+  private static func applicationSupport() -> URL? {
+    try? FileManager.default.url(
+      for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+  }
+
+  private var feed: SourceFeed? { feeds[source] }
+  var state: State { feed?.state ?? .loading }
+  var lastImport: ImportRun? { feed?.lastImport }
+  var clock: ImportClock { feed?.clock ?? DemoEnvironment.clock }
+  var isImporting: Bool { feed?.isImporting ?? false }
+  var importOutcomes: Int { feed?.importOutcomes ?? 0 }
+  var omniFocusState: OmniFocusState? { feed?.omniFocusState }
+  var lastFailure: ImportFailure? { feed?.lastFailure }
+  var omniFocusNote: SourceFeed.OmniFocusNote? { feed?.omniFocusNote }
+  var storeUnreadable: Bool { feed?.storeUnreadable ?? false }
+
+  /// Starts the selected source's feed. Idempotent.
   func start() {
-    guard starting == nil else { return }
-    guard let environment else {
-      state = .unavailable
-      return
-    }
-    consumer = Task {
-      for await event in environment.coordinator.events { await apply(event) }
-    }
-    starting = Task {
-      await showStored(environment.store)
-      await environment.coordinator.handle(.launch)
-      await environment.coordinator.run(environment.source)
-    }
+    feed(for: source).start()
+  }
+
+  /// The Settings picker. The first selection of a source starts its feed (a launch import);
+  /// a switch back to it imports as ⌘R does (owner, 2026-11-05). A test host never selects Live
+  /// and never writes the setting.
+  func select(_ new: Source) {
+    guard new != source, !(isTestHost && new == .live) else { return }
+    settings.setSource(new.rawValue)
+    source = new
+    if let feed = feeds[new] { feed.refresh() } else { feed(for: new).start() }
   }
 
   /// ⌘R.
   func refresh() {
-    guard let coordinator = environment?.coordinator else { return }
-    Task { await coordinator.handle(.manual) }
+    feed?.refresh()
   }
 
   /// For tests: `start()`, then wait until the first import has ended (bounded).
   func load() async {
     start()
-    guard environment != nil else { return }
+    guard feed?.environment != nil else { return }
     for _ in 0..<1_000 where importOutcomes == 0 {
       try? await Task.sleep(for: .milliseconds(10))
     }
   }
 
-  /// A store that has committed shows its data, with or without an import row; an empty
-  /// store (version 0) shows nothing yet.
-  private func showStored(_ store: any Store) async {
-    let version = (try? await store.identityMap().version) ?? 0
-    guard version > 0, let workspace = try? await store.workspace() else { return }
-    let last = try? await store.lastCommittedImport()
-    guard case .loading = state else { return }
-    lastImport = last
-    state = .loaded(Overview(workspace: workspace, now: clock.wall()))
-  }
-
-  private func apply(_ event: RefreshEvent) async {
-    switch event {
-    case .started:
-      isImporting = true
-    case .committed:
-      await reload()
-      isImporting = false
-      importOutcomes += 1
-    case .notCommitted:
-      if case .loading = state { state = .unavailable }
-      isImporting = false
-      importOutcomes += 1
-    case .omniFocusNotRunning:
-      break  // Live's sentence comes with S4-4c-1.
-    case .omniFocusState(let new):
-      omniFocusState = new
-    }
-  }
-
-  /// The import is read on its own: a store that cannot read it loses only the freshness text.
-  /// A failed read keeps what is shown, and with nothing shown Today is unavailable.
-  private func reload() async {
-    guard let store = environment?.store else { return }
-    lastImport = try? await store.lastCommittedImport()
-    do {
-      state = .loaded(Overview(workspace: try await store.workspace(), now: clock.wall()))
-    } catch {
-      if case .loading = state { state = .unavailable }
-    }
+  private func feed(for source: Source) -> SourceFeed {
+    if let feed = feeds[source] { return feed }
+    let feed = SourceFeed(environment: environments(source))
+    feeds[source] = feed
+    return feed
   }
 
   /// Read again on every minute's tick of the status bar.
   func freshness() -> Freshness? {
     lastImport.map { Freshness(finishedAt: $0.finishedAt, now: clock.wall()) }
   }
+}
+
+/// No setting is read or written.
+struct NoSettings: AppSettings {
+  var source: String? { nil }
+  func setSource(_ value: String) {}
 }

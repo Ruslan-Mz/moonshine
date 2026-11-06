@@ -12,14 +12,16 @@ packages:
     path: MoonShineCore
   Adapters:
     path: Adapters
+# Signing: ad hoc, or the owner's Personal Team through a local file (Configs/Signing.xcconfig).
+configFiles:
+  Debug: Configs/Signing.xcconfig
+  Release: Configs/Signing.xcconfig
 settings:
   base:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
-    # Ad-hoc signing; no App Sandbox and no hardened runtime yet: the JXA bridge needs an
-    # unsandboxed app (ADR-0003).
-    CODE_SIGN_IDENTITY: "-"
-    CODE_SIGN_STYLE: Manual
+    # No App Sandbox and no hardened runtime yet: the JXA bridge needs an unsandboxed app
+    # (ADR-0003).
     ENABLE_HARDENED_RUNTIME: NO
     SWIFT_EMIT_LOC_STRINGS: YES
     LOCALIZATION_PREFERS_STRING_CATALOGS: YES
@@ -32,6 +34,9 @@ targets:
       - path: Apps/Mac/Resources
       # Demo mode reads the invented snapshot; the tests read the tracked file instead.
       - path: fixtures/omnifocus.snapshot.json
+        buildPhase: resources
+      # Live reads OmniFocus through the bridge (ADR-0003).
+      - path: bridge/snapshot.js
         buildPhase: resources
     dependencies:
       - package: MoonShineCore
@@ -48,6 +53,7 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: MoonShine
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+        INFOPLIST_KEY_NSAppleEventsUsageDescription: MoonShine reads your OmniFocus tasks to show them. It never changes them.
         MARKETING_VERSION: "0.1"
         CURRENT_PROJECT_VERSION: "1"
   MoonShineMacTests:

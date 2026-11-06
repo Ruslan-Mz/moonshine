@@ -281,6 +281,38 @@
         }
       }
     },
+    "Data": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Данные"
+          }
+        }
+      }
+    },
+    "Demo": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Демо"
+          }
+        }
+      }
+    },
     "Demo data": {
       "localizations": {
         "en": {
@@ -309,6 +341,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Демо-данные не загрузились."
+          }
+        }
+      }
+    },
+    "Demo shows bundled sample data — nothing is read from OmniFocus or your vault.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo shows bundled sample data — nothing is read from OmniFocus or your vault."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Демо показывает встроенные примеры — из OmniFocus и хранилища ничего не читается."
           }
         }
       }
@@ -425,6 +473,70 @@
         }
       }
     },
+    "Live": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Живые данные"
+          }
+        }
+      }
+    },
+    "Live data could not be opened.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live data could not be opened."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Живые данные не удалось открыть."
+          }
+        }
+      }
+    },
+    "MoonShine has not read OmniFocus yet": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine has not read OmniFocus yet"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine ещё не читал OmniFocus"
+          }
+        }
+      }
+    },
+    "MoonShine is not allowed to read OmniFocus yet — allow it in System Settings → Privacy & Security → Automation": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine is not allowed to read OmniFocus yet — allow it in System Settings → Privacy & Security → Automation"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "У MoonShine пока нет доступа к OmniFocus — разрешите его в Системных настройках → Конфиденциальность и безопасность → Автоматизация"
+          }
+        }
+      }
+    },
     "Not completed": {
       "localizations": {
         "en": {
@@ -457,6 +569,70 @@
         }
       }
     },
+    "OmniFocus did not answer in time. If macOS is asking for permission, answer it, then press ⌘R.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OmniFocus did not answer in time. If macOS is asking for permission, answer it, then press ⌘R."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OmniFocus не ответил вовремя. Если macOS спрашивает разрешение, ответьте на запрос и нажмите ⌘R."
+          }
+        }
+      }
+    },
+    "OmniFocus is not running": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OmniFocus is not running"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OmniFocus не запущен"
+          }
+        }
+      }
+    },
+    "OmniFocus is not running — showing the last import": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OmniFocus is not running — showing the last import"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OmniFocus не запущен — показан последний импорт"
+          }
+        }
+      }
+    },
+    "OmniFocus sent data MoonShine cannot read": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OmniFocus sent data MoonShine cannot read"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OmniFocus прислал данные, которые MoonShine не может прочитать"
+          }
+        }
+      }
+    },
     "Paused on purpose": {
       "localizations": {
         "en": {
@@ -469,6 +645,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "На паузе намеренно"
+          }
+        }
+      }
+    },
+    "Press ⌘R to read OmniFocus": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Press ⌘R to read OmniFocus"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нажмите ⌘R, чтобы прочитать OmniFocus"
           }
         }
       }
@@ -681,6 +873,22 @@
         }
       }
     },
+    "Source": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Источник"
+          }
+        }
+      }
+    },
     "Suggested next step": {
       "localizations": {
         "en": {
@@ -709,6 +917,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Задача"
+          }
+        }
+      }
+    },
+    "The last import did not finish": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The last import did not finish"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Последний импорт не завершился"
           }
         }
       }
@@ -841,6 +1065,22 @@
         }
       }
     },
+    "Vault not read yet": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vault not read yet"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Хранилище ещё не прочитано"
+          }
+        }
+      }
+    },
     "When": {
       "localizations": {
         "en": {
@@ -873,6 +1113,38 @@
         }
       }
     },
+    "last full import": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "last full import"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "последний полный импорт"
+          }
+        }
+      }
+    },
+    "last full import %.1f s": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "last full import %.1f s"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "последний полный импорт %.1f с"
+          }
+        }
+      }
+    },
     "no activity yet": {
       "localizations": {
         "en": {
@@ -901,6 +1173,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "нет следующего шага"
+          }
+        }
+      }
+    },
+    "not read in Demo mode": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "not read in Demo mode"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "не читается в режиме демо"
+          }
+        }
+      }
+    },
+    "not read yet": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "not read yet"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ещё не прочитан"
           }
         }
       }

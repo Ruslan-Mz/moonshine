@@ -39,6 +39,7 @@ import Testing
   @Test func theAppAndTheMeasurementToolUseTwoFiles() {
     let folder = URL(filePath: "/base/MoonShine/", directoryHint: .isDirectory)
     #expect(DataFolder.appStorePath(in: folder) == "/base/MoonShine/MoonShine.sqlite")
-    #expect(DataFolder.measurementStorePath(in: folder) == "/base/MoonShine/moonshine-import.sqlite")
+    #expect(
+      DataFolder.measurementStorePath(in: folder) == "/base/MoonShine/moonshine-import.sqlite")
   }
 }
