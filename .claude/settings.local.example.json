@@ -22,6 +22,7 @@
       "Edit(**/.git/commondir)",
       "Edit(./.claude/hooks/**)",
       "Edit(./.claude/settings.json)",
+      "Edit(**/Configs/*.local.*)",
       "Bash(git *fetch*--prune*)",
       "Bash(git *fetch* -p*)",
       "Bash(git *fetch*:refs/heads/*)",
