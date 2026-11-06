@@ -263,6 +263,16 @@ test("a node folder that would need quoting is refused", () => {
   refused(work, install(work, [work.denyList], work.cwd, { PATH: `${odd}:/usr/bin:/bin` }), "a quote, a backslash or a control character");
 });
 
+// PR #47 round 1. /usr/bin and /bin hold no node on macOS; a runner that has one there skips this.
+test(
+  "without node on PATH the install is refused with a clear message",
+  { skip: ["/usr/bin/node", "/bin/node"].some((path) => existsSync(path)) && "node in /usr/bin or /bin" },
+  () => {
+    const work = setUp();
+    refused(work, install(work, [work.denyList], work.cwd, { PATH: "/usr/bin:/bin" }), "node is not on PATH");
+  },
+);
+
 test("running it from a subfolder of the checkout installs", () => {
   const work = setUp();
   assert.equal(install(work, [work.denyList], join(work.cwd, "scripts")).status, 0);

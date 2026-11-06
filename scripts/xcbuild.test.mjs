@@ -16,6 +16,7 @@ import {
   realpathSync,
   rmSync,
   symlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -56,6 +57,7 @@ function setUp() {
   stub(join(bin, "node"), `echo node >> "$LOG"\nexec '${process.execPath}' "$@"`);
   stub(join(bin, "xcodegen"), `echo "xcodegen $*" >> "$LOG"\nmkdir -p MoonShine.xcodeproj\n[ -z "\${FAIL_XCODEGEN:-}" ]`);
   stub(join(bin, "xcodebuild"), `echo "xcodebuild $*" >> "$LOG"\n[ -z "\${FAIL_XCODEBUILD:-}" ]`);
+  stub(join(bin, "xcrun"), `echo "xcrun $*" >> "$LOG"`);
   return { root, repo, installed, bin, log };
 }
 
@@ -90,7 +92,14 @@ for (const action of ["build", "test"]) {
   });
 }
 
-for (const args of [[], ["build", "test"], ["archive"], ["build --quiet"], ["-allowProvisioningUpdates"]]) {
+for (const args of [
+  [],
+  ["build", "test"],
+  ["archive"],
+  ["build --quiet"],
+  ["-allowProvisioningUpdates"],
+  ["summary", "/elsewhere"],
+]) {
   test(`${JSON.stringify(args)} is refused and runs nothing`, () => {
     withWork((work) => {
       const result = run(work, args);
@@ -180,4 +189,100 @@ test("an edited checkout copy warns and never runs: the installed copy does", ()
     assert.ok(result.stderr.includes("Reinstall the guard after the change is merged"), result.stderr);
     assert.ok(result.stdout.includes("the project is named MoonShine"), result.stdout);
   });
+});
+
+// PR #47 round 1.
+
+test("a missing Adapters/Package.resolved stops the build before xcodebuild", () => {
+  withWork((work) => {
+    rmSync(join(work.repo, "Adapters", "Package.resolved"));
+    const result = run(work, ["build"]);
+    assert.notEqual(result.status, 0);
+    assert.ok(!result.log.some((line) => line.startsWith("xcodebuild")), result.log.join("\n"));
+  });
+});
+
+// /usr/bin and /bin hold no node on macOS; a runner that has one there cannot run this test.
+const nodeInSystemFolders = ["/usr/bin/node", "/bin/node"].some((path) => existsSync(path));
+
+test("without node on PATH the build stops with a reinstall hint", { skip: nodeInSystemFolders && "node in /usr/bin or /bin" }, () => {
+  withWork((work) => {
+    rmSync(join(work.bin, "node"));
+    const result = run(work, ["build"]);
+    assert.equal(result.status, 2);
+    assert.ok(result.stderr.includes("node is not on PATH"), result.stderr);
+    assert.ok(result.stderr.includes("reinstall the guard"), result.stderr);
+    assert.deepEqual(result.log, []);
+  });
+});
+
+/// Result bundles under DerivedData/Logs/Test, each older than the next.
+function withResults(work, names) {
+  const folder = join(work.repo, "DerivedData", "Logs", "Test");
+  mkdirSync(folder, { recursive: true });
+  names.forEach((name, index) => {
+    mkdirSync(join(folder, name));
+    const time = new Date(Date.UTC(2026, 10, 6, 12, index));
+    utimesSync(join(folder, name), time, time);
+  });
+  return folder;
+}
+
+test("summary reads the newest result bundle, runs no check and no build", () => {
+  withWork((work) => {
+    const folder = withResults(work, ["Test-B.xcresult", "Test-C.xcresult", "Test-A.xcresult"]);
+    const result = run(work, ["summary"]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.deepEqual(result.log, [
+      `xcrun xcresulttool get test-results summary --path ${join(folder, "Test-A.xcresult")} --compact`,
+    ]);
+  });
+});
+
+test("summary without results says to run the tests first", () => {
+  withWork((work) => {
+    const result = run(work, ["summary"]);
+    assert.equal(result.status, 2);
+    assert.ok(result.stderr.includes("no test results"), result.stderr);
+    assert.deepEqual(result.log, []);
+  });
+});
+
+test("summary refuses a link anywhere on the bundle's path or inside it, and never names a target", () => {
+  const cases = [
+    ["DerivedData", (work, outside) => {
+      rmSync(join(work.repo, "DerivedData"), { recursive: true });
+      symlinkSync(outside, join(work.repo, "DerivedData"));
+    }],
+    ["DerivedData/Logs", (work, outside) => {
+      rmSync(join(work.repo, "DerivedData", "Logs"), { recursive: true });
+      symlinkSync(outside, join(work.repo, "DerivedData", "Logs"));
+    }],
+    ["DerivedData/Logs/Test", (work, outside) => {
+      rmSync(join(work.repo, "DerivedData", "Logs", "Test"), { recursive: true });
+      symlinkSync(outside, join(work.repo, "DerivedData", "Logs", "Test"));
+    }],
+    ["the newest result bundle", (work, outside, folder) => {
+      const link = join(folder, "Test-Z.xcresult");
+      symlinkSync(outside, link);
+      const time = new Date(Date.UTC(2026, 10, 7));
+      utimesSync(outside, time, time);
+    }],
+    ["the newest result bundle", (work, outside, folder) => {
+      symlinkSync(join(outside, "Info.plist"), join(folder, "Test-A.xcresult", "Info.plist"));
+    }],
+  ];
+  for (const [named, plant] of cases) {
+    withWork((work) => {
+      const folder = withResults(work, ["Test-A.xcresult"]);
+      const outside = join(work.root, "secret-target");
+      mkdirSync(join(outside, "Logs", "Test", "Test-S.xcresult"), { recursive: true });
+      plant(work, outside, folder);
+      const result = run(work, ["summary"]);
+      assert.equal(result.status, 2, `${named}: ${result.stderr}`);
+      assert.ok(result.stderr.includes(named), result.stderr);
+      assert.ok(!`${result.stdout}${result.stderr}`.includes("secret-target"), result.stderr);
+      assert.deepEqual(result.log, []);
+    });
+  }
 });

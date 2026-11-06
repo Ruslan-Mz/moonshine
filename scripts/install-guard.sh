@@ -27,8 +27,10 @@ dir=${MOONSHINE_GUARD_DIR:-$HOME/.config/moonshine}
 base=${MOONSHINE_SCRATCH_BASE:-/private/tmp/claude-$(id -u)}
 expected=${MOONSHINE_ORIGIN_URL:-https://github.com/Ruslan-Mz/moonshine.git}
 
-# The build wrapper's PATH names node's folder, as found now (H1c).
-node_dir=$(dirname "$(command -v node)")
+# The build wrapper's PATH names node's folder, as found now (H1c); after that folder changes (a
+# node upgrade), the owner reinstalls.
+node_bin=$(command -v node) || fail "node is not on PATH; install node, then run the installer again."
+node_dir=$(dirname "$node_bin")
 
 # The guard folder and node's are written into generated scripts: refuse characters that would need quoting.
 for path in "$dir" "$base" "$deny_list" "$node_dir"; do
