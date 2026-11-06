@@ -31,7 +31,8 @@
 // the tree the build reads and writes (`checkTree`). The build runs it first (`scripts/xcbuild.sh`);
 // locally the copy the guard installer took from main (H1c), never the checkout's.
 // Usage: node scripts/check-project-scripts.mjs [file] (default `project.yml`).
-// Exit 0 clean, 1 with `file:line: reason` per finding, 2 when the file cannot be read.
+// Exit 0 clean, 1 with `file:line: reason` per finding (`path: reason` for the build tree, which
+// has no line), 2 when the file cannot be read.
 
 import { lstatSync, readdirSync, readFileSync, readlinkSync, realpathSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, isAbsolute, sep } from "node:path";
@@ -111,15 +112,18 @@ const flowItem = /^[^:?#[\]{}&*!'",\s](?:[^:?#[\]{}&*!'",]*[^:?#[\]{}&*!'",\s])?
 
 class Stop extends Error {}
 
-/** Findings for the text of a `project.yml` whose folder is `root`, as `{ line, message }`. */
-export function checkProject(text, root) {
+/**
+ * Findings for the text of a `project.yml` whose folder is `root`, as `{ line, message }`. Every
+ * `path` it accepts is added to `paths`, for `checkTree`.
+ */
+export function checkProject(text, root, paths = []) {
   const findings = [];
   const fail = (line, message) => {
     findings.push({ line, message });
     throw new Stop();
   };
   try {
-    walk(parse(text, fail), schema, findings, root);
+    walk(parse(text, fail), schema, findings, root, paths);
   } catch (error) {
     if (!(error instanceof Stop)) throw error;
   }
@@ -224,7 +228,7 @@ function parse(text, fail) {
   return root;
 }
 
-function walk(node, rule, findings, root) {
+function walk(node, rule, findings, root, paths) {
   const report = (line, message) => findings.push({ line, message });
   if (node === null) return;
   if (rule === VALUE || rule === PATH || rule === VALUES || rule === CONFIG || rule === NAME) {
@@ -237,6 +241,8 @@ function walk(node, rule, findings, root) {
       report(node.line, `configFiles names ${signingConfig} only`);
     } else if (rule === PATH && !insideRepository(node.text, root)) {
       report(node.line, "a path outside the repository (relative, no `..` or `$`, inside it after symlinks, not its root)");
+    } else if (rule === PATH) {
+      paths.push(node.text);
     }
     return;
   }
@@ -244,7 +250,7 @@ function walk(node, rule, findings, root) {
     if (node.kind !== "seq") return report(node.line, "this key takes a sequence");
     for (const item of node.items) {
       if (rule[0] !== VALUE && item.kind !== "map") report(item.line, "this sequence takes mapping items");
-      else walk(item, rule[0], findings, root);
+      else walk(item, rule[0], findings, root, paths);
     }
     return;
   }
@@ -256,9 +262,9 @@ function walk(node, rule, findings, root) {
       if (key === "CC" || key.endsWith("_EXEC")) report(entry.line, `build setting ${key} names a tool to run`);
       else if (!buildSettingNames.has(key) && !key.startsWith("INFOPLIST_KEY_")) {
         report(entry.line, `build setting ${key} is not on the allowlist`);
-      } else walk(entry.node, VALUE, findings, root);
+      } else walk(entry.node, VALUE, findings, root, paths);
     } else if (Object.hasOwn(rule, key) || Object.hasOwn(rule, "*")) {
-      walk(entry.node, Object.hasOwn(rule, key) ? rule[key] : rule["*"], findings, root);
+      walk(entry.node, Object.hasOwn(rule, key) ? rule[key] : rule["*"], findings, root, paths);
     } else {
       report(entry.line, `${key} is not allowed here`);
     }
@@ -324,7 +330,11 @@ function lstat(path) {
   }
 }
 
-/// The links under `dir` as [absolute path, path from the root], not descending into links or `skip`.
+/// The packages' own build output, which the app build does not read; no other `.build` is skipped.
+const skippedFolders = new Set(["Adapters/.build", "MoonShineCore/.build"]);
+
+/// The links under `dir` as [absolute path, path from the root], not descending into links or into
+/// the folders of `skip`, named by their path from the root.
 function linksUnder(dir, name, skip = new Set()) {
   let entries;
   try {
@@ -334,26 +344,37 @@ function linksUnder(dir, name, skip = new Set()) {
   }
   return entries.flatMap((entry) => {
     const path = join(dir, entry.name);
-    if (entry.isSymbolicLink()) return [[path, `${name}/${entry.name}`]];
-    return entry.isDirectory() && !skip.has(entry.name) ? linksUnder(path, `${name}/${entry.name}`, skip) : [];
+    const child = `${name}/${entry.name}`;
+    if (entry.isSymbolicLink()) return [[path, child]];
+    return entry.isDirectory() && !skip.has(child) ? linksUnder(path, child, skip) : [];
   });
 }
 
 /**
  * Findings for the tree the unsandboxed build reads and writes (H1c, `scripts/xcbuild.sh`), as
- * `{ file, message }`: a link in a folder it reads (outside `.build/`, which it does not read), a
- * project or workspace beside the generated one, a link at `DerivedData` or the generated project,
- * a link inside `DerivedData` out of it (a package's own links stay inside), and
- * `Adapters/Package.resolved` that is not a regular file. A finding names the link, never its target.
+ * `{ file, message }`: a link in a folder it reads (the fixed `buildFolders` and every `path` of
+ * `project.yml`, outside `Adapters/.build` and `MoonShineCore/.build`), a link on the way to one
+ * (reported and never followed, PR #47 round 1), a project or workspace beside the generated one, a
+ * link at `DerivedData` or the generated project, a link inside `DerivedData` out of it (a package's
+ * own links stay inside), and `Adapters/Package.resolved` that is not a regular file. A finding
+ * names the link, never its target or anything behind it.
  */
-export function checkTree(root) {
-  const findings = [];
-  const report = (file, message) => findings.push({ file, message });
+export function checkTree(root, paths = []) {
+  const found = new Map(); // one finding per path, in the order found
+  const report = (file, message) => found.has(file) || found.set(file, message);
   const base = realpathSync(root);
-  for (const dir of buildFolders) {
-    if (lstat(join(base, dir))?.isSymbolicLink()) report(dir, "a symbolic link where the unsandboxed build reads");
-    for (const [, name] of linksUnder(join(base, dir), dir, new Set([".build"]))) {
-      report(name, "a symbolic link where the unsandboxed build reads");
+  for (const path of [...buildFolders, ...paths]) {
+    const parts = path.split("/").filter((part) => part !== "" && part !== ".");
+    for (const [index] of parts.entries()) {
+      const name = parts.slice(0, index + 1).join("/");
+      const stat = lstat(join(base, name));
+      if (stat?.isSymbolicLink()) report(name, "a symbolic link where the unsandboxed build reads");
+      if (!stat?.isDirectory()) break;
+      if (index === parts.length - 1) {
+        for (const [, link] of linksUnder(join(base, name), name, skippedFolders)) {
+          report(link, "a symbolic link where the unsandboxed build reads");
+        }
+      }
     }
   }
   const resolved = lstat(join(base, "Adapters", "Package.resolved"));
@@ -384,7 +405,7 @@ export function checkTree(root) {
       }
     }
   }
-  return findings;
+  return [...found].map(([file, message]) => ({ file, message }));
 }
 
 function insideRepository(path, root) {
@@ -409,14 +430,15 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
     process.exit(2);
   }
   let findings;
+  const paths = [];
   try {
-    findings = checkProject(new TextDecoder("utf-8", { fatal: true }).decode(bytes), dirname(path));
+    findings = checkProject(new TextDecoder("utf-8", { fatal: true }).decode(bytes), dirname(path), paths);
   } catch {
     findings = [{ line: 1, message: "a file that is not UTF-8" }];
   }
   findings = findings
     .map((finding) => ({ file: "project.yml", ...finding }))
-    .concat(checkSigning(dirname(path)), checkTree(dirname(path)));
+    .concat(checkSigning(dirname(path)), checkTree(dirname(path), paths));
   if (findings.length) {
     console.log(
       "project.yml, its signing settings and the build tree must not run commands or read or write outside the repository (CLAUDE.md → Commands):",

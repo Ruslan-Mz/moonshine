@@ -396,7 +396,7 @@ test("the command passes clean input and fails on a finding and on a file that i
 
 // H1c: what the unsandboxed build reads or writes besides project.yml and the xcconfigs.
 
-const tree = (root) => checkTree(root).map((finding) => `${finding.file}: ${finding.message}`);
+const tree = (root, paths) => checkTree(root, paths).map((finding) => `${finding.file}: ${finding.message}`);
 
 /// A temporary root with the folders the build reads, and a folder outside it named `secret-target`.
 function withTree(body) {
@@ -436,6 +436,75 @@ test("a link in a folder the build reads is a finding, and the finding never nam
 });
 
 // A missing file is left to the pin step, whose copy fails.
+// PR #47 round 1: a build folder that is a link is reported and never walked, so nothing behind
+// it is named.
+test("a build folder that is itself a link is reported once, and nothing behind it is named", () => {
+  for (const dir of buildFolders) {
+    withTree((root, outside) => {
+      mkdirSync(join(outside, "secret-folder", "deeper"), { recursive: true });
+      symlinkSync(join(outside, "missing"), join(outside, "secret-folder", "deeper", "secret-note.md"));
+      rmSync(join(root, dir), { recursive: true });
+      symlinkSync(outside, join(root, dir));
+      const findings = tree(root);
+      assert.deepEqual(findings, [`${dir}: a symbolic link where the unsandboxed build reads`]);
+      assert.ok(!/secret/.test(findings.join("\n")), findings.join("\n"));
+    });
+  }
+});
+
+test("a folder that only project.yml names is walked too, and a link on its way is reported", () => {
+  withTree((root, outside) => {
+    mkdirSync(join(root, "docs", "probe", "nested"), { recursive: true });
+    symlinkSync(join(outside, "x.txt"), join(root, "docs", "probe", "nested", "leak.txt"));
+    assert.deepEqual(tree(root), [], "a folder no rule names is not walked");
+    assert.deepEqual(tree(root, ["docs/probe"]), [
+      "docs/probe/nested/leak.txt: a symbolic link where the unsandboxed build reads",
+    ]);
+    // A file path is checked itself; a link in a parent folder of a path is reported, not followed.
+    assert.deepEqual(tree(root, ["docs/probe/nested/leak.txt"]), [
+      "docs/probe/nested/leak.txt: a symbolic link where the unsandboxed build reads",
+    ]);
+    mkdirSync(join(root, "real"));
+    symlinkSync(join(root, "real"), join(root, "docs", "alias"));
+    assert.deepEqual(tree(root, ["docs/alias/inner"]), ["docs/alias: a symbolic link where the unsandboxed build reads"]);
+    // A path the fixed folders already cover is reported once.
+    symlinkSync(outside, join(root, "Apps", "link"));
+    assert.deepEqual(tree(root, ["Apps"]), ["Apps/link: a symbolic link where the unsandboxed build reads"]);
+  });
+});
+
+test("only Adapters/.build and MoonShineCore/.build are skipped, not a .build folder anywhere", () => {
+  withTree((root, outside) => {
+    for (const dir of ["Adapters", "MoonShineCore"]) {
+      mkdirSync(join(root, dir, ".build"));
+      symlinkSync(outside, join(root, dir, ".build", "link"));
+    }
+    mkdirSync(join(root, "Apps", "Resources", ".build"), { recursive: true });
+    symlinkSync(outside, join(root, "Apps", "Resources", ".build", "leak.txt"));
+    mkdirSync(join(root, "Adapters", "Sources", ".build"), { recursive: true });
+    symlinkSync(outside, join(root, "Adapters", "Sources", ".build", "leak.txt"));
+    assert.deepEqual(tree(root), [
+      "Apps/Resources/.build/leak.txt: a symbolic link where the unsandboxed build reads",
+      "Adapters/Sources/.build/leak.txt: a symbolic link where the unsandboxed build reads",
+    ]);
+  });
+});
+
+test("the command walks the paths project.yml names", () => {
+  withTree((root, outside) => {
+    writeFileSync(join(root, "Configs", "Signing.xcconfig"), tracked);
+    mkdirSync(join(root, "docs", "probe"), { recursive: true });
+    symlinkSync(join(outside, "x.txt"), join(root, "docs", "probe", "leak.txt"));
+    writeFileSync(
+      join(root, "project.yml"),
+      "name: MoonShine\ntargets:\n  App:\n    sources:\n      - path: docs/probe\n        buildPhase: resources\n",
+    );
+    const found = run(join(root, "project.yml"));
+    assert.equal(found.status, 1, found.stdout);
+    assert.ok(found.stdout.includes("docs/probe/leak.txt: a symbolic link where the unsandboxed build reads"), found.stdout);
+  });
+});
+
 test("Adapters/Package.resolved, when present, is a regular file", () => {
   withTree((root) => {
     rmSync(join(root, "Adapters", "Package.resolved"));
