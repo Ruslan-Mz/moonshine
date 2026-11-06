@@ -145,7 +145,13 @@ import Testing
     // No tight wall-clock bound on shared CI runners (owner, 2026-11-06, H1c): the two timeout
     // tests assert how the child ended, bound the call only by 30 s against the child's 60 s
     // sleep, and print the time. The child writes its pid, its sleeping grandchild's pid and the
-    // signals it caught to files in a fresh folder: a timed-out call returns no output.
+    // signals it caught to files in a fresh folder: a timed-out call returns no output. The 2 s
+    // timeout leaves the shells time to set their traps before SIGTERM (PR #47 round 1).
+
+    /// Long enough for both shells to set their traps on a slow runner.
+    static let timeout = Duration.seconds(2)
+    /// What a call that waited out the child's or the grandchild's 60 s sleep would exceed.
+    static let bound = Duration.seconds(30)
 
     /// The files a timeout test's child writes, and a cleanup that ends whatever it left running.
     struct ChildTrace {
@@ -153,6 +159,19 @@ import Testing
       var pid: URL { folder.appending(path: "pid") }
       var grandchild: URL { folder.appending(path: "grandchild") }
       var signals: URL { folder.appending(path: "signals") }
+      /// Written by a grandchild whose standard output is the runner's pipe.
+      var grandchildOnPipe: URL { folder.appending(path: "grandchild-on-pipe") }
+
+      /// Whether the process of `file` ends within `bound`. `kill(pid, 0)` still succeeds while an
+      /// exited child waits to be reaped, so a single look right after the call could fail.
+      func ends(_ file: URL, within bound: Duration) async -> Bool {
+        let clock = ContinuousClock()
+        let deadline = clock.now + bound
+        while isAlive(file) && clock.now < deadline {
+          try? await Task.sleep(for: .milliseconds(50))
+        }
+        return !isAlive(file)
+      }
 
       init() throws {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -190,46 +209,48 @@ import Testing
         """
       let clock = ContinuousClock()
       let started = clock.now
-      await #expect(throws: BridgeError.timedOut(after: .milliseconds(200))) {
-        try await ProcessScriptRunner().run(
-          sh, arguments: ["-c", script], timeout: .milliseconds(200))
+      await #expect(throws: BridgeError.timedOut(after: Self.timeout)) {
+        try await ProcessScriptRunner().run(sh, arguments: ["-c", script], timeout: Self.timeout)
       }
       let elapsed = clock.now - started
       print("terminatesAProcessThatOutlivesItsTimeout: the call returned after \(elapsed)")
       #expect(trace.read(trace.signals) == "TERM", "the child never received SIGTERM")
       #expect(trace.read(trace.pid) != nil, "the child never started")
-      #expect(!trace.isAlive(trace.pid), "the child is still running")
-      #expect(elapsed < .seconds(30), "the call waited out the child's sleep")
+      #expect(await trace.ends(trace.pid, within: Self.bound), "the child is still running")
+      #expect(elapsed < Self.bound, "the call waited out the child's sleep")
     }
 
     /// A child that catches SIGTERM, records it and keeps waiting on its 60 s sleep: only SIGKILL
     /// can end it before the sleep does. The sleep ignores SIGTERM too, as the runner's terminate
-    /// also reaches the child's process group.
+    /// also reaches the child's process group, and it keeps the runner's pipes open: the call must
+    /// still return, as the runner never waits for its pipes after a timeout (PR #47 round 1).
     @Test func aChildThatIgnoresTermIsKilledAndTheCallReturns() async throws {
       let trace = try ChildTrace()
       defer { trace.cleanUp() }
       let script = """
         trap 'echo TERM >> "\(trace.signals.path())"' TERM
         echo $$ > "\(trace.pid.path())"
-        (trap '' TERM; exec sleep 60) > /dev/null 2>&1 &
+        (trap '' TERM; [ -p /dev/stdout ] && echo pipe > "\(trace.grandchildOnPipe.path())"; exec sleep 60) &
         sleeper=$!
         echo $sleeper > "\(trace.grandchild.path())"
         while kill -0 $sleeper 2> /dev/null; do wait $sleeper; done
         """
       let clock = ContinuousClock()
       let started = clock.now
-      await #expect(throws: BridgeError.timedOut(after: .milliseconds(200))) {
+      await #expect(throws: BridgeError.timedOut(after: Self.timeout)) {
         try await ProcessScriptRunner(grace: .milliseconds(500)).run(
-          sh, arguments: ["-c", script], timeout: .milliseconds(200))
+          sh, arguments: ["-c", script], timeout: Self.timeout)
       }
       let elapsed = clock.now - started
       print("aChildThatIgnoresTermIsKilledAndTheCallReturns: the call returned after \(elapsed)")
       #expect(trace.read(trace.signals) == "TERM", "the child never received SIGTERM")
       #expect(trace.read(trace.pid) != nil, "the child never started")
-      // It survived SIGTERM and its sleep still runs, so only SIGKILL can have ended it.
+      // The sleep held the runner's pipes when the call returned, and still runs, so only SIGKILL
+      // can have ended the child that waited on it.
+      #expect(trace.read(trace.grandchildOnPipe) == "pipe", "the sleep did not hold the pipes")
       #expect(trace.isAlive(trace.grandchild), "the child's sleep ended early")
-      #expect(!trace.isAlive(trace.pid), "the child survived: no SIGKILL")
-      #expect(elapsed < .seconds(30), "the call waited out the child's sleep")
+      #expect(await trace.ends(trace.pid, within: Self.bound), "the child survived: no SIGKILL")
+      #expect(elapsed < Self.bound, "the call waited for the child's sleep or its pipes")
     }
 
     @Test func bridgeScriptCompiles() async throws {
