@@ -19,7 +19,7 @@
       "Bash(swift build *)",
       "Bash(/Users/<you>/.config/moonshine/bin/xcbuild build)",
       "Bash(/Users/<you>/.config/moonshine/bin/xcbuild test)",
-      "Bash(xcrun xcresulttool get test-results *)"
+      "Bash(/Users/<you>/.config/moonshine/bin/xcbuild summary)"
     ],
     "deny": [
       "Edit(**/.git/config)",
@@ -131,7 +131,6 @@
       "swift test *",
       "swift build *",
       "/Users/<you>/.config/moonshine/bin/xcbuild *",
-      "xcrun xcresulttool get test-results *",
       "gh pr view *",
       "gh pr diff *",
       "gh pr checks *",
@@ -157,9 +156,9 @@
   },
   "_notes": {
     "Edit(**/Configs/*.local.*)": "S4-4c-1 (owner, 2026-11-05): only the owner writes Configs/Signing.local.xcconfig, which the unsandboxed xcodegen and xcodebuild read; no normal step (commit, branch, fetch, push, git worktree add or remove for /review-pr, build, tests, npm, the installer) writes it, so the rule adds no prompt. Its class (owner, 2026-11-06, PR #46 round 1: the tracked Configs/Signing.xcconfig, project.yml and the generated MoonShine.xcodeproj, writable by a session and read by the unsandboxed build) is closed by H1c: the build runs only through the installed xcbuild, which runs main's check first and generates the project afresh. What H1c leaves open is in CLAUDE.md § Git.",
-    "Bash(/Users/<you>/.config/moonshine/bin/xcbuild build|test)": "H1c (owner, 2026-11-06): the only way to build or test the app. The guard installer writes it from main's scripts/xcbuild.sh and scripts/check-project-scripts.mjs, outside the checkout where a session cannot write; it clears the environment, checks project.yml, the signing settings and the build tree, removes and generates MoonShine.xcodeproj, pins the packages and runs xcodebuild with fixed flags. It runs outside the sandbox (excludedCommands) like xcodebuild did. Bare xcodegen and xcodebuild have no allow and no exclusion and are denied: a session's copy would run inside the sandbox, where it cannot escape, and the deny refuses it at once. Reinstall the guard after a merged change to either script; the build warns when the checkout's copy differs, and never runs it.",
+    "Bash(/Users/<you>/.config/moonshine/bin/xcbuild build|test|summary)": "H1c (owner, 2026-11-06): the only way to build or test the app, and to read its test summary. The guard installer writes it from main's scripts/xcbuild.sh and scripts/check-project-scripts.mjs, outside the checkout where a session cannot write; it clears the environment, checks project.yml, the signing settings and the build tree, removes and generates MoonShine.xcodeproj, pins the packages and runs xcodebuild with fixed flags. `summary` (PR #47 round 1) takes no path: it reads the newest DerivedData/Logs/Test/*.xcresult, refuses a link on its path or inside it, and runs xcresulttool's summary on it; xcresulttool needs the system temporary folder (PR #45), so it runs outside the sandbox with the rest. No rule allows xcresulttool itself: with a path argument it echoed expanded file names from outside the repository. The same class stays open for `swift build *` and `swift test *` on main; H1d narrows it. It runs outside the sandbox (excludedCommands) like xcodebuild did. Reinstall the guard after a merged change to either script, and after node's folder changes; the build warns when the checkout's copy differs, and never runs it.",
+    "Bash(xcodegen*), Bash(xcodebuild*), Bash(*/xcodegen*), Bash(*/xcodebuild*), Bash(xcrun xcodebuild*)": "H1c (owner, 2026-11-06). Scenario closed: a session running XcodeGen or xcodebuild itself, on files it wrote, outside the sandbox. The class is closed by removing their sandbox exclusion: any other spelling (env xcodebuild, a copy of the binary) runs inside the sandbox, where it cannot escape; the denies refuse the usual spellings at once instead of failing slowly. Normal steps that run these paths: none; build and test go through xcbuild, and commit, branch, fetch, push, git worktree add or remove for /review-pr, npm, swift test and the installer run neither. No prompt is added.",
     "gh pr list": "H1c (owner, 2026-11-06): read the open PRs before creating one. Outside the sandbox for the same reason as gh pr view: inside it, gh cannot read its own config and login in the home folder.",
-    "xcrun xcresulttool get test-results": "H1c (owner, 2026-11-06): the app test summary, read from DerivedData/Logs/Test/*.xcresult in two calls (CLAUDE.md → Commands). Outside the sandbox because it writes to the system temporary folder (PR #45). It parses only .xcresult bundles, so a path outside the repository can yield only such a bundle's content.",
     "gh run view, gh run list": "H1c (owner, 2026-11-06): read CI runs. Outside the sandbox like gh pr view (gh's config and login in the home folder)."
   },
   "_worktreeOnly": {
