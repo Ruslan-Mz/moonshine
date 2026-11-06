@@ -72,13 +72,13 @@ Costly-to-reverse choices are Architecture Decision Records: the index, with eac
 
 ## Build and run
 
-Requirements: macOS 15 or newer, Xcode with Swift 6.3 or newer, and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).
+Requirements: macOS 15 or newer, Xcode with Swift 6.3 or newer, [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`) and [Node.js](https://nodejs.org/) (`brew install node`), which runs the build's project check.
 
 ```sh
 scripts/xcbuild.sh build
 ```
 
-The script checks `project.yml`, generates `MoonShine.xcodeproj` with XcodeGen, pins the package versions and runs `xcodebuild`; run XcodeGen only through it. Then open `MoonShine.xcodeproj` and run the `MoonShineMac` scheme. Demo mode works without OmniFocus or a vault. The tests: `swift test --package-path MoonShineCore`, `swift test --package-path Adapters`, and `scripts/xcbuild.sh test` for the app.
+The script checks `project.yml`, generates `MoonShine.xcodeproj` with XcodeGen, pins the package versions and runs `xcodebuild`; run XcodeGen only through it. Then open `MoonShine.xcodeproj` and run the `MoonShineMac` scheme. Demo mode works without OmniFocus or a vault. The tests: `swift test --package-path MoonShineCore`, `swift test --package-path Adapters`, and `scripts/xcbuild.sh test` for the app (`scripts/xcbuild.sh summary` prints the newest result).
 
 ## Privacy
 

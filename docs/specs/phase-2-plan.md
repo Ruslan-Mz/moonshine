@@ -369,7 +369,7 @@ Next if the timebox review needs more: 3. Q (300), then PL (350), to after the p
 
 ## Acceptance
 
-- **Demo:** fresh clone → `xcodegen generate` → run → Demo mode works without OmniFocus, a vault, a workbook, a Health folder or an API key. Demo shows invented hours, an invented dictation, an invented routine with its adherence, and invented plans.
+- **Demo:** fresh clone → `scripts/xcbuild.sh build` → run → Demo mode works without OmniFocus, a vault, a workbook, a Health folder or an API key. Demo shows invented hours, an invented dictation, an invented routine with its adherence, and invented plans.
 - **Log by text:**
   - an invented dictation gives the times the code computes;
   - no value only the model read goes unmarked;
