@@ -110,17 +110,66 @@ struct UnreadableStore: Store {
   func stored() async throws -> StoredWorkspace { try await inner.stored() }
 }
 
-/// A Live-like environment over fakes: the clock is Demo's, so the dataset's Today shows.
+/// A store that has committed once, but whose workspace cannot be read; with `gate`, the
+/// identity map waits until the gate opens.
+struct HalfReadableStore: Store {
+  let inner = InMemoryStore(timeZone: DemoVault.calendar.timeZone)
+  var gate: FakeTasks?
+  struct Unreadable: Error {}
+
+  func identityMap() async throws -> VersionedIdentityMap {
+    if let gate { _ = try await gate.snapshot(modifiedSince: nil) }
+    return VersionedIdentityMap(map: try await inner.identityMap().map, version: 1)
+  }
+  func commit(
+    _ workspace: Workspace, identities: IdentityMap, expectedVersion: Int, at now: Date,
+    run: PendingImportRun?
+  ) async throws {
+    try await inner.commit(
+      workspace, identities: identities, expectedVersion: expectedVersion, at: now, run: run)
+  }
+  func lastCommittedImport() async throws -> ImportRun? { nil }
+  func workspace() async throws -> Workspace { throw Unreadable() }
+  func stored() async throws -> StoredWorkspace { try await inner.stored() }
+}
+
+/// Records every read and write; `StandardSettings` must not reach it in a test host.
+final class RecordingStorage: SettingsStorage {
+  private(set) var reads: [String] = []
+  private(set) var writes: [String] = []
+  private var values: [String: String] = [:]
+
+  func string(forKey key: String) -> String? {
+    reads.append(key)
+    return values[key]
+  }
+
+  func set(_ value: Any?, forKey key: String) {
+    writes.append(key)
+    values[key] = value as? String
+  }
+}
+
+/// A Live-like environment over fakes: the clock is Demo's unless given, so the dataset's
+/// Today shows.
 private func live(
   _ state: OmniFocusState, tasks: FakeTasks = FakeTasks(),
   store: any Store = InMemoryStore(timeZone: DemoVault.calendar.timeZone),
-  reading: Reading? = nil
+  reading: Reading? = nil, clock: ImportClock = DemoEnvironment.clock
 ) -> AppEnvironment {
   var now: (@Sendable () -> OmniFocusState)?
   if let reading { now = { @Sendable in reading.get() } }
   return AppEnvironment.make(
-    tasks: tasks, notes: DemoVault(), store: store, clock: DemoEnvironment.clock,
+    tasks: tasks, notes: DemoVault(), store: store, clock: clock,
     source: OneState(state: state), omniFocusReading: now)
+}
+
+/// A store holding one committed launch import of the tracked snapshot.
+private func storeWithAnImport() async throws -> InMemoryStore {
+  let store = InMemoryStore(timeZone: DemoVault.calendar.timeZone)
+  try await AppEnvironment.demo(snapshot: trackedSnapshot, store: store).coordinator.service
+    .run(ImportRequest(trigger: .launch))
+  return store
 }
 
 /// Live selected, outside a test host as far as the model knows.
@@ -181,9 +230,7 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
   }
 
   @MainActor @Test func liveWithAStoredImportShowsItWhileOmniFocusIsNotRunning() async throws {
-    let store = InMemoryStore(timeZone: DemoVault.calendar.timeZone)
-    try await AppEnvironment.demo(snapshot: trackedSnapshot, store: store).coordinator.service
-      .run(ImportRequest(trigger: .launch))
+    let store = try await storeWithAnImport()
     let model = liveModel(live(.notRunning, store: store))
     model.start()
     await waitFor { isLoaded(model.state) && model.omniFocusState == .notRunning }
@@ -345,15 +392,87 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
   }
 
   @MainActor @Test func aTestHostNeverBuildsTheLiveEnvironment() throws {
+    try #require(AppModel.isTestHost)
     let base = FileManager.default.temporaryDirectory.appending(path: "base-\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: base, withIntermediateDirectories: false)
     defer { try? FileManager.default.removeItem(at: base) }
     #expect(AppEnvironment.live(base: base) == nil)
     #expect(try FileManager.default.contentsOfDirectory(atPath: base.path).isEmpty)
-    let settings = StandardSettings()
-    #expect(settings.source == nil)
-    settings.setSource("live")
-    #expect(settings.source == nil)
+  }
+
+  /// The real defaults are never touched: the storage is an in-memory stub.
+  @Test func standardSettingsReadAndWriteNothingInATestHost() throws {
+    try #require(AppModel.isTestHost)
+    let storage = RecordingStorage()
+    let host = StandardSettings(storage: storage)
+    #expect(host.source == nil)
+    host.setSource("live")
+    #expect(storage.reads.isEmpty)
+    #expect(storage.writes.isEmpty)
+    let app = StandardSettings(storage: storage, isTestHost: false)
+    app.setSource("live")
+    #expect(app.source == "live")
+    #expect(storage.writes == ["source"])
+  }
+
+  @MainActor @Test func aReadableIdentityMapOverAnUnreadableWorkspaceIsUnavailable() async {
+    let model = liveModel(live(.notRunning, store: HalfReadableStore()))
+    model.start()
+    await waitFor { isUnavailable(model.state) }
+    #expect(isUnavailable(model.state))
+    #expect(model.storeUnreadable)
+    #expect(TodayPlaceholder(model) == .liveUnavailable)
+  }
+
+  @MainActor @Test func liveBeforeItsStoreIsCheckedIsNotNotReadYet() async {
+    let gate = FakeTasks(open: false)
+    let model = liveModel(live(.notRunning, store: HalfReadableStore(gate: gate)))
+    model.start()
+    try? await Task.sleep(for: .milliseconds(100))
+    #expect(!model.storeChecked)
+    #expect(TodayPlaceholder(model) == .importing)
+    await gate.open()
+    await waitFor { model.storeChecked }
+    #expect(TodayPlaceholder(model) == .liveUnavailable)
+  }
+
+  @MainActor @Test func aLiveImportWithNothingStoredShowsTheSpinner() async {
+    let tasks = FakeTasks(open: false)
+    let model = liveModel(live(.background, tasks: tasks))
+    model.start()
+    await waitFor { model.isImporting }
+    #expect(isLoading(model.state))
+    #expect(TodayPlaceholder(model) == .importing)
+    await tasks.open()
+    await waitFor { isLoaded(model.state) }
+    #expect(TodayPlaceholder(model) == nil)
+  }
+
+  /// Owner, 2026-11-06: past midnight Today shows the new day from what it holds.
+  @MainActor @Test func midnightRebuildsTodayWithoutAnImport() async throws {
+    let store = try await storeWithAnImport()
+    let time = SettableClock(DemoEnvironment.now)
+    let model = liveModel(live(.notRunning, store: store, clock: time.clock))
+    model.start()
+    await waitFor { isLoaded(model.state) && model.omniFocusState == .notRunning }
+    guard case .loaded(let before) = model.state else {
+      Issue.record("not loaded")
+      return
+    }
+    let tomorrow = DemoEnvironment.now.addingTimeInterval(9 * 3_600)
+    #expect(!before.calendar.isDate(before.now, inSameDayAs: tomorrow))
+    time.set(tomorrow)
+    NotificationCenter.default.post(name: .NSCalendarDayChanged, object: nil)
+    await waitFor {
+      if case .loaded(let overview) = model.state { overview.now == tomorrow } else { false }
+    }
+    guard case .loaded(let after) = model.state else {
+      Issue.record("not loaded")
+      return
+    }
+    #expect(after.calendar.isDate(after.now, inSameDayAs: tomorrow))
+    #expect(model.importOutcomes == 0)
+    #expect(try await store.identityMap().version == 1)
   }
 
   /// An unmeasured duration reads `last full import` with no number, never 0.
@@ -373,5 +492,24 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     #expect(
       OmniFocusLine(source: .live, lastImport: run(nil), note: .failure(.timedOut))
         == .note(.failure(.timedOut)))
+    // Where Today says `Live data could not be opened.`, Settings says it too.
+    #expect(
+      OmniFocusLine(source: .live, lastImport: nil, note: nil, unavailable: true) == .unavailable)
+    #expect(
+      OmniFocusLine(source: .live, lastImport: run(nil), note: .notRunning, unavailable: true)
+        == .unavailable)
+    #expect(
+      OmniFocusLine(source: .demo, lastImport: nil, note: nil, unavailable: true) == .notReadInDemo)
+  }
+
+  @MainActor @Test func settingsTakesTodaysUnavailableState() async {
+    let model = liveModel(live(.notRunning, store: UnreadableStore()))
+    model.start()
+    await waitFor { isUnavailable(model.state) }
+    #expect(TodayPlaceholder(model) == .liveUnavailable)
+    #expect(
+      OmniFocusLine(
+        source: model.source, lastImport: model.lastImport, note: model.omniFocusNote,
+        unavailable: TodayPlaceholder(model) == .liveUnavailable) == .unavailable)
   }
 }

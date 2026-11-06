@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import MoonShineCore
 import Observation
@@ -28,6 +29,7 @@ final class SourceFeed {
   let environment: AppEnvironment?
   private var starting: Task<Void, Never>?
   private var consumer: Task<Void, Never>?
+  private var observers: [any NSObjectProtocol] = []
 
   init(environment: AppEnvironment?) {
     self.environment = environment
@@ -45,6 +47,8 @@ final class SourceFeed {
 
   /// The store holds data that could not be read: never "not read yet" (`TodayPlaceholder`).
   private(set) var storeUnreadable = false
+  /// What the store holds has been looked at: until then an empty Today is not "not read yet".
+  private(set) var storeChecked = false
 
   /// Shows what the store holds, then sends the launch and the source's signals. Idempotent.
   /// The work runs in a task the feed keeps, so a window's cancelled `.task` never loses it.
@@ -57,6 +61,7 @@ final class SourceFeed {
     consumer = Task {
       for await event in environment.coordinator.events { await apply(event) }
     }
+    observeDayChanges()
     starting = Task {
       await showStored(environment.store)
       await environment.coordinator.handle(.launch)
@@ -89,6 +94,7 @@ final class SourceFeed {
   /// A store that has committed shows its data, with or without an import row; an empty
   /// store (version 0) shows nothing yet; a store that cannot be read is unavailable.
   private func showStored(_ store: any Store) async {
+    defer { storeChecked = true }
     do {
       guard try await store.identityMap().version > 0 else { return }
       let workspace = try await store.workspace()
@@ -120,6 +126,28 @@ final class SourceFeed {
       break  // The note follows `omniFocusState`.
     case .omniFocusState(let new):
       omniFocusState = new
+    }
+  }
+
+  /// A new calendar day, or a wake from sleep past midnight, rebuilds Today from the workspace
+  /// already shown: no import and no store write (owner, 2026-11-06).
+  func dayMayHaveChanged() {
+    guard case .loaded(let overview) = state else { return }
+    let now = clock.wall()
+    guard !overview.calendar.isDate(overview.now, inSameDayAs: now) else { return }
+    state = .loaded(Overview(workspace: overview.workspace, now: now))
+  }
+
+  private func observeDayChanges() {
+    let centres = [
+      (NotificationCenter.default, Notification.Name.NSCalendarDayChanged),
+      (NSWorkspace.shared.notificationCenter, NSWorkspace.didWakeNotification),
+    ]
+    for (centre, name) in centres {
+      observers.append(
+        centre.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+          MainActor.assumeIsolated { self?.dayMayHaveChanged() }
+        })
     }
   }
 

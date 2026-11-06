@@ -194,6 +194,8 @@ import Testing
       let table: [(BridgeError, ImportFailure)] = [
         (.notRunning, .providerNotRunning), (.timedOut(after: .seconds(30)), .timedOut),
         (.failed(status: 1, osaError: -1743), .permissionDenied),
+        (.failed(status: 1, osaError: -600), .providerNotRunning),
+        (.failed(status: 1, osaError: -609), .providerNotRunning),
         (.failed(status: 1, osaError: -1728), .other), (.failed(status: 1, osaError: nil), .other),
         (.malformedOutput, .invalidSnapshot),
       ]

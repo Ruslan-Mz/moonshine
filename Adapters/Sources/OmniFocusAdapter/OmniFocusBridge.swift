@@ -18,6 +18,8 @@ extension BridgeError: ImportFailureKind {
     case .notRunning: .providerNotRunning
     case .timedOut: .timedOut
     case .failed(_, osaError: -1743): .permissionDenied
+    // -600: the application is not running; -609: its connection closed (a quit mid-read).
+    case .failed(_, osaError: -600), .failed(_, osaError: -609): .providerNotRunning
     case .failed: .other
     case .malformedOutput: .invalidSnapshot
     }

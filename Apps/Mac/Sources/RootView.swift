@@ -59,7 +59,9 @@ enum TodayPlaceholder: Equatable {
     case (_, _) where model.isImporting: self = .importing
     case (.loading, .demo): self = .importing
     case (.unavailable, .demo): self = .demoUnavailable
-    case (.loading, .live): self = .notReadYet(model.omniFocusNote)
+    // Until the store has been looked at, a store with history must not read "not read yet".
+    case (.loading, .live):
+      self = model.storeChecked ? .notReadYet(model.omniFocusNote) : .importing
     case (.unavailable, .live):
       // A failed first import names its kind; nothing named means Live could not be opened.
       let note = model.omniFocusNote
@@ -98,6 +100,7 @@ struct StatusBar: View {
 
   var body: some View {
     HStack {
+      // In the order of `design/screens/settings.md` § Status bar.
       Text(model.source == .live ? "Live" : "Demo data")
       if case .loaded(let overview) = model.state, model.lastImport != nil {
         TimelineView(.everyMinute) { _ in
@@ -106,8 +109,8 @@ struct StatusBar: View {
           }
         }
       }
-      if model.source == .live, case .loaded = model.state {
-        if model.omniFocusNote == .notRunning {
+      if model.source == .live {
+        if case .loaded = model.state, model.omniFocusNote == .notRunning {
           Text("OmniFocus is not running — showing the last import")
         }
         // Until the vault picker (S4-4d).

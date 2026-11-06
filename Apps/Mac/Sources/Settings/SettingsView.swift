@@ -20,7 +20,8 @@ struct SettingsView: View {
         LabeledContent("OmniFocus") {
           line(
             OmniFocusLine(
-              source: model.source, lastImport: model.lastImport, note: model.omniFocusNote))
+              source: model.source, lastImport: model.lastImport, note: model.omniFocusNote,
+              unavailable: TodayPlaceholder(model) == .liveUnavailable))
         }
         Text(
           "Demo shows bundled sample data — nothing is read from OmniFocus or your vault."
@@ -40,6 +41,7 @@ struct SettingsView: View {
       Text("last full import \(Double(duration / .milliseconds(1)) / 1_000, specifier: "%.1f") s")
     case .lastImport(nil): Text("last full import")
     case .notReadYet: Text("not read yet")
+    case .unavailable: Text("Live data could not be opened.")
     case .note(let note): OmniFocusWords.text(note)
     }
   }
@@ -51,11 +53,18 @@ enum OmniFocusLine: Equatable {
   /// Nil when the duration could not be measured: no number, never 0.
   case lastImport(Duration?)
   case notReadYet
+  /// Where Today says `Live data could not be opened.`: never "not read yet".
+  case unavailable
   case note(SourceFeed.OmniFocusNote)
 
-  init(source: AppModel.Source, lastImport: ImportRun?, note: SourceFeed.OmniFocusNote?) {
+  init(
+    source: AppModel.Source, lastImport: ImportRun?, note: SourceFeed.OmniFocusNote?,
+    unavailable: Bool = false
+  ) {
     if source == .demo {
       self = .notReadInDemo
+    } else if unavailable {
+      self = .unavailable
     } else if let note {
       self = .note(note)
     } else if let lastImport {

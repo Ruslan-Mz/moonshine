@@ -81,7 +81,7 @@ import SQLiteStore
       // Only `full` creates the folder: `vault` writes nothing.
       let base = try FileManager.default.url(
         for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
-      let storePath = DataFolder.measurementStorePath(in: try DataFolder.create(base: base))
+      let storePath = try Self.storePath(base: base)
       try removeStore(at: storePath)
       let store = try SQLiteStore(path: storePath)
       let names = ["bridge", "decode+validate", "import", "commit", "total", "OmniFocus held"]
@@ -177,6 +177,11 @@ import SQLiteStore
       guard paths else { return }
       print("problems (owner only; do not paste):")
       for location in read.problemLocations { print("  " + location) }
+    }
+
+    /// `full`'s store under `base`, the folder created first: the tool's own, never the app's.
+    static func storePath(base: URL) throws -> String {
+      DataFolder.measurementStorePath(in: try DataFolder.create(base: base))
     }
 
     /// Removes the tool's own store file and its `-wal` / `-shm`, nothing else. Only a missing

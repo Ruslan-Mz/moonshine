@@ -2,6 +2,7 @@ import Foundation
 import GRDB
 import MoonShineCore
 import MoonShineFixtures
+import Synchronization
 import Testing
 
 @testable import SQLiteStore
@@ -407,13 +408,15 @@ import Testing
     #expect(afterAttempts == afterInsert)
   }
 
-  /// The fixture ×20 (~3k tasks) committed to a file in one transaction. Logged target < 1 s;
-  /// the assertion is a 3 s regression guard so slower CI runners do not flake.
+  /// The fixture ×20 (~3k tasks) committed to a file in one transaction. The times are printed
+  /// as a metric (target < 1 s), never asserted: a slow CI runner made a time guard flake.
   @Test func bulkImportOfTheFixtureTimesTwentyInOneTransaction() async throws {
     let source = try fixtureSnapshot().scaled(20)
     let vault = try await DemoVault().vault()
     let store = try SQLiteStore(path: temporaryDatabasePath())
     let clock = ContinuousClock()
+    let commits = CommitCounter()
+    store.writer.add(transactionObserver: commits, extent: .observerLifetime)
 
     var identities = IdentityMap()
     var workspace = Workspace(timeZone: .gmt)
@@ -426,6 +429,7 @@ import Testing
       try await store.commit(
         workspace, identities: identities, expectedVersion: 0, at: first, run: nil)
     }
+    #expect(commits.count == 1)
     let recommit = try await clock.measure {
       try await store.commit(
         workspace, identities: identities, expectedVersion: 1, at: second, run: nil)
@@ -439,6 +443,17 @@ import Testing
         + " · re-commit \(recommit) · read \(readTime)")
     #expect(workspace.tasks.count == source.tasks.count)
     #expect(read.tasks.count == workspace.tasks.count)
-    #expect(commit < .seconds(3))
+    #expect(commits.count == 2)
   }
+}
+
+/// Counts the transactions the store commits.
+private final class CommitCounter: TransactionObserver, Sendable {
+  private let commits = Mutex(0)
+  var count: Int { commits.withLock { $0 } }
+
+  func observes(eventsOfKind eventKind: DatabaseEventKind) -> Bool { true }
+  func databaseDidChange(with event: DatabaseEvent) {}
+  func databaseDidCommit(_ db: Database) { commits.withLock { $0 += 1 } }
+  func databaseDidRollback(_ db: Database) {}
 }

@@ -13,16 +13,33 @@ protocol AppSettings {
   func setSource(_ value: String)
 }
 
+/// Where `StandardSettings` keeps its values; tests pass an in-memory one.
+protocol SettingsStorage {
+  func string(forKey key: String) -> String?
+  func set(_ value: Any?, forKey key: String)
+}
+
+extension UserDefaults: SettingsStorage {}
+
 struct StandardSettings: AppSettings {
   private static let sourceKey = "source"
+  private let storage: any SettingsStorage
+  private let isTestHost: Bool
+
+  init(
+    storage: any SettingsStorage = UserDefaults.standard, isTestHost: Bool = AppModel.isTestHost
+  ) {
+    self.storage = storage
+    self.isTestHost = isTestHost
+  }
 
   var source: String? {
-    AppModel.isTestHost ? nil : UserDefaults.standard.string(forKey: Self.sourceKey)
+    isTestHost ? nil : storage.string(forKey: Self.sourceKey)
   }
 
   func setSource(_ value: String) {
-    guard !AppModel.isTestHost else { return }
-    UserDefaults.standard.set(value, forKey: Self.sourceKey)
+    guard !isTestHost else { return }
+    storage.set(value, forKey: Self.sourceKey)
   }
 }
 
@@ -115,6 +132,7 @@ final class AppModel {
   var lastFailure: ImportFailure? { feed?.lastFailure }
   var omniFocusNote: SourceFeed.OmniFocusNote? { feed?.omniFocusNote }
   var storeUnreadable: Bool { feed?.storeUnreadable ?? false }
+  var storeChecked: Bool { feed?.storeChecked ?? false }
 
   /// Starts the selected source's feed. Idempotent.
   func start() {
