@@ -15,9 +15,9 @@ Recommended implementation: a native `Settings` scene (⌘,) with `Form { }.form
 **Data** group
 
 - Source: `Picker(.segmented)` **Demo | Live**.
-- Obsidian vault: path field (folder symbol + `~/Documents/Life vault`) + "Choose…" → `.fileImporter(allowedContentTypes: [.folder])` → security-scoped bookmark.
-- OmniFocus: status text (`not read in Demo mode` / `last full import 14 s`).
-- Caption: "Demo shows bundled sample data — nothing is read from OmniFocus or your vault. The vault is opened read-only through a security-scoped bookmark."
+- Obsidian vault: path field (folder symbol + `~/Documents/Life vault`) + "Choose…" → `.fileImporter(allowedContentTypes: [.folder])` → security-scoped bookmark. Comes with S4-4d.
+- OmniFocus: status text (`not read in Demo mode` / `last full import 14.0 s`, one decimal; S4-4c-1: `last full import` with no number when the duration was not measured, `not read yet`, `Live data could not be opened.` when Today says so, or the words of `design/copy.md` § Live source when OmniFocus is not running or the last import did not commit).
+- Caption: "Demo shows bundled sample data — nothing is read from OmniFocus or your vault." The second sentence, "The vault is opened read-only through a security-scoped bookmark.", comes with the vault row (S4-4d).
 
 **General** group (draft-2)
 
@@ -57,7 +57,7 @@ Buttons (sheet variant only): Cancel, Done (default, accent). The Settings scene
 
 ## Status bar
 
-`.safeAreaInset(edge: .bottom)` HStack, 28 high: "Demo data" capsule (Demo only) · `Updated 3 min ago` (relative, refreshes every minute, counted from the last committed import's end: `Updated just now` under a minute, `Updated N min ago` under an hour, `Updated N h ago` under a day, then `Updated on 3 October`, with the year only when it is not the current one; owner, 2026-10-28; it redraws on the clock's whole minutes, so a step can show up to a minute late, and at once when an import finishes; owner, 2026-11-04) · while importing: a small `ProgressView` + `Updating…` (never blocks the UI; ADR-0011:64, owner, 2026-10-28) · shortcut hints on the right.
+`.safeAreaInset(edge: .bottom)` HStack, 28 high: the source, "Demo data" or "Live" (S4-4c-1, as `docs/specs/phase-1-see.md` asks) · `Updated 3 min ago` (relative, refreshes every minute, counted from the last committed import's end: `Updated just now` under a minute, `Updated N min ago` under an hour, `Updated N h ago` under a day, then `Updated on 3 October`, with the year only when it is not the current one; owner, 2026-10-28; it redraws on the clock's whole minutes, so a step can show up to a minute late, and at once when an import finishes; owner, 2026-11-04) · in Live, `OmniFocus is not running — showing the last import` while it is not running and an import is shown, and `Vault not read yet` until S4-4d, whatever Today shows · while importing: a small `ProgressView` + `Updating…` (never blocks the UI; ADR-0011:64, owner, 2026-10-28) · shortcut hints on the right.
 
 ## Acceptance
 

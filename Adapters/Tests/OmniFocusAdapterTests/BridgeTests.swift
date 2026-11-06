@@ -187,6 +187,34 @@ import Testing
         timeout: .seconds(20))
       #expect(result.status == 0, "\(result.stderr)")
     }
+
+    // MARK: S4-4c-1
+
+    @Test func bridgeErrorsMapToFailureKinds() {
+      let table: [(BridgeError, ImportFailure)] = [
+        (.notRunning, .providerNotRunning), (.timedOut(after: .seconds(30)), .timedOut),
+        (.failed(status: 1, osaError: -1743), .permissionDenied),
+        (.failed(status: 1, osaError: -600), .providerNotRunning),
+        (.failed(status: 1, osaError: -609), .providerNotRunning),
+        (.failed(status: 1, osaError: -1728), .other), (.failed(status: 1, osaError: nil), .other),
+        (.malformedOutput, .invalidSnapshot),
+      ]
+      for (error, kind) in table { #expect(error.importFailure == kind, "\(error)") }
+    }
+
+    @Test func snapshotErrorsAreInvalidSnapshots() {
+      let errors: [SnapshotError] = [
+        .unsupportedSchema(9), .invalid([]), .badValue(path: "tasks[0].status"),
+        .undecodable(path: "document"),
+      ]
+      for error in errors { #expect(error.importFailure == .invalidSnapshot, "\(error)") }
+    }
+
+    /// The app asks macOS whether this OmniFocus runs; the script must ask about the same one.
+    @Test func theBridgeNamesTheOmniFocusOfItsScript() throws {
+      let script = try String(contentsOf: bridgeScript, encoding: .utf8)
+      #expect(script.contains("Application('\(OmniFocusBridge.bundleIdentifier)')"))
+    }
   }
 
 #endif

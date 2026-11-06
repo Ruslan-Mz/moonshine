@@ -1,0 +1,5 @@
+// An example of Signing.local.xcconfig, which only the owner writes (git-ignored). Copy it to
+// that name and set the team id of the Personal Team: the OU of the Apple Development
+// certificate whose O is the owner's own name. Never an organization's team.
+CODE_SIGN_IDENTITY = Apple Development
+DEVELOPMENT_TEAM = XXXXXXXXXX

@@ -141,6 +141,13 @@ test("the template keeps the rules of H1b", () => {
   assert.ok(ignored.includes(".npm-cache/"));
 });
 
+// S4-4c-1 (owner, 2026-11-05): only the owner writes the local signing settings, which the
+// unsandboxed xcodebuild reads. The Edit deny is also a sandbox write deny; no normal step
+// (commit, branch, fetch, push, worktree, build, tests, npm, the installer) writes the file.
+test("the template denies writing the local signing settings", () => {
+  assert.ok(new Set(template.permissions.deny).has("Edit(**/Configs/*.local.*)"));
+});
+
 test("the worktree-only block carries the main checkout's .git rules with placeholders only", () => {
   const block = template._worktreeOnly;
   assert.deepEqual(block.permissions.deny, [

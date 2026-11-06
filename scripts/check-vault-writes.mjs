@@ -45,6 +45,10 @@ const optional = ["Apps"];
 const allowed = {
   // The store: MoonShine's own data.
   "Adapters/Sources/SQLiteStore/SQLiteStore.swift": ["DatabasePool(path: path)", "DatabaseQueue()"],
+  // The data folder that holds the stores (S4-4c-1).
+  "Adapters/Sources/SQLiteStore/DataFolder.swift": [
+    "FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)",
+  ],
   // The measurement tool: its own store file, and a refusal printed to standard error.
   "Adapters/Sources/moonshine-import/MoonShineImport.swift": [
     "FileManager.default.removeItem(atPath: storePath + suffix)",
@@ -52,6 +56,10 @@ const allowed = {
   ],
   // The OmniFocus bridge runs `osascript`.
   "Adapters/Sources/OmniFocusAdapter/OmniFocusBridge.swift": ["let process = Process()"],
+  // Today listens for a wake from sleep, to rebuild past midnight; it opens nothing (S4-4c-1).
+  "Apps/Mac/Sources/SourceFeed.swift": [
+    "(NSWorkspace.shared.notificationCenter, NSWorkspace.didWakeNotification)",
+  ],
 };
 
 // The one file that may use EventKit, read-only.

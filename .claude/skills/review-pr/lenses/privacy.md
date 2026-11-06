@@ -1,6 +1,6 @@
 # Lens: privacy — nothing personal leaves the machine or enters the repository
 
-`CLAUDE.md` rule 5: raw content from the vault, OmniFocus, calendars and `data/` (titles, labels, values, names, ids) is never committed, logged or pasted. Aggregates and structure descriptions are allowed. Rule 6: no writes to external tools before their phase (the vault from the Write phase, OmniFocus and calendars from the Act phase).
+`CLAUDE.md` rule 5: raw content from the vault, OmniFocus, calendars, `data/` and the data folder `~/Library/Application Support/MoonShine/` (titles, labels, values, names, ids) is never committed, logged or pasted. Aggregates and structure descriptions are allowed. Rule 6: no writes to external tools before their phase (the vault from the Write phase, OmniFocus and calendars from the Act phase).
 
 ## Questions
 
@@ -13,7 +13,7 @@
 4. **Documents and fixtures**: any real title, label, name, id, personal date range, exact count that identifies real data, absolute path containing a user name? Fixtures and demo data must be invented.
 5. **Network and sync**: any new outbound request, upload or SDK that phones home? Sync must be opt-in and off by default (ADR-0010). Calendar events must not be stored or synced (ADR-0012).
 6. **External writes**: any OmniFocus, vault or EventKit write API, including "Save As" or export that changes the other app's state?
-7. **Files on disk**: does anything with real data land outside `data/` (git-ignored)? Temporary files removed?
+7. **Files on disk**: does anything with real data land outside `data/` (git-ignored) and the data folder `~/Library/Application Support/MoonShine/` (S4-4c-1)? Temporary files removed?
 8. **Access**: does the change read another app's private files or need a broader permission than the feature needs?
 
 ## Seen in this repository

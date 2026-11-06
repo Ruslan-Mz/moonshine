@@ -243,7 +243,7 @@ private struct NotLoaded: Error {}
   /// The tests run inside the app; there the app reads Demo data only, never a live source.
   @MainActor @Test func aTestHostReadsDemoOnly() {
     #expect(AppModel.isTestHost)
-    #expect(AppModel.source(isTestHost: true) == .demo)
+    #expect(AppModel.source(isTestHost: true, settings: NoSettings()) == .demo)
     #expect(AppModel().source == .demo)
   }
 

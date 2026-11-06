@@ -62,7 +62,7 @@ let package = Package(
     .testTarget(
       name: "CalendarAdapterTests",
       dependencies: ["CalendarAdapter", .product(name: "MoonShineCore", package: "MoonShineCore")]),
-    .testTarget(name: "MoonShineImportTests", dependencies: ["moonshine-import"]),
+    .testTarget(name: "MoonShineImportTests", dependencies: ["moonshine-import", "SQLiteStore"]),
     .testTarget(
       name: "SQLiteStoreTests",
       dependencies: [

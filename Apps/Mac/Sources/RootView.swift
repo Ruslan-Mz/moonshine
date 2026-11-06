@@ -18,17 +18,75 @@ struct RootView: View {
   }
 
   @ViewBuilder private var content: some View {
-    switch model.state {
-    case .loading:
-      ProgressView()
-    case .loaded(let overview):
+    if case .loaded(let overview) = model.state {
       // Dates follow the workspace's zone, so Demo reads the same on any Mac.
       let zone = overview.workspace.timeZone
       TodayContainer(overview: overview)
         .environment(\.timeZone, zone)
         .environment(\.calendar, TodayFormat.calendar(zone))
-    case .unavailable:
-      ContentUnavailableView("Demo data could not be loaded.", systemImage: "tray")
+    } else {
+      switch TodayPlaceholder(model) {
+      case .importing, nil:
+        ProgressView()
+      case .demoUnavailable:
+        ContentUnavailableView("Demo data could not be loaded.", systemImage: "tray")
+      case .liveUnavailable:
+        ContentUnavailableView("Live data could not be opened.", systemImage: "tray")
+      case .notReadYet(let note):
+        ContentUnavailableView {
+          Label("MoonShine has not read OmniFocus yet", systemImage: "tray")
+        } description: {
+          note.map(OmniFocusWords.text) ?? Text("Press ⌘R to read OmniFocus")
+        }
+      }
+    }
+  }
+}
+
+/// What Today shows instead of data. Nil when it shows data.
+enum TodayPlaceholder: Equatable {
+  case importing
+  case demoUnavailable
+  /// Live's folder, store or script could not be opened, or its store cannot be read: never
+  /// "not read yet", which would invite an import over a store that holds history.
+  case liveUnavailable
+  /// With the note, or none: then ⌘R reads OmniFocus.
+  case notReadYet(SourceFeed.OmniFocusNote?)
+
+  @MainActor init?(_ model: AppModel) {
+    switch (model.state, model.source) {
+    case (.loaded, _): return nil
+    case (_, _) where model.isImporting: self = .importing
+    case (.loading, .demo): self = .importing
+    case (.unavailable, .demo): self = .demoUnavailable
+    // Until the store has been looked at, a store with history must not read "not read yet".
+    case (.loading, .live):
+      self = model.storeChecked ? .notReadYet(model.omniFocusNote) : .importing
+    case (.unavailable, .live):
+      // A failed first import names its kind; nothing named means Live could not be opened.
+      let note = model.omniFocusNote
+      self = model.storeUnreadable || note == nil ? .liveUnavailable : .notReadYet(note)
+    }
+  }
+}
+
+/// The words of an OmniFocus note; no "failed" (CLAUDE.md rule 8).
+enum OmniFocusWords {
+  static func text(_ note: SourceFeed.OmniFocusNote) -> Text {
+    switch note {
+    case .notRunning: Text("OmniFocus is not running")
+    case .failure(.providerNotRunning): Text("OmniFocus is not running")
+    case .failure(.permissionDenied):
+      Text(
+        "MoonShine is not allowed to read OmniFocus yet — allow it in System Settings → Privacy & Security → Automation"
+      )
+    case .failure(.timedOut):
+      Text(
+        "OmniFocus did not answer in time. If macOS is asking for permission, answer it, then press ⌘R."
+      )
+    case .failure(.invalidSnapshot), .failure(.partialSnapshot):
+      Text("OmniFocus sent data MoonShine cannot read")
+    case .failure(.other): Text("The last import did not finish")
     }
   }
 }
@@ -42,13 +100,21 @@ struct StatusBar: View {
 
   var body: some View {
     HStack {
-      Text("Demo data")
+      // In the order of `design/screens/settings.md` § Status bar.
+      Text(model.source == .live ? "Live" : "Demo data")
       if case .loaded(let overview) = model.state, model.lastImport != nil {
         TimelineView(.everyMinute) { _ in
           if let freshness = model.freshness() {
             text(freshness, timeZone: overview.workspace.timeZone)
           }
         }
+      }
+      if model.source == .live {
+        if case .loaded = model.state, model.omniFocusNote == .notRunning {
+          Text("OmniFocus is not running — showing the last import")
+        }
+        // Until the vault picker (S4-4d).
+        Text("Vault not read yet")
       }
       if model.isImporting {
         ProgressView().controlSize(.mini)

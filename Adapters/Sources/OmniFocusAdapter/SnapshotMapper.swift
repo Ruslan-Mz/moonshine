@@ -13,6 +13,10 @@ public enum SnapshotError: Error, Equatable {
   case undecodable(path: String)
 }
 
+extension SnapshotError: ImportFailureKind {
+  public var importFailure: ImportFailure { .invalidSnapshot }
+}
+
 extension SnapshotDocument {
   /// The only way to decode a snapshot: errors carry a path, never payload text.
   public static func decode(_ data: Data) throws -> SnapshotDocument {

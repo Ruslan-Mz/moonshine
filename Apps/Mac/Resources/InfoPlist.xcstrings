@@ -1,0 +1,23 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSAppleEventsUsageDescription": {
+      "comment": "The Automation prompt when MoonShine first reads OmniFocus (Live).",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine reads your OmniFocus tasks to show them. It never changes them."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine читает ваши задачи OmniFocus, чтобы показать их, и никогда их не меняет."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

@@ -8,7 +8,7 @@ actor GatedTaskProvider: TaskProvider {
 
   private(set) var calls = 0
   private var isOpen = false
-  private var fails = false
+  private var failure: (any Error)?
   private var waiting: [CheckedContinuation<Void, Never>] = []
 
   init(open: Bool = false) {
@@ -17,9 +17,9 @@ actor GatedTaskProvider: TaskProvider {
 
   func snapshot(modifiedSince: Date?) async throws -> TaskSourceSnapshot {
     calls += 1
-    let failing = fails
+    let failing = failure
     if !isOpen { await withCheckedContinuation { waiting.append($0) } }
-    if failing { throw Unreadable() }
+    if let failing { throw failing }
     return TaskSourceSnapshot(
       provider: .omnifocus, generatedAt: Date(timeIntervalSince1970: 0),
       timeZone: TestWorld.timeZone, defaultTimes: DefaultTimeSettings(), tags: [], projects: [],
@@ -37,7 +37,11 @@ actor GatedTaskProvider: TaskProvider {
   }
 
   func setFailing(_ value: Bool) {
-    fails = value
+    failure = value ? Unreadable() : nil
+  }
+
+  func setFailure(_ error: any Error) {
+    failure = error
   }
 }
 

@@ -17,10 +17,21 @@
 // are named even if the allowlist ever lists them. A `path` value is relative, has no `..`
 // or `$` (XcodeGen expands `${VAR}`), and resolves, after symlinks, inside the repository and
 // not to its root.
+// `configFiles` is allowed at the top level only, for Debug and Release, and names exactly
+// `Configs/Signing.xcconfig` (S4-4c-1, owner 2026-11-05): an xcconfig is a second way to set any
+// build setting and to include any file. So the command also reads that file and, when present,
+// the git-ignored `Configs/Signing.local.xcconfig` next to it (only the owner writes it): each
+// must be a regular file inside the repository after symlinks, in printable ASCII with LF line
+// breaks, holding only blank lines, `//` comments and `NAME = value` lines for
+// CODE_SIGN_IDENTITY, CODE_SIGN_STYLE and DEVELOPMENT_TEAM, with no `$` and no condition
+// (`NAME[sdk=…]`); the tracked file may hold only `CODE_SIGN_IDENTITY = -`,
+// `CODE_SIGN_STYLE = Manual` and one `#include? "Signing.local.xcconfig"`, the local file no
+// include. Its findings name a line and a kind, never a name or a value from the file: the
+// local file holds the owner's team id. Locally this is a command, not a guard.
 // Usage: node scripts/check-project-scripts.mjs [file] (default `project.yml`).
 // Exit 0 clean, 1 with `file:line: reason` per finding, 2 when the file cannot be read.
 
-import { readFileSync, realpathSync } from "node:fs";
+import { lstatSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { dirname, join, relative, isAbsolute, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -38,7 +49,6 @@ export const forbiddenKeys = [
   "postGenCommand",
   "legacy",
   "include",
-  "configFiles",
   "projectReferences",
   "carthageExecutablePath",
 ];
@@ -46,8 +56,7 @@ export const forbiddenKeys = [
 const buildSettingNames = new Set([
   "SWIFT_VERSION",
   "SWIFT_STRICT_CONCURRENCY",
-  "CODE_SIGN_IDENTITY",
-  "CODE_SIGN_STYLE",
+  // Signing only through `Configs/Signing.xcconfig`, so `project.yml` cannot override it.
   "ENABLE_HARDENED_RUNTIME",
   "SWIFT_EMIT_LOC_STRINGS",
   "LOCALIZATION_PREFERS_STRING_CATALOGS",
@@ -62,9 +71,17 @@ const VALUE = "value";
 const PATH = "path";
 const VALUES = "values";
 const BUILD = "build settings";
+const CONFIG = "signing config";
 const settings = { base: BUILD };
+export const signingConfig = "Configs/Signing.xcconfig";
+const localConfig = "Configs/Signing.local.xcconfig";
+const signingSettings = new Set(["CODE_SIGN_IDENTITY", "CODE_SIGN_STYLE", "DEVELOPMENT_TEAM"]);
+// The tracked file signs ad hoc only: a team id or another identity never lands in the public
+// repository (owner, 2026-11-06, PR #46 round 1).
+const trackedSettings = new Set(["CODE_SIGN_IDENTITY = -", "CODE_SIGN_STYLE = Manual"]);
 const schema = {
   name: VALUE,
+  configFiles: { Debug: CONFIG, Release: CONFIG },
   options: {
     bundleIdPrefix: VALUE,
     deploymentTarget: { macOS: VALUE },
@@ -207,9 +224,11 @@ function parse(text, fail) {
 function walk(node, rule, findings, root) {
   const report = (line, message) => findings.push({ line, message });
   if (node === null) return;
-  if (rule === VALUE || rule === PATH || rule === VALUES) {
+  if (rule === VALUE || rule === PATH || rule === VALUES || rule === CONFIG) {
     if (node.kind !== "value" && !(rule === VALUES && node.kind === "values")) {
       report(node.line, "this key takes a single value");
+    } else if (rule === CONFIG && node.text !== signingConfig) {
+      report(node.line, `configFiles names ${signingConfig} only`);
     } else if (rule === PATH && !insideRepository(node.text, root)) {
       report(node.line, "a path outside the repository (relative, no `..` or `$`, inside it after symlinks, not its root)");
     }
@@ -240,6 +259,53 @@ function walk(node, rule, findings, root) {
   }
 }
 
+/** Findings for the text of a signing xcconfig, as `{ line, message }`. */
+export function checkXcconfig(text, { local }) {
+  const outside = /[^\x20-\x7e\n]/.exec(text);
+  if (outside) return [{ line: lineOf(text, outside.index), message: "a character other than printable ASCII or LF" }];
+  const findings = [];
+  let includes = 0;
+  for (const [index, raw] of text.split("\n").entries()) {
+    const line = index + 1;
+    if (/^ *$/.test(raw) || raw.startsWith("//")) continue;
+    if (raw === '#include? "Signing.local.xcconfig"') {
+      includes += 1;
+      if (local || includes > 1) findings.push({ line, message: "an include other than the tracked file's one" });
+    } else if (!/^[A-Z_][A-Z0-9_]* = [^$]*$/.test(raw)) {
+      findings.push({ line, message: "a line other than a comment, the include or `NAME = value` without `$`" });
+    } else if (!signingSettings.has(raw.slice(0, raw.indexOf(" ")))) {
+      findings.push({ line, message: "a build setting other than CODE_SIGN_IDENTITY, CODE_SIGN_STYLE, DEVELOPMENT_TEAM" });
+    } else if (!local && !trackedSettings.has(raw)) {
+      findings.push({ line, message: "in the tracked file, a line other than `CODE_SIGN_IDENTITY = -` or `CODE_SIGN_STYLE = Manual`" });
+    }
+  }
+  return findings;
+}
+
+/** Findings for the signing xcconfigs under `root`, as `{ file, line, message }`. */
+export function checkSigning(root) {
+  const findings = [];
+  for (const [file, local] of [
+    [signingConfig, false],
+    [localConfig, true],
+  ]) {
+    const path = join(root, file);
+    try {
+      lstatSync(path);
+    } catch {
+      if (!local) findings.push({ file, line: 1, message: "the tracked signing settings are missing" });
+      continue;
+    }
+    if (!insideRepository(file, root) || !statSync(path).isFile()) {
+      findings.push({ file, line: 1, message: "not a regular file inside the repository" });
+      continue;
+    }
+    // Latin-1 maps every byte to one character, so any byte outside ASCII is a finding.
+    for (const finding of checkXcconfig(readFileSync(path, "latin1"), { local })) findings.push({ file, ...finding });
+  }
+  return findings;
+}
+
 function insideRepository(path, root) {
   if (path === "" || /^[/~]/.test(path) || path.includes("$") || path.split("/").includes("..")) return false;
   try {
@@ -267,10 +333,13 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   } catch {
     findings = [{ line: 1, message: "a file that is not UTF-8" }];
   }
+  findings = findings.map((finding) => ({ file: "project.yml", ...finding })).concat(checkSigning(dirname(path)));
   if (findings.length) {
-    console.log("project.yml must not run commands or read outside the repository (CLAUDE.md → Commands):");
-    for (const finding of findings) console.log(`project.yml:${finding.line}: ${finding.message}`);
+    console.log(
+      "project.yml and its signing settings must not run commands or read outside the repository (CLAUDE.md → Commands):",
+    );
+    for (const finding of findings) console.log(`${finding.file}:${finding.line}: ${finding.message}`);
     process.exit(1);
   }
-  console.log("project.yml: in the subset, allowed keys only, paths inside the repository");
+  console.log("project.yml: in the subset, allowed keys only, paths inside the repository; signing settings clean");
 }

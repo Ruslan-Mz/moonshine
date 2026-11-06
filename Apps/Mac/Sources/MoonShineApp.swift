@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct MoonShineApp: App {
-  @State private var model = AppModel()
+  @State private var model = AppModel.production()
 
   var body: some Scene {
     WindowGroup {
@@ -24,6 +24,9 @@ struct MoonShineApp: App {
       TodayCommands()
       // Show / Hide Inspector, ⌃⌘I, in the View menu.
       InspectorCommands()
+    }
+    Settings {
+      SettingsView(model: model)
     }
   }
 }
