@@ -143,6 +143,9 @@
       ]
     }
   },
+  "_notes": {
+    "Edit(**/Configs/*.local.*)": "S4-4c-1 (owner, 2026-11-05): only the owner writes Configs/Signing.local.xcconfig, which the unsandboxed xcodegen and xcodebuild read; no normal step (commit, branch, fetch, push, git worktree add or remove for /review-pr, build, tests, npm, the installer) writes it, so the rule adds no prompt. It leaves its class open (owner, 2026-11-06, PR #46 round 1): the tracked Configs/Signing.xcconfig, project.yml and the generated MoonShine.xcodeproj stay writable by a session and are read by the unsandboxed xcodegen and xcodebuild. That is the class H1a accepted for project.yml: guarded in CI by scripts/check-project-scripts.mjs, a command locally. A deny on *.xcodeproj is not possible: scripts/pin-app-packages.sh writes into it from the sandbox. The class-level fix is a separate follow-up."
+  },
   "_worktreeOnly": {
     "_note": "Only for a parallel author session's sibling worktree ../moonshine-<n>, which the owner creates (CLAUDE.md § Git). In that worktree's copy, merge these entries into permissions.deny and sandbox.filesystem, fill in the placeholders with the main checkout's path (except `<repo>` in env.npm_config_cache, which is the checkout this file lives in: the worktree may write only its own folder), and delete this key; in the main checkout's copy, just delete it. Never commit a real path: the owner's home path is on the deny-list.",
     "permissions": {
