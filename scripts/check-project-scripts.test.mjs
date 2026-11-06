@@ -4,7 +4,15 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { checkProject, checkSigning, checkXcconfig, forbiddenKeys, signingConfig } from "./check-project-scripts.mjs";
+import {
+  buildFolders,
+  checkProject,
+  checkSigning,
+  checkTree,
+  checkXcconfig,
+  forbiddenKeys,
+  signingConfig,
+} from "./check-project-scripts.mjs";
 
 const script = new URL("./check-project-scripts.mjs", import.meta.url).pathname;
 
@@ -48,7 +56,7 @@ test("a project in the subset with allowed keys passes", () => {
   withRoot((root) => {
     const text = [
       "﻿# A comment",
-      "name: Demo # trailing comment",
+      "name: MoonShine # trailing comment",
       "options:",
       "  bundleIdPrefix: dev.demo",
       "  deploymentTarget:",
@@ -179,10 +187,20 @@ test("a flow sequence holds only plain items", () => {
 });
 
 test("# starts a comment only at the start of a line or after a space", () => {
-  assert.deepEqual(check("name: a#b\n"), []);
-  assert.deepEqual(check("name: a # postGenCommand: x\n"), []);
+  const language = (value) => `options:\n  developmentLanguage: ${value}\n`;
+  assert.deepEqual(check(language("a#b")), []);
+  assert.deepEqual(check(language("a # postGenCommand: x")), []);
   assert.deepEqual(check("# postGenCommand: x\n"), []);
-  assert.deepEqual(check("name: 'a # b'\n"), []);
+  assert.deepEqual(check(language("'a # b'")), []);
+});
+
+// H1c: the build removes and regenerates `MoonShine.xcodeproj` only, so another name would leave a
+// project a session planted in place.
+test("the project is named MoonShine", () => {
+  assert.deepEqual(check("name: MoonShine\n"), []);
+  assert.deepEqual(check("name: 'MoonShine'\n"), []);
+  finds("name: Shine\n", 1, "the project is named MoonShine");
+  finds("name: moonshine\n", 1, "the project is named MoonShine");
 });
 
 test("document markers and directives are findings", () => {
@@ -362,7 +380,7 @@ function run(path) {
 test("the command passes clean input and fails on a finding and on a file that is not UTF-8", () => {
   withSigning({ "Signing.xcconfig": tracked }, (root) => {
     const path = join(root, "project.yml");
-    writeFileSync(path, "name: App\n");
+    writeFileSync(path, "name: MoonShine\n");
     assert.equal(run(path).status, 0, run(path).stdout);
     writeFileSync(path, "targets:\n  App:\n    postBuildScripts:\n      - script: echo\n");
     const found = run(path);
@@ -373,5 +391,106 @@ test("the command passes clean input and fails on a finding and on a file that i
     assert.equal(bytes.status, 1);
     assert.ok(bytes.stdout.includes("project.yml:1: a file that is not UTF-8"), bytes.stdout);
     assert.equal(run(join(root, "absent.yml")).status, 2);
+  });
+});
+
+// H1c: what the unsandboxed build reads or writes besides project.yml and the xcconfigs.
+
+const tree = (root) => checkTree(root).map((finding) => `${finding.file}: ${finding.message}`);
+
+/// A temporary root with the folders the build reads, and a folder outside it named `secret-target`.
+function withTree(body) {
+  const outside = mkdtempSync(join(tmpdir(), "secret-target-"));
+  try {
+    return withRoot((root) => {
+      for (const dir of buildFolders) mkdirSync(join(root, dir));
+      writeFileSync(join(root, "Adapters", "Package.resolved"), "{}\n");
+      return body(root, outside);
+    });
+  } finally {
+    rmSync(outside, { recursive: true, force: true });
+  }
+}
+
+test("a clean tree passes, with or without DerivedData and the generated project", () => {
+  withTree((root) => {
+    assert.deepEqual(tree(root), []);
+    mkdirSync(join(root, "MoonShine.xcodeproj"));
+    mkdirSync(join(root, "DerivedData", "Build", "Products"), { recursive: true });
+    mkdirSync(join(root, "Adapters", ".build"));
+    symlinkSync(tmpdir(), join(root, "Adapters", ".build", "link"));
+    assert.deepEqual(tree(root), []);
+  });
+});
+
+test("a link in a folder the build reads is a finding, and the finding never names its target", () => {
+  for (const dir of buildFolders) {
+    withTree((root, outside) => {
+      mkdirSync(join(root, dir, "nested"));
+      symlinkSync(outside, join(root, dir, "nested", "link"));
+      const findings = tree(root);
+      assert.deepEqual(findings, [`${dir}/nested/link: a symbolic link where the unsandboxed build reads`]);
+      assert.ok(!findings.join("\n").includes("secret-target"));
+    });
+  }
+});
+
+// A missing file is left to the pin step, whose copy fails.
+test("Adapters/Package.resolved, when present, is a regular file", () => {
+  withTree((root) => {
+    rmSync(join(root, "Adapters", "Package.resolved"));
+    assert.deepEqual(tree(root), []);
+    mkdirSync(join(root, "Adapters", "Package.resolved"));
+    assert.deepEqual(tree(root), ["Adapters/Package.resolved: not a regular file"]);
+  });
+});
+
+test("another project or a workspace at the root is a finding", () => {
+  for (const name of ["Shine.xcodeproj", "MoonShine.xcworkspace", "Other.xcworkspace"]) {
+    withTree((root) => {
+      mkdirSync(join(root, name));
+      assert.deepEqual(tree(root), [`${name}: a project or workspace other than MoonShine.xcodeproj`]);
+    });
+  }
+});
+
+test("a link at the top of the build's own folders is a finding", () => {
+  for (const name of ["DerivedData", "MoonShine.xcodeproj"]) {
+    withTree((root, outside) => {
+      symlinkSync(outside, join(root, name));
+      assert.deepEqual(tree(root), [`${name}: a symbolic link where the unsandboxed build writes`]);
+    });
+  }
+});
+
+test("a link in DerivedData passes only when it stays inside DerivedData", () => {
+  withTree((root, outside) => {
+    const products = join(root, "DerivedData", "Build", "Products");
+    mkdirSync(products, { recursive: true });
+    mkdirSync(join(root, "DerivedData", "SourcePackages", "checkouts", "pkg", "Sources"), { recursive: true });
+    // A package's own link, as GRDB ships one.
+    symlinkSync("../Sources", join(root, "DerivedData", "SourcePackages", "checkouts", "pkg", "Sources", "self"));
+    assert.deepEqual(tree(root), []);
+    for (const target of [outside, join(outside, "missing"), "../../../outside", "/"]) {
+      const link = join(products, "Debug");
+      symlinkSync(target, link);
+      const findings = tree(root);
+      assert.deepEqual(findings, ["DerivedData/Build/Products/Debug: a symbolic link out of DerivedData"], target);
+      assert.ok(!findings.join("\n").includes("secret-target"));
+      rmSync(link);
+    }
+  });
+});
+
+test("the command reports the tree's findings", () => {
+  withTree((root) => {
+    mkdirSync(join(root, "Configs"), { recursive: true });
+    writeFileSync(join(root, "Configs", "Signing.xcconfig"), tracked);
+    writeFileSync(join(root, "project.yml"), "name: MoonShine\n");
+    assert.equal(run(join(root, "project.yml")).status, 0);
+    mkdirSync(join(root, "Shine.xcodeproj"));
+    const found = run(join(root, "project.yml"));
+    assert.equal(found.status, 1);
+    assert.ok(found.stdout.includes("Shine.xcodeproj: a project or workspace other than"), found.stdout);
   });
 });

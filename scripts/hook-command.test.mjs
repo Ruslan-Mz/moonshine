@@ -148,6 +148,54 @@ test("the template denies writing the local signing settings", () => {
   assert.ok(new Set(template.permissions.deny).has("Edit(**/Configs/*.local.*)"));
 });
 
+// H1c (owner, 2026-11-06): the app is built only through the installed xcbuild, which runs main's
+// check and build script; bare XcodeGen and xcodebuild lose their allow and their sandbox exclusion,
+// and are denied.
+const xcbuild = "/Users/<you>/.config/moonshine/bin/xcbuild";
+
+test("the template builds the app only through the installed xcbuild", () => {
+  const allow = template.permissions.allow;
+  assert.ok(allow.includes(`Bash(${xcbuild} build)`));
+  assert.ok(allow.includes(`Bash(${xcbuild} test)`));
+  assert.deepEqual(
+    allow.filter((rule) => rule.includes("xcbuild")),
+    [`Bash(${xcbuild} build)`, `Bash(${xcbuild} test)`],
+  );
+  const excluded = template.sandbox.excludedCommands;
+  assert.ok(excluded.includes(`${xcbuild} *`));
+  for (const rule of [...allow, ...excluded]) assert.doesNotMatch(rule, /xcodegen|xcodebuild/, rule);
+  const deny = new Set(template.permissions.deny);
+  for (const rule of [
+    "Bash(xcodegen*)",
+    "Bash(xcodebuild*)",
+    "Bash(*/xcodegen*)",
+    "Bash(*/xcodebuild*)",
+    "Bash(xcrun xcodebuild*)",
+  ]) {
+    assert.ok(deny.has(rule), rule);
+  }
+  assert.ok(Object.hasOwn(template._notes, `Bash(${xcbuild} build|test)`));
+});
+
+test("the template allows the four read commands of H1c outside the sandbox, each with its reason", () => {
+  const allow = template.permissions.allow;
+  const excluded = template.sandbox.excludedCommands;
+  for (const command of [
+    "gh pr list",
+    "gh pr list *",
+    "xcrun xcresulttool get test-results *",
+    "gh run view *",
+    "gh run list",
+    "gh run list *",
+  ]) {
+    assert.ok(allow.includes(`Bash(${command})`), command);
+    assert.ok(excluded.includes(command), command);
+  }
+  for (const note of ["gh pr list", "xcrun xcresulttool get test-results", "gh run view, gh run list"]) {
+    assert.ok(Object.hasOwn(template._notes, note), note);
+  }
+});
+
 test("the worktree-only block carries the main checkout's .git rules with placeholders only", () => {
   const block = template._worktreeOnly;
   assert.deepEqual(block.permissions.deny, [

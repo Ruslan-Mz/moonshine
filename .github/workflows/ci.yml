@@ -47,7 +47,7 @@ jobs:
             echo "swift=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          pattern='\.swift$|(^|/)Package\.resolved$|^bridge/|^fixtures/|^project\.yml$|^Configs/|^Apps/|^scripts/(pin-app-packages\.sh|require-tests\.mjs|check-project-scripts\.mjs|check-calendar-isolation\.test\.mjs)$|^\.github/workflows/ci\.yml$'
+          pattern='\.swift$|(^|/)Package\.resolved$|^bridge/|^fixtures/|^project\.yml$|^Configs/|^Apps/|^scripts/(xcbuild\.sh|require-tests\.mjs|check-project-scripts\.mjs|check-calendar-isolation\.test\.mjs)$|^\.github/workflows/ci\.yml$'
           if printf '%s\n' "$changed" | grep -qE "$pattern"; then
             echo "swift=true" >> "$GITHUB_OUTPUT"
           else
@@ -74,9 +74,9 @@ jobs:
           node --test scripts/check-catalog.test.mjs
           node scripts/check-catalog.mjs
 
-      - name: project.yml and its signing settings run no command and read nothing outside the repository (XcodeGen and xcodebuild run outside the sandbox)
+      - name: project.yml, its signing settings and the build tree run no command and read nothing outside the repository (XcodeGen and xcodebuild run outside the sandbox); the one build script
         run: |
-          node --test scripts/check-project-scripts.test.mjs
+          node --test scripts/check-project-scripts.test.mjs scripts/xcbuild.test.mjs
           node scripts/check-project-scripts.mjs
 
       - name: Test steps fail when no test ran
@@ -186,12 +186,8 @@ jobs:
       - name: Mac app tests (Demo mode)
         shell: bash
         run: |
-          node scripts/check-project-scripts.mjs
-          xcodegen generate
-          scripts/pin-app-packages.sh
-          xcodebuild -scheme MoonShineMac -destination platform=macOS,arch=arm64 \
-            -derivedDataPath DerivedData -onlyUsePackageVersionsFromResolvedFile test \
-            2>&1 | tee "$RUNNER_TEMP/app-tests.log"
+          # The script the local build runs (H1c): the check, XcodeGen, the pin, xcodebuild.
+          /bin/sh scripts/xcbuild.sh test 2>&1 | tee "$RUNNER_TEMP/app-tests.log"
           node scripts/require-tests.mjs "$RUNNER_TEMP/app-tests.log" App
 
       - name: Swift format lint
