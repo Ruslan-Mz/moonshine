@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import MoonShineCore
 import MoonShineFixtures
@@ -43,12 +44,14 @@ actor FakeTasks: TaskProvider {
   private var failure: (any Error)?
   private var isOpen: Bool
   private var waiting: [CheckedContinuation<Void, Never>] = []
+  private(set) var calls = 0
 
   init(open: Bool = true) {
     isOpen = open
   }
 
   func snapshot(modifiedSince: Date?) async throws -> TaskSourceSnapshot {
+    calls += 1
     if !isOpen { await withCheckedContinuation { waiting.append($0) } }
     if let failure { throw failure }
     return try await inner.snapshot(modifiedSince: modifiedSince)
@@ -75,6 +78,27 @@ struct OneState: ChangeSignalSource {
       continuation.finish()
     }
   }
+}
+
+/// The signals the test sends after the start, as Live's Mac source would.
+final class PushSource: ChangeSignalSource, Sendable {
+  private let stream: AsyncStream<ChangeSignal>
+  private let continuation: AsyncStream<ChangeSignal>.Continuation
+
+  init() {
+    (stream, continuation) = AsyncStream.makeStream()
+  }
+
+  func signals() -> AsyncStream<ChangeSignal> { stream }
+
+  func send(_ signals: ChangeSignal...) {
+    for signal in signals { continuation.yield(signal) }
+  }
+}
+
+/// Counts the store closes asked for.
+final class Closes: Sendable {
+  let count = Mutex(0)
 }
 
 /// What ⌘R reads as OmniFocus' state now.
@@ -155,13 +179,16 @@ final class RecordingStorage: SettingsStorage {
 private func live(
   _ state: OmniFocusState, tasks: FakeTasks = FakeTasks(),
   store: any Store = InMemoryStore(timeZone: DemoVault.calendar.timeZone),
-  reading: Reading? = nil, clock: ImportClock = DemoEnvironment.clock
+  reading: Reading? = nil, clock: ImportClock = DemoEnvironment.clock,
+  source: (any ChangeSignalSource)? = nil, closes: Closes? = nil
 ) -> AppEnvironment {
   var now: (@Sendable () -> OmniFocusState)?
   if let reading { now = { @Sendable in reading.get() } }
+  var close: (@Sendable () -> Void)?
+  if let closes { close = { @Sendable in closes.count.withLock { $0 += 1 } } }
   return AppEnvironment.make(
     tasks: tasks, notes: DemoVault(), store: store, clock: clock,
-    source: OneState(state: state), omniFocusReading: now)
+    source: source ?? OneState(state: state), omniFocusReading: now, close: close)
 }
 
 /// A store holding one committed launch import of the tracked snapshot.
@@ -354,6 +381,69 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     #expect(model.importOutcomes == 1)
     #expect(model.lastImport?.trigger == .manual)
     #expect(model.omniFocusNote == nil)
+  }
+
+  /// ADR-0011's not-running sentence ends when OmniFocus is seen running again (S4-4b-2).
+  @MainActor @Test func anOmniFocusStartClearsTheNotRunningSentence() async {
+    for (kind, note) in [
+      (ImportFailure.providerNotRunning, nil), (.permissionDenied, .failure(.permissionDenied)),
+    ] as [(ImportFailure, SourceFeed.OmniFocusNote?)] {
+      let (tasks, source) = (FakeTasks(), PushSource())
+      await tasks.fail(KindedError(importFailure: kind))
+      let model = liveModel(live(.background, tasks: tasks, source: source))
+      source.send(.omniFocus(.background))
+      await model.load()
+      #expect(model.lastFailure == kind)
+      source.send(.omniFocus(.notRunning), .omniFocus(.background))
+      await waitFor { model.omniFocusState == .background && model.omniFocusNote == note }
+      #expect(model.omniFocusNote == note, "\(kind)")
+      #expect(model.importOutcomes == 1)
+    }
+  }
+
+  @MainActor @Test func liveImportsNothingWhileDemoIsShownAndASwitchBackImportsOnce() async {
+    let (tasks, source) = (FakeTasks(), PushSource())
+    let model = AppModel(isTestHost: false, settings: CountingSettings(nil)) { selected in
+      selected == .live
+        ? live(.background, tasks: tasks, source: source)
+        : try? AppEnvironment.demo(snapshot: trackedSnapshot)
+    }
+    await model.load()
+    source.send(.omniFocus(.background))
+    model.select(.live)
+    await waitFor { model.importOutcomes == 1 }
+    #expect(await tasks.calls == 1)
+
+    model.select(.demo)
+    await waitFor { model.importOutcomes == 2 }
+    // A leave past its settle and a tick, while Demo is shown: Live stays put.
+    source.send(.omniFocus(.frontmost), .omniFocus(.background), .timer)
+    try? await Task.sleep(for: .seconds(1))
+    source.send(.omniFocus(.frontmost))
+    try? await Task.sleep(for: .milliseconds(100))
+    #expect(await tasks.calls == 1)
+
+    model.select(.live)
+    #expect(model.omniFocusState == .frontmost)
+    await waitFor { model.importOutcomes == 2 }
+    #expect(model.lastImport?.trigger == .manual)
+    try? await Task.sleep(for: .milliseconds(100))
+    #expect(await tasks.calls == 2)
+  }
+
+  @MainActor @Test func quittingClosesEachBuiltStoreOnce() async {
+    let (closes, center) = (Closes(), NotificationCenter())
+    var built: [AppModel.Source] = []
+    let model = AppModel(isTestHost: false, settings: CountingSettings("live")) { selected in
+      built.append(selected)
+      return selected == .live ? live(.background, closes: closes) : nil
+    }
+    model.closeStores(onTerminationOf: center)
+    await model.load()
+    center.post(name: NSApplication.willTerminateNotification, object: nil)
+    center.post(name: NSApplication.willTerminateNotification, object: nil)
+    #expect(closes.count.withLock { $0 } == 1)
+    #expect(built == [.live])
   }
 
   @Test func refreshSendsAStateOnlyWhenRunningChanged() {

@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import MoonShineCore
 import Observation
@@ -65,6 +66,8 @@ final class AppModel {
   private let environments: @MainActor (Source) -> AppEnvironment?
   private let settings: any AppSettings
   private let isTestHost: Bool
+  private var termination: (any NSObjectProtocol)?
+  private var closed = false
 
   /// The unit tests run inside the app (`project.yml`), so every test run launches it.
   nonisolated static var isTestHost: Bool {
@@ -106,7 +109,7 @@ final class AppModel {
 
   /// The app's own: the setting, the bundled Demo and Live in Application Support.
   static func production() -> AppModel {
-    AppModel(settings: StandardSettings()) { source in
+    let model = AppModel(settings: StandardSettings()) { source in
       switch source {
       case .demo:
         DemoEnvironment.bundledSnapshot.flatMap { try? AppEnvironment.demo(snapshot: $0) }
@@ -114,6 +117,25 @@ final class AppModel {
         applicationSupport().flatMap { AppEnvironment.live(base: $0) }
       }
     }
+    model.closeStores(onTerminationOf: .default)
+    return model
+  }
+
+  /// Quit closes every store built, so its data is in the main file (the #46 follow-up). The
+  /// block runs on the posting thread, the main one, before the app exits.
+  func closeStores(onTerminationOf center: NotificationCenter) {
+    termination = center.addObserver(
+      forName: NSApplication.willTerminateNotification, object: nil, queue: nil
+    ) { [weak self] _ in
+      MainActor.assumeIsolated { self?.closeStores() }
+    }
+  }
+
+  /// Once; a source never selected is not built for it.
+  func closeStores() {
+    guard !closed else { return }
+    closed = true
+    for feed in feeds.values { feed.environment?.close?() }
   }
 
   /// The data folder's base; only this entry point and the CLI's name it.
@@ -140,11 +162,13 @@ final class AppModel {
   }
 
   /// The Settings picker. The first selection of a source starts its feed (a launch import);
-  /// a switch back to it imports as ⌘R does (owner, 2026-11-05). A test host never selects Live
-  /// and never writes the setting.
+  /// a switch back to it imports as ⌘R does (owner, 2026-11-05). The source left imports
+  /// nothing until then (owner, 2026-11-07). A test host never selects Live and never writes
+  /// the setting.
   func select(_ new: Source) {
     guard new != source, !(isTestHost && new == .live) else { return }
     settings.setSource(new.rawValue)
+    feeds[source]?.hide()
     source = new
     if let feed = feeds[new] { feed.refresh() } else { feed(for: new).start() }
   }

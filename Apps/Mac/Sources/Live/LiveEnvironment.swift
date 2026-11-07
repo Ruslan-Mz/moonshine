@@ -16,7 +16,8 @@ extension AppEnvironment {
     else { return nil }
     return make(
       tasks: OmniFocusBridge(script: script), notes: NotChosenVault(), store: store,
-      clock: .system, source: RunningOmniFocus(), omniFocusReading: RunningOmniFocus.now)
+      clock: .system, source: MacChangeSignals(), omniFocusReading: RunningOmniFocus.now,
+      close: { try? store.close() })
   }
 }
 
@@ -28,19 +29,12 @@ struct NotChosenVault: NoteProvider {
   }
 }
 
-/// OmniFocus' state once, at launch, then nothing (S4-4b-2 adds the Mac's change signals).
-struct RunningOmniFocus: ChangeSignalSource {
+/// OmniFocus' state now: the change signals' first reading, and ⌘R's resync.
+enum RunningOmniFocus {
   @Sendable static func now() -> OmniFocusState {
     let running = NSRunningApplication.runningApplications(
       withBundleIdentifier: OmniFocusBridge.bundleIdentifier)
     if running.isEmpty { return .notRunning }
     return running.contains(where: \.isActive) ? .frontmost : .background
-  }
-
-  func signals() -> AsyncStream<ChangeSignal> {
-    AsyncStream { continuation in
-      continuation.yield(.omniFocus(Self.now()))
-      continuation.finish()
-    }
   }
 }

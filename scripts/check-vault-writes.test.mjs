@@ -15,6 +15,7 @@ const dataFolder = "Adapters/Sources/SQLiteStore/DataFolder.swift";
 const bridge = "Adapters/Sources/OmniFocusAdapter/OmniFocusBridge.swift";
 const adapter = "Adapters/Sources/ObsidianAdapter/A.swift";
 const app = "Apps/MoonShineMac/Sources/A.swift";
+const signals = "Apps/Mac/Sources/Live/MacChangeSignals.swift";
 
 function run(root) {
   return spawnSync("node", [script, root], { encoding: "utf8" });
@@ -186,6 +187,20 @@ test("an allowed text passes in its own file only", () => {
   fails("try FileManager.default.removeItem(atPath: storePath + suffix)", store);
   fails("let process = Process()", "Adapters/Sources/ObsidianAdapter/ObsidianVault.swift");
   fails("FileHandle.standardError.write(data)", bridge);
+  const observed = [
+    "center: NotificationCenter = NSWorkspace.shared.notificationCenter,",
+    "let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,",
+    "case NSWorkspace.didActivateApplicationNotification: .frontmost",
+    "NSWorkspace.didDeactivateApplicationNotification,",
+    "case NSWorkspace.didLaunchApplicationNotification: .background",
+    "NSWorkspace.didTerminateApplicationNotification,",
+  ];
+  for (const line of observed) {
+    passes(line, signals);
+    fails(line, app);
+  }
+  fails("NSWorkspace.shared.open(url)", signals);
+  fails("NSWorkspace.didActivateApplicationNotification; NSWorkspace.shared.open(url)", signals);
 });
 
 test("an allowed file fails on any other call, also on the same line", () => {

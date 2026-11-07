@@ -29,6 +29,8 @@ final class SourceFeed {
   let environment: AppEnvironment?
   private var starting: Task<Void, Never>?
   private var consumer: Task<Void, Never>?
+  /// The last call to the coordinator from `hide` or `refresh`, so they reach it in order.
+  private var control: Task<Void, Never>?
   private var observers: [any NSObjectProtocol] = []
 
   init(environment: AppEnvironment?) {
@@ -38,8 +40,7 @@ final class SourceFeed {
   /// The clock the import was timed by, so "updated …" counts from the same origin.
   var clock: ImportClock { environment?.clock ?? .system }
 
-  /// In Live's 4c-1 the source gives one state at launch, so a quit seen later shows up only as
-  /// an import that found OmniFocus not running.
+  /// A quit seen only by an import says not running until OmniFocus is seen running again.
   var omniFocusNote: OmniFocusNote? {
     if omniFocusState == .notRunning || lastFailure == .providerNotRunning { return .notRunning }
     return lastFailure.map { .failure($0) }
@@ -69,14 +70,29 @@ final class SourceFeed {
     }
   }
 
-  /// ⌘R, and a switch back to this source. Live first tells the coordinator what OmniFocus'
-  /// state is now.
+  /// ⌘R, and a switch back to this source, which ends a pause. Live first tells the
+  /// coordinator what OmniFocus' state is now, a resync of the held state.
   func refresh() {
     guard let environment else { return }
     let signal = Self.stateSignal(held: omniFocusState, reading: environment.omniFocusReading?())
-    Task {
-      if let signal { await environment.coordinator.handle(signal) }
-      await environment.coordinator.handle(.manual)
+    send { coordinator in
+      await coordinator.setPaused(false)
+      if let signal { await coordinator.handle(signal) }
+      await coordinator.handle(.manual)
+    }
+  }
+
+  /// A source not shown imports nothing and keeps tracking OmniFocus (owner, 2026-11-07).
+  func hide() {
+    send { await $0.setPaused(true) }
+  }
+
+  private func send(_ work: @escaping @Sendable (RefreshCoordinator) async -> Void) {
+    guard let coordinator = environment?.coordinator else { return }
+    let previous = control
+    control = Task {
+      await previous?.value
+      await work(coordinator)
     }
   }
 
@@ -126,6 +142,7 @@ final class SourceFeed {
       break  // The note follows `omniFocusState`.
     case .omniFocusState(let new):
       omniFocusState = new
+      if new != .notRunning, lastFailure == .providerNotRunning { lastFailure = nil }
     }
   }
 
