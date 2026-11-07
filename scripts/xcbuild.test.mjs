@@ -2,7 +2,7 @@
 // Each test runs an installed copy (the script and the check, as the guard installer copies them)
 // in a temporary repository folder, with stub `xcodegen` and `xcodebuild` and a `node` stub that
 // logs and runs this node. Started: /bin/sh, the stubs, node, and the tools the script starts from
-// /usr/bin and /bin (dirname, cmp, rm, mkdir, cp) (CLAUDE.md rule 5).
+// /usr/bin and /bin (dirname, cmp, rm, mkdir, cp, id, getconf, env, find) (CLAUDE.md rule 5).
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
@@ -52,19 +52,23 @@ function setUp() {
     cpSync(join(scripts, file), join(repo, "scripts", file));
     cpSync(join(scripts, file), join(installed, file));
   }
+  // The stubs name the log by its path, so the caller's environment holds only what a test passes.
   const log = join(root, "log");
   writeFileSync(log, "");
-  stub(join(bin, "node"), `echo node >> "$LOG"\nexec '${process.execPath}' "$@"`);
-  stub(join(bin, "xcodegen"), `echo "xcodegen $*" >> "$LOG"\nmkdir -p MoonShine.xcodeproj\n[ -z "\${FAIL_XCODEGEN:-}" ]`);
-  stub(join(bin, "xcodebuild"), `echo "xcodebuild $*" >> "$LOG"\n[ -z "\${FAIL_XCODEBUILD:-}" ]`);
-  stub(join(bin, "xcrun"), `echo "xcrun $*" >> "$LOG"`);
+  stub(join(bin, "node"), `echo node >> '${log}'\nexec '${process.execPath}' "$@"`);
+  stub(
+    join(bin, "xcodegen"),
+    `echo "xcodegen $*" >> '${log}'\n/usr/bin/env > '${root}/env-xcodegen'\nmkdir -p MoonShine.xcodeproj\n[ -z "\${FAIL_XCODEGEN:-}" ]`,
+  );
+  stub(join(bin, "xcodebuild"), `echo "xcodebuild $*" >> '${log}'\n/usr/bin/env > '${root}/env-xcodebuild'\n[ -z "\${FAIL_XCODEBUILD:-}" ]`);
+  stub(join(bin, "xcrun"), `echo "xcrun $*" >> '${log}'`);
   return { root, repo, installed, bin, log, searchOnly: [] };
 }
 
 function run(work, args, { cwd = work.repo, env = {} } = {}) {
   const result = spawnSync("/bin/sh", [join(work.installed, "xcbuild.sh"), ...args], {
     cwd,
-    env: { PATH: `${work.bin}:/usr/bin:/bin`, HOME: work.root, LOG: work.log, ...env },
+    env: { PATH: `${work.bin}:/usr/bin:/bin`, HOME: work.root, ...env },
     encoding: "utf8",
   });
   return { ...result, log: readFileSync(work.log, "utf8").split("\n").filter(Boolean) };
@@ -189,6 +193,40 @@ test("an edited checkout copy warns and never runs: the installed copy does", ()
     }
     assert.ok(result.stderr.includes("Reinstall the guard after the change is merged"), result.stderr);
     assert.ok(result.stdout.includes("the project is named MoonShine"), result.stdout);
+  });
+});
+
+// The owner's env -i run (2026-11-07): XcodeGen needs the user name, which env -i drops.
+// The shell itself sets PWD, OLDPWD, SHLVL and _, so they are left out of the comparison.
+
+function systemTemp() {
+  const result = spawnSync("/usr/bin/getconf", ["DARWIN_USER_TEMP_DIR"], { encoding: "utf8" });
+  return result.status === 0 && result.stdout.trim() !== "" ? result.stdout.trim() : "/tmp";
+}
+
+test("XcodeGen and xcodebuild get exactly HOME, PATH, USER, LOGNAME, TMPDIR and LANG, from the system", () => {
+  withWork((work) => {
+    const caller = { USER: "someone-else", LOGNAME: "someone-else", TMPDIR: "/elsewhere", LANG: "C" };
+    const result = run(work, ["build"], { env: caller });
+    assert.equal(result.status, 0, result.stderr);
+    const user = spawnSync("/usr/bin/id", ["-un"], { encoding: "utf8" }).stdout.trim();
+    for (const tool of ["xcodegen", "xcodebuild"]) {
+      const seen = Object.fromEntries(
+        readFileSync(join(work.root, `env-${tool}`), "utf8")
+          .split("\n")
+          .filter(Boolean)
+          .map((line) => [line.slice(0, line.indexOf("=")), line.slice(line.indexOf("=") + 1)])
+          .filter(([name]) => !["PWD", "OLDPWD", "SHLVL", "_"].includes(name)),
+      );
+      assert.deepEqual(seen, {
+        HOME: work.root,
+        PATH: `${work.bin}:/usr/bin:/bin`,
+        USER: user,
+        LOGNAME: user,
+        TMPDIR: systemTemp(),
+        LANG: "en_US.UTF-8",
+      }, tool);
+    }
   });
 });
 

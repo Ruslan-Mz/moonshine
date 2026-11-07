@@ -17,6 +17,14 @@ fail() {
   exit 2
 }
 
+# The installed wrapper clears the environment to HOME and PATH; XcodeGen needs the user name, and
+# the tools a temporary folder and a locale. They come from the system, never from the caller
+# (the owner's env -i run, 2026-11-07).
+user=$(id -un) || fail "cannot read the user name."
+tmp=$(getconf DARWIN_USER_TEMP_DIR 2> /dev/null) && [ -n "$tmp" ] || tmp=/tmp
+USER=$user LOGNAME=$user TMPDIR=$tmp LANG=en_US.UTF-8
+export USER LOGNAME TMPDIR LANG
+
 [ $# -eq 1 ] || fail "usage: xcbuild build|test|summary"
 case $1 in
   build | test | summary) ;;
