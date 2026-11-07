@@ -79,9 +79,42 @@ private func signals(
     ]
     for (name, isTerminated, state) in table {
       #expect(
-        MacChangeSignals.state(after: name, isTerminated: isTerminated) == state,
+        MacChangeSignals.state(
+          after: name, isTerminated: isTerminated, isActive: false, held: .notRunning) == state,
         "\(name.rawValue) \(isTerminated)")
     }
+  }
+
+  /// L2, 2026-11-07: macOS can post OmniFocus' activate before its launch. A launch takes the
+  /// app's own `isActive`, and never moves a frontmost state to background, which the
+  /// coordinator would take as resign-active.
+  @Test func aLaunchTakesTheAppsActivityAndNeverLeavesTheFront() {
+    let launch = NSWorkspace.didLaunchApplicationNotification
+    let table: [(Bool, OmniFocusState?, OmniFocusState?)] = [
+      (true, .notRunning, .frontmost), (false, .notRunning, .background),
+      (true, nil, .frontmost), (false, nil, .background),
+      (true, .frontmost, nil), (false, .frontmost, nil),
+      (false, .background, .background), (true, .background, .frontmost),
+    ]
+    for (isActive, held, state) in table {
+      #expect(
+        MacChangeSignals.state(after: launch, isTerminated: false, isActive: isActive, held: held)
+          == state, "\(isActive) \(String(describing: held))")
+    }
+  }
+
+  @MainActor @Test func anActivateBeforeTheLaunchStaysFrontmost() async {
+    let (center, gate) = (NotificationCenter(), TickGate())
+    var iterator = signals(center: center, gate: gate, reading: .notRunning).signals()
+      .makeAsyncIterator()
+    #expect(await iterator.next() == .omniFocus(.notRunning))
+    post(NSWorkspace.didActivateApplicationNotification, on: center)
+    post(NSWorkspace.didLaunchApplicationNotification, on: center)
+    #expect(await iterator.next() == .omniFocus(.frontmost))
+    // The next signal is the timer's: the launch gave none.
+    await eventually { await gate.sleepers > 0 }
+    await gate.open()
+    #expect(await iterator.next() == .timer)
   }
 
   @MainActor @Test func theSourceYieldsTheCurrentStateFirstThenOmniFocusChanges() async {

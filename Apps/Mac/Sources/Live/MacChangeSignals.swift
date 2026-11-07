@@ -33,13 +33,17 @@ struct MacChangeSignals: ChangeSignalSource {
     self.sleep = sleep
   }
 
-  /// A launch is background until OmniFocus comes to the front; a deactivate that ends with the
-  /// app is a quit.
-  static func state(after name: Notification.Name, isTerminated: Bool) -> OmniFocusState? {
+  /// A deactivate that ends with the app is a quit. A launch takes the app's own activity and
+  /// never moves a frontmost state to background: macOS can post the activate first (L2,
+  /// 2026-11-07), and the coordinator would take frontmost → background as resign-active.
+  static func state(
+    after name: Notification.Name, isTerminated: Bool, isActive: Bool, held: OmniFocusState?
+  ) -> OmniFocusState? {
     switch name {
     case NSWorkspace.didActivateApplicationNotification: .frontmost
     case NSWorkspace.didDeactivateApplicationNotification: isTerminated ? .notRunning : .background
-    case NSWorkspace.didLaunchApplicationNotification: .background
+    case NSWorkspace.didLaunchApplicationNotification:
+      held == .frontmost ? nil : isActive ? .frontmost : .background
     case NSWorkspace.didTerminateApplicationNotification: .notRunning
     default: nil
     }
@@ -59,12 +63,17 @@ struct MacChangeSignals: ChangeSignalSource {
           guard
             let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
             app.bundleIdentifier == bundleIdentifier,
-            let state = Self.state(after: note.name, isTerminated: app.isTerminated)
+            let state = Self.state(
+              after: note.name, isTerminated: app.isTerminated, isActive: app.isActive,
+              held: MainActor.assumeIsolated { observers.held })
           else { return }
+          MainActor.assumeIsolated { observers.held = state }
           continuation.yield(.omniFocus(state))
         }
       }
-      continuation.yield(.omniFocus(reading()))
+      let now = reading()
+      observers.held = now
+      continuation.yield(.omniFocus(now))
     }
     let (sleep, tick) = (sleep, interval + .seconds(1))
     let timer = Task {
@@ -85,9 +94,10 @@ struct MacChangeSignals: ChangeSignalSource {
   }
 }
 
-/// The observers of one stream, touched on the main actor only.
+/// The observers of one stream and the last state it yielded, touched on the main actor only.
 @MainActor private final class Observers: Sendable {
   var list: [any NSObjectProtocol] = []
+  var held: OmniFocusState?
 
   nonisolated init() {}
 }

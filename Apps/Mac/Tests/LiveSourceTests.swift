@@ -431,6 +431,34 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     #expect(await tasks.calls == 2)
   }
 
+  /// L2, 2026-11-07: an OmniFocus start that macOS posts as activate, then launch, imports
+  /// nothing while OmniFocus is frontmost; a real leave afterwards imports once.
+  @MainActor @Test func anOmniFocusStartSeenAsActivateThenLaunchImportsNothing() async {
+    let (tasks, center) = (FakeTasks(), NotificationCenter())
+    let source = MacChangeSignals(
+      bundleIdentifier: NSRunningApplication.current.bundleIdentifier ?? "", center: center,
+      reading: { .notRunning })
+    let model = liveModel(live(.notRunning, tasks: tasks, source: source))
+    model.start()
+    await waitFor { model.omniFocusState == .notRunning }
+    let info = [NSWorkspace.applicationUserInfoKey: NSRunningApplication.current]
+    for name in [
+      NSWorkspace.didActivateApplicationNotification, NSWorkspace.didLaunchApplicationNotification,
+    ] {
+      center.post(name: name, object: nil, userInfo: info)
+    }
+    // Past the 0.5 s settle a fake leave would have opened.
+    try? await Task.sleep(for: .seconds(1))
+    #expect(model.omniFocusState == .frontmost)
+    #expect(!model.isImporting)
+    #expect(await tasks.calls == 0)
+
+    center.post(name: NSWorkspace.didDeactivateApplicationNotification, object: nil, userInfo: info)
+    await waitFor { model.importOutcomes == 1 }
+    #expect(model.lastImport?.trigger == .resignActive)
+    #expect(await tasks.calls == 1)
+  }
+
   @MainActor @Test func quittingClosesEachBuiltStoreOnce() async {
     let (closes, center) = (Closes(), NotificationCenter())
     var built: [AppModel.Source] = []
