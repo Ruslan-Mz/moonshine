@@ -26,6 +26,14 @@ public struct SQLiteStore: Store {
     try Self.migrator.migrate(writer)
   }
 
+  /// At quit (S4-4b-2): folds the WAL into the main file, then closes every connection. Later
+  /// reads and commits throw.
+  public func close() throws {
+    // GRDB closes the writer before the readers, so its close alone would not fold the WAL in.
+    _ = try writer.writeWithoutTransaction { try $0.checkpoint(.truncate) }
+    try writer.close()
+  }
+
   public func identityMap() async throws -> VersionedIdentityMap {
     try await writer.read { db in
       var entries: [IdentityMap.Key: UUID] = [:]

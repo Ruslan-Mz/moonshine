@@ -23,6 +23,10 @@ public actor RefreshCoordinator {
   private let continuation: AsyncStream<RefreshEvent>.Continuation
   public nonisolated let service: ImportService
   public nonisolated let timerInterval: Duration
+  /// How long a resign-active request waits before it joins, so a quit from the front is seen
+  /// first (S4-4b-2).
+  public nonisolated let settle: Duration
+  private let sleep: @Sendable (Duration) async throws -> Void
 
   /// nil until the first state arrives; requests wait for it.
   private var state: OmniFocusState?
@@ -31,6 +35,12 @@ public actor RefreshCoordinator {
   /// The monotonic start of the last import that committed in this process. Not seeded from
   /// the store: the wall clock can move, and after a relaunch the launch import commits first.
   private var lastCommittedStart: Duration?
+  /// The resign-active request waiting out its settle; nothing starts meanwhile.
+  private(set) var settling: ImportRequest?
+  /// Bumped by every settle, so a settle that ended late cannot take a newer one's request.
+  private var settleTag = 0
+  /// Set while the source is not shown: requests are dropped, states still tracked.
+  private var paused = false
 
   /// The requests that joined while an import ran or before the first state.
   private struct Pending {
@@ -53,10 +63,22 @@ public actor RefreshCoordinator {
   }
 
   /// The interval is at least 15 min (`design/screens/settings.md`).
-  public init(service: ImportService, timerInterval: Duration) {
+  public init(
+    service: ImportService, timerInterval: Duration, settle: Duration = .milliseconds(500),
+    sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+  ) {
     (events, continuation) = AsyncStream.makeStream()
     self.service = service
     self.timerInterval = max(timerInterval, Self.minimumTimerInterval)
+    self.settle = settle
+    self.sleep = sleep
+  }
+
+  /// A source not shown imports nothing and keeps tracking OmniFocus' state (owner,
+  /// 2026-11-07); the switch back imports as ⌘R.
+  public func setPaused(_ paused: Bool) {
+    self.paused = paused
+    decide()
   }
 
   public func handle(_ signal: ChangeSignal) {
@@ -68,7 +90,14 @@ public actor RefreshCoordinator {
       let old = state
       state = new
       if old != new { continuation.yield(.omniFocusState(new)) }
-      if old == .frontmost, new == .background { enqueue(.resignActive) } else { decide() }
+      if old == .frontmost, new == .background {
+        beginSettle()
+      } else {
+        // A quit or a return to OmniFocus within the settle was not a leave: its request never
+        // joins (owner, 2026-11-07).
+        if new != .background { settling = nil }
+        decide()
+      }
     }
   }
 
@@ -80,15 +109,37 @@ public actor RefreshCoordinator {
   }
 
   private func enqueue(_ trigger: ImportTrigger) {
-    let request = ImportRequest(trigger: trigger, signalledAt: service.clock.monotonic())
+    enqueue(ImportRequest(trigger: trigger, signalledAt: service.clock.monotonic()))
+  }
+
+  private func enqueue(_ request: ImportRequest) {
     if pending == nil { pending = Pending(request) } else { pending?.join(request) }
     decide()
   }
 
-  /// Starts or drops the pending request once nothing runs and the state is known.
+  /// The resign-active request is timed from the deactivate, so the settle counts in its wait.
+  private func beginSettle() {
+    settleTag += 1
+    let tag = settleTag
+    settling = ImportRequest(trigger: .resignActive, signalledAt: service.clock.monotonic())
+    let (sleep, settle) = (self.sleep, self.settle)
+    Task {
+      try? await sleep(settle)
+      settled(tag)
+    }
+  }
+
+  private func settled(_ tag: Int) {
+    guard tag == settleTag, let request = settling else { return }
+    settling = nil
+    enqueue(request)
+  }
+
+  /// Starts or drops the pending request once nothing runs or settles and the state is known.
   private func decide() {
-    guard !importing, let state, let pending else { return }
+    guard !importing, settling == nil, let state, let pending else { return }
     self.pending = nil
+    guard !paused else { return }
     switch state {
     case .notRunning:
       if !pending.triggers.isDisjoint(with: [.manual, .launch]) {

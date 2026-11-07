@@ -35,8 +35,10 @@ struct AppEnvironment {
   let store: any Store
   let coordinator: RefreshCoordinator
   let source: any ChangeSignalSource
-  /// Live only: OmniFocus' state now, read on ⌘R (S4-4b-2's signals replace it).
+  /// Live only: OmniFocus' state now, read on ⌘R as a resync of the held state.
   let omniFocusReading: (@Sendable () -> OmniFocusState)?
+  /// Live only: closes the store at quit.
+  let close: (@Sendable () -> Void)?
   /// The import path's clock, so "updated …" counts from the same origin.
   let clock: ImportClock
 
@@ -51,13 +53,14 @@ struct AppEnvironment {
 
   static func make(
     tasks: any TaskProvider, notes: any NoteProvider, store: any Store, clock: ImportClock,
-    source: any ChangeSignalSource, omniFocusReading: (@Sendable () -> OmniFocusState)? = nil
+    source: any ChangeSignalSource, omniFocusReading: (@Sendable () -> OmniFocusState)? = nil,
+    close: (@Sendable () -> Void)? = nil
   ) -> AppEnvironment {
     let service = ImportService(tasks: tasks, notes: notes, store: store, clock: clock)
     return AppEnvironment(
       store: store,
       coordinator: RefreshCoordinator(
         service: service, timerInterval: RefreshCoordinator.minimumTimerInterval),
-      source: source, omniFocusReading: omniFocusReading, clock: clock)
+      source: source, omniFocusReading: omniFocusReading, close: close, clock: clock)
   }
 }

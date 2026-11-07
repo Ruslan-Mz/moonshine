@@ -327,6 +327,39 @@ import Testing
     expectSame(try await SQLiteStore(path: path).workspace(), committed)
   }
 
+  /// The #46 follow-up: after quit the main file alone holds everything, no WAL left behind.
+  @Test func aClosedStoreHoldsEverythingInItsMainFile() async throws {
+    let path = temporaryDatabasePath()
+    let store = try SQLiteStore(path: path)
+    try await run(try fixtureSnapshot(), store, at: first)
+    let committed = try await store.workspace()
+    try store.close()
+    let wal = try? FileManager.default.attributesOfItem(atPath: path + "-wal")[.size] as? Int
+    #expect((wal ?? 0) == 0)
+
+    let copy = temporaryDatabasePath()
+    try FileManager.default.copyItem(atPath: path, toPath: copy)
+    let reopened = try SQLiteStore(path: copy)
+    expectSame(try await reopened.workspace(), committed)
+    #expect(try await reopened.lastCommittedImport()?.trigger == .manual)
+  }
+
+  @Test func aClosedStoreRefusesLaterReads() async throws {
+    let store = try SQLiteStore(path: temporaryDatabasePath())
+    try await run(try fixtureSnapshot(), store, at: first)
+    try store.close()
+    await #expect(throws: (any Error).self) { try await store.workspace() }
+    await #expect(throws: (any Error).self) { try await store.lastCommittedImport() }
+  }
+
+  @Test func aClosedStoreRefusesLaterCommits() async throws {
+    let store = try SQLiteStore(path: temporaryDatabasePath())
+    try store.close()
+    await #expect(throws: (any Error).self) {
+      try await run(try fixtureSnapshot(), store, at: first)
+    }
+  }
+
   @Test func changeLogRecordsInsertsUpdatesAndDeletesButNotUnchangedRows() async throws {
     let store = try SQLiteStore()
     let source = try fixtureSnapshot()

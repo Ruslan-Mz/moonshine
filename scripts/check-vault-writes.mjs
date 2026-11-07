@@ -60,6 +60,16 @@ const allowed = {
   "Apps/Mac/Sources/SourceFeed.swift": [
     "(NSWorkspace.shared.notificationCenter, NSWorkspace.didWakeNotification)",
   ],
+  // Live's change signals observe OmniFocus' activation, launch and quit; they open nothing
+  // (S4-4b-2).
+  "Apps/Mac/Sources/Live/MacChangeSignals.swift": [
+    "NSWorkspace.shared.notificationCenter",
+    "NSWorkspace.applicationUserInfoKey",
+    "NSWorkspace.didActivateApplicationNotification",
+    "NSWorkspace.didDeactivateApplicationNotification",
+    "NSWorkspace.didLaunchApplicationNotification",
+    "NSWorkspace.didTerminateApplicationNotification",
+  ],
 };
 
 // The one file that may use EventKit, read-only.
