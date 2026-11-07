@@ -39,13 +39,16 @@ if [ "$1" = summary ]; then
   done
   newest=
   for bundle in "$root"/DerivedData/Logs/Test/*.xcresult; do
-    [ -e "$bundle" ] || [ -L "$bundle" ] || continue
+    # A link is refused before -e or -nt, which follow it and would tell an outside file's date
+    # (PR #47 round 2).
+    [ ! -L "$bundle" ] || fail "a result bundle is a symbolic link; no summary."
+    [ -e "$bundle" ] || continue
     if [ -z "$newest" ] || [ "$bundle" -nt "$newest" ]; then newest=$bundle; fi
   done
   [ -n "$newest" ] || fail "no test results in DerivedData/Logs/Test; run xcbuild test first."
-  if [ -L "$newest" ] || [ -n "$(find "$newest" -type l -print -quit)" ]; then
-    fail "the newest result bundle is or holds a symbolic link; no summary."
-  fi
+  # A folder find cannot list hides what it holds, so find's failure is a refusal (PR #47 round 2).
+  links=$(find "$newest" -type l -print -quit) || fail "cannot list the newest result bundle; no summary."
+  [ -z "$links" ] || fail "the newest result bundle holds a symbolic link; no summary."
   exec xcrun xcresulttool get test-results summary --path "$newest" --compact
 fi
 

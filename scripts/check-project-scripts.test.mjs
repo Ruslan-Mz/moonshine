@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import {
@@ -548,6 +548,61 @@ test("a link in DerivedData passes only when it stays inside DerivedData", () =>
       assert.ok(!findings.join("\n").includes("secret-target"));
       rmSync(link);
     }
+  });
+});
+
+// PR #47 round 2: a folder the check cannot list (search-only, mode 100) is a finding, never "no
+// links": the unsandboxed build still opens a known name through it. Each test restores the modes
+// before the temporary folders are removed. Root lists every folder, so these tests skip as root.
+const asRoot = process.getuid?.() === 0 && "root lists a search-only folder";
+
+function searchOnly(paths, body) {
+  for (const path of paths) chmodSync(path, 0o100);
+  try {
+    return body();
+  } finally {
+    for (const path of paths) chmodSync(path, 0o755);
+  }
+}
+
+test("a folder the check cannot list is a finding: in a build folder, a project.yml path and DerivedData", { skip: asRoot }, () => {
+  withTree((root, outside) => {
+    const folders = ["Apps/Sources", "docs/probe", "DerivedData/Build"];
+    for (const folder of folders) {
+      mkdirSync(join(root, folder), { recursive: true });
+      symlinkSync(outside, join(root, folder, "link"));
+    }
+    searchOnly(
+      folders.map((folder) => join(root, folder)),
+      () => {
+        const findings = tree(root, ["docs/probe"]);
+        assert.deepEqual(
+          findings,
+          folders.map((folder) => `${folder}: a folder the check cannot list`),
+        );
+        assert.ok(!findings.join("\n").includes("secret-target"));
+      },
+    );
+  });
+});
+
+test("a linked Adapters/Package.resolved is reported directly, also in a folder the check cannot list", { skip: asRoot }, () => {
+  withTree((root, outside) => {
+    writeFileSync(join(root, "Configs", "Signing.xcconfig"), tracked);
+    writeFileSync(join(root, "project.yml"), "name: MoonShine\n");
+    rmSync(join(root, "Adapters", "Package.resolved"));
+    symlinkSync(join(outside, "secret.json"), join(root, "Adapters", "Package.resolved"));
+    assert.deepEqual(tree(root), ["Adapters/Package.resolved: a symbolic link where the unsandboxed build reads"]);
+    searchOnly([join(root, "Adapters")], () => {
+      assert.deepEqual(tree(root), [
+        "Adapters: a folder the check cannot list",
+        "Adapters/Package.resolved: not a regular file",
+      ]);
+      const found = run(join(root, "project.yml"));
+      assert.equal(found.status, 1, found.stdout);
+      assert.ok(found.stdout.includes("Adapters/Package.resolved: not a regular file"), found.stdout);
+      assert.ok(!found.stdout.includes("secret"), found.stdout);
+    });
   });
 });
 

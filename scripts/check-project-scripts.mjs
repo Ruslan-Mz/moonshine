@@ -334,19 +334,21 @@ function lstat(path) {
 const skippedFolders = new Set(["Adapters/.build", "MoonShineCore/.build"]);
 
 /// The links under `dir` as [absolute path, path from the root], not descending into links or into
-/// the folders of `skip`, named by their path from the root.
-function linksUnder(dir, name, skip = new Set()) {
+/// the folders of `skip`, named by their path from the root. A folder it cannot list goes to
+/// `unlisted` by its path from the root: it may hold a link (PR #47 round 2).
+function linksUnder(dir, name, unlisted, skip = new Set()) {
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
   } catch {
+    unlisted(name);
     return [];
   }
   return entries.flatMap((entry) => {
     const path = join(dir, entry.name);
     const child = `${name}/${entry.name}`;
     if (entry.isSymbolicLink()) return [[path, child]];
-    return entry.isDirectory() && !skip.has(child) ? linksUnder(path, child, skip) : [];
+    return entry.isDirectory() && !skip.has(child) ? linksUnder(path, child, unlisted, skip) : [];
   });
 }
 
@@ -356,12 +358,14 @@ function linksUnder(dir, name, skip = new Set()) {
  * `project.yml`, outside `Adapters/.build` and `MoonShineCore/.build`), a link on the way to one
  * (reported and never followed, PR #47 round 1), a project or workspace beside the generated one, a
  * link at `DerivedData` or the generated project, a link inside `DerivedData` out of it (a package's
- * own links stay inside), and `Adapters/Package.resolved` that is not a regular file. A finding
+ * own links stay inside), a folder in either it cannot list (PR #47 round 2), and
+ * `Adapters/Package.resolved` that is not a regular file, a link included. A finding
  * names the link, never its target or anything behind it.
  */
 export function checkTree(root, paths = []) {
   const found = new Map(); // one finding per path, in the order found
   const report = (file, message) => found.has(file) || found.set(file, message);
+  const unlisted = (file) => report(file, "a folder the check cannot list");
   const base = realpathSync(root);
   for (const path of [...buildFolders, ...paths]) {
     const parts = path.split("/").filter((part) => part !== "" && part !== ".");
@@ -371,14 +375,15 @@ export function checkTree(root, paths = []) {
       if (stat?.isSymbolicLink()) report(name, "a symbolic link where the unsandboxed build reads");
       if (!stat?.isDirectory()) break;
       if (index === parts.length - 1) {
-        for (const [, link] of linksUnder(join(base, name), name, skippedFolders)) {
+        for (const [, link] of linksUnder(join(base, name), name, unlisted, skippedFolders)) {
           report(link, "a symbolic link where the unsandboxed build reads");
         }
       }
     }
   }
+  // Checked directly too, so a folder the walk cannot list does not hide a link here (PR #47 round 2).
   const resolved = lstat(join(base, "Adapters", "Package.resolved"));
-  if (resolved && !resolved.isFile() && !resolved.isSymbolicLink()) report("Adapters/Package.resolved", "not a regular file");
+  if (resolved && !resolved.isFile()) report("Adapters/Package.resolved", "not a regular file");
   for (const name of readdirSync(base).sort()) {
     if (/\.(?:xcodeproj|xcworkspace)$/.test(name) && name !== generatedProject) {
       report(name, `a project or workspace other than ${generatedProject}`);
@@ -393,7 +398,7 @@ export function checkTree(root, paths = []) {
       const rest = relative(derived, path);
       return !(rest === ".." || rest.startsWith(`..${sep}`) || isAbsolute(rest));
     };
-    for (const [path, name] of linksUnder(derived, "DerivedData")) {
+    for (const [path, name] of linksUnder(derived, "DerivedData", unlisted)) {
       let real = null;
       try {
         real = realpathSync(path);

@@ -103,4 +103,4 @@ git config core.hooksPath "$dir/hooks"
 
 echo "install-guard: guard installed in $dir from origin's main $main; core.hooksPath set for $top."
 echo "install-guard: gh-post is $dir/bin/gh-post; scratchpad roots under $base."
-echo "install-guard: the build is $dir/bin/xcbuild build|test, run from a checkout's root."
+echo "install-guard: the build is $dir/bin/xcbuild build|test|summary, run from a checkout's root."

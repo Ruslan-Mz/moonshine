@@ -58,7 +58,7 @@ function setUp() {
   stub(join(bin, "xcodegen"), `echo "xcodegen $*" >> "$LOG"\nmkdir -p MoonShine.xcodeproj\n[ -z "\${FAIL_XCODEGEN:-}" ]`);
   stub(join(bin, "xcodebuild"), `echo "xcodebuild $*" >> "$LOG"\n[ -z "\${FAIL_XCODEBUILD:-}" ]`);
   stub(join(bin, "xcrun"), `echo "xcrun $*" >> "$LOG"`);
-  return { root, repo, installed, bin, log };
+  return { root, repo, installed, bin, log, searchOnly: [] };
 }
 
 function run(work, args, { cwd = work.repo, env = {} } = {}) {
@@ -75,6 +75,7 @@ function withWork(body) {
   try {
     return body(work);
   } finally {
+    for (const path of work.searchOnly) chmodSync(path, 0o755);
     rmSync(work.root, { recursive: true, force: true });
   }
 }
@@ -262,7 +263,7 @@ test("summary refuses a link anywhere on the bundle's path or inside it, and nev
       rmSync(join(work.repo, "DerivedData", "Logs", "Test"), { recursive: true });
       symlinkSync(outside, join(work.repo, "DerivedData", "Logs", "Test"));
     }],
-    ["the newest result bundle", (work, outside, folder) => {
+    ["a result bundle is a symbolic link", (work, outside, folder) => {
       const link = join(folder, "Test-Z.xcresult");
       symlinkSync(outside, link);
       const time = new Date(Date.UTC(2026, 10, 7));
@@ -282,6 +283,47 @@ test("summary refuses a link anywhere on the bundle's path or inside it, and nev
       assert.equal(result.status, 2, `${named}: ${result.stderr}`);
       assert.ok(result.stderr.includes(named), result.stderr);
       assert.ok(!`${result.stdout}${result.stderr}`.includes("secret-target"), result.stderr);
+      assert.deepEqual(result.log, []);
+    });
+  }
+});
+
+// PR #47 round 2.
+
+test("summary refuses a linked bundle before it looks at the target: older or dangling, the same outcome", () => {
+  for (const target of ["older", "dangling"]) {
+    withWork((work) => {
+      const folder = withResults(work, ["Test-A.xcresult"]);
+      const outside = join(work.root, "secret-target");
+      if (target === "older") {
+        mkdirSync(outside);
+        const time = new Date(Date.UTC(2020, 0, 1));
+        utimesSync(outside, time, time);
+      }
+      symlinkSync(outside, join(folder, "Test-B.xcresult"));
+      const result = run(work, ["summary"]);
+      assert.equal(result.status, 2, `${target}: ${result.stderr}`);
+      assert.ok(result.stderr.includes("a result bundle is a symbolic link"), result.stderr);
+      assert.ok(!`${result.stdout}${result.stderr}`.includes("secret-target"), result.stderr);
+      assert.deepEqual(result.log, []);
+    });
+  }
+});
+
+// Root lists every folder, so this test skips as root.
+test("summary refuses a bundle it cannot list, or one with a folder it cannot list", { skip: process.getuid?.() === 0 && "root" }, () => {
+  for (const locked of ["Test-A.xcresult", "Test-A.xcresult/Data"]) {
+    withWork((work) => {
+      const folder = withResults(work, ["Test-A.xcresult"]);
+      const outside = join(work.root, "secret-target");
+      mkdirSync(outside);
+      mkdirSync(join(folder, "Test-A.xcresult", "Data"));
+      symlinkSync(join(outside, "Info.plist"), join(folder, locked, "Info.plist"));
+      chmodSync(join(folder, locked), 0o100);
+      work.searchOnly.push(join(folder, locked));
+      const result = run(work, ["summary"]);
+      assert.equal(result.status, 2, `${locked}: ${result.stderr}`);
+      assert.ok(result.stderr.includes("cannot list the newest result bundle"), result.stderr);
       assert.deepEqual(result.log, []);
     });
   }
