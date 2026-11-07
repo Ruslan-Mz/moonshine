@@ -132,10 +132,13 @@ private func signals(
     }
     var states: [ChangeSignal?] = []
     for _ in 0..<4 { states.append(await iterator.next()) }
+    // The posts carry the test host's own app: its launch takes the host's activity, which
+    // is frontmost on a CI runner and background on a desktop.
+    let launched: OmniFocusState = NSRunningApplication.current.isActive ? .frontmost : .background
     #expect(
       states == [
         .omniFocus(.frontmost), .omniFocus(.background), .omniFocus(.notRunning),
-        .omniFocus(.background),
+        .omniFocus(launched),
       ])
   }
 
