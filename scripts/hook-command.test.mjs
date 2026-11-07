@@ -148,6 +148,69 @@ test("the template denies writing the local signing settings", () => {
   assert.ok(new Set(template.permissions.deny).has("Edit(**/Configs/*.local.*)"));
 });
 
+// H1c (owner, 2026-11-06): the app is built only through the installed xcbuild, which runs main's
+// check and build script; bare XcodeGen and xcodebuild lose their allow and their sandbox exclusion,
+// and are denied.
+const xcbuild = "/Users/<you>/.config/moonshine/bin/xcbuild";
+
+test("the template builds the app only through the installed xcbuild", () => {
+  const allow = template.permissions.allow;
+  assert.deepEqual(
+    allow.filter((rule) => rule.includes("xcbuild")),
+    [`Bash(${xcbuild} build)`, `Bash(${xcbuild} test)`, `Bash(${xcbuild} summary)`],
+  );
+  const excluded = template.sandbox.excludedCommands;
+  assert.ok(excluded.includes(`${xcbuild} *`));
+  for (const rule of [...allow, ...excluded]) assert.doesNotMatch(rule, /xcodegen|xcodebuild/, rule);
+  const deny = new Set(template.permissions.deny);
+  for (const rule of [
+    "Bash(xcodegen*)",
+    "Bash(xcodebuild*)",
+    "Bash(*/xcodegen*)",
+    "Bash(*/xcodebuild*)",
+    "Bash(xcrun xcodebuild*)",
+  ]) {
+    assert.ok(deny.has(rule), rule);
+  }
+  assert.ok(Object.hasOwn(template._notes, `Bash(${xcbuild} build|test|summary)`));
+  // CLAUDE.md § Git: a new deny rule names the steps that run its paths.
+  const denyNote =
+    template._notes["Bash(xcodegen*), Bash(xcodebuild*), Bash(*/xcodegen*), Bash(*/xcodebuild*), Bash(xcrun xcodebuild*)"];
+  assert.match(denyNote ?? "", /Normal steps that run these paths: none/);
+});
+
+// PR #47 round 1 (owner, 2026-11-06): xcresulttool outside the sandbox echoed expanded file names
+// for any path; the summary goes through `xcbuild summary`, which takes no path.
+test("no rule runs xcresulttool directly", () => {
+  for (const rule of [...template.permissions.allow, ...template.sandbox.excludedCommands]) {
+    assert.doesNotMatch(rule, /xcresulttool/, rule);
+  }
+});
+
+test("the template allows the three gh read commands of H1c outside the sandbox, each with its reason", () => {
+  const allow = template.permissions.allow;
+  const excluded = template.sandbox.excludedCommands;
+  for (const command of ["gh pr list", "gh pr list *", "gh run view *", "gh run list", "gh run list *"]) {
+    assert.ok(allow.includes(`Bash(${command})`), command);
+    assert.ok(excluded.includes(command), command);
+  }
+  for (const note of ["gh pr list", "gh run view, gh run list"]) {
+    assert.ok(Object.hasOwn(template._notes, note), note);
+  }
+});
+
+// PR #47 round 1 (owner, 2026-11-06): a reviewer created and removed folders in the main checkout.
+test("/review-pr and its agents write only in their own worktree or the scratchpad", () => {
+  const skill = readFileSync(join(repository, ".claude/skills/review-pr/SKILL.md"), "utf8");
+  assert.match(skill, /\*\*Writes stay in a worktree or the scratchpad\*\*/);
+  assert.match(skill, /Reviewers and verifiers write only inside their own worktree or the session scratchpad, and plant fixtures there/);
+  for (const agent of ["pr-reviewer.md", "review-verifier.md"]) {
+    const text = readFileSync(join(repository, ".claude/agents", agent), "utf8");
+    assert.match(text, /\*\*Write only in your own worktree or the session scratchpad\*\*/, agent);
+    assert.match(text, /Never create, change or remove a file or folder in the main checkout/, agent);
+  }
+});
+
 test("the worktree-only block carries the main checkout's .git rules with placeholders only", () => {
   const block = template._worktreeOnly;
   assert.deepEqual(block.permissions.deny, [

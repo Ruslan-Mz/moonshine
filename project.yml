@@ -1,5 +1,5 @@
-# XcodeGen spec for the Mac app (ADR-0007). `xcodegen generate` writes `MoonShine.xcodeproj`,
-# which is not committed; `scripts/pin-app-packages.sh` then copies the pinned package versions.
+# XcodeGen spec for the Mac app (ADR-0007). `scripts/xcbuild.sh` checks it, generates
+# `MoonShine.xcodeproj` (not committed), copies the pinned package versions and builds.
 name: MoonShine
 options:
   bundleIdPrefix: dev.moonshine

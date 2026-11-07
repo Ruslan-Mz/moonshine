@@ -7,14 +7,19 @@
       "Bash(gh pr view *)",
       "Bash(gh pr diff *)",
       "Bash(gh pr checks *)",
+      "Bash(gh pr list)",
+      "Bash(gh pr list *)",
+      "Bash(gh run view *)",
+      "Bash(gh run list)",
+      "Bash(gh run list *)",
       "Bash(gh api repos/Ruslan-Mz/moonshine/*)",
       "Bash(git branch -d *)",
       "Bash(git worktree prune)",
       "Bash(swift test *)",
       "Bash(swift build *)",
-      "Bash(xcodegen generate)",
-      "Bash(xcodebuild -scheme MoonShineMac -destination platform=macOS,arch=arm64 -derivedDataPath DerivedData -onlyUsePackageVersionsFromResolvedFile test)",
-      "Bash(xcodebuild -scheme MoonShineMac -destination platform=macOS,arch=arm64 -derivedDataPath DerivedData -onlyUsePackageVersionsFromResolvedFile build)"
+      "Bash(/Users/<you>/.config/moonshine/bin/xcbuild build)",
+      "Bash(/Users/<you>/.config/moonshine/bin/xcbuild test)",
+      "Bash(/Users/<you>/.config/moonshine/bin/xcbuild summary)"
     ],
     "deny": [
       "Edit(**/.git/config)",
@@ -101,9 +106,11 @@
       "Bash(git update-ref -d refs/heads/*)",
       "Bash(git update-ref -d refs/tags/*)",
       "Bash(git update-ref -d refs/remotes/origin/*)",
-      "Bash(xcodebuild *-allowProvisioning*)",
-      "Bash(xcodebuild *rchive*)",
-      "Bash(xcodebuild *otariz*)"
+      "Bash(xcodegen*)",
+      "Bash(xcodebuild*)",
+      "Bash(*/xcodegen*)",
+      "Bash(*/xcodebuild*)",
+      "Bash(xcrun xcodebuild*)"
     ],
     "ask": [
       "Bash(dangerouslyDisableSandbox:true)",
@@ -123,11 +130,15 @@
       "swift",
       "swift test *",
       "swift build *",
-      "xcodegen generate",
-      "xcodebuild *",
+      "/Users/<you>/.config/moonshine/bin/xcbuild *",
       "gh pr view *",
       "gh pr diff *",
       "gh pr checks *",
+      "gh pr list",
+      "gh pr list *",
+      "gh run view *",
+      "gh run list",
+      "gh run list *",
       "gh api *",
       "/Users/<you>/.config/moonshine/bin/gh-post *",
       "git fetch origin",
@@ -144,7 +155,11 @@
     }
   },
   "_notes": {
-    "Edit(**/Configs/*.local.*)": "S4-4c-1 (owner, 2026-11-05): only the owner writes Configs/Signing.local.xcconfig, which the unsandboxed xcodegen and xcodebuild read; no normal step (commit, branch, fetch, push, git worktree add or remove for /review-pr, build, tests, npm, the installer) writes it, so the rule adds no prompt. It leaves its class open (owner, 2026-11-06, PR #46 round 1): the tracked Configs/Signing.xcconfig, project.yml and the generated MoonShine.xcodeproj stay writable by a session and are read by the unsandboxed xcodegen and xcodebuild. That is the class H1a accepted for project.yml: guarded in CI by scripts/check-project-scripts.mjs, a command locally. A deny on *.xcodeproj is not possible: scripts/pin-app-packages.sh writes into it from the sandbox. The class-level fix is a separate follow-up."
+    "Edit(**/Configs/*.local.*)": "S4-4c-1 (owner, 2026-11-05): only the owner writes Configs/Signing.local.xcconfig, which the unsandboxed xcodegen and xcodebuild read; no normal step (commit, branch, fetch, push, git worktree add or remove for /review-pr, build, tests, npm, the installer) writes it, so the rule adds no prompt. Its class (owner, 2026-11-06, PR #46 round 1: the tracked Configs/Signing.xcconfig, project.yml and the generated MoonShine.xcodeproj, writable by a session and read by the unsandboxed build) is closed by H1c: the build runs only through the installed xcbuild, which runs main's check first and generates the project afresh. What H1c leaves open is in CLAUDE.md § Git.",
+    "Bash(/Users/<you>/.config/moonshine/bin/xcbuild build|test|summary)": "H1c (owner, 2026-11-06): the only way to build or test the app, and to read its test summary. The guard installer writes it from main's scripts/xcbuild.sh and scripts/check-project-scripts.mjs, outside the checkout where a session cannot write; it clears the environment, checks project.yml, the signing settings and the build tree, removes and generates MoonShine.xcodeproj, pins the packages and runs xcodebuild with fixed flags. `summary` (PR #47 round 1) takes no path: it reads the newest DerivedData/Logs/Test/*.xcresult, refuses a link on its path or inside it, and runs xcresulttool's summary on it; xcresulttool needs the system temporary folder (PR #45), so it runs outside the sandbox with the rest. No rule allows xcresulttool itself: with a path argument it echoed expanded file names from outside the repository. The same class stays open for `swift build *` and `swift test *` on main; H1d narrows it. It runs outside the sandbox (excludedCommands) like xcodebuild did. Reinstall the guard after a merged change to either script, and after node's folder changes; the build warns when the checkout's copy differs, and never runs it.",
+    "Bash(xcodegen*), Bash(xcodebuild*), Bash(*/xcodegen*), Bash(*/xcodebuild*), Bash(xcrun xcodebuild*)": "H1c (owner, 2026-11-06). Scenario closed: a session running XcodeGen or xcodebuild itself, on files it wrote, outside the sandbox. The class is closed by removing their sandbox exclusion: any other spelling (env xcodebuild, a copy of the binary) runs inside the sandbox, where it cannot escape; the denies refuse the usual spellings at once instead of failing slowly. Normal steps that run these paths: none; build and test go through xcbuild, and commit, branch, fetch, push, git worktree add or remove for /review-pr, npm, swift test and the installer run neither. No prompt is added.",
+    "gh pr list": "H1c (owner, 2026-11-06): read the open PRs before creating one. Outside the sandbox for the same reason as gh pr view: inside it, gh cannot read its own config and login in the home folder.",
+    "gh run view, gh run list": "H1c (owner, 2026-11-06): read CI runs. Outside the sandbox like gh pr view (gh's config and login in the home folder)."
   },
   "_worktreeOnly": {
     "_note": "Only for a parallel author session's sibling worktree ../moonshine-<n>, which the owner creates (CLAUDE.md § Git). In that worktree's copy, merge these entries into permissions.deny and sandbox.filesystem, fill in the placeholders with the main checkout's path (except `<repo>` in env.npm_config_cache, which is the checkout this file lives in: the worktree may write only its own folder), and delete this key; in the main checkout's copy, just delete it. Never commit a real path: the owner's home path is on the deny-list.",

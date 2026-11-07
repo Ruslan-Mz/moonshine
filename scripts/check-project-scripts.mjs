@@ -27,12 +27,15 @@
 // (`NAME[sdk=…]`); the tracked file may hold only `CODE_SIGN_IDENTITY = -`,
 // `CODE_SIGN_STYLE = Manual` and one `#include? "Signing.local.xcconfig"`, the local file no
 // include. Its findings name a line and a kind, never a name or a value from the file: the
-// local file holds the owner's team id. Locally this is a command, not a guard.
+// local file holds the owner's team id. The project is named MoonShine, and the command also checks
+// the tree the build reads and writes (`checkTree`). The build runs it first (`scripts/xcbuild.sh`);
+// locally the copy the guard installer took from main (H1c), never the checkout's.
 // Usage: node scripts/check-project-scripts.mjs [file] (default `project.yml`).
-// Exit 0 clean, 1 with `file:line: reason` per finding, 2 when the file cannot be read.
+// Exit 0 clean, 1 with `file:line: reason` per finding (`path: reason` for the build tree, which
+// has no line), 2 when the file cannot be read.
 
-import { lstatSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { dirname, join, relative, isAbsolute, sep } from "node:path";
+import { lstatSync, readdirSync, readFileSync, readlinkSync, realpathSync, statSync } from "node:fs";
+import { dirname, join, relative, resolve, isAbsolute, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
 /** Keys that run a command, read another spec or point at a build tool. */
@@ -72,6 +75,7 @@ const PATH = "path";
 const VALUES = "values";
 const BUILD = "build settings";
 const CONFIG = "signing config";
+const NAME = "project name";
 const settings = { base: BUILD };
 export const signingConfig = "Configs/Signing.xcconfig";
 const localConfig = "Configs/Signing.local.xcconfig";
@@ -80,7 +84,7 @@ const signingSettings = new Set(["CODE_SIGN_IDENTITY", "CODE_SIGN_STYLE", "DEVEL
 // repository (owner, 2026-11-06, PR #46 round 1).
 const trackedSettings = new Set(["CODE_SIGN_IDENTITY = -", "CODE_SIGN_STYLE = Manual"]);
 const schema = {
-  name: VALUE,
+  name: NAME,
   configFiles: { Debug: CONFIG, Release: CONFIG },
   options: {
     bundleIdPrefix: VALUE,
@@ -108,15 +112,18 @@ const flowItem = /^[^:?#[\]{}&*!'",\s](?:[^:?#[\]{}&*!'",]*[^:?#[\]{}&*!'",\s])?
 
 class Stop extends Error {}
 
-/** Findings for the text of a `project.yml` whose folder is `root`, as `{ line, message }`. */
-export function checkProject(text, root) {
+/**
+ * Findings for the text of a `project.yml` whose folder is `root`, as `{ line, message }`. Every
+ * `path` it accepts is added to `paths`, for `checkTree`.
+ */
+export function checkProject(text, root, paths = []) {
   const findings = [];
   const fail = (line, message) => {
     findings.push({ line, message });
     throw new Stop();
   };
   try {
-    walk(parse(text, fail), schema, findings, root);
+    walk(parse(text, fail), schema, findings, root, paths);
   } catch (error) {
     if (!(error instanceof Stop)) throw error;
   }
@@ -221,16 +228,21 @@ function parse(text, fail) {
   return root;
 }
 
-function walk(node, rule, findings, root) {
+function walk(node, rule, findings, root, paths) {
   const report = (line, message) => findings.push({ line, message });
   if (node === null) return;
-  if (rule === VALUE || rule === PATH || rule === VALUES || rule === CONFIG) {
+  if (rule === VALUE || rule === PATH || rule === VALUES || rule === CONFIG || rule === NAME) {
     if (node.kind !== "value" && !(rule === VALUES && node.kind === "values")) {
       report(node.line, "this key takes a single value");
+    } else if (rule === NAME && node.text !== "MoonShine") {
+      // The build regenerates MoonShine.xcodeproj only (H1c).
+      report(node.line, "the project is named MoonShine");
     } else if (rule === CONFIG && node.text !== signingConfig) {
       report(node.line, `configFiles names ${signingConfig} only`);
     } else if (rule === PATH && !insideRepository(node.text, root)) {
       report(node.line, "a path outside the repository (relative, no `..` or `$`, inside it after symlinks, not its root)");
+    } else if (rule === PATH) {
+      paths.push(node.text);
     }
     return;
   }
@@ -238,7 +250,7 @@ function walk(node, rule, findings, root) {
     if (node.kind !== "seq") return report(node.line, "this key takes a sequence");
     for (const item of node.items) {
       if (rule[0] !== VALUE && item.kind !== "map") report(item.line, "this sequence takes mapping items");
-      else walk(item, rule[0], findings, root);
+      else walk(item, rule[0], findings, root, paths);
     }
     return;
   }
@@ -250,9 +262,9 @@ function walk(node, rule, findings, root) {
       if (key === "CC" || key.endsWith("_EXEC")) report(entry.line, `build setting ${key} names a tool to run`);
       else if (!buildSettingNames.has(key) && !key.startsWith("INFOPLIST_KEY_")) {
         report(entry.line, `build setting ${key} is not on the allowlist`);
-      } else walk(entry.node, VALUE, findings, root);
+      } else walk(entry.node, VALUE, findings, root, paths);
     } else if (Object.hasOwn(rule, key) || Object.hasOwn(rule, "*")) {
-      walk(entry.node, Object.hasOwn(rule, key) ? rule[key] : rule["*"], findings, root);
+      walk(entry.node, Object.hasOwn(rule, key) ? rule[key] : rule["*"], findings, root, paths);
     } else {
       report(entry.line, `${key} is not allowed here`);
     }
@@ -306,6 +318,101 @@ export function checkSigning(root) {
   return findings;
 }
 
+/** Folders the build reads as they are: `project.yml`'s paths, the packages and the signing settings. */
+export const buildFolders = ["Apps", "Adapters", "MoonShineCore", "Configs", "fixtures", "bridge"];
+const generatedProject = "MoonShine.xcodeproj";
+
+function lstat(path) {
+  try {
+    return lstatSync(path);
+  } catch {
+    return null;
+  }
+}
+
+/// The packages' own build output, which the app build does not read; no other `.build` is skipped.
+const skippedFolders = new Set(["Adapters/.build", "MoonShineCore/.build"]);
+
+/// The links under `dir` as [absolute path, path from the root], not descending into links or into
+/// the folders of `skip`, named by their path from the root. A folder it cannot list goes to
+/// `unlisted` by its path from the root: it may hold a link (PR #47 round 2).
+function linksUnder(dir, name, unlisted, skip = new Set()) {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    unlisted(name);
+    return [];
+  }
+  return entries.flatMap((entry) => {
+    const path = join(dir, entry.name);
+    const child = `${name}/${entry.name}`;
+    if (entry.isSymbolicLink()) return [[path, child]];
+    return entry.isDirectory() && !skip.has(child) ? linksUnder(path, child, unlisted, skip) : [];
+  });
+}
+
+/**
+ * Findings for the tree the unsandboxed build reads and writes (H1c, `scripts/xcbuild.sh`), as
+ * `{ file, message }`: a link in a folder it reads (the fixed `buildFolders` and every `path` of
+ * `project.yml`, outside `Adapters/.build` and `MoonShineCore/.build`), a link on the way to one
+ * (reported and never followed, PR #47 round 1), a project or workspace beside the generated one, a
+ * link at `DerivedData` or the generated project, a link inside `DerivedData` out of it (a package's
+ * own links stay inside), a folder in either it cannot list (PR #47 round 2), and
+ * `Adapters/Package.resolved` that is not a regular file, a link included. A finding
+ * names the link, never its target or anything behind it.
+ */
+export function checkTree(root, paths = []) {
+  const found = new Map(); // one finding per path, in the order found
+  const report = (file, message) => found.has(file) || found.set(file, message);
+  const unlisted = (file) => report(file, "a folder the check cannot list");
+  const base = realpathSync(root);
+  for (const path of [...buildFolders, ...paths]) {
+    const parts = path.split("/").filter((part) => part !== "" && part !== ".");
+    for (const [index] of parts.entries()) {
+      const name = parts.slice(0, index + 1).join("/");
+      const stat = lstat(join(base, name));
+      if (stat?.isSymbolicLink()) report(name, "a symbolic link where the unsandboxed build reads");
+      if (!stat?.isDirectory()) break;
+      if (index === parts.length - 1) {
+        for (const [, link] of linksUnder(join(base, name), name, unlisted, skippedFolders)) {
+          report(link, "a symbolic link where the unsandboxed build reads");
+        }
+      }
+    }
+  }
+  // Checked directly too, so a folder the walk cannot list does not hide a link here (PR #47 round 2).
+  const resolved = lstat(join(base, "Adapters", "Package.resolved"));
+  if (resolved && !resolved.isFile()) report("Adapters/Package.resolved", "not a regular file");
+  for (const name of readdirSync(base).sort()) {
+    if (/\.(?:xcodeproj|xcworkspace)$/.test(name) && name !== generatedProject) {
+      report(name, `a project or workspace other than ${generatedProject}`);
+    }
+  }
+  for (const name of ["DerivedData", generatedProject]) {
+    if (lstat(join(base, name))?.isSymbolicLink()) report(name, "a symbolic link where the unsandboxed build writes");
+  }
+  const derived = join(base, "DerivedData");
+  if (lstat(derived)?.isDirectory()) {
+    const inside = (path) => {
+      const rest = relative(derived, path);
+      return !(rest === ".." || rest.startsWith(`..${sep}`) || isAbsolute(rest));
+    };
+    for (const [path, name] of linksUnder(derived, "DerivedData", unlisted)) {
+      let real = null;
+      try {
+        real = realpathSync(path);
+      } catch {
+        // dangling: its written target decides
+      }
+      if (!inside(resolve(dirname(path), readlinkSync(path))) || (real !== null && !inside(real))) {
+        report(name, "a symbolic link out of DerivedData");
+      }
+    }
+  }
+  return [...found].map(([file, message]) => ({ file, message }));
+}
+
 function insideRepository(path, root) {
   if (path === "" || /^[/~]/.test(path) || path.includes("$") || path.split("/").includes("..")) return false;
   try {
@@ -328,18 +435,23 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
     process.exit(2);
   }
   let findings;
+  const paths = [];
   try {
-    findings = checkProject(new TextDecoder("utf-8", { fatal: true }).decode(bytes), dirname(path));
+    findings = checkProject(new TextDecoder("utf-8", { fatal: true }).decode(bytes), dirname(path), paths);
   } catch {
     findings = [{ line: 1, message: "a file that is not UTF-8" }];
   }
-  findings = findings.map((finding) => ({ file: "project.yml", ...finding })).concat(checkSigning(dirname(path)));
+  findings = findings
+    .map((finding) => ({ file: "project.yml", ...finding }))
+    .concat(checkSigning(dirname(path)), checkTree(dirname(path), paths));
   if (findings.length) {
     console.log(
-      "project.yml and its signing settings must not run commands or read outside the repository (CLAUDE.md → Commands):",
+      "project.yml, its signing settings and the build tree must not run commands or read or write outside the repository (CLAUDE.md → Commands):",
     );
-    for (const finding of findings) console.log(`${finding.file}:${finding.line}: ${finding.message}`);
+    for (const finding of findings) {
+      console.log(`${finding.line ? `${finding.file}:${finding.line}` : finding.file}: ${finding.message}`);
+    }
     process.exit(1);
   }
-  console.log("project.yml: in the subset, allowed keys only, paths inside the repository; signing settings clean");
+  console.log("project.yml: in the subset, allowed keys only, paths inside the repository; signing settings and build tree clean");
 }
