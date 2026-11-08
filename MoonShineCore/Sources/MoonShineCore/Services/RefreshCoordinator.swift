@@ -24,8 +24,9 @@ public actor RefreshCoordinator {
   public nonisolated let service: ImportService
   public nonisolated let timerInterval: Duration
   /// How long a resign-active request waits before it joins, so a quit from the front is seen
-  /// first (S4-4b-2).
+  /// first (S4-4b-2). At most 2 s: nothing starts meanwhile, ⌘R included.
   public nonisolated let settle: Duration
+  public static let maximumSettle: Duration = .seconds(2)
   private let sleep: @Sendable (Duration) async throws -> Void
 
   /// nil until the first state arrives; requests wait for it.
@@ -62,7 +63,7 @@ public actor RefreshCoordinator {
     }
   }
 
-  /// The interval is at least 15 min (`design/screens/settings.md`).
+  /// The interval is at least 15 min (`design/screens/settings.md`); the settle is 0…2 s.
   public init(
     service: ImportService, timerInterval: Duration, settle: Duration = .milliseconds(500),
     sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
@@ -70,7 +71,7 @@ public actor RefreshCoordinator {
     (events, continuation) = AsyncStream.makeStream()
     self.service = service
     self.timerInterval = max(timerInterval, Self.minimumTimerInterval)
-    self.settle = settle
+    self.settle = min(max(settle, .zero), Self.maximumSettle)
     self.sleep = sleep
   }
 
