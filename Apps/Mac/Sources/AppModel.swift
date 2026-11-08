@@ -168,7 +168,7 @@ final class AppModel {
   func select(_ new: Source) {
     guard new != source, !(isTestHost && new == .live) else { return }
     settings.setSource(new.rawValue)
-    feeds[source]?.hide()
+    feeds[source]?.pause()
     source = new
     if let feed = feeds[new] { feed.refresh() } else { feed(for: new).start() }
   }

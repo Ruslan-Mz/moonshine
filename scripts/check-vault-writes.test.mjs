@@ -163,6 +163,25 @@ test("a process or a script fails in every form", () => {
   }
 });
 
+test("a call that changes another app's run state fails in every file", () => {
+  const handler = (call) =>
+    `center.addObserver(forName: name, object: nil, queue: .main) { note in (note.userInfo?[key] as? NSRunningApplication)${call} }`;
+  for (const call of ["?.terminate()", "?.forceTerminate()", "?.activate(options: [])", "?.hide()", "?.unhide()"]) {
+    for (const where of [adapter, app, signals, bridge]) fails(handler(call), where, "app run state");
+  }
+  for (const line of [
+    "_ = app.terminate()",
+    "app.activate()",
+    "NSApp.activate(ignoringOtherApps: true)",
+    "_ = running.first?.forceTerminate ()",
+    "/// Then app.hide() it.",
+  ]) {
+    fails(line, app, "app run state");
+  }
+  passes("func terminate() {}");
+  passes("let hidden = view.hidden()");
+});
+
 test("a line that is only a comment is searched for member calls, not for names", () => {
   passes("/// Process the snapshot in one pass.");
   passes("  // Follows the note's parent link (a wikilink) to the artifact, then remove(it).");
@@ -179,6 +198,12 @@ test("an allowed text passes in its own file only", () => {
   passes("try FileManager.default.removeItem(atPath: storePath + suffix)", tool);
   passes('FileHandle.standardError.write(Data((refusal + "\\n").utf8))', tool);
   passes("let process = Process()", bridge);
+  // The runner stops its own `osascript` child after a timeout.
+  passes("        process.terminate()", bridge);
+  fails("process.terminate()", adapter, "app run state");
+  fails("process.terminate()", app, "app run state");
+  fails("app.terminate()", bridge, "app run state");
+  fails("process.terminate(); app.terminate()", bridge, "app run state");
   passes("try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)", dataFolder);
   fails("try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)", store);
   fails("try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)", tool);
@@ -373,6 +398,7 @@ test("the repository is clean, and not by accident", () => {
     [store, "DatabasePool(path: path)"],
     [tool, "FileHandle.standardError.write("],
     [bridge, "let process = Process()"],
+    [bridge, "process.terminate()"],
   ]) {
     fails(text, path.replace(".swift", "Copy.swift"));
   }

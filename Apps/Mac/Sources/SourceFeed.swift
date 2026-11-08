@@ -29,7 +29,7 @@ final class SourceFeed {
   let environment: AppEnvironment?
   private var starting: Task<Void, Never>?
   private var consumer: Task<Void, Never>?
-  /// The last call to the coordinator from `hide` or `refresh`, so they reach it in order.
+  /// The last call to the coordinator from `pause` or `refresh`, so they reach it in order.
   private var control: Task<Void, Never>?
   private var observers: [any NSObjectProtocol] = []
 
@@ -83,7 +83,7 @@ final class SourceFeed {
   }
 
   /// A source not shown imports nothing and keeps tracking OmniFocus (owner, 2026-11-07).
-  func hide() {
+  func pause() {
     send { await $0.setPaused(true) }
   }
 
