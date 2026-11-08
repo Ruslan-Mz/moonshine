@@ -327,21 +327,29 @@ import Testing
     expectSame(try await SQLiteStore(path: path).workspace(), committed)
   }
 
-  /// The #46 follow-up: after quit the main file alone holds everything, no WAL left behind.
+  /// The #46 follow-up: after quit the main file alone holds everything; the WAL is truncated
+  /// to zero bytes.
   @Test func aClosedStoreHoldsEverythingInItsMainFile() async throws {
     let path = temporaryDatabasePath()
     let store = try SQLiteStore(path: path)
     try await run(try fixtureSnapshot(), store, at: first)
     let committed = try await store.workspace()
+    #expect(walSize(path) > 0)
     try store.close()
-    let wal = try? FileManager.default.attributesOfItem(atPath: path + "-wal")[.size] as? Int
-    #expect((wal ?? 0) == 0)
+    #expect(walSize(path) == 0)
+    try await expectMainFileHolds(committed, at: path)
+  }
 
-    let copy = temporaryDatabasePath()
-    try FileManager.default.copyItem(atPath: path, toPath: copy)
-    let reopened = try SQLiteStore(path: copy)
-    expectSame(try await reopened.workspace(), committed)
-    #expect(try await reopened.lastCommittedImport()?.trigger == .manual)
+  /// A read in flight at quit: the checkpoint waits for it instead of failing busy.
+  @Test func aCloseWaitsForAReadInFlight() async throws {
+    let path = temporaryDatabasePath()
+    let store = try SQLiteStore(path: path)
+    try await run(try fixtureSnapshot(), store, at: first)
+    let committed = try await store.workspace()
+    #expect(walSize(path) > 0)
+    try whileReading(store) { try store.close() }
+    #expect(walSize(path) == 0)
+    try await expectMainFileHolds(committed, at: path)
   }
 
   @Test func aClosedStoreRefusesLaterReads() async throws {
@@ -489,4 +497,34 @@ private final class CommitCounter: TransactionObserver, Sendable {
   func databaseDidChange(with event: DatabaseEvent) {}
   func databaseDidCommit(_ db: Database) { commits.withLock { $0 += 1 } }
   func databaseDidRollback(_ db: Database) {}
+}
+
+/// The WAL's size in bytes; 0 when it is missing.
+private func walSize(_ path: String) -> Int {
+  (try? FileManager.default.attributesOfItem(atPath: path + "-wal")[.size] as? Int) ?? 0
+}
+
+/// A copy of the main file alone reopens with everything committed.
+private func expectMainFileHolds(_ committed: Workspace, at path: String) async throws {
+  let copy = temporaryDatabasePath()
+  try FileManager.default.copyItem(atPath: path, toPath: copy)
+  let reopened = try SQLiteStore(path: copy)
+  expectSame(try await reopened.workspace(), committed)
+  #expect(try await reopened.lastCommittedImport()?.trigger == .manual)
+}
+
+/// Runs `body` while a read transaction is open on another thread; the read ends 0.2 s later,
+/// so a `body` that does not wait for it meets it in flight.
+private func whileReading(_ store: SQLiteStore, _ body: () throws -> Void) throws {
+  let (reading, release) = (DispatchSemaphore(value: 0), DispatchSemaphore(value: 0))
+  DispatchQueue.global().async {
+    try? store.writer.read { db in
+      _ = try Int.fetchOne(db, sql: "SELECT count(*) FROM external_ref")
+      reading.signal()
+      release.wait()
+    }
+  }
+  reading.wait()
+  DispatchQueue.global().asyncAfter(deadline: .now() + 0.2) { release.signal() }
+  try body()
 }
