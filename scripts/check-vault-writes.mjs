@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 // No code path writes to the vault before the Write phase (ADR-0004, ADR-0014, ADR-0015).
 // Searches the Swift sources of every target that can reach the vault for calls that write
-// files, open a database or start a process or script, and fails on any outside the allowlist
-// below. From the Write phase the `VaultWriter` implementation joins the allowlist. In `Apps`
+// files, open a database, start a process or script, or change another app's run state, and
+// fails on any outside the allowlist below. From the Write phase the `VaultWriter` implementation joins the allowlist. In `Apps`
 // it also fails on anything that opens a URL: the app opens external URLs through one function
 // with an allowlist of schemes (ADR-0015, amendment of 2026-10-10); that function joins the
 // allowlist here in S4.
+//
+// Another app's run state is the owner's machine, changed from the Act phase only: a member
+// call to `terminate`, `forceTerminate`, `activate`, `hide` or `unhide` fails in every file
+// (owner, 2026-11-08, PR #49 round 1). The OmniFocus bridge stops its own `osascript` child
+// after a timeout, the one allowed text. Not seen: `kill` and other signals by process id.
 //
 // Calendars are read-only until the Act phase (ADR-0012): EventKit may be imported only by
 // `CalendarAdapter/SystemEventStore.swift`, in any import spelling; EventKitUI nowhere (its
@@ -55,10 +60,23 @@ const allowed = {
     "FileHandle.standardError.write(",
   ],
   // The OmniFocus bridge runs `osascript`.
-  "Adapters/Sources/OmniFocusAdapter/OmniFocusBridge.swift": ["let process = Process()"],
+  "Adapters/Sources/OmniFocusAdapter/OmniFocusBridge.swift": [
+    "let process = Process()",
+    "process.terminate()",
+  ],
   // Today listens for a wake from sleep, to rebuild past midnight; it opens nothing (S4-4c-1).
   "Apps/Mac/Sources/SourceFeed.swift": [
     "(NSWorkspace.shared.notificationCenter, NSWorkspace.didWakeNotification)",
+  ],
+  // Live's change signals observe OmniFocus' activation, launch and quit; they open nothing
+  // and change no app's run state (S4-4b-2).
+  "Apps/Mac/Sources/Live/MacChangeSignals.swift": [
+    "NSWorkspace.shared.notificationCenter",
+    "NSWorkspace.applicationUserInfoKey",
+    "NSWorkspace.didActivateApplicationNotification",
+    "NSWorkspace.didDeactivateApplicationNotification",
+    "NSWorkspace.didLaunchApplicationNotification",
+    "NSWorkspace.didTerminateApplicationNotification",
   ],
 };
 
@@ -103,6 +121,11 @@ const patterns = [
       "truncate", "ftruncate", "symlink", "symlinkat", "link", "linkat", "copyfile", "clonefile",
       "chmod", "fchmod", "chown", "fchown", "lchown",
     ]),
+  ],
+  [
+    "app run state",
+    member(["terminate", "forceTerminate", "activate", "hide", "unhide"]),
+    true,
   ],
   ["database", word(["DatabasePool", "DatabaseQueue", "sqlite3_open", "sqlite3_open_v2"])],
   [

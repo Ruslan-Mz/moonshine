@@ -42,7 +42,26 @@ struct ListSource: ChangeSignalSource {
   }
 }
 
-/// A coordinator over a real `ImportService` and `InMemoryStore`, with one settable clock.
+/// The settle's sleep: every settle waits until the test opens the gate.
+actor SettleGate {
+  private var waiting: [CheckedContinuation<Void, Never>] = []
+  private(set) var asked: [Duration] = []
+
+  var sleepers: Int { waiting.count }
+
+  func sleep(_ duration: Duration) async {
+    asked.append(duration)
+    await withCheckedContinuation { waiting.append($0) }
+  }
+
+  func open() {
+    for continuation in waiting { continuation.resume() }
+    waiting = []
+  }
+}
+
+/// A coordinator over a real `ImportService` and `InMemoryStore`, with one settable clock and
+/// a settle that ends only when the test says so.
 struct Rig {
   static let start = Date(timeIntervalSince1970: 1_790_000_000)
 
@@ -52,11 +71,13 @@ struct Rig {
   let service: ImportService
   let coordinator: RefreshCoordinator
   let log = EventLog()
+  let gate = SettleGate()
 
   init(open: Bool = true, timerInterval: Duration = .seconds(15 * 60)) {
     provider = GatedTaskProvider(open: open)
     service = ImportService(tasks: provider, notes: DemoVault(), store: store, clock: time.clock)
-    coordinator = RefreshCoordinator(service: service, timerInterval: timerInterval)
+    coordinator = RefreshCoordinator(
+      service: service, timerInterval: timerInterval, sleep: { [gate] in await gate.sleep($0) })
     let (events, log) = (coordinator.events, log)
     Task { for await event in events { await log.append(event) } }
   }
@@ -65,14 +86,23 @@ struct Rig {
     for signal in signals { await coordinator.handle(signal) }
   }
 
-  /// Sends what makes the coordinator see `trigger`.
+  /// Sends what makes the coordinator see `trigger`; resign-active after its settle.
   func signal(_ trigger: ImportTrigger) async {
     switch trigger {
     case .launch: await send(.launch)
     case .manual: await send(.manual)
     case .timer: await send(.timer)
-    case .resignActive: await send(.omniFocus(.frontmost), .omniFocus(.background))
+    case .resignActive:
+      await send(.omniFocus(.frontmost), .omniFocus(.background))
+      await settle()
     }
+  }
+
+  /// Ends the open settle, and waits until the coordinator has taken its request.
+  func settle() async {
+    await eventually { await gate.sleepers > 0 }
+    await gate.open()
+    await eventually { await coordinator.settling == nil }
   }
 
   func committed(_ count: Int) async {
@@ -117,6 +147,7 @@ struct Rig {
     await rig.quiesce()
     #expect(await rig.provider.calls == 0)
     await rig.send(.omniFocus(.background))
+    await rig.settle()
     await rig.committed(1)
     #expect(try await rig.lastTrigger() == .resignActive)
     #expect(await rig.provider.calls == 1)
@@ -124,6 +155,7 @@ struct Rig {
     let quit = Rig()
     await quit.send(
       .omniFocus(.frontmost), .launch, .omniFocus(.notRunning), .omniFocus(.background))
+    await eventually { await quit.log.count(.omniFocusState(.notRunning)) == 1 }
     await quit.quiesce()
     #expect(await quit.provider.calls == 0)
     #expect(await quit.log.count(.omniFocusNotRunning) == 0)
@@ -217,6 +249,17 @@ struct Rig {
     await refreshed.committed(2)
     // Resign-active stays recorded, so its median keeps the signal (owner, 2026-11-05).
     #expect(try await refreshed.lastTrigger() == .resignActive)
+
+    // A return within the settle is not a leave: the ⌘R that joined meanwhile is recorded as
+    // ⌘R (owner, 2026-11-07).
+    let returned = Rig(open: false)
+    await returned.send(.omniFocus(.background), .launch)
+    await eventually { await returned.provider.calls == 1 }
+    await returned.send(.omniFocus(.frontmost), .omniFocus(.background), .manual)
+    await returned.send(.omniFocus(.frontmost))
+    await returned.provider.open()
+    await returned.committed(2)
+    #expect(try await returned.lastTrigger() == .manual)
   }
 
   /// Owner, 2026-11-05: a pending request that starts only because a joined ⌘R exempts it from
@@ -333,6 +376,104 @@ struct Rig {
       await rig.send(.manual)
       await eventually { await rig.log.events.filter(\.endsAnImport).count == number + 1 }
       #expect(await rig.log.events.last == .notCommitted(kind))
+    }
+  }
+
+  @Test func aResignActiveImportStartsAfterTheSettleAndCountsItInTheWait() async throws {
+    let rig = Rig()
+    await rig.send(.omniFocus(.frontmost), .omniFocus(.background))
+    await rig.quiesce()
+    #expect(await rig.provider.calls == 0)
+    #expect(await rig.gate.asked == [.milliseconds(500)])
+    rig.time.advance(by: .milliseconds(500))
+    await rig.settle()
+    await rig.committed(1)
+    let run = try #require(try await rig.store.lastCommittedImport())
+    #expect(run.trigger == .resignActive)
+    #expect(run.waited == .milliseconds(500))
+  }
+
+  /// The quit ends the settle at once: a ⌘R that joined is dropped and said so before the
+  /// settle's sleep would have ended, and the resign-active request says nothing (owner,
+  /// 2026-11-07).
+  @Test func aQuitDuringTheSettleDropsAJoinedRefreshAtOnce() async throws {
+    let rig = Rig()
+    await rig.send(.omniFocus(.frontmost), .omniFocus(.background), .manual)
+    await eventually { await rig.gate.sleepers > 0 }
+    await rig.send(.omniFocus(.notRunning))
+    await eventually { await rig.log.count(.omniFocusNotRunning) == 1 }
+    #expect(await rig.log.count(.omniFocusNotRunning) == 1)
+    await rig.gate.open()
+    await rig.quiesce()
+    #expect(await rig.provider.calls == 0)
+    #expect(await rig.log.count(.omniFocusNotRunning) == 1)
+    #expect(await rig.log.count(.omniFocusState(.notRunning)) == 1)
+  }
+
+  /// The return ends the settle at once: a ⌘R that joined starts as ⌘R before the settle's
+  /// sleep would have ended, and a second leave settles on its own.
+  @Test func aReturnToOmniFocusDuringTheSettleStartsAJoinedRefreshAtOnce() async throws {
+    let rig = Rig()
+    await rig.send(.omniFocus(.frontmost), .omniFocus(.background), .manual)
+    await eventually { await rig.gate.sleepers > 0 }
+    await rig.send(.omniFocus(.frontmost))
+    await rig.committed(1)
+    #expect(await rig.log.started == [.manual])
+    #expect(try await rig.lastTrigger() == .manual)
+    await rig.gate.open()
+    await rig.quiesce()
+    #expect(await rig.provider.calls == 1)
+
+    await rig.send(.omniFocus(.background))
+    await rig.settle()
+    await rig.committed(2)
+    #expect(try await rig.lastTrigger() == .resignActive)
+  }
+
+  @Test func nothingStartsDuringTheSettleAndWhatJoinedIsRecordedAsResignActive() async throws {
+    let rig = Rig()
+    await rig.send(.omniFocus(.frontmost), .omniFocus(.background), .timer, .manual)
+    await rig.quiesce()
+    #expect(await rig.provider.calls == 0)
+    await rig.settle()
+    await rig.committed(1)
+    await rig.quiesce()
+    #expect(await rig.provider.calls == 1)
+    #expect(await rig.log.started == [.resignActive])
+  }
+
+  @Test func aPausedCoordinatorStartsNothingAndKeepsTheState() async throws {
+    let rig = Rig()
+    await rig.coordinator.setPaused(true)
+    await rig.send(.omniFocus(.background), .launch, .timer, .manual)
+    await rig.signal(.resignActive)
+    await eventually { await rig.log.count(.omniFocusState(.background)) == 2 }
+    #expect(await rig.log.count(.omniFocusState(.frontmost)) == 1)
+    #expect(await rig.log.count(.omniFocusState(.background)) == 2)
+    await rig.quiesce()
+    #expect(await rig.provider.calls == 0)
+    #expect(await rig.log.count(.omniFocusNotRunning) == 0)
+
+    // What was dropped stays dropped: the switch back imports once, as ⌘R.
+    await rig.coordinator.setPaused(false)
+    await rig.quiesce()
+    #expect(await rig.provider.calls == 0)
+    await rig.send(.manual)
+    await rig.committed(1)
+    #expect(try await rig.lastTrigger() == .manual)
+  }
+
+  /// The settle stays within 0…2 s, like the timer's floor: a long one would hold every
+  /// request, ⌘R included.
+  @Test func theSettleIsClampedToAtMostTwoSeconds() {
+    let service = Rig().service
+    let table: [(Duration, Duration)] = [
+      (.seconds(-1), .zero), (.zero, .zero), (.milliseconds(500), .milliseconds(500)),
+      (.seconds(2), .seconds(2)), (.seconds(3600), .seconds(2)),
+    ]
+    for (asked, kept) in table {
+      let coordinator = RefreshCoordinator(service: service, timerInterval: .zero, settle: asked)
+      #expect(coordinator.settle == kept, "\(asked)")
     }
   }
 

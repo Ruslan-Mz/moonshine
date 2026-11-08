@@ -26,6 +26,18 @@ public struct SQLiteStore: Store {
     try Self.migrator.migrate(writer)
   }
 
+  /// At quit (S4-4b-2): folds the WAL into the main file and truncates it to zero bytes, then
+  /// closes every connection, also when the checkpoint fails. Later reads and commits throw.
+  public func close() throws {
+    // GRDB closes the writer before the readers, so its close alone would not fold the WAL in.
+    // The barrier waits for reads in flight, which would make the checkpoint busy.
+    let checkpoint = Result {
+      try writer.barrierWriteWithoutTransaction { try $0.checkpoint(.truncate) }
+    }
+    try writer.close()
+    _ = try checkpoint.get()
+  }
+
   public func identityMap() async throws -> VersionedIdentityMap {
     try await writer.read { db in
       var entries: [IdentityMap.Key: UUID] = [:]
