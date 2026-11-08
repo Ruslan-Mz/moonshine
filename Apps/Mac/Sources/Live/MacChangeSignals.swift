@@ -16,20 +16,19 @@ struct MacChangeSignals: ChangeSignalSource {
   let bundleIdentifier: String
   let center: NotificationCenter
   let reading: @Sendable () -> OmniFocusState
-  let interval: Duration
+  /// The coordinator's own interval: `AppEnvironment.make` gives every coordinator this floor.
+  let interval = RefreshCoordinator.minimumTimerInterval
   let sleep: @Sendable (Duration) async throws -> Void
 
   init(
     bundleIdentifier: String = OmniFocusBridge.bundleIdentifier,
     center: NotificationCenter = NSWorkspace.shared.notificationCenter,
     reading: @escaping @Sendable () -> OmniFocusState = RunningOmniFocus.now,
-    interval: Duration = RefreshCoordinator.minimumTimerInterval,
     sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
   ) {
     self.bundleIdentifier = bundleIdentifier
     self.center = center
     self.reading = reading
-    self.interval = interval
     self.sleep = sleep
   }
 

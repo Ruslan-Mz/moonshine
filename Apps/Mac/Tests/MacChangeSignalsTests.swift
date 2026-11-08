@@ -39,7 +39,7 @@ final class ReadingLog: Sendable {
   let onMain = Mutex<[Bool]>([])
 }
 
-private let interval = Duration.seconds(15 * 60)
+private let interval = RefreshCoordinator.minimumTimerInterval
 private let host = NSRunningApplication.current.bundleIdentifier ?? ""
 
 private func signals(
@@ -52,7 +52,7 @@ private func signals(
       log.onMain.withLock { $0.append(Thread.isMainThread) }
       return reading
     },
-    interval: interval, sleep: { await gate.sleep($0) })
+    sleep: { await gate.sleep($0) })
 }
 
 /// Yields until `condition` holds, bounded so a broken source fails instead of hanging.
