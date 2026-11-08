@@ -394,8 +394,13 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
       source.send(.omniFocus(.background))
       await model.load()
       #expect(model.lastFailure == kind)
-      source.send(.omniFocus(.notRunning), .omniFocus(.background))
-      await waitFor { model.omniFocusState == .background && model.omniFocusNote == note }
+      // Each state is applied before the next is sent: the feed already holds background.
+      source.send(.omniFocus(.notRunning))
+      await waitFor { model.omniFocusState == .notRunning }
+      #expect(model.omniFocusState == .notRunning)
+      source.send(.omniFocus(.background))
+      await waitFor { model.omniFocusState == .background }
+      #expect(model.omniFocusState == .background)
       #expect(model.omniFocusNote == note, "\(kind)")
       #expect(model.importOutcomes == 1)
     }
@@ -459,19 +464,24 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     #expect(await tasks.calls == 1)
   }
 
+  /// Live is closed at quit also when Demo is shown: every built store, not the shown one.
   @MainActor @Test func quittingClosesEachBuiltStoreOnce() async {
     let (closes, center) = (Closes(), NotificationCenter())
     var built: [AppModel.Source] = []
     let model = AppModel(isTestHost: false, settings: CountingSettings("live")) { selected in
       built.append(selected)
-      return selected == .live ? live(.background, closes: closes) : nil
+      return selected == .live
+        ? live(.background, closes: closes) : try? AppEnvironment.demo(snapshot: trackedSnapshot)
     }
     model.closeStores(onTerminationOf: center)
     await model.load()
+    model.select(.demo)
+    await waitFor { model.importOutcomes == 1 }
+    #expect(model.importOutcomes == 1)
     center.post(name: NSApplication.willTerminateNotification, object: nil)
     center.post(name: NSApplication.willTerminateNotification, object: nil)
     #expect(closes.count.withLock { $0 } == 1)
-    #expect(built == [.live])
+    #expect(built == [.live, .demo])
   }
 
   @Test func refreshSendsAStateOnlyWhenRunningChanged() {
