@@ -10,7 +10,8 @@
 // Another app's run state is the owner's machine, changed from the Act phase only: a member
 // call to `terminate`, `forceTerminate`, `activate`, `hide` or `unhide` fails in every file
 // (owner, 2026-11-08, PR #49 round 1). So does a signal sent by process id, `kill` or `killpg`
-// (owner, 2026-11-08, S4-4c-2). The OmniFocus bridge stops its own `osascript` child after a
+// (owner, 2026-11-08, S4-4c-2), or libproc's `proc_terminate` and `proc_signal` calls (owner,
+// 2026-11-09, PR #50 round 1). The OmniFocus bridge stops its own `osascript` child after a
 // timeout, with `terminate` and then `kill` after a grace period: the two allowed texts.
 //
 // Calendars are read-only until the Act phase (ADR-0012): EventKit may be imported only by
@@ -59,6 +60,10 @@ const allowed = {
   "Adapters/Sources/moonshine-import/MoonShineImport.swift": [
     "FileManager.default.removeItem(atPath: storePath + suffix)",
     "FileHandle.standardError.write(",
+  ],
+  // The mapping file: one read-only open that follows no link (S4-4c-2, PR #50 round 1).
+  "Adapters/Sources/ObsidianAdapter/MappingFile.swift": [
+    "open(path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)",
   ],
   // The OmniFocus bridge runs `osascript`.
   "Adapters/Sources/OmniFocusAdapter/OmniFocusBridge.swift": [
@@ -129,7 +134,18 @@ const patterns = [
     member(["terminate", "forceTerminate", "activate", "hide", "unhide"]),
     true,
   ],
-  ["signal by process id", cCall(["kill", "killpg"])],
+  [
+    "signal by process id",
+    cCall([
+      "kill",
+      "killpg",
+      "proc_terminate",
+      "proc_terminate_with_audittoken",
+      "proc_terminate_delegate",
+      "proc_signal_with_audittoken",
+      "proc_signal_delegate",
+    ]),
+  ],
   ["database", word(["DatabasePool", "DatabaseQueue", "sqlite3_open", "sqlite3_open_v2"])],
   [
     "process or script",
