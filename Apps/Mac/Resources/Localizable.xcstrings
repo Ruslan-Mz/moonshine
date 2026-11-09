@@ -953,18 +953,18 @@
         }
       }
     },
-    "The mapping file cannot be read — fix it, then reopen MoonShine": {
+    "The mapping file cannot be read — fix it, then quit MoonShine (⌘Q) and open it again": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The mapping file cannot be read — fix it, then reopen MoonShine"
+            "value": "The mapping file cannot be read — fix it, then quit MoonShine (⌘Q) and open it again"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Файл соответствий не читается — исправьте его и откройте MoonShine заново"
+            "value": "Файл соответствий не читается — исправьте его, затем закройте MoonShine (⌘Q) и откройте снова"
           }
         }
       }
@@ -1193,22 +1193,6 @@
         }
       }
     },
-    "mapping.yaml cannot be read — fix it, then reopen MoonShine": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "mapping.yaml cannot be read — fix it, then reopen MoonShine"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "mapping.yaml не читается — исправьте его и откройте MoonShine заново"
-          }
-        }
-      }
-    },
     "no activity yet": {
       "localizations": {
         "en": {
@@ -1225,18 +1209,18 @@
         }
       }
     },
-    "no mapping file — no tag group is read as attributes. Add mapping.yaml to the data folder, then reopen MoonShine.": {
+    "no mapping file — no tag group is read as attributes. Add mapping.yaml to the data folder, then quit MoonShine (⌘Q) and open it again.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "no mapping file — no tag group is read as attributes. Add mapping.yaml to the data folder, then reopen MoonShine."
+            "value": "no mapping file — no tag group is read as attributes. Add mapping.yaml to the data folder, then quit MoonShine (⌘Q) and open it again."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "нет файла соответствий — ни одна группа тегов не читается как атрибуты. Добавьте mapping.yaml в папку данных и откройте MoonShine заново."
+            "value": "нет файла соответствий — ни одна группа тегов не читается как атрибуты. Добавьте mapping.yaml в папку данных, затем закройте MoonShine (⌘Q) и откройте снова."
           }
         }
       }

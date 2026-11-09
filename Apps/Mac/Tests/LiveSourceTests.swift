@@ -641,7 +641,7 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     let tasks = FakeTasks()
     let mapped = LiveMapping(.success(.groups(["Effort", "Other"])), tasks: tasks)
     #expect(mapped.importer.metaTagGroups == ["Effort", "Other"])
-    #expect(mapped.state == .groups(2))
+    #expect(mapped.state == .groups(["Effort", "Other"]))
     #expect(mapped.tasks is FakeTasks)
     let missing = LiveMapping(.success(.missing), tasks: tasks)
     #expect(missing.importer.metaTagGroups.isEmpty)
@@ -698,19 +698,38 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     #expect(TagGroupsLine(demo) == .found(2, of: 2))
   }
 
+  /// The store was imported under Demo's groups; the file now names others. Before an import
+  /// runs (OmniFocus not running), the count is the current file's names among the shown
+  /// workspace's top-level tags: a misspelt name is not found, and n never exceeds m.
+  @MainActor @Test func theTagGroupsLineCountsTheCurrentFileNotTheLastImport() async throws {
+    for (groups, line) in [
+      (["Effort", "Settng"], TagGroupsLine.found(1, of: 2)),
+      (["Effort"], .found(1, of: 1)),
+    ] {
+      let store = try await storeWithAnImport()
+      let model = liveModel(
+        live(.notRunning, store: store, mapping: .success(.groups(Set(groups)))))
+      model.start()
+      await waitFor { isLoaded(model.state) && model.omniFocusState == .notRunning }
+      #expect(model.importOutcomes == 0)
+      #expect(TagGroupsLine(model) == line)
+    }
+  }
+
   @Test func theTagGroupsLineOfSettings() {
     let workspace = Workspace(timeZone: .gmt)
     #expect(
-      TagGroupsLine(source: .live, mapping: .groups(6), workspace: nil) == .notCountedYet)
+      TagGroupsLine(source: .live, mapping: .groups(["A", "B"]), workspace: nil) == .notCountedYet)
     #expect(
-      TagGroupsLine(source: .live, mapping: .groups(6), workspace: workspace) == .found(0, of: 6))
+      TagGroupsLine(source: .live, mapping: .groups(["A", "B"]), workspace: workspace)
+        == .found(0, of: 2))
     #expect(TagGroupsLine(source: .live, mapping: .missing, workspace: workspace) == .missing)
     #expect(TagGroupsLine(source: .live, mapping: .missing, workspace: nil) == .missing)
     #expect(TagGroupsLine(source: .live, mapping: .invalid, workspace: workspace) == .invalid)
     #expect(TagGroupsLine(source: .live, mapping: nil, workspace: nil) == .liveUnavailable)
     #expect(TagGroupsLine(source: .demo, mapping: nil, workspace: nil) == .demoUnavailable)
     #expect(
-      TagGroupsLine(source: .demo, mapping: .demo(groups: 2), workspace: workspace)
+      TagGroupsLine(source: .demo, mapping: .demo(groups: ["A", "B"]), workspace: workspace)
         == .found(0, of: 2))
   }
 

@@ -5,10 +5,11 @@ import ObsidianAdapter
 /// What the app knows about its meta tag groups, for Settings and the status bar (S4-4c-2).
 enum MappingState: Equatable {
   /// Demo's own invented set (`DemoMapping`).
-  case demo(groups: Int)
+  case demo(groups: Set<String>)
   /// No `mapping.yaml`: no group is meta.
   case missing
-  case groups(Int)
+  /// The names, so Settings counts them in the workspace shown (PR #50 round 1).
+  case groups(Set<String>)
   /// Every import is refused until MoonShine is reopened with a valid file.
   case invalid
 }
@@ -30,7 +31,7 @@ struct LiveMapping {
     case .success(.groups(let groups)):
       self.tasks = tasks
       importer = Importer(metaTagGroups: groups)
-      state = .groups(groups.count)
+      state = .groups(groups)
     case .failure(let error):
       self.tasks = RefusedTasks(error: error)
       importer = Importer(metaTagGroups: [])

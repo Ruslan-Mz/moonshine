@@ -51,7 +51,7 @@ struct AppEnvironment {
       tasks: SnapshotFileTaskProvider(url: snapshot), notes: DemoVault(),
       store: try store ?? SQLiteStore(timeZone: DemoVault.calendar.timeZone),
       importer: Importer(metaTagGroups: DemoMapping.metaTagGroups),
-      mapping: .demo(groups: DemoMapping.metaTagGroups.count), clock: DemoEnvironment.clock,
+      mapping: .demo(groups: DemoMapping.metaTagGroups), clock: DemoEnvironment.clock,
       source: source)
   }
 

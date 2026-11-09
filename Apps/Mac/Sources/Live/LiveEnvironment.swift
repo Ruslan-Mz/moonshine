@@ -17,7 +17,9 @@ extension AppEnvironment {
       let store = try? SQLiteStore(path: DataFolder.appStorePath(in: folder))
     else { return nil }
     let mapping = LiveMapping(
-      Result { () throws(MappingFileError) in try MappingFile.read(folder: folder) },
+      Result { () throws(MappingFileError) in
+        try MappingFile.read(file: DataFolder.mappingFile(in: folder))
+      },
       tasks: OmniFocusBridge(script: script))
     return make(
       tasks: mapping.tasks, notes: NotChosenVault(), store: store, importer: mapping.importer,

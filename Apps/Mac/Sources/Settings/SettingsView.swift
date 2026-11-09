@@ -55,17 +55,18 @@ struct SettingsView: View {
     case .notCountedYet: Text("not counted yet")
     case .missing:
       Text(
-        "no mapping file — no tag group is read as attributes. Add mapping.yaml to the data folder, then reopen MoonShine."
+        "no mapping file — no tag group is read as attributes. Add mapping.yaml to the data folder, then quit MoonShine (⌘Q) and open it again."
       )
-    case .invalid: Text("mapping.yaml cannot be read — fix it, then reopen MoonShine")
+    // The OmniFocus line's sentence: one sentence for an invalid file.
+    case .invalid: OmniFocusWords.text(.failure(.mappingInvalid))
     case .liveUnavailable: Text("Live data could not be opened.")
     case .demoUnavailable: Text("Demo data could not be loaded.")
     }
   }
 }
 
-/// The Tag groups line of the Data group: how many of the mapped groups a top-level tag was
-/// found for, counted from the workspace shown (S4-4c-2).
+/// The Tag groups line of the Data group: how many of the current mapping's groups a top-level
+/// tag of the workspace shown has the name of (S4-4c-2), whatever groups it was imported under.
 enum TagGroupsLine: Equatable {
   case found(Int, of: Int)
   /// Nothing imported yet to count in.
@@ -87,7 +88,7 @@ enum TagGroupsLine: Equatable {
     case .missing: self = .missing
     case .invalid: self = .invalid
     case .demo(let groups), .groups(let groups):
-      self = workspace.map { .found($0.metaGroupsFound, of: groups) } ?? .notCountedYet
+      self = workspace.map { .found($0.groupsFound(groups), of: groups.count) } ?? .notCountedYet
     }
   }
 }
