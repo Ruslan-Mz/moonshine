@@ -184,11 +184,13 @@ test("a call that changes another app's run state fails in every file", () => {
 });
 
 test("a signal by process id fails in every file", () => {
-  // libproc's terminate and signal calls take a process id too (owner, 2026-11-09, PR #50 round 1).
+  // libproc's terminate and signal calls take a process id too (owner, 2026-11-09, PR #50 rounds
+  // 1 and 2); `proc_terminate_all_rsr` signals every process of a kind.
   for (const name of [
     "kill",
     "killpg",
     "proc_terminate",
+    "proc_terminate_all_rsr",
     "proc_terminate_with_audittoken",
     "proc_terminate_delegate",
     "proc_signal_with_audittoken",

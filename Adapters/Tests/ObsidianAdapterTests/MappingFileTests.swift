@@ -130,8 +130,9 @@ import Testing
     #expect(throws: MappingFileError.unreadable) { try read() }
   }
 
-  /// A FIFO is refused at once: the open does not wait for a writer.
-  @Test func aFIFOAtThePathIsUnreadable() throws {
+  /// A FIFO is refused at once: the open does not wait for a writer. The limit turns a
+  /// regression that waits into a failure, not a hung run.
+  @Test(.timeLimit(.minutes(1))) func aFIFOAtThePathIsUnreadable() throws {
     #expect(mkfifo(file.path(percentEncoded: false), 0o600) == 0)
     #expect(throws: MappingFileError.unreadable) { try read() }
   }
