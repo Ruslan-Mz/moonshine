@@ -4,8 +4,6 @@ import MoonShineCore
 /// `mapping.yaml` in the data folder (S4-4c-2): which top-level OmniFocus tag groups hold task
 /// attributes, not lines. The names are the owner's labels, so they live only there.
 public enum MappingFile {
-  public static let name = "mapping.yaml"
-
   public enum Read: Equatable, Sendable {
     /// No file: no group is meta.
     case missing
@@ -15,31 +13,30 @@ public enum MappingFile {
   /// At most this many groups.
   public static let maxGroups = 20
 
-  /// Reads `<folder>/mapping.yaml`: only `meta_tag_groups`, a list of 0–20 distinct names, each
-  /// by the line `name` rule (vault contract §1). The whole file is valid or none of it is used.
-  public static func read(folder: URL) throws(MappingFileError) -> Read {
+  /// Reads `file` (the caller names it, `DataFolder.mappingFile`): only `meta_tag_groups`, a list
+  /// of 0–20 distinct names, each by the line `name` rule (vault contract §1). The whole file is
+  /// valid or none of it is used.
+  public static func read(file: URL) throws(MappingFileError) -> Read {
     let limits = VaultLimits()
-    let path = folder.appending(path: name).path(percentEncoded: false)
-    // `attributesOfItem` does not follow a link: a link, dangling or not, is not the file.
-    let attributes: [FileAttributeKey: Any]
-    do {
-      attributes = try FileManager.default.attributesOfItem(atPath: path)
-    } catch let error as NSError
-      where error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError
-    {
-      return .missing
-    } catch {
+    // One open that follows no link and never blocks (a FIFO), then every check on what was
+    // opened: nothing can be swapped in between a check and the read.
+    let path = file.path(percentEncoded: false)
+    let descriptor = open(path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
+    guard descriptor >= 0 else {
+      if errno == ENOENT { return .missing }
       throw .unreadable
     }
-    guard attributes[.type] as? FileAttributeType == .typeRegular else { throw .unreadable }
-    if let size = attributes[.size] as? Int, size > limits.maxFrontmatterBytes {
+    let handle = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
+    var info = stat()
+    guard fstat(descriptor, &info) == 0, info.st_mode & S_IFMT == S_IFREG else {
+      throw .unreadable
+    }
+    if info.st_size > limits.maxFrontmatterBytes {
       throw .invalid(.frontmatterTooLarge, key: .root)
     }
     // Read up to one byte past the cap, in case the file grew since its size was read.
     let data: Data
     do {
-      let handle = try FileHandle(forReadingFrom: URL(filePath: path))
-      defer { try? handle.close() }
       data = try handle.read(upToCount: limits.maxFrontmatterBytes + 1) ?? Data()
     } catch {
       throw .unreadable
@@ -88,7 +85,7 @@ public enum MappingFileError: Error, Equatable, Sendable, ImportFailureKind {
     case metaTagGroups = "meta_tag_groups"
   }
 
-  /// Not a regular file (a folder, a link), or the read failed.
+  /// Not a regular file (a folder, a link, a FIFO), or the open or the read failed.
   case unreadable
   case invalid(VaultProblem.Kind, key: Key)
 

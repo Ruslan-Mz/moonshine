@@ -69,7 +69,7 @@ import Testing
 
     func writeMapping(_ text: String) throws {
       try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-      try Data(text.utf8).write(to: folder.appending(path: MappingFile.name))
+      try Data(text.utf8).write(to: DataFolder.mappingFile(in: folder))
     }
 
     func storedTags() async throws -> [MoonShineCore.Tag] {
@@ -86,6 +86,40 @@ import Testing
       }
       #expect(runner.runs == 1)
       try unchanged([tool, tool + "-wal", app])
+    }
+
+    /// The bridge ran, but its output does not decode: the old store stays (PR #50 round 1).
+    @Test func anOutputThatDoesNotDecodeRemovesNothing() async throws {
+      try plantStores()
+      let runner = CannedRunner(stdout: Data("{}".utf8))
+      await #expect(throws: SnapshotError.self) {
+        try await MoonShineImport.full(runs: 1, base: base, bridge: bridge(runner))
+      }
+      #expect(runner.runs == 1)
+      try unchanged([tool, tool + "-wal", app])
+    }
+
+    /// A valid snapshot of changes only is not the full read that may replace the store.
+    @Test func aSnapshotOfChangesOnlyRemovesNothing() async throws {
+      try plantStores()
+      let full = String(decoding: try Data(contentsOf: fixtureSnapshot), as: UTF8.self)
+      let delta = full.replacingOccurrences(
+        of: "\"mode\": \"full\",",
+        with: "\"mode\": \"incremental\",\n \"modifiedSince\": \"2026-10-01T15:00:00+03:00\",")
+      #expect(delta != full)
+      let runner = CannedRunner(stdout: Data(delta.utf8))
+      await #expect(throws: PartialSnapshotError.self) {
+        try await MoonShineImport.full(runs: 1, base: base, bridge: bridge(runner))
+      }
+      try unchanged([tool, tool + "-wal", app])
+    }
+
+    /// Later runs import into the store run 1 opened: each commit raises its version by one.
+    @Test func laterRunsReuseTheStore() async throws {
+      try await MoonShineImport.full(runs: 2, base: base, bridge: bridge(try succeeding()))
+      let store = try SQLiteStore(path: tool)
+      defer { try? store.close() }
+      #expect(try await store.identityMap().version == 2)
     }
 
     @Test func aSuccessfulReadReplacesOnlyTheMeasurementStore() async throws {

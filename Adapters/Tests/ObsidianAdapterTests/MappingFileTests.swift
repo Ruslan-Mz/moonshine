@@ -16,12 +16,14 @@ import Testing
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
   }
 
+  var file: URL { folder.appending(path: "mapping.yaml") }
+
   func write(_ text: String) throws {
-    try Data(text.utf8).write(to: folder.appending(path: MappingFile.name))
+    try Data(text.utf8).write(to: file)
   }
 
   func read() throws(MappingFileError) -> MappingFile.Read {
-    try MappingFile.read(folder: folder)
+    try MappingFile.read(file: file)
   }
 
   @Test func aMappingFileReadsItsGroups() throws {
@@ -102,22 +104,42 @@ import Testing
   }
 
   @Test func aFileThatIsNotUTF8IsAProblem() throws {
-    try Data([0x6D, 0x3A, 0x20, 0xFF, 0xFE, 0x0A]).write(
-      to: folder.appending(path: MappingFile.name))
+    try Data([0x6D, 0x3A, 0x20, 0xFF, 0xFE, 0x0A]).write(to: file)
     #expect(throws: MappingFileError.invalid(.notUTF8, key: .root)) { try read() }
   }
 
   @Test func aFolderAtThePathIsUnreadable() throws {
-    try FileManager.default.createDirectory(
-      at: folder.appending(path: MappingFile.name), withIntermediateDirectories: false)
+    try FileManager.default.createDirectory(at: file, withIntermediateDirectories: false)
+    #expect(throws: MappingFileError.unreadable) { try read() }
+  }
+
+  /// A file that exists but cannot be opened is refused, never read as missing (PR #50 round 1).
+  @Test func aFileThatCannotBeOpenedIsUnreadable() throws {
+    try write("meta_tag_groups: [Effort]\n")
+    let path = file.path(percentEncoded: false)
+    try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: path)
+    defer { try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: path) }
+    #expect(throws: MappingFileError.unreadable) { try read() }
+  }
+
+  @Test func aFileInAFolderThatCannotBeSearchedIsUnreadable() throws {
+    try write("meta_tag_groups: [Effort]\n")
+    let path = folder.path(percentEncoded: false)
+    try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: path)
+    defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: path) }
+    #expect(throws: MappingFileError.unreadable) { try read() }
+  }
+
+  /// A FIFO is refused at once: the open does not wait for a writer.
+  @Test func aFIFOAtThePathIsUnreadable() throws {
+    #expect(mkfifo(file.path(percentEncoded: false), 0o600) == 0)
     #expect(throws: MappingFileError.unreadable) { try read() }
   }
 
   /// A link is never followed, dangling or not: `fileExists` would call a dangling one missing.
   @Test func aLinkAtThePathIsUnreadable() throws {
     let target = folder.appending(path: "elsewhere.yaml")
-    try FileManager.default.createSymbolicLink(
-      at: folder.appending(path: MappingFile.name), withDestinationURL: target)
+    try FileManager.default.createSymbolicLink(at: file, withDestinationURL: target)
     #expect(throws: MappingFileError.unreadable) { try read() }
     try Data("meta_tag_groups: [Effort]\n".utf8).write(to: target)
     #expect(throws: MappingFileError.unreadable) { try read() }

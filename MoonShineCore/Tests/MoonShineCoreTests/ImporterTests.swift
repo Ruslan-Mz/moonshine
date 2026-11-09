@@ -33,7 +33,7 @@ import Testing
 
   func snapshot(
     _ tasks: [SourceTask], projects: [SourceProject] = [],
-    defaultTimes: DefaultTimeSettings? = DefaultTimeSettings()
+    defaultTimes: DefaultTimeSettings? = DefaultTimeSettings(), extraTags: [SourceTag] = []
   ) -> TaskSourceSnapshot {
     TaskSourceSnapshot(
       provider: .omnifocus, generatedAt: now, timeZone: TimeZone(identifier: "Europe/Moscow")!,
@@ -46,7 +46,7 @@ import Testing
         SourceTag(externalId: "t-time-low", name: "Low", parentExternalId: "t-time"),
         SourceTag(externalId: "t-energy", name: "Charge"),
         SourceTag(externalId: "t-energy-low", name: "Low", parentExternalId: "t-energy"),
-      ],
+      ] + extraTags,
       projects: projects, tasks: tasks)
   }
 
@@ -82,14 +82,22 @@ import Testing
       ])
   }
 
-  /// "n of m groups found": a group counts once a top-level tag of that name was imported.
+  /// "n of m groups found": the current mapping's names, counted among the shown workspace's
+  /// top-level tag names, whatever groups it was imported under, so n never exceeds m (PR #50
+  /// round 1).
   @Test func aMappedGroupCountsAsFoundOnlyWhenATopLevelTagHasItsName() {
-    var identities = IdentityMap()
-    let ws = Importer(metaTagGroups: ["Rhythm", "Absent", "Dawn"]).makeWorkspace(
-      tasks: snapshot([]), vault: vault, stored: Workspace(timeZone: .gmt),
-      identities: &identities, now: now)
-    #expect(ws.metaGroupsFound == 1)
-    #expect(run(snapshot([])).metaGroupsFound == 3)
+    let ws = run(snapshot([]))
+    #expect(ws.groupsFound(["Rhythm", "Absent", "Dawn"]) == 1)
+    #expect(ws.groupsFound(Self.groups) == 3)
+    #expect(ws.groupsFound(["Rhythm", "Effort"]) == 2)
+    #expect(ws.groupsFound(["Rhythm", "violin"]) == 2)
+    #expect(ws.groupsFound([]) == 0)
+  }
+
+  @Test func twoTopLevelTagsWithOneNameCountOnce() {
+    let ws = run(snapshot([], extraTags: [SourceTag(externalId: "t-cycle-2", name: "Rhythm")]))
+    #expect(ws.tags.filter { $0.parentID == nil && $0.name == "Rhythm" }.count == 2)
+    #expect(ws.groupsFound(["Rhythm"]) == 1)
   }
 
   /// The groups come only from the mapping file: with none, no tag is meta and a tag under a

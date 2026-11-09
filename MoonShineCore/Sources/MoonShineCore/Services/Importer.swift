@@ -213,13 +213,16 @@ public struct Importer: Sendable {
 /// everything outside the delta.
 public struct PartialSnapshotError: Error, Equatable, Sendable {
   public let modifiedSince: Date
+
+  public init(modifiedSince: Date) { self.modifiedSince = modifiedSince }
 }
 
 extension Workspace {
-  /// How many meta groups a top-level tag was found for: "n of m groups found" (S4-4c-2). A
-  /// misspelt group in the mapping file finds none, and its tags stay line tags.
-  public var metaGroupsFound: Int {
-    Set(tags.filter { $0.parentID == nil && $0.isMeta }.map(\.name)).count
+  /// How many of `groups` a top-level tag has the name of: "n of m groups found" (S4-4c-2).
+  /// Counted from the names, not the stored meta flags, which the last import set under the
+  /// mapping it read then; so a misspelt group finds none, and n never exceeds m.
+  public func groupsFound(_ groups: Set<String>) -> Int {
+    groups.intersection(tags.filter { $0.parentID == nil }.map(\.name)).count
   }
 }
 

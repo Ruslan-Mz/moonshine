@@ -8,6 +8,8 @@ public enum DataFolder {
   public static let appStore = "MoonShine.sqlite"
   /// `moonshine-import full`'s own store, never the app's.
   public static let measurementStore = "moonshine-import.sqlite"
+  /// The owner's meta tag groups (S4-4c-2), read by `MappingFile`.
+  public static let mapping = "mapping.yaml"
 
   public static func url(base: URL) -> URL {
     base.appending(path: "MoonShine", directoryHint: .isDirectory)
@@ -27,5 +29,9 @@ public enum DataFolder {
 
   public static func measurementStorePath(in folder: URL) -> String {
     folder.appending(path: measurementStore).path(percentEncoded: false)
+  }
+
+  public static func mappingFile(in folder: URL) -> URL {
+    folder.appending(path: mapping)
   }
 }

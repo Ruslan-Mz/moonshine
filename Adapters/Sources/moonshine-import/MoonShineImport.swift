@@ -88,7 +88,8 @@ import SQLiteStore
     static func full(runs: Int, base: URL, bridge: OmniFocusBridge) async throws {
       // Only `full` creates the folder: `vault` writes nothing.
       let storePath = try Self.storePath(base: base)
-      let mapping = try MappingFile.read(folder: DataFolder.url(base: base))
+      let mapping = try MappingFile.read(
+        file: DataFolder.mappingFile(in: DataFolder.url(base: base)))
       let groups: Set<String> = if case .groups(let groups) = mapping { groups } else { [] }
       var opened: SQLiteStore?
       var workspace: Workspace?
@@ -101,12 +102,15 @@ import SQLiteStore
         marks.append(clock.now)
         let document = try SnapshotDocument.decode(output.json)
         let source = try SnapshotMapper.map(document)
+        // Only a full snapshot replaces the store: a delta would stand for everything.
+        if let since = source.modifiedSince { throw PartialSnapshotError(modifiedSince: since) }
         marks.append(clock.now)
         let store: SQLiteStore
         if let opened {
           store = opened
         } else {
-          // Only now that OmniFocus was read: a failed read leaves the old store as it was.
+          // Only now that OmniFocus was read in full and validated: a failed read leaves the
+          // old store as it was.
           try removeStore(at: storePath)
           store = try SQLiteStore(path: storePath)
           opened = store
@@ -132,7 +136,7 @@ import SQLiteStore
       if let workspace {
         print(
           mappingLine(
-            mapping, found: workspace.metaGroupsFound,
+            mapping, found: workspace.groupsFound(groups),
             metaTags: workspace.tags.filter(\.isMeta).count))
       }
     }
@@ -304,6 +308,7 @@ import SQLiteStore
           + violations.prefix(5).map(\.description).joined(separator: "; ")
       case SnapshotError.badValue(let path): return "bad value at \(path)"
       case SnapshotError.undecodable(let path): return "JSON does not decode at \(path)"
+      case is PartialSnapshotError: return "the bridge returned changes only, not a full snapshot"
       case MappingFileError.unreadable:
         return "mapping.yaml is not a regular file or cannot be read"
       case MappingFileError.invalid(let kind, let key):
