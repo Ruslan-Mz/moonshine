@@ -20,7 +20,7 @@ Result (closed, owner 2026-11-09): the three slices found no loss of review qual
 | S4-4b-2 | 227              | 10 (3 verified, 3 confirmed)   | 0              | no      | 1                   |
 | S4-4c-2 | 318              | 17 (4 verified, 4 confirmed)   | 1 (author)     | yes     | 6, and 1 in round 2 |
 
-Confirmed findings per 100 production lines: 1.5, 1.3 and 1.3. Review tokens per production line: n/a (the review sessions' tokens were not recorded).
+Confirmed findings per 100 production lines: 1.5, 1.3 and 1.3. Review tokens per production line, from each review's "For the method log" block, divided by the production lines of the head under review (subagent tokens only, not the session's cost): S4-4c-1 about 2,750 (round 1, ≈ 1.41 M over 513); S4-4b-2 about 5,480 (≈ 1.15 M over 210); S4-4c-2 about 4,740 in round 1 (≈ 1.35 M over 285) and about 1,230 in round 2 (≈ 0.39 M over 317), about 6,110 in all (≈ 1.74 M over 285).
 
 **Risky-slice limit experiment, second** (owner, 2026-11-09): the limit for risky slices is about 800 net production lines after the factor; past about 850 while building, the author stops and shows the owner. Two adjacent slices may be planned as one PR when the factored sum of their estimates fits the limit (the first: S4-4c-3 with S4-4e). Measured as above. After three PRs under this limit the owner keeps ~800 or goes back.
 
