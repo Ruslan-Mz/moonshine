@@ -12,6 +12,18 @@ The durations below are forecasts at the measured pace, not timeboxes. A phase's
 
 **Risky-slice limit experiment** (owner, 2026-11-05): for the next three risky slices, S4-4c-1, S4-4b-2 and S4-4c-2, the limit is about 550 net production lines after the factor instead of `CLAUDE.md` rule 2's about 400; past about 600 the author stops and shows the owner. Reason: `/review-pr` runs every lens on one PR, so a split would not change what the review sees, and each PR has a fixed cost. Measured per slice, from the method log and the review: confirmed findings per 100 production lines, whether a round 2 was needed, findings for the owner, and review tokens per production line. After the third slice the owner keeps 550 or goes back to 400.
 
+Result (closed, owner 2026-11-09): the three slices found no loss of review quality. From the method log (`docs/method/log/2026-11.md`), at the final heads:
+
+| Slice   | Production lines | Round-1 findings after merging | Confirmed High | Round 2 | Owner findings      |
+| ------- | ---------------- | ------------------------------ | -------------- | ------- | ------------------- |
+| S4-4c-1 | 588              | 25 (9 verified, 9 confirmed)   | 0              | no      | 6                   |
+| S4-4b-2 | 227              | 10 (3 verified, 3 confirmed)   | 0              | no      | 1                   |
+| S4-4c-2 | 318              | 17 (4 verified, 4 confirmed)   | 1 (author)     | yes     | 6, and 1 in round 2 |
+
+Confirmed findings per 100 production lines: 1.5, 1.3 and 1.3. Review tokens per production line: n/a (the review sessions' tokens were not recorded).
+
+**Risky-slice limit experiment, second** (owner, 2026-11-09): the limit for risky slices is about 800 net production lines after the factor; past about 850 while building, the author stops and shows the owner. Two adjacent slices may be planned as one PR when the factored sum of their estimates fits the limit (the first: S4-4c-3 with S4-4e). Measured as above. After three PRs under this limit the owner keeps ~800 or goes back.
+
 **The String Catalog does not count** (owner, 2026-10-20, S4-1a): `Localizable.xcstrings` is left out of the estimate and the actual, like tests, fixtures and generated files; its line count is stated separately in the PR and the method-log row.
 
 **A move counts net** (owner, 2026-10-13, PR #19 round 1): code moved with no behaviour change counts as added lines minus the lines it removed, in the actual as in the estimate. The actual is the final head (owner, 2026-10-14). The moved lines are still stated in the PR and in the method-log row.
@@ -36,7 +48,7 @@ The owner's figures, read from the method log:
 
 - **Pace:** 2026-10-05 to 2026-10-08, about 250 production lines and one merged PR a day (`docs/method/log/2026-10.md`).
 - **Factor:** 1.55, actual production lines against the plan's estimate (the figure of 2026-10-09; the size factor above replaces it for sizing).
-- **Size by risk:** risky slices up to about 400 production lines after the factor, plain slices up to about 800 (`CLAUDE.md` rule 2). Owner experiment, 2026-11-05: ~550 for the risky slices 4c-1, 4b-2 and 4c-2; then keep it or go back to ~400; see "Risky-slice limit experiment" above.
+- **Size by risk:** risky slices up to about 400 production lines after the factor, plain slices up to about 800 (`CLAUDE.md` rule 2). Owner experiment, 2026-11-05: ~550 for the risky slices 4c-1, 4b-2 and 4c-2, closed with no loss of review quality; owner experiment, 2026-11-09: ~800 for risky slices, and two adjacent slices may share a PR when their factored sum fits; see "Risky-slice limit experiment" above.
 - **Slow scenario:** 0.6 of the pace from January (less owner time).
 - **Memos and practice lines (2026-10-19, ADR-0018, ADR-0019):** P1 ~400 and Practice lines ~350 production lines estimated, ~750 × 1.62 ≈ 1,215, at about 250 a day ≈ 5 days; phase 2 and every stage after it move 5 days later. The slow column keeps its months: 5 days do not change them.
 - **Timebox review after S4-1b (owner, 2026-10-28):** factor 1.47; phase 1 ends ~2026-11-20 (was 2026-11-03, 10-30 to 11-12), with live data first and the Month view and the README moved to the usage period after it (`docs/specs/phase-1-see.md`); the stages after phase 1 are not re-forecast here.
