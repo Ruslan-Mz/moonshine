@@ -14,7 +14,7 @@
 OmniFocus:
 
 - [x] Folders/projects/tags: counts, hierarchy depth.
-- [x] Line tags (`violin`, `аспирантура`, …) vs meta tags (`<group> : …`, the meta groups now in `mapping.yaml`).
+- [x] Line tags (a few dedicated tags, such as an instrument or a study track; `docs/discovery/data-report.md`) vs meta tags (`<group> : …`, the meta groups now in `mapping.yaml`).
 - [x] Completions per line tag and per top-level folder per ISO week, last 12 weeks. _(Partly: 12-week totals per line tag and per folder, plus weekly totals overall; the per-folder × per-week grid is computed by the phase-1 bridge.)_
 - [x] Field availability: `estimatedMinutes`, `plannedDate`, `deferDate`, `dueDate`, repeat rules, notes length.
 - [x] Active tasks mapping to no line (count + anonymised examples).
