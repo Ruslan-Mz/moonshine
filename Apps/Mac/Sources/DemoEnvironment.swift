@@ -41,6 +41,8 @@ struct AppEnvironment {
   let close: (@Sendable () -> Void)?
   /// The import path's clock, so "updated …" counts from the same origin.
   let clock: ImportClock
+  /// Where the meta tag groups came from (Settings, the status bar).
+  let mapping: MappingState
 
   static func demo(
     snapshot: URL, store: (any Store)? = nil, source: any ChangeSignalSource = DemoSignals()
@@ -48,19 +50,25 @@ struct AppEnvironment {
     make(
       tasks: SnapshotFileTaskProvider(url: snapshot), notes: DemoVault(),
       store: try store ?? SQLiteStore(timeZone: DemoVault.calendar.timeZone),
-      clock: DemoEnvironment.clock, source: source)
+      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups),
+      mapping: .demo(groups: DemoMapping.metaTagGroups.count), clock: DemoEnvironment.clock,
+      source: source)
   }
 
+  /// `importer` and `mapping` have no default: every environment names its meta tag groups.
   static func make(
-    tasks: any TaskProvider, notes: any NoteProvider, store: any Store, clock: ImportClock,
-    source: any ChangeSignalSource, omniFocusReading: (@Sendable () -> OmniFocusState)? = nil,
+    tasks: any TaskProvider, notes: any NoteProvider, store: any Store, importer: Importer,
+    mapping: MappingState, clock: ImportClock, source: any ChangeSignalSource,
+    omniFocusReading: (@Sendable () -> OmniFocusState)? = nil,
     close: (@Sendable () -> Void)? = nil
   ) -> AppEnvironment {
-    let service = ImportService(tasks: tasks, notes: notes, store: store, clock: clock)
+    let service = ImportService(
+      tasks: tasks, notes: notes, store: store, importer: importer, clock: clock)
     return AppEnvironment(
       store: store,
       coordinator: RefreshCoordinator(
         service: service, timerInterval: RefreshCoordinator.minimumTimerInterval),
-      source: source, omniFocusReading: omniFocusReading, close: close, clock: clock)
+      source: source, omniFocusReading: omniFocusReading, close: close, clock: clock,
+      mapping: mapping)
   }
 }

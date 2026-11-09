@@ -10,7 +10,7 @@ import Testing
   func overview() async throws -> Overview {
     let source = try SnapshotMapper.map(try fixtureDocument())
     var identities = IdentityMap()
-    let workspace = Importer().makeWorkspace(
+    let workspace = Importer(metaTagGroups: DemoMapping.metaTagGroups).makeWorkspace(
       tasks: source, vault: try await DemoVault().vault(), stored: Workspace(timeZone: .gmt),
       identities: &identities,
       now: source.generatedAt)

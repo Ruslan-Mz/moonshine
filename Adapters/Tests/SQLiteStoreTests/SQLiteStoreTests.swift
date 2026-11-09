@@ -35,7 +35,7 @@ import Testing
   func run(_ source: TaskSourceSnapshot, _ store: SQLiteStore, at now: Date) async throws {
     try await ImportService(
       tasks: FixedTaskProvider(source: source), notes: DemoVault(), store: store,
-      clock: .frozen(at: now)
+      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups), clock: .frozen(at: now)
     ).run(ImportRequest(trigger: .manual))
   }
 
@@ -245,7 +245,7 @@ import Testing
       })
     try await ImportService(
       tasks: FixedTaskProvider(source: try fixtureSnapshot()), notes: DemoVault(), store: store,
-      clock: clock
+      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups), clock: clock
     ).run(ImportRequest(trigger: .manual))
 
     let recorded = order.recorded
@@ -310,7 +310,7 @@ import Testing
     let store = try SQLiteStore()
     try await ImportService(
       tasks: FixedTaskProvider(source: try fixtureSnapshot()), notes: DemoVault(), store: store,
-      clock: .frozen(at: first)
+      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups), clock: .frozen(at: first)
     ).run(ImportRequest(trigger: .manual))
     let kinds = try await store.writer.read { db in
       try String.fetchSet(db, sql: "SELECT DISTINCT kind FROM external_ref")
@@ -322,7 +322,8 @@ import Testing
     let path = temporaryDatabasePath()
     let committed = try await ImportService(
       tasks: FixedTaskProvider(source: try fixtureSnapshot()), notes: DemoVault(),
-      store: try SQLiteStore(path: path), clock: .frozen(at: first)
+      store: try SQLiteStore(path: path),
+      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups), clock: .frozen(at: first)
     ).run(ImportRequest(trigger: .manual))
     expectSame(try await SQLiteStore(path: path).workspace(), committed)
   }
@@ -462,7 +463,7 @@ import Testing
     var identities = IdentityMap()
     var workspace = Workspace(timeZone: .gmt)
     let build = clock.measure {
-      workspace = Importer().makeWorkspace(
+      workspace = Importer(metaTagGroups: DemoMapping.metaTagGroups).makeWorkspace(
         tasks: source, vault: vault, stored: Workspace(timeZone: .gmt), identities: &identities,
         now: first)
     }

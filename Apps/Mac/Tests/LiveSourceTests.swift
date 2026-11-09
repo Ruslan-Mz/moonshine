@@ -2,6 +2,7 @@ import AppKit
 import Foundation
 import MoonShineCore
 import MoonShineFixtures
+import ObsidianAdapter
 import OmniFocusAdapter
 import Synchronization
 import Testing
@@ -175,19 +176,23 @@ final class RecordingStorage: SettingsStorage {
 }
 
 /// A Live-like environment over fakes: the clock is Demo's unless given, so the dataset's
-/// Today shows.
+/// Today shows; the mapping file names Demo's groups unless `mapping` says otherwise.
 private func live(
   _ state: OmniFocusState, tasks: FakeTasks = FakeTasks(),
   store: any Store = InMemoryStore(timeZone: DemoVault.calendar.timeZone),
   reading: Reading? = nil, clock: ImportClock = DemoEnvironment.clock,
-  source: (any ChangeSignalSource)? = nil, closes: Closes? = nil
+  source: (any ChangeSignalSource)? = nil, closes: Closes? = nil,
+  mapping: Result<MappingFile.Read, MappingFileError> = .success(
+    .groups(DemoMapping.metaTagGroups))
 ) -> AppEnvironment {
+  let mapped = LiveMapping(mapping, tasks: tasks)
   var now: (@Sendable () -> OmniFocusState)?
   if let reading { now = { @Sendable in reading.get() } }
   var close: (@Sendable () -> Void)?
   if let closes { close = { @Sendable in closes.count.withLock { $0 += 1 } } }
   return AppEnvironment.make(
-    tasks: tasks, notes: DemoVault(), store: store, clock: clock,
+    tasks: mapped.tasks, notes: DemoVault(), store: store, importer: mapped.importer,
+    mapping: mapped.state, clock: clock,
     source: source ?? OneState(state: state), omniFocusReading: now, close: close)
 }
 
@@ -628,6 +633,85 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
         == .unavailable)
     #expect(
       OmniFocusLine(source: .demo, lastImport: nil, note: nil, unavailable: true) == .notReadInDemo)
+  }
+
+  /// The groups read from the file reach the importer; a missing file means none; an invalid
+  /// one refuses every import and never reaches OmniFocus.
+  @Test func theMappingFileDecidesTheTasksTheImporterAndTheState() async throws {
+    let tasks = FakeTasks()
+    let mapped = LiveMapping(.success(.groups(["Effort", "Other"])), tasks: tasks)
+    #expect(mapped.importer.metaTagGroups == ["Effort", "Other"])
+    #expect(mapped.state == .groups(2))
+    #expect(mapped.tasks is FakeTasks)
+    let missing = LiveMapping(.success(.missing), tasks: tasks)
+    #expect(missing.importer.metaTagGroups.isEmpty)
+    #expect(missing.state == .missing)
+    #expect(missing.tasks is FakeTasks)
+    let invalid = LiveMapping(.failure(.invalid(.invalidValue, key: .root)), tasks: tasks)
+    #expect(invalid.importer.metaTagGroups.isEmpty)
+    #expect(invalid.state == .invalid)
+    await #expect(throws: MappingFileError.invalid(.invalidValue, key: .root)) {
+      _ = try await invalid.tasks.snapshot(modifiedSince: nil)
+    }
+    #expect(await tasks.calls == 0)
+  }
+
+  /// With OmniFocus running, an invalid file shows the stored workspace, refuses the import
+  /// without asking OmniFocus, and says why in the status bar and Settings.
+  @MainActor @Test func liveWithAnInvalidMappingFileShowsTheStoreAndImportsNothing() async throws {
+    let store = try await storeWithAnImport()
+    let tasks = FakeTasks()
+    let model = liveModel(
+      live(.background, tasks: tasks, store: store, mapping: .failure(.unreadable)))
+    await model.load()
+    #expect(isLoaded(model.state))
+    #expect(model.importOutcomes == 1)
+    #expect(await tasks.calls == 0)
+    #expect(model.lastImport?.trigger == .launch)
+    #expect(model.omniFocusNote == .failure(.mappingInvalid))
+    #expect(LiveNote.notes(model) == [.mappingInvalid, .vaultNotRead])
+    #expect(TagGroupsLine(model) == .invalid)
+  }
+
+  @MainActor @Test func notRunningAndAnInvalidMappingFileAreBothSaid() async throws {
+    let store = try await storeWithAnImport()
+    let model = liveModel(live(.notRunning, store: store, mapping: .failure(.unreadable)))
+    model.start()
+    await waitFor { isLoaded(model.state) && model.omniFocusState == .notRunning }
+    #expect(LiveNote.notes(model) == [.notRunning, .mappingInvalid, .vaultNotRead])
+  }
+
+  @MainActor @Test func demoHasNoLiveNotes() async {
+    let model = AppModel(snapshot: trackedSnapshot, isTestHost: true)
+    await model.load()
+    #expect(LiveNote.notes(model).isEmpty)
+  }
+
+  /// Counted from the workspace shown: a misspelt group finds no tag.
+  @MainActor @Test func theTagGroupsLineCountsTheGroupsFound() async throws {
+    let model = liveModel(
+      live(.background, mapping: .success(.groups(["Effort", "Setting", "Misspelt"]))))
+    await model.load()
+    #expect(TagGroupsLine(model) == .found(2, of: 3))
+    let demo = AppModel(snapshot: trackedSnapshot, isTestHost: true)
+    await demo.load()
+    #expect(TagGroupsLine(demo) == .found(2, of: 2))
+  }
+
+  @Test func theTagGroupsLineOfSettings() {
+    let workspace = Workspace(timeZone: .gmt)
+    #expect(
+      TagGroupsLine(source: .live, mapping: .groups(6), workspace: nil) == .notCountedYet)
+    #expect(
+      TagGroupsLine(source: .live, mapping: .groups(6), workspace: workspace) == .found(0, of: 6))
+    #expect(TagGroupsLine(source: .live, mapping: .missing, workspace: workspace) == .missing)
+    #expect(TagGroupsLine(source: .live, mapping: .missing, workspace: nil) == .missing)
+    #expect(TagGroupsLine(source: .live, mapping: .invalid, workspace: workspace) == .invalid)
+    #expect(TagGroupsLine(source: .live, mapping: nil, workspace: nil) == .liveUnavailable)
+    #expect(TagGroupsLine(source: .demo, mapping: nil, workspace: nil) == .demoUnavailable)
+    #expect(
+      TagGroupsLine(source: .demo, mapping: .demo(groups: 2), workspace: workspace)
+        == .found(0, of: 2))
   }
 
   @MainActor @Test func settingsTakesTodaysUnavailableState() async {

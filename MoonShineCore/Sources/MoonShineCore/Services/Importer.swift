@@ -4,13 +4,11 @@ import Foundation
 /// maps lines and marks repeat occurrences. Pure; the store persists the result.
 public struct Importer: Sendable {
   /// Top-level tag groups whose children are task attributes, not lines (snapshot-contract).
-  public static let defaultMetaTagGroups: Set<String> = [
-    "Тип работы", "Контекст", "Время", "Энергия", "Цикл", "Локация",
-  ]
-
+  /// They are the owner's labels, so they come from the mapping file in the data folder (Demo
+  /// has its own invented set); no default, so every caller names them.
   public let metaTagGroups: Set<String>
 
-  public init(metaTagGroups: Set<String> = Importer.defaultMetaTagGroups) {
+  public init(metaTagGroups: Set<String>) {
     self.metaTagGroups = metaTagGroups
   }
 
@@ -217,6 +215,14 @@ public struct PartialSnapshotError: Error, Equatable, Sendable {
   public let modifiedSince: Date
 }
 
+extension Workspace {
+  /// How many meta groups a top-level tag was found for: "n of m groups found" (S4-4c-2). A
+  /// misspelt group in the mapping file finds none, and its tags stay line tags.
+  public var metaGroupsFound: Int {
+    Set(tags.filter { $0.parentID == nil && $0.isMeta }.map(\.name)).count
+  }
+}
+
 /// Reads both providers, builds the workspace with the store's identities and commits it.
 public actor ImportService {
   public let tasks: any TaskProvider
@@ -233,7 +239,7 @@ public actor ImportService {
 
   public init(
     tasks: any TaskProvider, notes: any NoteProvider, store: any Store,
-    importer: Importer = Importer(), clock: ImportClock = .system
+    importer: Importer, clock: ImportClock = .system
   ) {
     self.tasks = tasks
     self.notes = notes

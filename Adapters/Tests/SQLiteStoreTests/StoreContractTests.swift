@@ -15,7 +15,8 @@ import Testing
     _ source: TaskSourceSnapshot, into store: any Store, clock: ImportClock
   ) -> ImportService {
     ImportService(
-      tasks: FixedTaskProvider(source: source), notes: DemoVault(), store: store, clock: clock)
+      tasks: FixedTaskProvider(source: source), notes: DemoVault(), store: store,
+      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups), clock: clock)
   }
 
   func importer(_ source: TaskSourceSnapshot, into store: any Store, at now: Date) -> ImportService
@@ -45,7 +46,7 @@ import Testing
     let store = try kind.make()
     let source = try fixtureSnapshot()
     var identities = IdentityMap()
-    let workspace = Importer().makeWorkspace(
+    let workspace = Importer(metaTagGroups: DemoMapping.metaTagGroups).makeWorkspace(
       tasks: source, vault: try await DemoVault().vault(), stored: Workspace(timeZone: .gmt),
       identities: &identities,
       now: first)
@@ -84,7 +85,7 @@ import Testing
         SourceLine(key: "plain", name: "Plain", block: "Life", state: .paused),
       ], complete: true)
     var identities = IdentityMap()
-    let workspace = Importer().makeWorkspace(
+    let workspace = Importer(metaTagGroups: DemoMapping.metaTagGroups).makeWorkspace(
       tasks: try fixtureSnapshot(),
       vault: VaultSnapshot(lines: lines, artifacts: [], notes: [], unread: .nothing),
       stored: Workspace(timeZone: .gmt), identities: &identities, now: first)
@@ -208,7 +209,7 @@ import Testing
     let vault = try await DemoVault().vault()
     let stale = try await store.identityMap()
     var mine = stale.map
-    let workspace = Importer().makeWorkspace(
+    let workspace = Importer(metaTagGroups: DemoMapping.metaTagGroups).makeWorkspace(
       tasks: source, vault: vault, stored: Workspace(timeZone: .gmt), identities: &mine, now: first)
     try await importer(source, into: store, at: first).run(manual)
     let before = try await store.stored()

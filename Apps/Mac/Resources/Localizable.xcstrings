@@ -905,6 +905,22 @@
         }
       }
     },
+    "Tag groups": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tag groups"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Группы тегов"
+          }
+        }
+      }
+    },
     "Task": {
       "localizations": {
         "en": {
@@ -933,6 +949,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Последний импорт не завершился"
+          }
+        }
+      }
+    },
+    "The mapping file cannot be read — fix it, then reopen MoonShine": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The mapping file cannot be read — fix it, then reopen MoonShine"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Файл соответствий не читается — исправьте его и откройте MoonShine заново"
           }
         }
       }
@@ -1113,6 +1145,22 @@
         }
       }
     },
+    "groups found: %lld of %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "groups found: %lld of %lld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "найдено групп: %lld из %lld"
+          }
+        }
+      }
+    },
     "last full import": {
       "localizations": {
         "en": {
@@ -1145,6 +1193,22 @@
         }
       }
     },
+    "mapping.yaml cannot be read — fix it, then reopen MoonShine": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mapping.yaml cannot be read — fix it, then reopen MoonShine"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "mapping.yaml не читается — исправьте его и откройте MoonShine заново"
+          }
+        }
+      }
+    },
     "no activity yet": {
       "localizations": {
         "en": {
@@ -1161,6 +1225,22 @@
         }
       }
     },
+    "no mapping file — no tag group is read as attributes. Add mapping.yaml to the data folder, then reopen MoonShine.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "no mapping file — no tag group is read as attributes. Add mapping.yaml to the data folder, then reopen MoonShine."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "нет файла соответствий — ни одна группа тегов не читается как атрибуты. Добавьте mapping.yaml в папку данных и откройте MoonShine заново."
+          }
+        }
+      }
+    },
     "no next action": {
       "localizations": {
         "en": {
@@ -1173,6 +1253,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "нет следующего шага"
+          }
+        }
+      }
+    },
+    "not counted yet": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "not counted yet"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ещё не подсчитано"
           }
         }
       }

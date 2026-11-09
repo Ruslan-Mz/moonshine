@@ -17,6 +17,7 @@ Recommended implementation: a native `Settings` scene (⌘,) with `Form { }.form
 - Source: `Picker(.segmented)` **Demo | Live**.
 - Obsidian vault: path field (folder symbol + `~/Documents/Life vault`) + "Choose…" → `.fileImporter(allowedContentTypes: [.folder])` → security-scoped bookmark. Comes with S4-4d.
 - OmniFocus: status text (`not read in Demo mode` / `last full import 14.0 s`, one decimal; S4-4c-1: `last full import` with no number when the duration was not measured, `not read yet`, `Live data could not be opened.` when Today says so, or the words of `design/copy.md` § Live source when OmniFocus is not running or the last import did not commit).
+- Tag groups (S4-4c-2): `groups found: n of m`, the meta groups of `mapping.yaml` (Demo: its own invented set) that a top-level OmniFocus tag was imported for, counted by name; `not counted yet` before the first import; with no file, `no mapping file — …` and the next step; with an invalid one, `mapping.yaml cannot be read — fix it, then reopen MoonShine` (`design/copy.md` § Live source).
 - Caption: "Demo shows bundled sample data — nothing is read from OmniFocus or your vault." The second sentence, "The vault is opened read-only through a security-scoped bookmark.", comes with the vault row (S4-4d).
 
 **General** group (draft-2)

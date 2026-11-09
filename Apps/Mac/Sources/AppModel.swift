@@ -153,6 +153,8 @@ final class AppModel {
   var omniFocusState: OmniFocusState? { feed?.omniFocusState }
   var lastFailure: ImportFailure? { feed?.lastFailure }
   var omniFocusNote: SourceFeed.OmniFocusNote? { feed?.omniFocusNote }
+  /// Nil when the source's environment could not be built.
+  var mapping: MappingState? { feed?.environment?.mapping }
   var storeUnreadable: Bool { feed?.storeUnreadable ?? false }
   var storeChecked: Bool { feed?.storeChecked ?? false }
 

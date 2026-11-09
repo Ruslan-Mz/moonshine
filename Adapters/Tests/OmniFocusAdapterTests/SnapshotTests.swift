@@ -348,6 +348,7 @@ func fixtureDocument() throws -> SnapshotDocument {
   func importFixture() async throws -> Workspace {
     let service = ImportService(
       tasks: SnapshotFileTaskProvider(url: fixtureURL), notes: DemoVault(), store: InMemoryStore(),
+      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups),
       clock: .frozen(at: Date(timeIntervalSince1970: 1_790_791_200)))
     return try await service.run(ImportRequest(trigger: .manual))
   }

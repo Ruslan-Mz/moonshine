@@ -38,14 +38,14 @@ Written from the Omni Automation object model and the field set of `kip-d/omnifo
 
 ### Tag
 
-| Field      | Type                                    | Notes                                                    |
-| ---------- | --------------------------------------- | -------------------------------------------------------- |
-| `id`       | string                                  |                                                          |
-| `name`     | string                                  | leaf name only, e.g. `Высокая`, not `Энергия : Высокая`  |
-| `parentId` | string \| null                          | hierarchy for meta-tag groups (`Энергия`, `Контекст`, …) |
-| `status`   | `"active"` \| `"onHold"` \| `"dropped"` |                                                          |
+| Field      | Type                                    | Notes                                                  |
+| ---------- | --------------------------------------- | ------------------------------------------------------ |
+| `id`       | string                                  |                                                        |
+| `name`     | string                                  | leaf name only, e.g. `Low`, not `Effort : Low`         |
+| `parentId` | string \| null                          | hierarchy for meta-tag groups (`Effort`, `Setting`, …) |
+| `status`   | `"active"` \| `"onHold"` \| `"dropped"` |                                                        |
 
-Tasks reference tags **by id**. Leaf names are not unique (e.g. `Низкая` can exist under both `Энергия` and `Время`); the MCP server returns only leaf names on tasks, the bridge must not.
+Tasks reference tags **by id**. Leaf names are not unique (e.g. `Low` can exist under both `Effort` and `Pace`); the MCP server returns only leaf names on tasks, the bridge must not.
 
 ### Project
 
@@ -214,14 +214,23 @@ Completions are never weighted or mixed. Per line, per ISO week:
 - **Rhythm** = completed occurrences of repeating tasks (`repeatOf != null`), shown as _sessions_.
 - **Progress** = completed one-off tasks (`repeatOf == null`).
   Both are counted from completed task records; the same split applies to Life ops.
-  Meta tags (children of `Тип работы`, `Контекст`, `Время`, `Энергия`, `Цикл`, `Локация`) are never line tags; they are kept as task attributes (`attrs.meta`) for later filters.
+  Meta tags (the top-level groups `mapping.yaml` names, and their children; § Meta tag groups) are never line tags; they are kept as task attributes (`attrs.meta`) for later filters.
+
+## Meta tag groups: `mapping.yaml` (S4-4c-2)
+
+The group names are the owner's labels, so they are not in the code, the fixtures or these documents: they live in `mapping.yaml` in the data folder (`~/Library/Application Support/MoonShine/`), read by the app at Live's first selection and by `moonshine-import full` before anything else (`Adapters/Sources/ObsidianAdapter/MappingFile.swift`). Demo has its own invented set (`MoonShineCore/Sources/MoonShineFixtures/DemoMapping.swift`).
+
+- **Shape:** one root key, `meta_tag_groups`, a list of 0–20 distinct names; each name by the line `name` rule (1–120 characters, at most 1 KiB, no C0 or DEL; `vault-contract.md` §1). Any other key, a second key, a null value or a list item that is not such a name makes the file invalid. At most 64 KiB, UTF-8, and the vault reader's YAML guards (no directive, no anchor with an alias, the depth and node caps).
+- **Missing** (no entry at the path): no group is meta, and Settings says so.
+- **Invalid or unreadable** (a folder or a link at the path, dangling or not; an empty or comment-only file, which has no `meta_tag_groups`): the whole file is refused, never one name dropped. The app keeps the stored workspace and refuses every import until it is reopened with a valid file; the CLI stops before it reads OmniFocus. Errors name a kind and a fixed key (`root` or `meta_tag_groups`), never a value.
+- **Found:** Settings and the CLI count, by name, the mapped groups a top-level tag was imported for (`groups found: n of m`), so a misspelt name shows.
 
 ## Findings from live data (2026-09-30)
 
 - **V1 — repeating tasks (settled).** Completing a repeating task leaves the live task with its id and creates a completed copy with id `<liveId>.<n>`, its own `completionDate`, `added` ≈ completion time, and the same repetition rule. Completing a repeating _action group_ also clones its children as `<childId>.<n>` with parent `<groupId>.<n>`. Consequence: stats must be able to separate habit occurrences (86 % of completions) from one-off completions.
 - **V2 — latency (target revised 2026-09-30).** Through the MCP server: any count that scans all tasks takes ~8 s; a 250-row page ~8–9 s (the server halves oversized pages, so a full export needs ≥ 17 pages ≈ 2.5 min). Decision: the UI reads only from the store (< 1 s); the full import runs in the background (≤ 20 s) and later refreshes are incremental (`modified` since the last import). Measured in phase 1 S3 (ADR-0003, phase-1 spec).
 - **V3 — field use (settled, sample of 500 remaining tasks).** `estimatedMinutes` 23 %, `plannedDate` 10 % (128 of 1 079 by count), `dueDate` 7 % (83 by count), `deferDate` 5 % (44 by count), repetition 14 %, note 7 %, flagged 2 %.
-- **V4 — tags (settled).** Hierarchy depth is exactly 2. Meta groups (`Время`, `Тип работы`, `Контекст`, `Энергия`, `Цикл`, `Локация`) are top-level tags whose children have short English leaf names (`15min`, `deepwork`, `phone`, `low-energy`, `cycle-ai`…); everything else is flat. 31 % of remaining tasks have no tags, 17 % only meta tags.
+- **V4 — tags (settled).** Hierarchy depth is exactly 2. Meta groups (six; their names are in `mapping.yaml`, § Meta tag groups) are top-level tags whose children have short English leaf names (`15min`, `deepwork`, `phone`, `low-energy`, `cycle-ai`…); everything else is flat. 31 % of remaining tasks have no tags, 17 % only meta tags.
 
 ## Findings from live data (2026-10-02, phase 1 S3a-1)
 
