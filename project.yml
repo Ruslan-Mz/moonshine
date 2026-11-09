@@ -47,6 +47,9 @@ targets:
         product: SQLiteStore
       - package: Adapters
         product: OmniFocusAdapter
+      # Live reads its meta tag groups from `mapping.yaml` in the data folder (S4-4c-2).
+      - package: Adapters
+        product: ObsidianAdapter
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.moonshine.mac

@@ -86,8 +86,27 @@ enum OmniFocusWords {
       )
     case .failure(.invalidSnapshot), .failure(.partialSnapshot):
       Text("OmniFocus sent data MoonShine cannot read")
+    case .failure(.mappingInvalid):
+      Text("The mapping file cannot be read — fix it, then quit MoonShine (⌘Q) and open it again")
     case .failure(.other): Text("The last import did not finish")
     }
+  }
+}
+
+/// Live's sentences in the status bar, in order, beside its data.
+enum LiveNote: Hashable {
+  case notRunning
+  /// Shown whatever OmniFocus' state: no import runs until a valid file and a relaunch (⌘Q,
+  /// then open: reopening a running app keeps the file it read).
+  case mappingInvalid
+  case vaultNotRead
+
+  @MainActor static func notes(_ model: AppModel) -> [LiveNote] {
+    guard model.source == .live else { return [] }
+    var notes: [LiveNote] = []
+    if case .loaded = model.state, model.omniFocusNote == .notRunning { notes.append(.notRunning) }
+    if model.mapping == .invalid { notes.append(.mappingInvalid) }
+    return notes + [.vaultNotRead]
   }
 }
 
@@ -109,12 +128,14 @@ struct StatusBar: View {
           }
         }
       }
-      if model.source == .live {
-        if case .loaded = model.state, model.omniFocusNote == .notRunning {
-          Text("OmniFocus is not running — showing the last import")
-        }
+      ForEach(LiveNote.notes(model), id: \.self) { note in
+        switch note {
+        case .notRunning: Text("OmniFocus is not running — showing the last import")
+        // The one sentence for an invalid file, here and in Settings.
+        case .mappingInvalid: OmniFocusWords.text(.failure(.mappingInvalid))
         // Until the vault picker (S4-4d).
-        Text("Vault not read yet")
+        case .vaultNotRead: Text("Vault not read yet")
+        }
       }
       if model.isImporting {
         ProgressView().controlSize(.mini)

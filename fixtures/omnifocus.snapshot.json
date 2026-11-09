@@ -155,25 +155,25 @@
   },
   {
    "id": "tag-0011",
-   "name": "Энергия",
+   "name": "Effort",
    "parentId": null,
    "status": "active"
   },
   {
    "id": "tag-0012",
-   "name": "Низкая",
+   "name": "Low",
    "parentId": "tag-0011",
    "status": "active"
   },
   {
    "id": "tag-0013",
-   "name": "Контекст",
+   "name": "Setting",
    "parentId": null,
    "status": "active"
   },
   {
    "id": "tag-0014",
-   "name": "Дом",
+   "name": "Home",
    "parentId": "tag-0013",
    "status": "active"
   }

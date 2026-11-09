@@ -29,7 +29,7 @@ import Testing
   /// A store that already holds violin and piano from a clean read, and its identities.
   func storedAfterACleanRead() -> (StoredWorkspace, IdentityMap) {
     var identities = IdentityMap()
-    let first = Importer().makeWorkspace(
+    let first = Importer(metaTagGroups: []).makeWorkspace(
       tasks: source, vault: vault(.read([violin, piano], complete: true)),
       stored: Workspace(timeZone: .gmt),
       identities: &identities, now: earlier)
@@ -40,7 +40,7 @@ import Testing
   func reimport(_ lines: VaultLines) -> (Workspace, StoredWorkspace, before: [Line]) {
     var (stored, identities) = storedAfterACleanRead()
     let before = stored.workspace.lines
-    let workspace = Importer().makeWorkspace(
+    let workspace = Importer(metaTagGroups: []).makeWorkspace(
       tasks: source, vault: vault(lines), stored: stored.workspace, identities: &identities,
       now: now)
     stored = stored.merging(workspace, at: now)
@@ -116,7 +116,8 @@ import Testing
     let store = InMemoryStore(timeZone: TestWorld.timeZone)
     let time = SettableClock(earlier)
     let service = ImportService(
-      tasks: OneTask(source: source), notes: FlakyVault(piano), store: store, clock: time.clock)
+      tasks: OneTask(source: source), notes: FlakyVault(piano), store: store,
+      importer: Importer(metaTagGroups: []), clock: time.clock)
     try await service.run(ImportRequest(trigger: .manual))
     time.set(now)
     try await service.run(ImportRequest(trigger: .manual))
@@ -130,7 +131,7 @@ import Testing
       key: "core", name: "Core", block: "Foundation", state: .active, budgetHoursPerWeek: 2,
       foundation: true, floorHoursPerDay: 1.5, language: "pt-BR")
     var identities = IdentityMap()
-    let workspace = Importer().makeWorkspace(
+    let workspace = Importer(metaTagGroups: []).makeWorkspace(
       tasks: source, vault: vault(.read([core, piano], complete: true)),
       stored: Workspace(timeZone: .gmt),
       identities: &identities, now: now)

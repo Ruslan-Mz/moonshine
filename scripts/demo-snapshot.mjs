@@ -61,10 +61,10 @@ const tagList = [
   ["tag-0008", "japanese", null],
   ["tag-0009", "anchor", null],
   ["tag-0010", "deadline", null],
-  ["tag-0011", "Энергия", null],
-  ["tag-0012", "Низкая", "tag-0011"],
-  ["tag-0013", "Контекст", null],
-  ["tag-0014", "Дом", "tag-0013"],
+  ["tag-0011", "Effort", null],
+  ["tag-0012", "Low", "tag-0011"],
+  ["tag-0013", "Setting", null],
+  ["tag-0014", "Home", "tag-0013"],
 ];
 const tags = tagList.map(([id, name, parentId]) => ({ id, name, parentId, status: "active" }));
 const tagID = Object.fromEntries(tagList.map(([id, name]) => [name, id]));
@@ -250,12 +250,12 @@ task("japanese", "Install a kana flashcard app", { planned: planned("2026-10-06"
 
 repeating("piano", "pianoUpkeep", "Play through one piece", 20, { defer: deferred("2026-08-27") });
 
-task("brush", "Basic strokes sheet", { estimate: 30, tags: ["Низкая"] });
+task("brush", "Basic strokes sheet", { estimate: 30, tags: ["Low"] });
 task("brush", "Lowercase alphabet", { estimate: 45 });
 
 // Life ops: three in Household, two in the inbox, all planned today; three more undated.
 task("household", "Pay electricity bill", { planned: todayPlanned, estimate: 5 });
-task("household", "Return parcel at the post office", { planned: todayPlanned, estimate: 20, tags: ["Дом"] });
+task("household", "Return parcel at the post office", { planned: todayPlanned, estimate: 20, tags: ["Home"] });
 task("household", "Compare car insurance quotes", { planned: todayPlanned, estimate: 30 });
 task(null, "Process inbox — 3 items", { planned: todayPlanned, estimate: 15 });
 task(null, "Order printer toner", { planned: todayPlanned, estimate: 5 });

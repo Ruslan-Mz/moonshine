@@ -42,4 +42,13 @@ import Testing
     #expect(
       DataFolder.measurementStorePath(in: folder) == "/base/MoonShine/moonshine-import.sqlite")
   }
+
+  /// The owner writes this name by hand: the app and the CLI read it from here (S4-4c-2).
+  @Test func theMappingFileIsMappingYAMLInTheFolder() {
+    let folder = URL(filePath: "/base/MoonShine/", directoryHint: .isDirectory)
+    #expect(DataFolder.mapping == "mapping.yaml")
+    #expect(
+      DataFolder.mappingFile(in: folder).path(percentEncoded: false)
+        == "/base/MoonShine/mapping.yaml")
+  }
 }

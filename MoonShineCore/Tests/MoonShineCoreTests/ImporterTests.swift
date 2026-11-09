@@ -4,6 +4,8 @@ import Testing
 @testable import MoonShineCore
 
 @Suite struct ImporterTests {
+  /// Invented meta groups, as a mapping file would name them.
+  static let groups: Set<String> = ["Rhythm", "Effort", "Charge"]
   let now = Date(timeIntervalSince1970: 1_790_000_000)
 
   let vault = VaultSnapshot(
@@ -12,7 +14,7 @@ import Testing
         SourceLine(
           key: "violin", name: "Violin", block: "Creative", state: .active, tags: ["violin"]),
         SourceLine(
-          key: "morning", name: "Morning", block: "Foundation", state: .active, tags: ["Утро"]),
+          key: "morning", name: "Morning", block: "Foundation", state: .active, tags: ["Dawn"]),
       ], complete: true),
     artifacts: [
       SourceArtifact(
@@ -31,20 +33,20 @@ import Testing
 
   func snapshot(
     _ tasks: [SourceTask], projects: [SourceProject] = [],
-    defaultTimes: DefaultTimeSettings? = DefaultTimeSettings()
+    defaultTimes: DefaultTimeSettings? = DefaultTimeSettings(), extraTags: [SourceTag] = []
   ) -> TaskSourceSnapshot {
     TaskSourceSnapshot(
       provider: .omnifocus, generatedAt: now, timeZone: TimeZone(identifier: "Europe/Moscow")!,
       defaultTimes: defaultTimes,
       tags: [
         SourceTag(externalId: "t-violin", name: "violin"),
-        SourceTag(externalId: "t-cycle", name: "Цикл"),
-        SourceTag(externalId: "t-morning", name: "Утро", parentExternalId: "t-cycle"),
-        SourceTag(externalId: "t-time", name: "Время"),
-        SourceTag(externalId: "t-time-low", name: "Низкая", parentExternalId: "t-time"),
-        SourceTag(externalId: "t-energy", name: "Энергия"),
-        SourceTag(externalId: "t-energy-low", name: "Низкая", parentExternalId: "t-energy"),
-      ],
+        SourceTag(externalId: "t-cycle", name: "Rhythm"),
+        SourceTag(externalId: "t-morning", name: "Dawn", parentExternalId: "t-cycle"),
+        SourceTag(externalId: "t-time", name: "Effort"),
+        SourceTag(externalId: "t-time-low", name: "Low", parentExternalId: "t-time"),
+        SourceTag(externalId: "t-energy", name: "Charge"),
+        SourceTag(externalId: "t-energy-low", name: "Low", parentExternalId: "t-energy"),
+      ] + extraTags,
       projects: projects, tasks: tasks)
   }
 
@@ -52,7 +54,7 @@ import Testing
     _ source: TaskSourceSnapshot, identities: inout IdentityMap,
     stored: Workspace = Workspace(timeZone: .gmt)
   ) -> Workspace {
-    Importer().makeWorkspace(
+    Importer(metaTagGroups: Self.groups).makeWorkspace(
       tasks: source, vault: vault, stored: stored, identities: &identities, now: now)
   }
 
@@ -76,8 +78,39 @@ import Testing
     #expect(try task(ws, "x").line == .lifeOps)
     #expect(
       ws.tags.filter(\.isMeta).map(\.name).sorted() == [
-        "Время", "Низкая", "Низкая", "Утро", "Цикл", "Энергия",
+        "Charge", "Dawn", "Effort", "Low", "Low", "Rhythm",
       ])
+  }
+
+  /// "n of m groups found": the current mapping's names, counted among the shown workspace's
+  /// top-level tag names, whatever groups it was imported under, so n never exceeds m (PR #50
+  /// round 1).
+  @Test func aMappedGroupCountsAsFoundOnlyWhenATopLevelTagHasItsName() {
+    let ws = run(snapshot([]))
+    #expect(ws.groupsFound(["Rhythm", "Absent", "Dawn"]) == 1)
+    #expect(ws.groupsFound(Self.groups) == 3)
+    #expect(ws.groupsFound(["Rhythm", "Effort"]) == 2)
+    #expect(ws.groupsFound(["Rhythm", "violin"]) == 2)
+    #expect(ws.groupsFound([]) == 0)
+  }
+
+  @Test func twoTopLevelTagsWithOneNameCountOnce() {
+    let ws = run(snapshot([], extraTags: [SourceTag(externalId: "t-cycle-2", name: "Rhythm")]))
+    #expect(ws.tags.filter { $0.parentID == nil && $0.name == "Rhythm" }.count == 2)
+    #expect(ws.groupsFound(["Rhythm"]) == 1)
+  }
+
+  /// The groups come only from the mapping file: with none, no tag is meta and a tag under a
+  /// former group maps its line like any other.
+  @Test func withoutMappedGroupsNoTagIsMeta() throws {
+    var identities = IdentityMap()
+    let ws = Importer(metaTagGroups: []).makeWorkspace(
+      tasks: snapshot([SourceTask(externalId: "x", name: "Stretch", tagExternalIds: ["t-morning"])]
+      ),
+      vault: vault, stored: Workspace(timeZone: .gmt), identities: &identities, now: now)
+    #expect(ws.tags.filter(\.isMeta).isEmpty)
+    let morning = try #require(ws.lines.first { $0.key == "morning" })
+    #expect(try task(ws, "x").line == .line(morning.id))
   }
 
   @Test func duplicateLeafNamesStayDistinctTagsReferencedByID() throws {

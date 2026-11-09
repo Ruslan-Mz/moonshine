@@ -36,7 +36,7 @@ import Testing
     let time = SettableClock(Date(timeIntervalSince1970: 1_790_000_000))
     let service = ImportService(
       tasks: OneTask(), notes: ObsidianVault(root: vault.root, timeZone: moscow), store: store,
-      clock: time.clock)
+      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups), clock: time.clock)
     var runs: [Workspace] = []
     for (index, state) in states.enumerated() {
       time.set(Date(timeIntervalSince1970: 1_790_000_000 + 86_400 * Double(index)))

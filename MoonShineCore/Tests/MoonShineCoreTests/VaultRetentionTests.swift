@@ -53,7 +53,7 @@ import Testing
     var stored = StoredWorkspace(timeZone: TestWorld.timeZone)
     var runs: [Workspace] = []
     for (snapshot, now) in zip(snapshots, [first, second, third]) {
-      let workspace = Importer().makeWorkspace(
+      let workspace = Importer(metaTagGroups: []).makeWorkspace(
         tasks: source, vault: snapshot, stored: stored.workspace, identities: &identities, now: now)
       stored = stored.merging(workspace, at: now)
       runs.append(workspace)
@@ -309,7 +309,7 @@ import Testing
     let service = ImportService(
       tasks: Tasks(source: source),
       notes: Vaults([vault([yearNote()], [artifact("a")]), vault([], [], unread: unread)]),
-      store: store, clock: time.clock)
+      store: store, importer: Importer(metaTagGroups: []), clock: time.clock)
     let before = try await service.run(ImportRequest(trigger: .manual))
     time.set(second)
     try await service.run(ImportRequest(trigger: .manual))

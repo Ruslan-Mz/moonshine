@@ -13,7 +13,7 @@ import Testing
   init() async throws {
     let source = try SnapshotMapper.map(try fixtureDocument())
     var identities = IdentityMap()
-    let workspace = Importer().makeWorkspace(
+    let workspace = Importer(metaTagGroups: DemoMapping.metaTagGroups).makeWorkspace(
       tasks: source, vault: try await DemoVault().vault(), stored: Workspace(timeZone: .gmt),
       identities: &identities, now: source.generatedAt)
     overview = Overview(workspace: workspace, now: source.generatedAt)
@@ -27,6 +27,16 @@ import Testing
     try #require(
       DemoVault.calendar.date(
         from: DateComponents(year: 2026, month: month, day: day, hour: hour, minute: minute)))
+  }
+
+  /// Demo's meta groups are its own invented set: the fixture's top-level tags with children,
+  /// and every tag under them is meta.
+  @Test func theDemoFixtureUsesItsOwnInventedGroups() throws {
+    let tags = overview.workspace.tags
+    let parents = Set(tags.compactMap(\.parentID))
+    let groups = tags.filter { $0.parentID == nil && parents.contains($0.id) }
+    #expect(Set(groups.map(\.name)) == DemoMapping.metaTagGroups)
+    #expect(tags.filter(\.isMeta).count == 4)
   }
 
   @Test func theClockIsTheDemoClock() {

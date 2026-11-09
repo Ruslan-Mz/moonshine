@@ -21,9 +21,11 @@ import SQLiteStore
   /// terminal. An agent never runs it, and its output never goes into a log, commit or PR.
   ///
   /// `full` imports into its own store, `moonshine-import.sqlite` in the data folder
-  /// (`~/Library/Application Support/MoonShine/`, created if missing), recreated before the first
-  /// run; never the app's `MoonShine.sqlite` next to it. One run unless `runs` is given. The vault
-  /// is not read here (`VaultSnapshot.notRead`), so every task maps to Life ops.
+  /// (`~/Library/Application Support/MoonShine/`, created if missing); never the app's
+  /// `MoonShine.sqlite` next to it. It reads `mapping.yaml` there first (an invalid file stops it),
+  /// then OmniFocus, and only after that first read succeeds does it recreate its store, so a
+  /// failed read removes nothing; run 1's "import" phase includes that. One run unless `runs` is
+  /// given. The vault is not read here (`VaultSnapshot.notRead`), so every task maps to Life ops.
   @main
   struct MoonShineImport {
     /// 300 s for the measurement only (a full read may exceed the adapter's 30 s default).
@@ -40,7 +42,7 @@ import SQLiteStore
           guard let count = second == nil ? 1 : second.flatMap({ Int($0) }), count > 0 else {
             usage()
           }
-          try await full(runs: count)
+          try await full(runs: count, base: try applicationSupport(), bridge: bridge)
         case ("incremental", let minutes?):
           guard let minutes = Int(minutes), minutes > 0 else { usage() }
           try await incremental(minutes: minutes)
@@ -77,13 +79,20 @@ import SQLiteStore
 
     // MARK: Modes
 
-    static func full(runs: Int) async throws {
-      // Only `full` creates the folder: `vault` writes nothing.
-      let base = try FileManager.default.url(
+    /// The data folder's base; only this entry point and the app's name it.
+    static func applicationSupport() throws -> URL {
+      try FileManager.default.url(
         for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+    }
+
+    static func full(runs: Int, base: URL, bridge: OmniFocusBridge) async throws {
+      // Only `full` creates the folder: `vault` writes nothing.
       let storePath = try Self.storePath(base: base)
-      try removeStore(at: storePath)
-      let store = try SQLiteStore(path: storePath)
+      let mapping = try MappingFile.read(
+        file: DataFolder.mappingFile(in: DataFolder.url(base: base)))
+      let groups: Set<String> = if case .groups(let groups) = mapping { groups } else { [] }
+      var opened: SQLiteStore?
+      var workspace: Workspace?
       let names = ["bridge", "decode+validate", "import", "commit", "total", "OmniFocus held"]
       var phases: [[Duration]] = []
       var last: SnapshotDocument?
@@ -93,15 +102,28 @@ import SQLiteStore
         marks.append(clock.now)
         let document = try SnapshotDocument.decode(output.json)
         let source = try SnapshotMapper.map(document)
+        // Only a full snapshot replaces the store: a delta would stand for everything.
+        if let since = source.modifiedSince { throw PartialSnapshotError(modifiedSince: since) }
         marks.append(clock.now)
+        let store: SQLiteStore
+        if let opened {
+          store = opened
+        } else {
+          // Only now that OmniFocus was read in full and validated: a failed read leaves the
+          // old store as it was.
+          try removeStore(at: storePath)
+          store = try SQLiteStore(path: storePath)
+          opened = store
+        }
         var identities = try await store.identityMap()
-        let workspace = Importer().makeWorkspace(
+        let imported = Importer(metaTagGroups: groups).makeWorkspace(
           tasks: source, vault: .notRead(), stored: try await store.workspace(),
           identities: &identities.map, now: Date())
+        workspace = imported
         marks.append(clock.now)
         // The measurement records its own phases; it adds no row to `imports`.
         try await store.commit(
-          workspace, identities: identities.map, expectedVersion: identities.version, at: Date(),
+          imported, identities: identities.map, expectedVersion: identities.version, at: Date(),
           run: nil)
         marks.append(clock.now)
         let steps = zip(marks.dropFirst(), marks).map { $0 - $1 }
@@ -111,6 +133,12 @@ import SQLiteStore
       }
       if runs > 1 { print("median: " + line(median(phases), names)) }
       if let last { report(last) }
+      if let workspace {
+        print(
+          mappingLine(
+            mapping, found: workspace.groupsFound(groups),
+            metaTags: workspace.tags.filter(\.isMeta).count))
+      }
     }
 
     static func incremental(minutes: Int) async throws {
@@ -257,6 +285,15 @@ import SQLiteStore
 
     // MARK: Helpers
 
+    /// Counts only: never a group's name.
+    static func mappingLine(_ read: MappingFile.Read, found: Int, metaTags: Int) -> String {
+      switch read {
+      case .missing: "mapping: missing (no group is meta)"
+      case .groups(let groups):
+        "mapping: \(found) of \(groups.count) groups found · meta tags \(metaTags)"
+      }
+    }
+
     /// Error kind and JSON path only: never a value, a payload slice or osascript's stderr.
     static func describe(_ error: any Error) -> String {
       switch error {
@@ -271,6 +308,11 @@ import SQLiteStore
           + violations.prefix(5).map(\.description).joined(separator: "; ")
       case SnapshotError.badValue(let path): return "bad value at \(path)"
       case SnapshotError.undecodable(let path): return "JSON does not decode at \(path)"
+      case is PartialSnapshotError: return "the bridge returned changes only, not a full snapshot"
+      case MappingFileError.unreadable:
+        return "mapping.yaml is not a regular file or cannot be read"
+      case MappingFileError.invalid(let kind, let key):
+        return "mapping.yaml: \(kind.rawValue) at \(key.rawValue)"
       case VaultReadError.rootUnreadable: return "the vault folder cannot be read"
       case VaultReadError.tooManyNotes(let limit):
         return "the vault has more than \(limit) notes; nothing was read"

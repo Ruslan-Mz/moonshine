@@ -87,6 +87,8 @@ public enum ImportFailure: String, Sendable, CaseIterable {
   case timedOut
   case invalidSnapshot
   case partialSnapshot
+  /// The mapping file in the data folder cannot be read; imports wait for a valid one.
+  case mappingInvalid
   case other
 }
 

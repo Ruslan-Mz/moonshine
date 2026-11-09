@@ -16,6 +16,7 @@ const bridge = "Adapters/Sources/OmniFocusAdapter/OmniFocusBridge.swift";
 const adapter = "Adapters/Sources/ObsidianAdapter/A.swift";
 const app = "Apps/MoonShineMac/Sources/A.swift";
 const signals = "Apps/Mac/Sources/Live/MacChangeSignals.swift";
+const mapping = "Adapters/Sources/ObsidianAdapter/MappingFile.swift";
 
 function run(root) {
   return spawnSync("node", [script, root], { encoding: "utf8" });
@@ -182,6 +183,29 @@ test("a call that changes another app's run state fails in every file", () => {
   passes("let hidden = view.hidden()");
 });
 
+test("a signal by process id fails in every file", () => {
+  // libproc's terminate and signal calls take a process id too (owner, 2026-11-09, PR #50 rounds
+  // 1 and 2); `proc_terminate_all_rsr` signals every process of a kind.
+  for (const name of [
+    "kill",
+    "killpg",
+    "proc_terminate",
+    "proc_terminate_all_rsr",
+    "proc_terminate_with_audittoken",
+    "proc_terminate_delegate",
+    "proc_signal_with_audittoken",
+    "proc_signal_delegate",
+  ]) {
+    for (const where of [adapter, app, signals, bridge, "MoonShineCore/Sources/MoonShineCore/A.swift"]) {
+      fails(`${name}(pid, SIGTERM)`, where, "signal by process id");
+      fails(`  _ = Darwin.${name}(pid, SIGKILL)`, where, "signal by process id");
+    }
+    passes(`process.${name}(pid)`);
+    passes(`func ${name}(_ pid: Int32) {}`);
+    passes(`// Then ${name}(pid, SIGKILL) after the grace period.`);
+  }
+});
+
 test("a line that is only a comment is searched for member calls, not for names", () => {
   passes("/// Process the snapshot in one pass.");
   passes("  // Follows the note's parent link (a wikilink) to the artifact, then remove(it).");
@@ -204,6 +228,17 @@ test("an allowed text passes in its own file only", () => {
   fails("process.terminate()", app, "app run state");
   fails("app.terminate()", bridge, "app run state");
   fails("process.terminate(); app.terminate()", bridge, "app run state");
+  // After the grace period the runner kills its own child, by its process id.
+  passes("          kill(process.processIdentifier, SIGKILL)", bridge);
+  fails("kill(process.processIdentifier, SIGKILL)", adapter, "signal by process id");
+  fails("kill(process.processIdentifier, SIGKILL)", app, "signal by process id");
+  fails("kill(other, SIGKILL)", bridge, "signal by process id");
+  fails("kill(process.processIdentifier, SIGKILL); kill(pid, SIGTERM)", bridge, "signal by process id");
+  // The mapping file is opened once, read-only, without following a link (PR #50 round 1).
+  passes("    let descriptor = open(path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)", mapping);
+  fails("let descriptor = open(path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)", adapter, "C file call");
+  fails("let descriptor = open(path, O_RDWR | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)", mapping, "C file call");
+  fails("let descriptor = open(path, O_RDONLY)", mapping, "C file call");
   passes("try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)", dataFolder);
   fails("try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)", store);
   fails("try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)", tool);
@@ -399,6 +434,8 @@ test("the repository is clean, and not by accident", () => {
     [tool, "FileHandle.standardError.write("],
     [bridge, "let process = Process()"],
     [bridge, "process.terminate()"],
+    [bridge, "kill(process.processIdentifier, SIGKILL)"],
+    [mapping, "open(path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)"],
   ]) {
     fails(text, path.replace(".swift", "Copy.swift"));
   }

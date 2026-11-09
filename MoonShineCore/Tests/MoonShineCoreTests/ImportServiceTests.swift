@@ -9,6 +9,7 @@ import Testing
     let provider = GatedTaskProvider()
     let service = ImportService(
       tasks: provider, notes: DemoVault(), store: InMemoryStore(),
+      importer: Importer(metaTagGroups: []),
       clock: .frozen(at: Date(timeIntervalSince1970: 1_790_000_000)))
 
     let running = Task { try await service.run(ImportRequest(trigger: .launch)) }
@@ -31,7 +32,8 @@ import Testing
     let time = SettableClock(start)
     let store = InMemoryStore()
     let service = ImportService(
-      tasks: provider, notes: DemoVault(), store: store, clock: time.clock)
+      tasks: provider, notes: DemoVault(), store: store, importer: Importer(metaTagGroups: []),
+      clock: time.clock)
 
     let running = Task { try await service.run(ImportRequest(trigger: .launch)) }
     await eventually { await provider.calls == 1 }
@@ -58,7 +60,8 @@ import Testing
     let time = SettableClock(start)
     let store = InMemoryStore()
     let service = ImportService(
-      tasks: provider, notes: DemoVault(), store: store, clock: time.clock)
+      tasks: provider, notes: DemoVault(), store: store, importer: Importer(metaTagGroups: []),
+      clock: time.clock)
 
     let running = Task { try await service.run(ImportRequest(trigger: .launch)) }
     await eventually { await provider.calls == 1 }
@@ -79,7 +82,9 @@ import Testing
   @Test func aRequestAfterTheFollowUpFinishedRunsAgain() async throws {
     let provider = GatedTaskProvider()
     await provider.open()
-    let service = ImportService(tasks: provider, notes: DemoVault(), store: InMemoryStore())
+    let service = ImportService(
+      tasks: provider, notes: DemoVault(), store: InMemoryStore(),
+      importer: Importer(metaTagGroups: []))
     try await service.run(ImportRequest(trigger: .manual))
     try await service.run(ImportRequest(trigger: .manual))
     #expect(await provider.calls == 2)
@@ -99,7 +104,8 @@ import Testing
   @Test func aPartialSnapshotIsNeverCommittedAsAFullImport() async throws {
     let store = InMemoryStore()
     let provider = PartialTaskProvider()
-    let service = ImportService(tasks: provider, notes: DemoVault(), store: store)
+    let service = ImportService(
+      tasks: provider, notes: DemoVault(), store: store, importer: Importer(metaTagGroups: []))
     await #expect(throws: PartialSnapshotError(modifiedSince: provider.since)) {
       try await service.run(ImportRequest(trigger: .manual))
     }
@@ -123,13 +129,13 @@ import Testing
     let now = Date(timeIntervalSince1970: 1_790_000_000)
     try await ImportService(
       tasks: TimedTaskProvider(defaultTimes: times), notes: DemoVault(), store: store,
-      clock: .frozen(at: now)
+      importer: Importer(metaTagGroups: []), clock: .frozen(at: now)
     ).run(ImportRequest(trigger: .manual))
     #expect(try await store.workspace().defaultTimeSettings == times)
 
     try await ImportService(
       tasks: TimedTaskProvider(defaultTimes: nil), notes: DemoVault(), store: store,
-      clock: .frozen(at: now.addingTimeInterval(60))
+      importer: Importer(metaTagGroups: []), clock: .frozen(at: now.addingTimeInterval(60))
     ).run(ImportRequest(trigger: .manual))
     let after = try await store.workspace()
     #expect(after.defaultTimeSettings == times)

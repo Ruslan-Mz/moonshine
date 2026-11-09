@@ -68,7 +68,7 @@ import Testing
     let store = InMemoryStore()
     let service = ImportService(
       tasks: HeldTaskProvider(heldFor: .milliseconds(2_700)), notes: DemoVault(), store: store,
-      clock: time.clock)
+      importer: Importer(metaTagGroups: []), clock: time.clock)
     let workspace = try await service.run(
       ImportRequest(trigger: .resignActive, signalledAt: .milliseconds(400)))
 
@@ -86,7 +86,7 @@ import Testing
     let store = InMemoryStore()
     try await ImportService(
       tasks: HeldTaskProvider(heldFor: nil), notes: DemoVault(), store: store,
-      clock: .frozen(at: Self.start)
+      importer: Importer(metaTagGroups: []), clock: .frozen(at: Self.start)
     ).run(ImportRequest(trigger: .manual))
     let run = try #require(try await store.lastCommittedImport())
     #expect(run.providerHeld == nil)
@@ -98,7 +98,8 @@ import Testing
     let time = SettableClock(Self.start)
     let store = InMemoryStore()
     let service = ImportService(
-      tasks: OnceTaskProvider(), notes: DemoVault(), store: store, clock: time.clock)
+      tasks: OnceTaskProvider(), notes: DemoVault(), store: store,
+      importer: Importer(metaTagGroups: []), clock: time.clock)
     try await service.run(ImportRequest(trigger: .launch))
     time.advance(by: .seconds(60))
     await #expect(throws: OnceTaskProvider.Unavailable.self) {
@@ -139,7 +140,7 @@ import Testing
     let store = InMemoryStore()
     try await ImportService(
       tasks: SlowTaskProvider(time: time, readTime: .seconds(3)), notes: DemoVault(), store: store,
-      clock: time.clock
+      importer: Importer(metaTagGroups: []), clock: time.clock
     ).run(ImportRequest(trigger: .manual))
     let run = try #require(try await store.lastCommittedImport())
     #expect(run.startedAt == Self.start)
@@ -152,7 +153,8 @@ import Testing
     let time = SettableClock(Self.start)
     let store = SlowStore(time: time, writeTime: .milliseconds(250))
     try await ImportService(
-      tasks: HeldTaskProvider(heldFor: nil), notes: DemoVault(), store: store, clock: time.clock
+      tasks: HeldTaskProvider(heldFor: nil), notes: DemoVault(), store: store,
+      importer: Importer(metaTagGroups: []), clock: time.clock
     ).run(ImportRequest(trigger: .manual))
     let run = try #require(try await store.lastCommittedImport())
     #expect(run.duration == .milliseconds(250))
