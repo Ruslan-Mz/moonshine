@@ -20,6 +20,8 @@ final class SourceFeed {
   private(set) var isImporting = false
   /// Imports that ended, committed or not.
   private(set) var importOutcomes = 0
+  /// ⌘R and launch requests dropped because OmniFocus is not running.
+  private(set) var droppedRequests = 0
   /// Nil until the coordinator knows it.
   private(set) var omniFocusState: OmniFocusState?
   /// The kind of the last import that did not commit; a commit clears it. The store's last
@@ -182,7 +184,7 @@ final class SourceFeed {
       isImporting = false
       importOutcomes += 1
     case .omniFocusNotRunning:
-      break  // The note follows `omniFocusState`.
+      droppedRequests += 1  // The note follows `omniFocusState`.
     case .omniFocusState(let new):
       omniFocusState = new
       if new != .notRunning, lastFailure == .providerNotRunning { lastFailure = nil }

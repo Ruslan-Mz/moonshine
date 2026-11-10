@@ -1,6 +1,7 @@
 import Foundation
 import MoonShineCore
 import MoonShineFixtures
+import SwiftUI
 import Testing
 
 @testable import MoonShineMac
@@ -603,5 +604,70 @@ private struct NotLoaded: Error {}
     #expect(format("%lld sessions", 5) == "5 занятий")
     #expect(format("quiet for %lld days", 21) == "тихо 21 день")
     #expect(format("quiet for %lld days", 29) == "тихо 29 дней")
+  }
+
+  // MARK: S4-4e, the held-removal notice and its menu command
+
+  static func held(_ names: [String]) -> [TodayScreen.HeldLine] {
+    names.map { TodayScreen.HeldLine(id: LineID(uuid: UUID()), emoji: nil, name: $0) }
+  }
+
+  @Test func theNoticeNamesAHoldOfThreeWithoutAnEllipsisAndOfFourWithOne() {
+    #expect(LineRemovalHold.names(Self.held(["Cello", "Drum", "Harp"])) == "Cello, Drum, Harp")
+    #expect(
+      LineRemovalHold.names(Self.held(["Cello", "Drum", "Harp", "Oboe"])) == "Cello, Drum, Harp, …")
+    let emoji = [TodayScreen.HeldLine(id: LineID(uuid: UUID()), emoji: "🎻", name: "Viola")]
+    #expect(LineRemovalHold.names(emoji) == "🎻 Viola")
+  }
+
+  @Test func theMenuCommandActsOnlyWhileAHoldStandsUnapproved() {
+    func hold(approved: Bool) -> LineRemovalHold {
+      LineRemovalHold(isApproved: approved, omniFocusClosed: false, approve: {})
+    }
+    #expect(!LineRemovalHold.canApprove(nil))
+    #expect(LineRemovalHold.canApprove(hold(approved: false)))
+    #expect(!LineRemovalHold.canApprove(hold(approved: true)))
+  }
+
+  /// The rail's content is 240 pt wide (inspector 300 − 2 × 16 − 2 × 14). The window fact has
+  /// its own line under the name and wraps, as the card lays it out, so the date is never
+  /// truncated: the three cases measured in PR #52's review.
+  @MainActor @Test func theWindowFactFitsTheRailOnItsOwnLine() throws {
+    let path = try #require(Bundle.main.path(forResource: "ru", ofType: "lproj"))
+    let ru = try #require(Bundle(path: path))
+    let zone = try #require(TimeZone(identifier: "Europe/Berlin"))
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = zone
+    let today = try #require(calendar.date(from: DateComponents(year: 2026, month: 9, day: 28)))
+    let july = try #require(calendar.date(from: DateComponents(year: 2026, month: 7, day: 6)))
+    let lastYear = try #require(calendar.date(from: DateComponents(year: 2025, month: 12, day: 6)))
+    func fact(_ since: Date, _ locale: Locale, _ bundle: Bundle) -> String {
+      let date = TodayFormat.lastDate(since, today: today, timeZone: zone, locale: locale)
+      return String(
+        format: bundle.localizedString(forKey: "no completions since %@", value: nil, table: nil),
+        locale: locale, date)
+    }
+    let english = Locale(identifier: "en")
+    let cases = [
+      fact(july, Locale(identifier: "ru"), ru),
+      fact(lastYear, english, .main),
+      fact(july, english, .main),
+    ]
+    #expect(cases[0] == "нет выполненных задач с 6 июля")
+    var widths: [CGFloat] = []
+    for text in cases {
+      let line = NSHostingView(rootView: Text(verbatim: text).fixedSize()).fittingSize
+      let laidOut = NSHostingView(
+        rootView: Text(verbatim: text).fixedSize(horizontal: false, vertical: true)
+          .frame(width: 240)
+      ).fittingSize
+      widths.append(line.width)
+      // One line when it fits; otherwise a second line, never a cut.
+      #expect(
+        line.width <= 240 ? laidOut.height == line.height : laidOut.height >= 2 * line.height - 1)
+    }
+    // RU and the Demo row fit on one line; English with a year may take two.
+    #expect(widths[0] <= 240)
+    #expect(widths[2] <= 240)
   }
 }

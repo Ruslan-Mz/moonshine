@@ -56,6 +56,19 @@ struct LineRemovalHold {
   let isApproved: Bool
   let omniFocusClosed: Bool
   let approve: () -> Void
+
+  /// The notice names the first three, then `…`.
+  static func names(_ lines: [TodayScreen.HeldLine]) -> String {
+    let shown = lines.prefix(3).map {
+      [$0.emoji, $0.name].compactMap { $0 }.joined(separator: " ")
+    }
+    return (shown + (lines.count > 3 ? ["…"] : [])).joined(separator: ", ")
+  }
+
+  /// The menu command acts while a hold stands unapproved; nil is nothing held.
+  static func canApprove(_ removal: LineRemovalHold?) -> Bool {
+    removal.map { !$0.isApproved } ?? false
+  }
 }
 
 extension FocusedValues {
@@ -84,7 +97,7 @@ struct TodayCommands: Commands {
       .keyboardShortcut("f", modifiers: [.option, .command])
       .disabled(toggle?.isAvailable != true)
       Button("Remove Lines No Longer in the Budget Note") { removal?.approve() }
-        .disabled(removal == nil || removal?.isApproved == true)
+        .disabled(!LineRemovalHold.canApprove(removal))
     }
   }
 }
@@ -113,13 +126,7 @@ private struct LineRemovalNotice: View {
   let lines: [TodayScreen.HeldLine]
   let removal: LineRemovalHold
 
-  /// The first three, then `…`.
-  private var names: String {
-    let shown = lines.prefix(3).map {
-      [$0.emoji, $0.name].compactMap { $0 }.joined(separator: " ")
-    }
-    return (shown + (lines.count > 3 ? ["…"] : [])).joined(separator: ", ")
-  }
+  private var names: String { LineRemovalHold.names(lines) }
 
   var body: some View {
     HStack(alignment: .firstTextBaseline, spacing: 12) {

@@ -853,8 +853,10 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     let (model, _) = try await heldModel(ShrinkingVault(), source: source)
     source.send(.omniFocus(.notRunning))
     await waitFor { model.omniFocusState == .notRunning }
+    let dropped = model.droppedRequests
     model.approveHeldRemoval()
-    await waitFor { model.removalApproved }
+    // Remove's ⌘R reached the coordinator and was dropped, so no import ran.
+    await waitFor { model.droppedRequests == dropped + 1 }
     #expect(model.removalApproved)
     #expect(model.omniFocusNote == .notRunning)
     #expect(model.importOutcomes == 2)

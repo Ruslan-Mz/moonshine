@@ -197,21 +197,20 @@ private struct NoActivityCard: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      HStack(alignment: .firstTextBaseline) {
-        LineName(emoji: line.emoji, name: line.name).fontWeight(.semibold)
-        Spacer(minLength: 6)
-        Group {
-          // With the window start known, the fact is bounded by it (S4-4c-3).
-          if let since = line.since {
-            Text(
-              "no completions since \(TodayFormat.lastDate(since, today: today, timeZone: timeZone, locale: locale))"
-            )
-          } else {
-            Text("no activity yet")
-          }
+      LineName(emoji: line.emoji, name: line.name).fontWeight(.semibold)
+      // With the window start known, the fact is bounded by it (S4-4c-3). Its own line, as
+      // QuietLineCard's `Last:`, and it wraps: the date is the news, never truncated.
+      Group {
+        if let since = line.since {
+          Text(
+            "no completions since \(TodayFormat.lastDate(since, today: today, timeZone: timeZone, locale: locale))"
+          )
+        } else {
+          Text("no activity yet")
         }
-        .foregroundStyle(.secondary).lineLimit(1)
       }
+      .foregroundStyle(.secondary)
+      .fixedSize(horizontal: false, vertical: true)
       NextStepBlock(label: "First step", next: line.next)
     }
     .padding(14)

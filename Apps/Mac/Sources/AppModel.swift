@@ -150,6 +150,7 @@ final class AppModel {
   var clock: ImportClock { feed?.clock ?? DemoEnvironment.clock }
   var isImporting: Bool { feed?.isImporting ?? false }
   var importOutcomes: Int { feed?.importOutcomes ?? 0 }
+  var droppedRequests: Int { feed?.droppedRequests ?? 0 }
   var omniFocusState: OmniFocusState? { feed?.omniFocusState }
   var lastFailure: ImportFailure? { feed?.lastFailure }
   var omniFocusNote: SourceFeed.OmniFocusNote? { feed?.omniFocusNote }
