@@ -81,6 +81,60 @@ test("every Russian plural category is required, and a plural in one language ne
   ]);
 });
 
+const cases = (forms) => Object.fromEntries(Object.entries(forms).map(([k, v]) => [k, unit(v)]));
+/** A sentence whose count is a substitution, as Xcode writes one with a second argument. */
+const substituted = (en, ru, { enValue, ruValue } = {}) => ({
+  localizations: {
+    en: {
+      stringUnit: { state: "translated", value: enValue ?? "Gone: %#@lines@ (%2$@)" },
+      substitutions: en && {
+        lines: { argNum: 1, formatSpecifier: "lld", variations: { plural: cases(en) } },
+      },
+    },
+    ru: {
+      stringUnit: { state: "translated", value: ruValue ?? "Нет: %#@lines@ (%2$@)" },
+      substitutions: ru && {
+        lines: { argNum: 1, formatSpecifier: "lld", variations: { plural: cases(ru) } },
+      },
+    },
+  },
+});
+const enLines = { one: "%arg line", other: "%arg lines" };
+const ruLines = { one: "%arg строки", few: "%arg строк", many: "%arg строк", other: "%arg строки" };
+
+test("a substitution's plural needs its language's categories, in every language", () => {
+  const { few, ...ruWithoutFew } = ruLines;
+  assert.equal(few, "%arg строк");
+  assert.deepEqual(
+    checkCatalog(
+      catalog({
+        clean: substituted(enLines, ruLines),
+        a: substituted(enLines, ruWithoutFew),
+        b: substituted(enLines, undefined, { ruValue: "Нет: %lld строк (%2$@)" }),
+      }),
+      banned,
+    ),
+    ['a [ru]: substitution "lines" plural "few" missing', 'b [ru]: no substitution "lines"'],
+  );
+});
+
+test("a substitution the string names must be defined, and a defined one must be named", () => {
+  assert.deepEqual(
+    checkCatalog(
+      catalog({
+        a: substituted(enLines, ruLines, { ruValue: "Нет: %#@rows@ (%2$@)" }),
+        b: substituted(enLines, ruLines, { enValue: "Gone: %lld lines (%2$@)" }),
+      }),
+      banned,
+    ),
+    [
+      'a [ru]: substitution "rows" is not defined',
+      'a [ru]: substitution "lines" is not named in the string',
+      'b [en]: substitution "lines" is not named in the string',
+    ],
+  );
+});
+
 test("the command fails on a finding and passes a clean folder", () => {
   const dir = mkdtempSync(join(tmpdir(), "check-catalog-"));
   try {
