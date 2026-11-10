@@ -157,6 +157,8 @@ final class AppModel {
   var mapping: MappingState? { feed?.environment?.mapping }
   var storeUnreadable: Bool { feed?.storeUnreadable ?? false }
   var storeChecked: Bool { feed?.storeChecked ?? false }
+  var heldLineRemoval: [Line] { feed?.heldLineRemoval ?? [] }
+  var removalApproved: Bool { feed?.removalApproved ?? false }
 
   /// Starts the selected source's feed. Idempotent.
   func start() {
@@ -178,6 +180,11 @@ final class AppModel {
   /// ⌘R.
   func refresh() {
     feed?.refresh()
+  }
+
+  /// Remove N lines: approves exactly the held set and imports as ⌘R (S4-4e).
+  func approveHeldRemoval() {
+    feed?.approveHeldRemoval()
   }
 
   /// For tests: `start()`, then wait until the first import has ended (bounded).

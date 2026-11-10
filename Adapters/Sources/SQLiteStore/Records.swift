@@ -10,11 +10,15 @@ extension Date {
   init(millis: Millis) { self.init(timeIntervalSince1970: Double(millis) / 1000) }
 }
 
-enum SQLiteStoreError: Error, Equatable {
+public enum SQLiteStoreError: Error, Equatable {
   /// A stored text that names no known case; the value is left out.
   case unknownValue(column: String)
   /// A stored number outside its range; the value is left out.
   case outOfRange(column: String)
+  /// A database without this table (not the app's store, or older than it).
+  case missingTable(String)
+  /// A WAL store without its side files cannot be opened read-only.
+  case cannotOpenReadOnly
 }
 
 func decode<Value: RawRepresentable>(_ raw: String, _ column: String) throws -> Value
@@ -336,6 +340,7 @@ struct WorkspaceRecord: Codable, FetchableRecord, PersistableRecord {
     case vault(path: String, line: Int?, kind: VaultProblem.Kind, key: String?)
     case vaultWide(kind: VaultProblem.Kind, key: String?)
     case defaultTimesNotRead
+    case lineRemovalHeld(keys: [String])
   }
   /// Minutes from midnight, read in the row's time zone. Absent from a row written before
   /// S4-3a.
@@ -348,6 +353,8 @@ struct WorkspaceRecord: Codable, FetchableRecord, PersistableRecord {
     var issues: [Issue]
     /// nil when every time is absent: one encoding for that state.
     var defaultTimes: Times?
+    /// Absent from a row written before S4-4c-3.
+    var completedSince: Millis?
   }
   var id = 1
   var timeZone: String
@@ -371,9 +378,11 @@ struct WorkspaceRecord: Codable, FetchableRecord, PersistableRecord {
         case .vaultWide(let problem):
           .vaultWide(kind: problem.kind, key: problem.key)
         case .defaultTimesNotRead: .defaultTimesNotRead
+        case .lineRemovalHeld(let keys): .lineRemovalHeld(keys: keys.map(\.rawValue))
         }
       },
-      defaultTimes: Self.times(stored.defaultTimeSettings))
+      defaultTimes: Self.times(stored.defaultTimeSettings),
+      completedSince: stored.completedSince?.millis)
   }
 
   private static func times(_ settings: DefaultTimeSettings) -> Times? {
@@ -411,6 +420,7 @@ struct WorkspaceRecord: Codable, FetchableRecord, PersistableRecord {
       case .vaultWide(let kind, let key):
         .vaultWide(VaultProblem(kind, key: key))
       case .defaultTimesNotRead: .defaultTimesNotRead
+      case .lineRemovalHeld(let keys): .lineRemovalHeld(keys.map { LineKey($0) })
       }
     }
   }
@@ -422,15 +432,17 @@ struct ImportRecord: Codable, FetchableRecord, PersistableRecord {
   static let databaseColumnDecodingStrategy = DatabaseColumnDecodingStrategy.convertFromSnakeCase
   static let databaseColumnEncodingStrategy = DatabaseColumnEncodingStrategy.convertToSnakeCase
   static let committed = "committed"
+  static let failed = "failed"
 
-  /// The row counts.
+  /// A committed run's row counts, or a failed run's kind; never both (S4-4c-3).
   struct Attrs: Codable, Equatable {
-    var lines: Int
-    var notes: Int
-    var artifacts: Int
-    var projects: Int
-    var tasks: Int
-    var tags: Int
+    var lines: Int?
+    var notes: Int?
+    var artifacts: Int?
+    var projects: Int?
+    var tasks: Int?
+    var tags: Int?
+    var failure: String?
   }
   var id: Int64?
   var trigger: String
@@ -443,43 +455,58 @@ struct ImportRecord: Codable, FetchableRecord, PersistableRecord {
   var attrs: Attrs
 
   init(_ run: ImportRun) {
-    let counts: ImportCounts
-    switch run.outcome {
-    case .committed(let committed): counts = committed
-    }
     trigger = run.trigger.rawValue
     startedAt = run.startedAt.millis
     finishedAt = run.finishedAt.millis
     waitedMs = run.waited.map(Self.millis)
     durationMs = run.duration.map(Self.millis)
     heldMs = run.providerHeld.map(Self.millis)
-    outcome = Self.committed
-    attrs = Attrs(
-      lines: counts.lines, notes: counts.notes, artifacts: counts.artifacts,
-      projects: counts.projects, tasks: counts.tasks, tags: counts.tags)
+    switch run.outcome {
+    case .committed(let counts):
+      outcome = Self.committed
+      attrs = Attrs(
+        lines: counts.lines, notes: counts.notes, artifacts: counts.artifacts,
+        projects: counts.projects, tasks: counts.tasks, tags: counts.tags)
+    case .failed(let kind):
+      outcome = Self.failed
+      attrs = Attrs(failure: kind.rawValue)
+    }
   }
 
   private static func millis(_ duration: Duration) -> Int64 {
     duration.components.seconds * 1000 + duration.components.attoseconds / 1_000_000_000_000_000
   }
 
-  /// Every column is checked: an unknown text, a negative number or an end before the start
-  /// throws, naming only its column. An instant is not checked against the clock: a future end
-  /// cannot be told from a clock set back, and the status bar reads both as just now.
+  /// Every column is checked: an unknown text, a negative number, an end before the start or
+  /// attrs that do not match the outcome throw, naming only the column. An instant is not
+  /// checked against the clock: a future end cannot be told from a clock set back, and the
+  /// status bar reads both as just now.
   func run() throws -> ImportRun {
     func duration(_ ms: Int64?, _ column: String) throws -> Duration? {
       guard let ms else { return nil }
       guard ms >= 0 else { throw SQLiteStoreError.outOfRange(column: "imports.\(column)") }
       return .milliseconds(ms)
     }
-    guard outcome == Self.committed else {
-      throw SQLiteStoreError.unknownValue(column: "imports.outcome")
-    }
     let counts = [
       attrs.lines, attrs.notes, attrs.artifacts, attrs.projects, attrs.tasks, attrs.tags,
     ]
-    guard counts.allSatisfy({ $0 >= 0 }) else {
-      throw SQLiteStoreError.outOfRange(column: "imports.attrs")
+    let result: ImportOutcome
+    switch outcome {
+    case Self.committed:
+      let present = counts.compactMap { $0 }
+      guard attrs.failure == nil, present.count == counts.count, present.allSatisfy({ $0 >= 0 })
+      else { throw SQLiteStoreError.outOfRange(column: "imports.attrs") }
+      result = .committed(
+        ImportCounts(
+          lines: present[0], notes: present[1], artifacts: present[2], projects: present[3],
+          tasks: present[4], tags: present[5]))
+    case Self.failed:
+      guard let failure = attrs.failure, counts.allSatisfy({ $0 == nil }) else {
+        throw SQLiteStoreError.outOfRange(column: "imports.attrs")
+      }
+      result = .failed(try decode(failure, "imports.attrs.failure"))
+    default:
+      throw SQLiteStoreError.unknownValue(column: "imports.outcome")
     }
     guard finishedAt >= startedAt else {
       throw SQLiteStoreError.outOfRange(column: "imports.finished_at")
@@ -488,10 +515,6 @@ struct ImportRecord: Codable, FetchableRecord, PersistableRecord {
       trigger: try decode(trigger, "imports.trigger"), startedAt: Date(millis: startedAt),
       finishedAt: Date(millis: finishedAt), waited: try duration(waitedMs, "waited_ms"),
       duration: try duration(durationMs, "duration_ms"),
-      providerHeld: try duration(heldMs, "held_ms"),
-      outcome: .committed(
-        ImportCounts(
-          lines: attrs.lines, notes: attrs.notes, artifacts: attrs.artifacts,
-          projects: attrs.projects, tasks: attrs.tasks, tags: attrs.tags)))
+      providerHeld: try duration(heldMs, "held_ms"), outcome: result)
   }
 }

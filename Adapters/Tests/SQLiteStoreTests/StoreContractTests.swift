@@ -48,7 +48,7 @@ import Testing
     var identities = IdentityMap()
     let workspace = Importer(metaTagGroups: DemoMapping.metaTagGroups).makeWorkspace(
       tasks: source, vault: try await DemoVault().vault(), stored: Workspace(timeZone: .gmt),
-      identities: &identities,
+      approvedLineRemovals: [], identities: &identities,
       now: first)
     try await store.commit(
       workspace, identities: identities, expectedVersion: 0, at: first, run: nil)
@@ -88,7 +88,8 @@ import Testing
     let workspace = Importer(metaTagGroups: DemoMapping.metaTagGroups).makeWorkspace(
       tasks: try fixtureSnapshot(),
       vault: VaultSnapshot(lines: lines, artifacts: [], notes: [], unread: .nothing),
-      stored: Workspace(timeZone: .gmt), identities: &identities, now: first)
+      stored: Workspace(timeZone: .gmt), approvedLineRemovals: [], identities: &identities,
+      now: first)
     try await store.commit(
       workspace, identities: identities, expectedVersion: 0, at: first, run: nil)
 
@@ -210,7 +211,8 @@ import Testing
     let stale = try await store.identityMap()
     var mine = stale.map
     let workspace = Importer(metaTagGroups: DemoMapping.metaTagGroups).makeWorkspace(
-      tasks: source, vault: vault, stored: Workspace(timeZone: .gmt), identities: &mine, now: first)
+      tasks: source, vault: vault, stored: Workspace(timeZone: .gmt), approvedLineRemovals: [],
+      identities: &mine, now: first)
     try await importer(source, into: store, at: first).run(manual)
     let before = try await store.stored()
 
@@ -274,9 +276,7 @@ import Testing
     time.advance(by: .seconds(1))
     let run = PendingImportRun(
       request: ImportRequest(trigger: trigger, signalledAt: .milliseconds(600)),
-      startedAt: first, started: .seconds(1), providerHeld: held,
-      counts: ImportCounts(lines: 3, notes: 2, artifacts: 4, projects: 5, tasks: 6, tags: 1),
-      clock: time.clock)
+      startedAt: first, started: .seconds(1), providerHeld: held, clock: time.clock)
     time.advance(by: took)
     return (run, time)
   }
@@ -296,7 +296,7 @@ import Testing
             finishedAt: first.addingTimeInterval(2.5), waited: .milliseconds(400),
             duration: .milliseconds(1_500), providerHeld: held,
             outcome: .committed(
-              ImportCounts(lines: 3, notes: 2, artifacts: 4, projects: 5, tasks: 6, tags: 1))))
+              ImportCounts(lines: 0, notes: 0, artifacts: 0, projects: 0, tasks: 0, tags: 0))))
     }
   }
 
@@ -325,5 +325,53 @@ import Testing
         run: pending(.manual, held: nil).0)
     }
     #expect(try await store.lastCommittedImport() == nil)
+  }
+
+  @Test(arguments: StoreKind.allCases)
+  func theLatestAttemptIsAFailureOnlyUntilTheNextCommit(kind: StoreKind) async throws {
+    let store = try kind.make()
+    try await store.commit(
+      Workspace(timeZone: .gmt), identities: IdentityMap(), expectedVersion: 0, at: first,
+      run: pending(.launch, held: nil).0)
+    try await store.recordFailure(pending(.resignActive, held: .seconds(2)).0, .timedOut)
+    let failed = try #require(try await store.lastImportAttempt())
+    #expect(
+      failed
+        == ImportRun(
+          trigger: .resignActive, startedAt: first, finishedAt: first.addingTimeInterval(2.5),
+          waited: .milliseconds(400), duration: .milliseconds(1_500), providerHeld: nil,
+          outcome: .failed(.timedOut)))
+    #expect(try await store.lastCommittedImport()?.trigger == .launch)
+
+    try await store.commit(
+      Workspace(timeZone: .gmt), identities: IdentityMap(), expectedVersion: 1, at: second,
+      run: pending(.timer, held: nil).0)
+    #expect(try await store.lastImportAttempt()?.trigger == .timer)
+  }
+
+  @Test(arguments: StoreKind.allCases)
+  func recordFailureWritesOneFailedRowAndLeavesTheCommittedRunAndTheVersion(kind: StoreKind)
+    async throws
+  {
+    let store = try kind.make()
+    try await store.recordFailure(pending(.manual, held: nil).0, .permissionDenied)
+    #expect(try await store.lastImportAttempt()?.outcome == .failed(.permissionDenied))
+    #expect(try await store.lastCommittedImport() == nil)
+    #expect(try await store.identityMap().version == 0)
+    #expect(try await store.workspace().issues.isEmpty)
+  }
+
+  @Test(arguments: StoreKind.allCases)
+  func theWindowStartAndTheHeldRemovalRoundTrip(kind: StoreKind) async throws {
+    let store = try kind.make()
+    let since = Date(timeIntervalSince1970: 1_783_296_000)
+    try await store.commit(
+      Workspace(
+        timeZone: .gmt, issues: [.lineRemovalHeld(["piano", "cello"])], completedSince: since),
+      identities: IdentityMap(), expectedVersion: 0, at: first, run: nil)
+    let workspace = try await store.workspace()
+    #expect(workspace.completedSince == since)
+    #expect(workspace.issues == [.lineRemovalHeld(["piano", "cello"])])
+    #expect(try await store.stored().completedSince == since)
   }
 }

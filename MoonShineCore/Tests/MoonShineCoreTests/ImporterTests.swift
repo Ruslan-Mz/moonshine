@@ -33,7 +33,8 @@ import Testing
 
   func snapshot(
     _ tasks: [SourceTask], projects: [SourceProject] = [],
-    defaultTimes: DefaultTimeSettings? = DefaultTimeSettings(), extraTags: [SourceTag] = []
+    defaultTimes: DefaultTimeSettings? = DefaultTimeSettings(), extraTags: [SourceTag] = [],
+    completedSince: Date? = nil
   ) -> TaskSourceSnapshot {
     TaskSourceSnapshot(
       provider: .omnifocus, generatedAt: now, timeZone: TimeZone(identifier: "Europe/Moscow")!,
@@ -47,7 +48,7 @@ import Testing
         SourceTag(externalId: "t-energy", name: "Charge"),
         SourceTag(externalId: "t-energy-low", name: "Low", parentExternalId: "t-energy"),
       ] + extraTags,
-      projects: projects, tasks: tasks)
+      projects: projects, tasks: tasks, completedSince: completedSince)
   }
 
   func run(
@@ -55,7 +56,8 @@ import Testing
     stored: Workspace = Workspace(timeZone: .gmt)
   ) -> Workspace {
     Importer(metaTagGroups: Self.groups).makeWorkspace(
-      tasks: source, vault: vault, stored: stored, identities: &identities, now: now)
+      tasks: source, vault: vault, stored: stored, approvedLineRemovals: [],
+      identities: &identities, now: now)
   }
 
   func run(_ source: TaskSourceSnapshot, stored: Workspace) -> Workspace {
@@ -107,7 +109,8 @@ import Testing
     let ws = Importer(metaTagGroups: []).makeWorkspace(
       tasks: snapshot([SourceTask(externalId: "x", name: "Stretch", tagExternalIds: ["t-morning"])]
       ),
-      vault: vault, stored: Workspace(timeZone: .gmt), identities: &identities, now: now)
+      vault: vault, stored: Workspace(timeZone: .gmt), approvedLineRemovals: [],
+      identities: &identities, now: now)
     #expect(ws.tags.filter(\.isMeta).isEmpty)
     let morning = try #require(ws.lines.first { $0.key == "morning" })
     #expect(try task(ws, "x").line == .line(morning.id))
@@ -274,5 +277,15 @@ import Testing
     let five = try #require(
       calendar.date(from: DateComponents(year: 2026, month: 10, day: 1, hour: 17)))
     #expect(ws.defaultTimes.isDateOnly(five, kind: .due))
+  }
+
+  /// S4-4c-3: the window start is kept like the default times, so a snapshot that cannot say
+  /// it never turns "no completions since" back into "no activity yet".
+  @Test func theImporterTakesTheWindowStartAndKeepsTheStoredOneWhenTheSourceHasNone() {
+    let since = Date(timeIntervalSince1970: 1_780_000_000)
+    let read = run(snapshot([], completedSince: since))
+    #expect(read.completedSince == since)
+    #expect(run(snapshot([]), stored: read).completedSince == since)
+    #expect(run(snapshot([])).completedSince == nil)
   }
 }

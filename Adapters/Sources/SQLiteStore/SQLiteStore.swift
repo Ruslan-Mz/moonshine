@@ -76,14 +76,44 @@ public struct SQLiteStore: Store {
       try Self.sync(merged.tasks, as: TaskRecord.self, db, at: at)
       try WorkspaceRecord(merged, committedAt: at, version: version + 1).save(db)
       // Read the clocks last: only this insert and the transaction's commit fall outside.
-      if let run { try ImportRecord(run.finished()).insert(db) }
+      if let run { try ImportRecord(run.finished(counts: ImportCounts(workspace))).insert(db) }
     }
+  }
+
+  public func recordFailure(_ run: PendingImportRun, _ kind: ImportFailure) async throws {
+    try await writer.write { db in try ImportRecord(run.failed(kind)).insert(db) }
   }
 
   public func lastCommittedImport() async throws -> ImportRun? {
     try await writer.read { db in
       try ImportRecord.filter(Column("outcome") == ImportRecord.committed)
         .order(Column("id").desc).fetchOne(db)?.run()
+    }
+  }
+
+  public func lastImportAttempt() async throws -> ImportRun? {
+    try await writer.read { db in
+      try ImportRecord.order(Column("id").desc).fetchOne(db)?.run()
+    }
+  }
+
+  /// Every recorded run, oldest first, for `moonshine-import timings` (S4-4c-3). Opened
+  /// read-only and never migrated: nothing is written, and no side file is created, so a store
+  /// whose `-shm` and `-wal` are gone (a copy, or after a crash) cannot be opened.
+  public static func importRuns(readOnlyAt path: String) throws -> [ImportRun] {
+    var configuration = Configuration()
+    configuration.readonly = true
+    do {
+      let queue = try DatabaseQueue(path: path, configuration: configuration)
+      defer { try? queue.close() }
+      return try queue.read { db in
+        guard try db.tableExists(ImportRecord.databaseTableName) else {
+          throw SQLiteStoreError.missingTable(ImportRecord.databaseTableName)
+        }
+        return try ImportRecord.order(Column("id")).fetchAll(db).map { try $0.run() }
+      }
+    } catch let error as DatabaseError where error.resultCode == .SQLITE_CANTOPEN {
+      throw SQLiteStoreError.cannotOpenReadOnly
     }
   }
 
@@ -119,7 +149,8 @@ public struct SQLiteStore: Store {
       lines: try rows(LineRecord.self), artifacts: try rows(ArtifactRecord.self),
       notes: try rows(NoteRecord.self), projects: try rows(ProjectRecord.self),
       tasks: try rows(TaskRecord.self), tags: try rows(TagRecord.self),
-      issues: record?.issues ?? [])
+      issues: record?.issues ?? [],
+      completedSince: record?.attrs.completedSince.map(Date.init(millis:)))
   }
 
   /// The refs entities carry (those with `last_seen`), grouped by MoonShine id.

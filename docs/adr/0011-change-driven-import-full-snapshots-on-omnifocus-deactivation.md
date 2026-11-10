@@ -95,6 +95,12 @@ Rules that follow:
 - **Live while Demo is shown.** A source not shown imports nothing and keeps tracking OmniFocus' state; the switch back imports as ⌘R. Demo never holds OmniFocus.
 - **Quit.** When the app terminates, every store it built runs a TRUNCATE checkpoint and closes, so its data is in the main file and the WAL is truncated to zero bytes (the follow-up of PR #46); a 0-byte `-wal` and the `-shm` stay on disk. The checkpoint waits for reads in flight, and the store closes even when it fails (PR #49 round 1).
 
+**Amendment (2026-11-09, owner; S4-4c-3).**
+
+- **Failed attempts are rows.** Every import that does not commit writes one `imports` row: `outcome` `failed`, its kind in `attrs` (the kinds of `ImportFailure`, never a value), its trigger, wait and duration, no row counts and no held time. It is written on its own, without bumping the store's version. A row that cannot be written is dropped, and the import's own error stands. The store's last attempt seeds the failure shown at the start, except a mapping-file failure, which the running process decides itself.
+- **`moonshine-import timings`** reads the app's store read-only and prints, per trigger, the runs, the committed ones and the kinds of the rest; signal → landing (the wait plus the import), the import total and the held time, as medians and p90s by nearest rank; runs without a measured time are counted, never read as 0. Counts and seconds only; the owner runs it.
+- **The target's cutoff.** The 5 s target's median and its count over 5 s take resign-active rows that started at or after PR #49's merge (2026-11-08 11:41:14 UTC) only: earlier rows hold the resign-actives the launch-order bug faked (amendment of 2026-11-07). The per-trigger lines count every row. The week of Confirmation starts at that cutoff.
+
 ### Consequences
 
 - Good — fresh data a few seconds after switching apps, with no perceptible freeze in normal use.

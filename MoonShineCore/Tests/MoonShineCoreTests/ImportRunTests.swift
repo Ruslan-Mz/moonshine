@@ -55,9 +55,13 @@ import Testing
       try await inner.commit(
         workspace, identities: identities, expectedVersion: expectedVersion, at: now, run: run)
     }
+    func recordFailure(_ run: PendingImportRun, _ kind: ImportFailure) async throws {
+      try await inner.recordFailure(run, kind)
+    }
     func lastCommittedImport() async throws -> ImportRun? {
       try await inner.lastCommittedImport()
     }
+    func lastImportAttempt() async throws -> ImportRun? { try await inner.lastImportAttempt() }
     func workspace() async throws -> Workspace { try await inner.workspace() }
     func stored() async throws -> StoredWorkspace { try await inner.stored() }
   }
@@ -113,22 +117,20 @@ import Testing
   @Test func aSignalAfterTheStartIsNotMeasurableNotZero() {
     let pending = PendingImportRun(
       request: ImportRequest(trigger: .timer, signalledAt: .seconds(5)), startedAt: Self.start,
-      started: .seconds(2), providerHeld: nil,
-      counts: ImportCounts(lines: 0, notes: 0, artifacts: 0, projects: 0, tasks: 0, tags: 0),
-      clock: .frozen(at: Self.start))
+      started: .seconds(2), providerHeld: nil, clock: .frozen(at: Self.start))
+    let counts = ImportCounts(lines: 0, notes: 0, artifacts: 0, projects: 0, tasks: 0, tags: 0)
     #expect(pending.waited == nil)
-    #expect(pending.finished().waited == nil)
+    #expect(pending.finished(counts: counts).waited == nil)
 
     let atTheStart = PendingImportRun(
       request: ImportRequest(trigger: .timer, signalledAt: .seconds(2)), startedAt: Self.start,
-      started: .seconds(2), providerHeld: nil, counts: pending.counts,
-      clock: .frozen(at: Self.start))
+      started: .seconds(2), providerHeld: nil, clock: .frozen(at: Self.start))
     #expect(atTheStart.waited == .zero)
 
     let negative = ImportRun(
       trigger: .manual, startedAt: Self.start, finishedAt: Self.start, waited: .seconds(-1),
       duration: .milliseconds(-5), providerHeld: .seconds(-2),
-      outcome: .committed(pending.counts))
+      outcome: .committed(counts))
     #expect(negative.waited == nil)
     #expect(negative.duration == nil)
     #expect(negative.providerHeld == nil)

@@ -281,6 +281,10 @@ private struct NotLoaded: Error {}
         workspace, identities: identities, expectedVersion: expectedVersion, at: now, run: run)
     }
     func lastCommittedImport() async throws -> ImportRun? { throw Unreadable() }
+    func recordFailure(_ run: PendingImportRun, _ kind: ImportFailure) async throws {
+      try await inner.recordFailure(run, kind)
+    }
+    func lastImportAttempt() async throws -> ImportRun? { throw Unreadable() }
     func workspace() async throws -> Workspace { try await inner.workspace() }
     func stored() async throws -> StoredWorkspace { try await inner.stored() }
   }
@@ -477,6 +481,10 @@ private struct NotLoaded: Error {}
         ).day)
     #expect(italian.days == 29)
     #expect(screen.noActivity.compactMap { key($0.id) } == ["japanese"])
+    // `no completions since 6 July`: the fixture's window start (S4-4c-3).
+    #expect(
+      screen.noActivity.first?.since
+        == DemoVault.calendar.date(from: DateComponents(year: 2026, month: 7, day: 6)))
     let quietOrNew = Set(screen.quiet.map(\.id) + screen.noActivity.map(\.id))
     for line in lines where line.state != .active {
       #expect(!quietOrNew.contains(line.id))
@@ -545,6 +553,8 @@ private struct NotLoaded: Error {}
       Overview(workspace: Workspace(timeZone: zone, lines: [line]), now: now))
     #expect(screen.noActivity.map(\.id) == [line.id])
     #expect(screen.noActivity.first?.next == nil)
+    // No window start known: `no activity yet`.
+    #expect(screen.noActivity.first?.since == nil)
     #expect(TodayScreen(Overview(workspace: Workspace(timeZone: zone), now: now)).railIsEmpty)
   }
 

@@ -26,14 +26,17 @@ public struct StoredWorkspace: Hashable, Sendable {
   public var tasks: [Stored<TaskItem>]
   public var tags: [Stored<Tag>]
   public var issues: [ImportIssue]
+  public var completedSince: Date?
 
   public init(
     timeZone: TimeZone, defaultTimeSettings: DefaultTimeSettings = DefaultTimeSettings(),
     lines: [Stored<Line>] = [], artifacts: [Stored<Artifact>] = [],
     notes: [Stored<NoteRef>] = [], projects: [Stored<Project>] = [],
-    tasks: [Stored<TaskItem>] = [], tags: [Stored<Tag>] = [], issues: [ImportIssue] = []
+    tasks: [Stored<TaskItem>] = [], tags: [Stored<Tag>] = [], issues: [ImportIssue] = [],
+    completedSince: Date? = nil
   ) {
     self.timeZone = timeZone
+    self.completedSince = completedSince
     self.defaultTimeSettings = defaultTimeSettings
     self.lines = lines
     self.artifacts = artifacts
@@ -50,7 +53,7 @@ public struct StoredWorkspace: Hashable, Sendable {
       timeZone: timeZone, defaultTimeSettings: defaultTimeSettings, lines: Self.visible(lines),
       artifacts: Self.visible(artifacts), notes: Self.visible(notes),
       projects: Self.visible(projects), tasks: Self.visible(tasks), tags: Self.visible(tags),
-      issues: issues)
+      issues: issues, completedSince: completedSince)
   }
 
   /// Applies a full import. Incoming entities replace stored ones by id, in import order.
@@ -74,7 +77,8 @@ public struct StoredWorkspace: Hashable, Sendable {
       artifacts: merge(artifacts, incoming.artifacts), notes: merge(notes, incoming.notes),
       projects: merge(projects, incoming.projects),
       tasks: merge(tasks, incoming.tasks) { $0.status == .completed },
-      tags: merge(tags, incoming.tags), issues: incoming.issues)
+      tags: merge(tags, incoming.tags), issues: incoming.issues,
+      completedSince: incoming.completedSince)
   }
 
   private static func visible<Entity>(_ stored: [Stored<Entity>]) -> [Entity] {

@@ -42,7 +42,7 @@ The reader says whether it could read the lines, not only which ones it read (20
 
 - **Unavailable** — the budget note is missing, rejected or ambiguous (more than one marked note), or its `lines:` is missing, not a list or an empty list. The stored lines stay as they are and keep mapping tasks.
 - **Read with skipped items** — the lines read are updated; no stored line is removed.
-- **Clean read** — note found, list parsed, no item skipped. Only then does a line missing from the list leave the store (soft delete).
+- **Clean read** — note found, list parsed, no item skipped. Only then does a line missing from the list leave the store (soft delete). More than 3 leaving at once are held until the owner approves exactly that set; a set held once stays held until approved or back (S4-4e; `docs/specs/phase-1-see.md`, the mass-removal rule under S4).
 
 ```yaml
 moonshine: budget # required marker: the only way the budget note is found

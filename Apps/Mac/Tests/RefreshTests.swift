@@ -32,6 +32,10 @@ final class FailingReadsStore: Store {
     flags.withLock { if $0.armed { $0.failing = true } }
   }
   func lastCommittedImport() async throws -> ImportRun? { try await inner.lastCommittedImport() }
+  func recordFailure(_ run: PendingImportRun, _ kind: ImportFailure) async throws {
+    try await inner.recordFailure(run, kind)
+  }
+  func lastImportAttempt() async throws -> ImportRun? { try await inner.lastImportAttempt() }
   func workspace() async throws -> Workspace {
     if flags.withLock({ $0.failing }) { throw Unreadable() }
     return try await inner.workspace()
@@ -52,6 +56,10 @@ struct RunlessStore: Store {
       workspace, identities: identities, expectedVersion: expectedVersion, at: now, run: nil)
   }
   func lastCommittedImport() async throws -> ImportRun? { try await inner.lastCommittedImport() }
+  func recordFailure(_ run: PendingImportRun, _ kind: ImportFailure) async throws {
+    try await inner.recordFailure(run, kind)
+  }
+  func lastImportAttempt() async throws -> ImportRun? { try await inner.lastImportAttempt() }
   func workspace() async throws -> Workspace { try await inner.workspace() }
   func stored() async throws -> StoredWorkspace { try await inner.stored() }
 }

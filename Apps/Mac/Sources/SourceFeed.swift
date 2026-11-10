@@ -22,9 +22,12 @@ final class SourceFeed {
   private(set) var importOutcomes = 0
   /// Nil until the coordinator knows it.
   private(set) var omniFocusState: OmniFocusState?
-  /// The kind of the last import that did not commit; a commit clears it. In memory only until
-  /// S4-4c-3 records it.
+  /// The kind of the last import that did not commit; a commit clears it. The store's last
+  /// attempt seeds it at the start, so a relaunch still says why (S4-4c-3).
   private(set) var lastFailure: ImportFailure?
+  /// What the import service holds as approved for removal, read after Remove and after every
+  /// import (S4-4e).
+  private(set) var approvedLineRemovals: Set<LineKey> = []
   /// Nil when it could not be built: Today is then unavailable.
   let environment: AppEnvironment?
   private var starting: Task<Void, Never>?
@@ -44,6 +47,17 @@ final class SourceFeed {
   var omniFocusNote: OmniFocusNote? {
     if omniFocusState == .notRunning || lastFailure == .providerNotRunning { return .notRunning }
     return lastFailure.map { .failure($0) }
+  }
+
+  /// The lines whose removal waits for the owner, as the workspace shown says (S4-4e).
+  var heldLineRemoval: [Line] {
+    if case .loaded(let overview) = state { overview.workspace.heldLineRemoval } else { [] }
+  }
+
+  /// Remove was pressed for exactly the set held now; it lands with the next import.
+  var removalApproved: Bool {
+    let held = heldLineRemoval
+    return !held.isEmpty && Set(held.map(\.key)) == approvedLineRemovals
   }
 
   /// The store holds data that could not be read: never "not read yet" (`TodayPlaceholder`).
@@ -73,13 +87,33 @@ final class SourceFeed {
   /// ⌘R, and a switch back to this source, which ends a pause. Live first tells the
   /// coordinator what OmniFocus' state is now, a resync of the held state.
   func refresh() {
+    refresh(approving: nil)
+  }
+
+  /// Remove N lines: approves exactly the held set, then imports as ⌘R in the same call, so
+  /// that import reads the approval (S4-4e).
+  func approveHeldRemoval() {
+    let keys = Set(heldLineRemoval.map(\.key))
+    guard !keys.isEmpty else { return }
+    refresh(approving: keys)
+  }
+
+  private func refresh(approving keys: Set<LineKey>?) {
     guard let environment else { return }
     let signal = Self.stateSignal(held: omniFocusState, reading: environment.omniFocusReading?())
-    send { coordinator in
+    send { [weak self] coordinator in
+      if let keys {
+        await coordinator.service.approveLineRemovals(keys)
+        await self?.readApproval()
+      }
       await coordinator.setPaused(false)
       if let signal { await coordinator.handle(signal) }
       await coordinator.handle(.manual)
     }
+  }
+
+  private func readApproval() async {
+    approvedLineRemovals = await environment?.coordinator.service.approvedLineRemovals ?? []
   }
 
   /// A source not shown imports nothing and keeps tracking OmniFocus (owner, 2026-11-07).
@@ -111,6 +145,13 @@ final class SourceFeed {
   /// store (version 0) shows nothing yet; a store that cannot be read is unavailable.
   private func showStored(_ store: any Store) async {
     defer { storeChecked = true }
+    // Before the version check: failure rows do not bump it. The mapping file is read by this
+    // process, so a stored mapping failure says nothing about it now.
+    if case .failed(let kind) = try? await store.lastImportAttempt()?.outcome,
+      kind != .mappingInvalid
+    {
+      lastFailure = kind
+    }
     do {
       guard try await store.identityMap().version > 0 else { return }
       let workspace = try await store.workspace()
@@ -131,11 +172,13 @@ final class SourceFeed {
     case .committed:
       lastFailure = nil
       await reload()
+      await readApproval()
       isImporting = false
       importOutcomes += 1
     case .notCommitted(let failure):
       lastFailure = failure
       if case .loading = state { state = .unavailable }
+      await readApproval()
       isImporting = false
       importOutcomes += 1
     case .omniFocusNotRunning:

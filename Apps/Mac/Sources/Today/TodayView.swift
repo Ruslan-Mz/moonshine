@@ -50,14 +50,25 @@ struct FlaggedToggle {
   let showsAll: Binding<Bool>
 }
 
+/// A held line removal as Today and the menu command see it (S4-4e).
+struct LineRemovalHold {
+  /// Remove was pressed for exactly the lines held now; they go with the next import.
+  let isApproved: Bool
+  let omniFocusClosed: Bool
+  let approve: () -> Void
+}
+
 extension FocusedValues {
   @Entry var flaggedToggle: FlaggedToggle?
+  /// Nil when nothing is held.
+  @Entry var lineRemoval: LineRemovalHold?
 }
 
 /// ⌥⌘F in the View menu: it works wherever the list is scrolled, unlike a shortcut on the
 /// Top 3 header, which is drawn only while visible.
 struct TodayCommands: Commands {
   @FocusedValue(\.flaggedToggle) private var toggle
+  @FocusedValue(\.lineRemoval) private var removal
 
   var body: some Commands {
     CommandGroup(after: .sidebar) {
@@ -72,6 +83,8 @@ struct TodayCommands: Commands {
       }
       .keyboardShortcut("f", modifiers: [.option, .command])
       .disabled(toggle?.isAvailable != true)
+      Button("Remove Lines No Longer in the Budget Note") { removal?.approve() }
+        .disabled(removal == nil || removal?.isApproved == true)
     }
   }
 }
@@ -80,14 +93,60 @@ struct TodayCommands: Commands {
 /// stored choice take effect.
 struct TodayContainer: View {
   let overview: Overview
+  let removal: LineRemovalHold
   @SceneStorage("today.showAllFlagged") private var showAllFlagged = false
 
   var body: some View {
     let screen = TodayScreen(overview, showAllFlagged: showAllFlagged)
-    TodayView(screen: screen, showAllFlagged: $showAllFlagged)
+    TodayView(screen: screen, removal: removal, showAllFlagged: $showAllFlagged)
       .focusedSceneValue(
         \.flaggedToggle,
-        FlaggedToggle(isAvailable: screen.showsFlaggedCaption, showsAll: $showAllFlagged))
+        FlaggedToggle(isAvailable: screen.showsFlaggedCaption, showsAll: $showAllFlagged)
+      )
+      .focusedSceneValue(\.lineRemoval, screen.heldRemoval.isEmpty ? nil : removal)
+  }
+}
+
+/// `design/components.md` § LineRemovalNotice: a calm fact above the table, with no dismiss;
+/// the lines stay until Remove (S4-4e).
+private struct LineRemovalNotice: View {
+  let lines: [TodayScreen.HeldLine]
+  let removal: LineRemovalHold
+
+  /// The first three, then `…`.
+  private var names: String {
+    let shown = lines.prefix(3).map {
+      [$0.emoji, $0.name].compactMap { $0 }.joined(separator: " ")
+    }
+    return (shown + (lines.count > 3 ? ["…"] : [])).joined(separator: ", ")
+  }
+
+  var body: some View {
+    HStack(alignment: .firstTextBaseline, spacing: 12) {
+      Image(systemName: "info.circle").foregroundStyle(.secondary)
+      VStack(alignment: .leading, spacing: 4) {
+        Text(
+          "The budget note no longer lists \(lines.count) lines: \(names). They stay in MoonShine until you remove them."
+        )
+        if removal.isApproved {
+          Group {
+            if removal.omniFocusClosed {
+              Text("They will be removed at the next import, once OmniFocus is open")
+            } else {
+              Text("They will be removed at the next import")
+            }
+          }
+          .foregroundStyle(.secondary)
+        }
+      }
+      Spacer(minLength: 12)
+      if !removal.isApproved {
+        Button("Remove \(lines.count) lines") { removal.approve() }
+      }
+    }
+    .padding(.horizontal, 16)
+    .padding(.vertical, 10)
+    .background(Tokens.card)
   }
 }
 
@@ -95,6 +154,7 @@ struct TodayContainer: View {
 /// OmniFocus comes with the link opener (S4-5).
 struct TodayView: View {
   let screen: TodayScreen
+  let removal: LineRemovalHold
   @Binding var showAllFlagged: Bool
   @SceneStorage("today.fromEarlierExpanded") private var fromEarlierExpanded = true
   @SceneStorage("today.lifeOpsExpanded") private var lifeOpsExpanded = false
@@ -109,6 +169,10 @@ struct TodayView: View {
 
   var body: some View {
     VStack(spacing: 0) {
+      if !screen.heldRemoval.isEmpty {
+        LineRemovalNotice(lines: screen.heldRemoval, removal: removal)
+        Divider()
+      }
       if !screen.anchors.isEmpty {
         AnchorStrip(anchors: screen.anchors, total: screen.anchorsTotal, done: screen.anchorsDone)
         Divider()

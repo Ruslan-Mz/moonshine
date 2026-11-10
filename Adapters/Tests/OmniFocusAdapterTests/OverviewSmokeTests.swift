@@ -12,7 +12,7 @@ import Testing
     var identities = IdentityMap()
     let workspace = Importer(metaTagGroups: DemoMapping.metaTagGroups).makeWorkspace(
       tasks: source, vault: try await DemoVault().vault(), stored: Workspace(timeZone: .gmt),
-      identities: &identities,
+      approvedLineRemovals: [], identities: &identities,
       now: source.generatedAt)
     return Overview(workspace: workspace, now: source.generatedAt)
   }

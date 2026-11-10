@@ -150,6 +150,7 @@ OmniFocus stores a time on every date; a date picked without a time gets the use
 6. No field carries note text or attachments.
 7. `status == "dropped"` on a task appears only in an incremental snapshot.
 8. `defaultTimes` values match `HH:mm`.
+9. `window.completedSince` is a `YYYY-MM-DD` date that exists (ASCII digits; `2026-02-30` is none). MoonShine stores the start of that day in `timeZone` as the window start (S4-4c-3).
 
 ## Mapping to MoonShine lines
 

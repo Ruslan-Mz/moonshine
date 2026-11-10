@@ -140,8 +140,8 @@ import Testing
     #expect(
       today.quietLines == [
         QuietLine(line: quiet, reason: .quiet(days: 14, last: last), nextStep: nil),
-        QuietLine(line: fresh, reason: .noActivityYet, nextStep: nil),
-        QuietLine(line: newFoundation, reason: .noActivityYet, nextStep: first),
+        QuietLine(line: fresh, reason: .noActivity(since: nil), nextStep: nil),
+        QuietLine(line: newFoundation, reason: .noActivity(since: nil), nextStep: first),
       ])
   }
 
@@ -179,7 +179,7 @@ import Testing
     world.task("Waiting", line: .line(japanese.id), status: .blocked)
     let today = Overview(workspace: world.workspace, now: now).today()
     #expect(today.quietLines.map(\.nextStep) == [child, review, nil])
-    #expect(today.quietLines.last?.reason == .noActivityYet)
+    #expect(today.quietLines.last?.reason == .noActivity(since: nil))
   }
 
   @Test func nextStepAlsoComesWithNoActivityYet() throws {
@@ -188,7 +188,21 @@ import Testing
     let first = world.task("Learn kana", line: .line(japanese.id))
     let today = Overview(workspace: world.workspace, now: now).today()
     #expect(
-      today.quietLines == [QuietLine(line: japanese, reason: .noActivityYet, nextStep: first)])
+      today.quietLines == [
+        QuietLine(line: japanese, reason: .noActivity(since: nil), nextStep: first)
+      ])
+  }
+
+  @Test func aLineWithoutStoredCompletionsCarriesTheWindowStart() {
+    var world = W()
+    let italian = world.line("italian")
+    var workspace = world.workspace
+    workspace.completedSince = W.date(2026, 7, 6)
+    let today = Overview(workspace: workspace, now: now).today()
+    #expect(
+      today.quietLines == [
+        QuietLine(line: italian, reason: .noActivity(since: W.date(2026, 7, 6)), nextStep: nil)
+      ])
   }
 
   @Test func touchedTodayListsLinesWithACompletionTodayAndTheirCounts() {

@@ -16,9 +16,11 @@ public struct Importer: Sendable {
   /// the vault could not read (`VaultLines`), and its notes and artifacts for those the read
   /// saw and could not use (`VaultUnread`), so an unclean read never drops anything. No
   /// default: leaving it out would drop every stored line, note and artifact.
+  /// `approvedLineRemovals` is the set the owner approved for removal (S4-4e); no default,
+  /// so every caller says whether it carries one.
   public func makeWorkspace(
     tasks source: TaskSourceSnapshot, vault: VaultSnapshot, stored: Workspace,
-    identities: inout IdentityMap, now: Date
+    approvedLineRemovals: Set<LineKey>, identities: inout IdentityMap, now: Date
   ) -> Workspace {
     func ref(_ provider: ProviderID, _ externalId: String) -> ExternalRef {
       ExternalRef(provider: provider, externalId: externalId, lastSeen: now)
@@ -65,13 +67,27 @@ public struct Importer: Sendable {
     // Only a clean read may drop a line, and it takes the order from the note. Otherwise every
     // stored line keeps its position (updated when read, as it was when not, so it still maps
     // tasks and the merge never soft-deletes it); lines new to the store follow in note order.
+    // A held removal (S4-4e) builds the lines the same way, minus the leaving lines it does not
+    // hold, which go as on a clean read.
     let readByID = Dictionary(read.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     let storedLines = stored.lines
     let storedIDs = Set(storedLines.map(\.id))
-    let lines =
-      vault.lines.isComplete
+    let held = Self.heldLineRemovals(vault: vault, stored: stored)
+    let holds = !held.isEmpty && Set(held) != approvedLineRemovals
+    let readKeys = Set(vault.lines.read.map(\.key))
+    var lines =
+      vault.lines.isComplete && !holds
       ? read
       : storedLines.map { readByID[$0.id] ?? $0 } + read.filter { !storedIDs.contains($0.id) }
+    if holds {
+      let heldKeys = Set(held)
+      lines = lines.filter { readKeys.contains($0.key) || heldKeys.contains($0.key) }
+      issues.append(.lineRemovalHeld(held))
+    } else if !vault.lines.isComplete {
+      // An unclean read decides nothing about a hold: it stands, without the lines read again.
+      let carried = stored.lineRemovalHeldKeys.filter { !readKeys.contains($0) }
+      if !carried.isEmpty { issues.append(.lineRemovalHeld(carried)) }
+    }
     let lineByKey = Dictionary(
       lines.map { ($0.key, $0.id) }, uniquingKeysWith: { first, _ in first })
     let noteByPath = Dictionary(
@@ -156,7 +172,7 @@ public struct Importer: Sendable {
       timeZone: source.timeZone,
       defaultTimeSettings: source.defaultTimes ?? stored.defaultTimeSettings, lines: lines,
       artifacts: artifacts, notes: notes, projects: projects, tasks: tasks, tags: tags,
-      issues: issues)
+      issues: issues, completedSince: source.completedSince ?? stored.completedSince)
   }
 
   /// The artifacts read, plus the stored ones the read could not see: those of a carried note
@@ -196,6 +212,21 @@ public struct Importer: Sendable {
           ?? (carriedIDs.contains(old.id) ? old : nil)
       } + mine.filter { !keptIDs.contains($0.id) }
     }
+  }
+
+  /// More lines than this leaving the budget note in one clean read wait for the owner.
+  public static let massLineRemovalLimit = 3
+
+  /// The stored lines whose removal this read holds, in stored order (S4-4e): only a clean
+  /// read removes lines, so only a clean read holds. More than the limit leaving are held; a
+  /// set held before stays held, as far as it is still leaving, until approved or back.
+  public static func heldLineRemovals(vault: VaultSnapshot, stored: Workspace) -> [LineKey] {
+    guard vault.lines.isComplete else { return [] }
+    let readKeys = Set(vault.lines.read.map(\.key))
+    let leaving = stored.lines.map(\.key).filter { !readKeys.contains($0) }
+    guard leaving.count <= massLineRemovalLimit else { return leaving }
+    let heldBefore = Set(stored.lineRemovalHeldKeys)
+    return leaving.filter { heldBefore.contains($0) }
   }
 
   /// OmniFocus names a completed occurrence `<liveId>.<n>`; only trusted when the live task exists.
@@ -239,6 +270,8 @@ public actor ImportService {
   private var followUp: (task: Task<Workspace, any Error>, request: ImportRequest)?
   /// Requests waiting on the queued follow-up run (observable by tests).
   private(set) var followUpRequests = 0
+  /// The held lines the owner approved for removal; memory only, lost on quit (S4-4e).
+  public private(set) var approvedLineRemovals: Set<LineKey> = []
 
   public init(
     tasks: any TaskProvider, notes: any NoteProvider, store: any Store,
@@ -284,6 +317,11 @@ public actor ImportService {
     return try result.get()
   }
 
+  /// Approves removing exactly `keys`; the next commit that holds exactly them removes them.
+  public func approveLineRemovals(_ keys: Set<LineKey>) {
+    approvedLineRemovals = keys
+  }
+
   /// Returns the request the follow-up records.
   private func promoteFollowUp() -> ImportRequest? {
     let request = followUp?.request
@@ -295,22 +333,35 @@ public actor ImportService {
 
   private func importOnce(_ request: ImportRequest) async throws -> Workspace {
     let now = clock.wall()
-    let started = clock.monotonic()
-    async let taskSnapshot = tasks.snapshot(modifiedSince: nil)
-    async let vaultSnapshot = notes.vault()
-    let (source, vault) = try await (taskSnapshot, vaultSnapshot)
-    if let since = source.modifiedSince { throw PartialSnapshotError(modifiedSince: since) }
-    var identities = try await store.identityMap()
-    // Read after the identity map: a commit in between bumps the version and this one fails.
-    let stored = try await store.workspace()
-    let workspace = importer.makeWorkspace(
-      tasks: source, vault: vault, stored: stored, identities: &identities.map, now: now)
-    let run = PendingImportRun(
-      request: request, startedAt: now, started: started, providerHeld: source.heldFor,
-      counts: ImportCounts(workspace), clock: clock)
-    try await store.commit(
-      workspace, identities: identities.map, expectedVersion: identities.version, at: now,
-      run: run)
-    return workspace
+    var run = PendingImportRun(
+      request: request, startedAt: now, started: clock.monotonic(), clock: clock)
+    let approved = approvedLineRemovals
+    do {
+      async let taskSnapshot = tasks.snapshot(modifiedSince: nil)
+      async let vaultSnapshot = notes.vault()
+      let (source, vault) = try await (taskSnapshot, vaultSnapshot)
+      if let since = source.modifiedSince { throw PartialSnapshotError(modifiedSince: since) }
+      run.providerHeld = source.heldFor
+      var identities = try await store.identityMap()
+      // Read after the identity map: a commit in between bumps the version and this one fails.
+      let stored = try await store.workspace()
+      let workspace = importer.makeWorkspace(
+        tasks: source, vault: vault, stored: stored, approvedLineRemovals: approved,
+        identities: &identities.map, now: now)
+      try await store.commit(
+        workspace, identities: identities.map, expectedVersion: identities.version, at: now,
+        run: run)
+      // One commit uses an approval once: only the one that removed exactly that set clears it.
+      let held = Importer.heldLineRemovals(vault: vault, stored: stored)
+      if !held.isEmpty, Set(held) == approved, approvedLineRemovals == approved {
+        approvedLineRemovals = []
+      }
+      return workspace
+    } catch {
+      // A record that cannot be written is dropped: the import's own error wins.
+      try? await store.recordFailure(
+        run, (error as? any ImportFailureKind)?.importFailure ?? .other)
+      throw error
+    }
   }
 }

@@ -20,7 +20,7 @@ An invented dataset; no real people. "Today" = **Thursday 1 October 2026, ISO we
 | 🎹    | Piano         | Creative   | maintenance                   | 1             | Keep repertoire alive     | last activity 2 Sep, **not** flagged        |
 | ✒️    | Calligraphy   | Creative   | paused                        | —             | —                         | paused since 14 Jul                         |
 | 🇮🇹    | Italian       | Languages  | active                        | 2             | B1 by summer 2027         | last activity 2 Sep → **quiet for 29 days** |
-| 🇯🇵    | Japanese      | Languages  | active                        | 1             | Kana and first 300 words  | **no activity yet**                         |
+| 🇯🇵    | Japanese      | Languages  | active                        | 1             | Kana and first 300 words  | **no completions since 6 July**             |
 | 📐    | Math          | Science    | active                        | 4             | Linear algebra foundation |                                             |
 | 👨‍👩‍👧    | Family        | Life       | active                        | —             | Family year 2026          |                                             |
 | 🧺    | Life ops      | —          | (bucket)                      | —             | —                         | household, errands, inbox                   |
@@ -241,18 +241,18 @@ Demo fixtures: 🧘 `Shoulders down, breathe out` · 💪 `Stand up and stretch`
 
 These values **replace** the Last activity, Next actions and Estimated this week cells drawn in `Lines.dc.html` (which shows, for example, Research `yesterday` · 5 · `≈ 2 h 25 min`): the generated file is not edited and is listed as stale in `README.md` § Pending design rounds, Before 3b.
 
-| Line             | Last activity     | Next actions | Estimated this week |
-| ---------------- | ----------------- | ------------ | ------------------- |
-| 🧘 Core practice | today             | 2            | ≈ 1 h est.          |
-| 💪 Calisthenics  | today             | 2            | ≈ 40 min est.       |
-| 🤖 AI/ML         | yesterday         | 4            | ≈ 4 h 10 min est.   |
-| 🔬 Research      | 2 days ago        | 3            | ≈ 1 h 15 min est.   |
-| 🎻 Violin        | today             | 9            | ≈ 6 h 40 min est.   |
-| 🇮🇹 Italian       | quiet for 29 days | 3            | —                   |
-| 🇯🇵 Japanese      | no activity yet   | 2            | ≈ 10 min est.       |
-| 📐 Math          | yesterday         | 5            | ≈ 1 h 30 min est.   |
-| 👨‍👩‍👧 Family        | today             | 3            | ≈ 35 min est.       |
-| 🎹 Piano         | 29 days ago       | 1            | —                   |
+| Line             | Last activity               | Next actions | Estimated this week |
+| ---------------- | --------------------------- | ------------ | ------------------- |
+| 🧘 Core practice | today                       | 2            | ≈ 1 h est.          |
+| 💪 Calisthenics  | today                       | 2            | ≈ 40 min est.       |
+| 🤖 AI/ML         | yesterday                   | 4            | ≈ 4 h 10 min est.   |
+| 🔬 Research      | 2 days ago                  | 3            | ≈ 1 h 15 min est.   |
+| 🎻 Violin        | today                       | 9            | ≈ 6 h 40 min est.   |
+| 🇮🇹 Italian       | quiet for 29 days           | 3            | —                   |
+| 🇯🇵 Japanese      | no completions since 6 July | 2            | ≈ 10 min est.       |
+| 📐 Math          | yesterday                   | 5            | ≈ 1 h 30 min est.   |
+| 👨‍👩‍👧 Family        | today                       | 3            | ≈ 35 min est.       |
+| 🎹 Piano         | 29 days ago                 | 1            | —                   |
 
 **Practice lines (phase 2):** 📓 Reflection, `within: core`, `measure: entries`, targets diary 5 per week and report 1 per month; diary entries W33–W40: 5 6 4 5 5 7 5 4 (W40 so far); the September report exists, October's not yet; last entry today; streak 4 weeks (W36–W39). 🎼 Practice journal, `within: violin`, target note 3 per week; entries 3 3 1 0 2 3 3 2; last entry yesterday; streak 2 weeks (W38–W39).
 
