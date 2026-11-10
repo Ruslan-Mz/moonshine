@@ -351,9 +351,10 @@ public actor ImportService {
       try await store.commit(
         workspace, identities: identities.map, expectedVersion: identities.version, at: now,
         run: run)
-      // One commit uses an approval once: only the one that removed exactly that set clears it.
-      let held = Importer.heldLineRemovals(vault: vault, stored: stored)
-      if !held.isEmpty, Set(held) == approved, approvedLineRemovals == approved {
+      // An approval does not outlive its hold: a clean read removed the approved set, or the
+      // hold ended or changed. Only an incomplete read carries the hold, and keeps it; one given
+      // during this import is for the next.
+      if vault.lines.isComplete, approvedLineRemovals == approved {
         approvedLineRemovals = []
       }
       return workspace

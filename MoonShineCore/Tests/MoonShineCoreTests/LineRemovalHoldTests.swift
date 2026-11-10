@@ -241,17 +241,55 @@ import Testing
     #expect(try await store.workspace().lines.map(\.key) == ["drum", "violin"])
   }
 
-  @Test func anApprovalIsKeptByAnIncompleteReadAndByAChangedSet() async throws {
+  @Test func anApprovalIsKeptByAnIncompleteRead() async throws {
     let (service, vault, _) = try await heldService()
     await service.approveLineRemovals(Set(Self.four))
     await vault.set(.unavailable)
     #expect(Self.held(try await service.run(ImportRequest(trigger: .manual))) == Self.four)
     #expect(await service.approvedLineRemovals == Set(Self.four))
+  }
 
+  /// (a) Approved while no import ran, then the lines came back: the same drop later is held
+  /// again, not removed on the old approval.
+  @Test func anEndedHoldClearsTheApproval() async throws {
+    let (service, vault, store) = try await heldService()
+    await service.approveLineRemovals(Set(Self.four))
+    await vault.set(.read(Self.all, complete: true))
+    #expect(Self.held(try await service.run(ImportRequest(trigger: .manual))) == nil)
+    #expect(await service.approvedLineRemovals.isEmpty)
+
+    await vault.set(.read(Self.lines(["drum", "violin"]), complete: true))
+    #expect(Self.held(try await service.run(ImportRequest(trigger: .manual))) == Self.four)
+    #expect(try await store.workspace().lines.count == 6)
+  }
+
+  /// (b) The set shrank and grew again: the four are held again, not removed on the old approval.
+  @Test func aChangedHoldClearsTheApproval() async throws {
+    let (service, vault, store) = try await heldService()
+    await service.approveLineRemovals(Set(Self.four))
     await vault.set(.read(Self.lines(["violin", "cello", "drum"]), complete: true))
     let changed = try await service.run(ImportRequest(trigger: .manual))
     #expect(Self.held(changed) == ["piano", "italian", "japanese"])
-    #expect(await service.approvedLineRemovals == Set(Self.four))
+    #expect(await service.approvedLineRemovals.isEmpty)
+
+    await vault.set(.read(Self.lines(["drum", "violin"]), complete: true))
+    #expect(Self.held(try await service.run(ImportRequest(trigger: .manual))) == Self.four)
+    #expect(try await store.workspace().lines.count == 6)
+  }
+
+  @Test func anApprovalGivenWhileAnotherIsAppliedIsKept() async throws {
+    let tasks = GatedTaskProvider(open: true)
+    let (service, _, store) = try await heldService(tasks: tasks)
+    await service.approveLineRemovals(Set(Self.four))
+    await tasks.close()
+    let calls = await tasks.calls
+    let running = Task { try await service.run(ImportRequest(trigger: .manual)) }
+    await eventually { await tasks.calls == calls + 1 }
+    await service.approveLineRemovals(["drum"])
+    await tasks.open()
+    #expect(Self.held(try await running.value) == nil)
+    #expect(try await store.workspace().lines.map(\.key) == ["drum", "violin"])
+    #expect(await service.approvedLineRemovals == ["drum"])
   }
 
   @Test func anApprovalGivenDuringAnImportAppliesToTheFollowUp() async throws {
