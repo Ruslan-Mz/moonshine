@@ -11,7 +11,7 @@ import Testing
     let source = try SnapshotMapper.map(try fixtureDocument())
     var identities = IdentityMap()
     let workspace = Importer(metaTagGroups: DemoMapping.metaTagGroups).makeWorkspace(
-      tasks: source, vault: try await DemoVault().vault(), stored: Workspace(timeZone: .gmt),
+      tasks: source, vault: DemoVault.snapshot, stored: Workspace(timeZone: .gmt),
       approvedLineRemovals: [], identities: &identities,
       now: source.generatedAt)
     return Overview(workspace: workspace, now: source.generatedAt)

@@ -77,7 +77,7 @@ struct Rig {
     provider = GatedTaskProvider(open: open)
     service = ImportService(
       tasks: provider, notes: DemoVault(), store: store, importer: Importer(metaTagGroups: []),
-      clock: time.clock)
+      vaultTimeZone: { TestWorld.timeZone }, clock: time.clock)
     coordinator = RefreshCoordinator(
       service: service, timerInterval: timerInterval, sleep: { [gate] in await gate.sleep($0) })
     let (events, log) = (coordinator.events, log)

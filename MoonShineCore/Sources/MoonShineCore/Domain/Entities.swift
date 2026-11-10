@@ -367,8 +367,13 @@ public struct VaultProblem: Hashable, Sendable, CustomStringConvertible {
     /// A line's `parent` matches more than one note read; the shortest path was taken
     /// (ADR-0014). The line is read as usual.
     case ambiguousLink
-    /// Vault-wide: no vault is chosen yet (Live before S4-4d), so nothing was read.
+    /// Vault-wide: no vault folder is chosen, so nothing was read.
     case vaultNotChosen
+    /// Vault-wide: the chosen folder cannot be opened, is no longer an Obsidian vault, or its
+    /// bookmark no longer resolves (S4-4d); nothing was read.
+    case vaultUnreadable
+    /// Vault-wide: the folder holds more notes than the reader's limit (S4-4d); nothing was read.
+    case vaultTooLarge
   }
 
   public let kind: Kind

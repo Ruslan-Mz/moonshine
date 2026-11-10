@@ -51,19 +51,23 @@ struct AppEnvironment {
       tasks: SnapshotFileTaskProvider(url: snapshot), notes: DemoVault(),
       store: try store ?? SQLiteStore(timeZone: DemoVault.calendar.timeZone),
       importer: Importer(metaTagGroups: DemoMapping.metaTagGroups),
+      vaultTimeZone: { DemoVault.calendar.timeZone },
       mapping: .demo(groups: DemoMapping.metaTagGroups), clock: DemoEnvironment.clock,
       source: source)
   }
 
-  /// `importer` and `mapping` have no default: every environment names its meta tag groups.
+  /// `importer`, `vaultTimeZone` and `mapping` have no default: every environment names its
+  /// meta tag groups and the zone its vault is first read in.
   static func make(
     tasks: any TaskProvider, notes: any NoteProvider, store: any Store, importer: Importer,
+    vaultTimeZone: @escaping @Sendable () -> TimeZone,
     mapping: MappingState, clock: ImportClock, source: any ChangeSignalSource,
     omniFocusReading: (@Sendable () -> OmniFocusState)? = nil,
     close: (@Sendable () -> Void)? = nil
   ) -> AppEnvironment {
     let service = ImportService(
-      tasks: tasks, notes: notes, store: store, importer: importer, clock: clock)
+      tasks: tasks, notes: notes, store: store, importer: importer,
+      vaultTimeZone: vaultTimeZone, clock: clock)
     return AppEnvironment(
       store: store,
       coordinator: RefreshCoordinator(

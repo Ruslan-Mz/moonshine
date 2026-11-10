@@ -6,11 +6,12 @@ import OmniFocusAdapter
 import SQLiteStore
 
 extension AppEnvironment {
-  /// Live: OmniFocus through the bridge into `<base>/MoonShine/MoonShine.sqlite`; the vault waits
-  /// for S4-4d. Nil in a test host, read from the process before anything is opened or started
-  /// (CLAUDE.md rule 5), and when the folder, the store or the bridge script is missing. The
-  /// meta tag groups come from `mapping.yaml` in the folder (`LiveMapping`).
-  static func live(base: URL) -> AppEnvironment? {
+  /// Live: OmniFocus through the bridge and the vault folder `vault` names, into
+  /// `<base>/MoonShine/MoonShine.sqlite`. Nil in a test host, read from the process before
+  /// anything is opened or started (CLAUDE.md rule 5), and when the folder, the store or the
+  /// bridge script is missing. The meta tag groups come from `mapping.yaml` in the folder
+  /// (`LiveMapping`).
+  static func live(base: URL, vault: VaultFolder) -> AppEnvironment? {
     guard !AppModel.isTestHost,
       let script = Bundle.main.url(forResource: "snapshot", withExtension: "js"),
       let folder = try? DataFolder.create(base: base),
@@ -22,18 +23,18 @@ extension AppEnvironment {
       },
       tasks: OmniFocusBridge(script: script))
     return make(
-      tasks: mapping.tasks, notes: NotChosenVault(), store: store, importer: mapping.importer,
-      mapping: mapping.state, clock: .system, source: MacChangeSignals(),
-      omniFocusReading: RunningOmniFocus.now, close: { try? store.close() })
+      tasks: mapping.tasks, notes: BookmarkedVault(folder: vault), store: store,
+      importer: mapping.importer, vaultTimeZone: localTimeZone, mapping: mapping.state,
+      clock: .system, source: MacChangeSignals(), omniFocusReading: RunningOmniFocus.now,
+      close: { try? store.close() })
   }
 }
 
-/// No vault is chosen until S4-4d: nothing is read, and the store keeps every line, note and
-/// artifact it holds.
-struct NotChosenVault: NoteProvider {
-  func vault() async throws -> VaultSnapshot {
-    .notRead(issues: [.vaultWide(VaultProblem(.vaultNotChosen))])
-  }
+/// The Mac's zone now, the one the bridge reads in its own process (`bridge/snapshot.js`). The
+/// cached system zone is reset first, so a running app follows a zone change.
+@Sendable func localTimeZone() -> TimeZone {
+  NSTimeZone.resetSystemTimeZone()
+  return .current
 }
 
 /// OmniFocus' state now: the change signals' first reading, and ⌘R's resync.

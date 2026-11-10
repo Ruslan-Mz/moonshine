@@ -270,17 +270,25 @@ public actor ImportService {
   private var followUp: (task: Task<Workspace, any Error>, request: ImportRequest)?
   /// Requests waiting on the queued follow-up run (observable by tests).
   private(set) var followUpRequests = 0
+  /// The zone the vault is first read in, before the task snapshot says its own; no default:
+  /// every caller says it (S4-4d).
+  public let vaultTimeZone: @Sendable () -> TimeZone
   /// The held lines the owner approved for removal; memory only, lost on quit (S4-4e).
   public private(set) var approvedLineRemovals: Set<LineKey> = []
+  /// An import read the approval and kept it, because its read of the budget note was not
+  /// complete (S4-4d). Cleared with the approval and by a new one.
+  public private(set) var approvalKeptByIncompleteRead = false
 
   public init(
     tasks: any TaskProvider, notes: any NoteProvider, store: any Store,
-    importer: Importer, clock: ImportClock = .system
+    importer: Importer, vaultTimeZone: @escaping @Sendable () -> TimeZone,
+    clock: ImportClock = .system
   ) {
     self.tasks = tasks
     self.notes = notes
     self.store = store
     self.importer = importer
+    self.vaultTimeZone = vaultTimeZone
     self.clock = clock
   }
 
@@ -320,6 +328,7 @@ public actor ImportService {
   /// Approves removing exactly `keys`; the next commit that holds exactly them removes them.
   public func approveLineRemovals(_ keys: Set<LineKey>) {
     approvedLineRemovals = keys
+    approvalKeptByIncompleteRead = false
   }
 
   /// Returns the request the follow-up records.
@@ -338,9 +347,14 @@ public actor ImportService {
     let approved = approvedLineRemovals
     do {
       async let taskSnapshot = tasks.snapshot(modifiedSince: nil)
-      async let vaultSnapshot = notes.vault()
-      let (source, vault) = try await (taskSnapshot, vaultSnapshot)
+      let first = vaultTimeZone()
+      async let vaultSnapshot = notes.vault(timeZone: first)
+      let (source, firstRead) = try await (taskSnapshot, vaultSnapshot)
       if let since = source.modifiedSince { throw PartialSnapshotError(modifiedSince: since) }
+      // Periods follow `Workspace.timeZone`, the snapshot's: a read in another zone is read again.
+      let vault =
+        source.timeZone.identifier == first.identifier
+        ? firstRead : await notes.vault(timeZone: source.timeZone)
       run.providerHeld = source.heldFor
       var identities = try await store.identityMap()
       // Read after the identity map: a commit in between bumps the version and this one fails.
@@ -356,6 +370,9 @@ public actor ImportService {
       // during this import is for the next.
       if vault.lines.isComplete, approvedLineRemovals == approved {
         approvedLineRemovals = []
+        approvalKeptByIncompleteRead = false
+      } else if !vault.lines.isComplete, !approved.isEmpty, approvedLineRemovals == approved {
+        approvalKeptByIncompleteRead = true
       }
       return workspace
     } catch {

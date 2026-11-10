@@ -220,4 +220,144 @@ import Yams
     // The generator must reach Yams often enough for the test to mean something.
     #expect(parsed > 300)
   }
+
+  // MARK: Block nesting before Yams (S4-4d)
+
+  func rejectedBeforeYams(_ text: String) -> Bool {
+    FrontNode.preParseFailure(of: text, limits: VaultLimits()) == .yamlTooComplex
+  }
+
+  /// The depth `FrontNode.convert` checks: the root is 0, each collection's items one deeper.
+  func depth(_ node: Node) -> Int {
+    switch node {
+    case .scalar, .alias: 0
+    case .sequence(let sequence): sequence.map { depth($0) + 1 }.max() ?? 0
+    case .mapping(let mapping):
+      mapping.map { max(depth($0.key), depth($0.value)) + 1 }.max() ?? 0
+    }
+  }
+
+  /// The depth Yams composes `text` to; the fixtures below must reach past the cap.
+  func composedDepth(_ text: String) throws -> Int {
+    try Yams.compose(yaml: text).map(depth) ?? 0
+  }
+
+  static let compact = String(repeating: "- ", count: 40) + "x"
+
+  @Test func deepCompactSequencesAreRejectedBeforeYams() throws {
+    #expect(try composedDepth("a:\n" + Self.compact) > 32)
+    #expect(rejectedBeforeYams("a:\n" + Self.compact))
+    // A 64 KiB run, which Yams would compose about 32,000 levels deep.
+    #expect(rejectedBeforeYams("a:\n" + String(repeating: "- ", count: 32_000) + "x"))
+  }
+
+  /// Depth carried in on compact indicators is kept across lines.
+  @Test func compactRunsAcrossLinesAreRejected() throws {
+    let text = (0..<16).map { String(repeating: " ", count: 6 * $0) + "- - - - x" }
+      .joined(separator: "\n")
+    #expect(try composedDepth(text) > 32)
+    #expect(rejectedBeforeYams(text))
+  }
+
+  @Test func deepIndentedMappingsAreRejectedBeforeYams() throws {
+    let keys = (0..<40).map { String(repeating: "  ", count: $0) + "k\($0):" }
+    let text = keys.joined(separator: "\n") + " x"
+    #expect(try composedDepth(text) > 32)
+    #expect(rejectedBeforeYams(text))
+  }
+
+  /// libyaml reads block-scalar content only right of the innermost collection on the header's
+  /// line; a line at or left of it is structure.
+  @Test(arguments: ["a:\n- - |\n  ", "- a: |\n  b:\n  "])
+  func aCompactBlockScalarHeaderDoesNotHideStructure(head: String) throws {
+    let text = head + Self.compact
+    #expect(try composedDepth(text) > 32)
+    #expect(rejectedBeforeYams(text))
+  }
+
+  @Test(arguments: ["\r", "\u{85}", "\u{2028}", "\u{2029}", "\r\n"])
+  func everyLineBreakSplitsLines(lineBreak: String) throws {
+    let text = "a:" + lineBreak + Self.compact
+    #expect(try composedDepth(text) > 32)
+    #expect(rejectedBeforeYams(text))
+  }
+
+  @Test(arguments: ["|", "|-", "|2", ">", ">+"])
+  func aDeepCodeBlockInABlockScalarIsAccepted(header: String) throws {
+    let code = (1...40).map { String(repeating: " ", count: 2 + $0) + "- - k: v" }
+    let text = "title: Notes\ncode: \(header)\n" + code.joined(separator: "\n") + "\nnext: 1"
+    #expect(FrontNode.preParseFailure(of: text, limits: VaultLimits()) == nil)
+    let root = try FrontNode.parse(text, limits: VaultLimits())
+    #expect(root["next"]?.scalar == "1")
+  }
+
+  @Test func ordinaryFrontmatterIsAccepted() throws {
+    let read = try ObsidianVault(root: fixtureVault, timeZone: moscow).read()
+    #expect(
+      !read.issues.contains { issue in
+        if case .vault(_, _, let problem) = issue { problem.kind == .yamlTooComplex } else { false }
+      })
+    #expect(read.notesFound > 0)
+  }
+
+  static let indicators = ["- ", "- ", "- ", "? ", ": ", "k: ", "k:", "&a ", "!t "]
+  static let tails = [
+    "x", "x", "", "|", "|2", ">-", "|\n", "\"q", "'q'", "[x, [y]]", "{a: [b]}", "# c", "k: v",
+    "&a x", "!t x", "- - - x",
+  ]
+  static let breaks = ["\n", "\n", "\n", "\r", "\r\n", "\u{85}", "\u{2028}", "\u{2029}"]
+
+  /// A line: indentation, a run of block indicators, a tail (scalar, block-scalar header, flow,
+  /// quote, comment), sometimes a byte-order mark first. The indentation is one of `columns`
+  /// (where the lines before opened something), or any; the line's own columns are added.
+  static func blockLine(
+    columns: inout [Int], clean: Bool, using generator: inout SeededGenerator
+  ) -> String {
+    var column =
+      Int.random(in: 0..<5, using: &generator) == 0
+      ? Int.random(in: 0...14, using: &generator) : columns.randomElement(using: &generator)!
+    var line = String(repeating: " ", count: column)
+    for _ in 0..<Int.random(in: 0...5, using: &generator) {
+      let indicator = clean ? "- " : indicators.randomElement(using: &generator)!
+      line += indicator
+      column += indicator.count
+      columns.append(column)
+    }
+    let bom = !clean && Int.random(in: 0..<40, using: &generator) == 0 ? "\u{FEFF}" : ""
+    return bom + line + (clean ? cleanTails : tails).randomElement(using: &generator)!
+  }
+
+  /// Tails that keep a run of `- ` valid YAML, so documents reach depth.
+  static let cleanTails = ["x", "k: x", "k:", "k: |", "|", "|2", "- x", "[x, [y]]", "? x"]
+
+  /// The bound plus the flow depth is never below the depth Yams composes, for documents built
+  /// from block indicators, indentation, block-scalar headers and every line break.
+  @Test func theBlockBoundNeverUndercountsYams() {
+    var generator = SeededGenerator(state: 20_261_110)
+    let clock = ContinuousClock()
+    let start = clock.now
+    var parsed = 0
+    var deep = 0
+    for _ in 0..<20_000 {
+      let count = Int.random(in: 1...16, using: &generator)
+      var text = ""
+      var columns = [0]
+      let clean = Bool.random(using: &generator)
+      for _ in 0..<count {
+        text += Self.blockLine(columns: &columns, clean: clean, using: &generator)
+        text += Self.breaks.randomElement(using: &generator)!
+      }
+      guard let root = try? Yams.compose(yaml: text) else { continue }
+      parsed += 1
+      let real = depth(root)
+      if real > 4 { deep += 1 }
+      let bound = FrontNode.blockDepthBound(of: text) + FrontNode.flowDepth(of: text)
+      #expect(real <= bound, "\(text.debugDescription)")
+    }
+    print(
+      "theBlockBoundNeverUndercountsYams: \(parsed) parsed, \(deep) deeper than 4,",
+      clock.now - start)
+    #expect(parsed > 2_000)
+    #expect(deep > 500)
+  }
 }

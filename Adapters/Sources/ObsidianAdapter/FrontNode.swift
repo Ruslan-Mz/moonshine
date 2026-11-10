@@ -55,8 +55,9 @@ struct FrontNode: Equatable {
 
   /// Why `text` is rejected before Yams sees it, if it is.
   static func preParseFailure(of text: String, limits: VaultLimits) -> VaultProblem.Kind? {
-    // libyaml parses flow collections recursively: reject deep `[[[…` before it sees them.
-    if flowDepth(of: text) > limits.maxDepth { return .yamlTooComplex }
+    // Yams composes collections recursively: reject deep `[[[…` and deep block nesting
+    // (`- - - …`) before it sees them (S4-4d).
+    if blockDepthBound(of: text) + flowDepth(of: text) > limits.maxDepth { return .yamlTooComplex }
     // libyaml copies a `%TAG` prefix into every tag that uses it, before any cap of ours runs.
     if hasDirective(text) { return .yamlDirective }
     // Yams expands aliases while composing (it hashes mapping keys), before any cap of ours
@@ -101,8 +102,99 @@ struct FrontNode: Equatable {
     }
   }
 
+  /// An upper bound on the block nesting Yams composes, counted lexically (S4-4d). A block
+  /// collection opens at a column, a nested one at a greater column, except a sequence under a
+  /// mapping key at the key's own column: so the nesting is at most two per distinct column
+  /// where a collection can open. Those are the first token of a line and the token after each
+  /// `- `, `? ` or `: ` (and after an anchor or tag that follows one). A column once seen stays
+  /// counted, so a line left of open collections (a quoted or flow continuation) hides none.
+  /// Comment and blank lines open nothing; block-scalar content is skipped only while libyaml
+  /// reads it as content: right of the innermost collection on the header's line.
+  static func blockDepthBound(of text: String) -> Int {
+    var columns = Set<Int>()
+    // The open block scalar: content must start right of `innermost`; `content` once known.
+    var scalar: (innermost: Int, content: Int?)?
+    for line in lines(of: text) {
+      guard let first = line.firstIndex(where: { $0 != " " && $0 != "\t" }) else { continue }
+      if let open = scalar {
+        if let content = open.content, first >= content { continue }
+        if open.content == nil, first > open.innermost {
+          scalar = (open.innermost, first)
+          continue
+        }
+        scalar = nil
+      }
+      if line[first] == "#" { continue }
+      let opened = openingColumns(line, from: first)
+      columns.formUnion(opened)
+      scalar = blockScalarHeader(line, opened: opened)
+    }
+    return 2 * columns.count
+  }
+
+  /// The text split at every line break libyaml knows, each line without its leading
+  /// byte-order marks (`hasDirective` skips them the same way).
+  private static func lines(of text: String) -> [[Unicode.Scalar]] {
+    var lines: [[Unicode.Scalar]] = [[]]
+    for scalar in text.unicodeScalars {
+      if lineBreaks.contains(scalar) {
+        lines.append([])
+      } else if !(scalar == "\u{FEFF}" && lines[lines.count - 1].isEmpty) {
+        lines[lines.count - 1].append(scalar)
+      }
+    }
+    return lines
+  }
+
+  /// The columns where a block collection can open on `line`: its first token, and the token
+  /// after each indicator (`- `, `? `, `: `), past an anchor or tag that follows one.
+  private static func openingColumns(_ line: [Unicode.Scalar], from first: Int) -> [Int] {
+    let blank: (Int) -> Bool = { $0 >= line.count || line[$0] == " " || line[$0] == "\t" }
+    let next: (Int) -> Int? = { start in
+      var index = start
+      while index < line.count, blank(index) { index += 1 }
+      return index < line.count ? index : nil
+    }
+    var opened = [first]
+    var index = first
+    while true {
+      let isIndicator = "-?:".unicodeScalars.contains(line[index]) && blank(index + 1)
+      let isProperty = index != first && (line[index] == "&" || line[index] == "!")
+      guard isIndicator || isProperty else { break }
+      var end = index + 1
+      while isProperty, !blank(end) { end += 1 }
+      guard let token = next(end) else { break }
+      opened.append(token)
+      index = token
+    }
+    return opened
+  }
+
+  /// A block-scalar header (`|`, `>`, with chomping and indentation indicators) ending `line`
+  /// right after an indicator or a key: the column content must start right of, and its fixed
+  /// start when an indentation indicator gives one. Nil for anything else, which then counts as
+  /// structure (a header followed by a comment included).
+  private static func blockScalarHeader(
+    _ line: [Unicode.Scalar], opened: [Int]
+  ) -> (innermost: Int, content: Int?)? {
+    var end = line.count
+    while end > 0, line[end - 1] == " " || line[end - 1] == "\t" { end -= 1 }
+    var start = end
+    while start > 0, line[start - 1] != " ", line[start - 1] != "\t" { start -= 1 }
+    let token = line[start..<end]
+    guard let head = token.first, head == "|" || head == ">", token.count <= 3,
+      token.dropFirst().allSatisfy({ "+-123456789".unicodeScalars.contains($0) })
+    else { return nil }
+    var before = start
+    while before > 0, line[before - 1] == " " || line[before - 1] == "\t" { before -= 1 }
+    guard before == 0 || ":-?".unicodeScalars.contains(line[before - 1]) else { return nil }
+    let innermost = opened.filter { $0 < start }.max() ?? start
+    let digit = token.dropFirst().first { $0.properties.numericType != nil }
+    return (innermost, digit.map { innermost + Int($0.value - 48) })
+  }
+
   /// The deepest nesting of `[` and `{`, counted lexically (brackets in quotes count too).
-  private static func flowDepth(of text: String) -> Int {
+  static func flowDepth(of text: String) -> Int {
     var depth = 0
     var deepest = 0
     for byte in text.utf8 {
