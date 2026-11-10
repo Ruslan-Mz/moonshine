@@ -264,6 +264,27 @@ func fixtureDocument() throws -> SnapshotDocument {
   }
 }
 
+extension SnapshotDecodingTests {
+  /// Snapshot-contract invariant 9 (S4-4c-3): a `YYYY-MM-DD` date that exists. The value is
+  /// never quoted.
+  @Test(arguments: [
+    "2026-13-01", "2026-02-30", "2026-04-31", "2026-07-06T00:00", "x", "２０２６-07-06",
+  ])
+  func aWindowStartThatIsNotADateIsAViolation(value: String) throws {
+    var document = try fixtureDocument()
+    document.window.completedSince = value
+    let found = SnapshotValidator.violations(in: document)
+    #expect(found.contains(.init("window.completedSince", "is not a date YYYY-MM-DD")))
+    #expect(!found.contains { $0.description.contains(value) })
+  }
+
+  @Test func aWindowStartThatExistsIsNoViolation() throws {
+    var document = try fixtureDocument()
+    document.window.completedSince = "2024-02-29"
+    #expect(SnapshotValidator.violations(in: document) == [])
+  }
+}
+
 @Suite struct SnapshotMapperTests {
   let source: TaskSourceSnapshot
 
@@ -341,6 +362,14 @@ func fixtureDocument() throws -> SnapshotDocument {
     #expect(task.repeatOfExternalId == "tsk-0115")
     #expect(task.status == .completed)
     #expect(task.completedAt != nil)
+  }
+
+  @Test func theWindowStartIsTheStartOfThatDayInTheSnapshotsZone() throws {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = source.timeZone
+    #expect(
+      source.completedSince
+        == calendar.date(from: DateComponents(year: 2026, month: 7, day: 6)))
   }
 }
 

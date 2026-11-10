@@ -28,9 +28,9 @@ public struct QuietLine: Hashable, Sendable {
   public enum Reason: Hashable, Sendable {
     /// Calendar days since the line's last completion, and that completed task.
     case quiet(days: Int, last: TaskItem)
-    /// No completed task in the store. History older than the import window reads the same
-    /// until S4-4c carries the window start (owner, 2026-10-27).
-    case noActivityYet
+    /// No completed task in the store since `since`, the start of the task provider's
+    /// window; nil when the window start is not known (owner, 2026-10-27; S4-4c-3).
+    case noActivity(since: Date?)
   }
 
   public let line: Line
@@ -319,7 +319,8 @@ public struct Overview: Sendable {
     return workspace.lines.filter { $0.state == .active }.compactMap { line in
       let next = firstNext[.line(line.id)]
       guard let last = lastDone[.line(line.id)], let done = last.completedAt else {
-        return QuietLine(line: line, reason: .noActivityYet, nextStep: next)
+        return QuietLine(
+          line: line, reason: .noActivity(since: workspace.completedSince), nextStep: next)
       }
       let days = calendarDays(from: done, to: day)
       guard !line.foundation, days >= Self.quietAfterDays else { return nil }

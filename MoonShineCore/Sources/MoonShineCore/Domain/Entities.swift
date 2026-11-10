@@ -259,13 +259,17 @@ public struct Workspace: Sendable {
   public var tasks: [TaskItem]
   public var tags: [Tag]
   public var issues: [ImportIssue]
+  /// The start of the task provider's completed-task window, as last read; nil = not known.
+  public var completedSince: Date?
 
   public init(
     timeZone: TimeZone, defaultTimeSettings: DefaultTimeSettings = DefaultTimeSettings(),
     lines: [Line] = [], artifacts: [Artifact] = [], notes: [NoteRef] = [],
-    projects: [Project] = [], tasks: [TaskItem] = [], tags: [Tag] = [], issues: [ImportIssue] = []
+    projects: [Project] = [], tasks: [TaskItem] = [], tags: [Tag] = [], issues: [ImportIssue] = [],
+    completedSince: Date? = nil
   ) {
     self.timeZone = timeZone
+    self.completedSince = completedSince
     self.defaultTimeSettings = defaultTimeSettings
     self.lines = lines
     self.artifacts = artifacts
@@ -278,6 +282,17 @@ public struct Workspace: Sendable {
 
   /// The default times in the workspace's own zone, so the two can never disagree.
   public var defaultTimes: DefaultTimes { DefaultTimes(timeZone: timeZone, defaultTimeSettings) }
+
+  /// The lines whose removal waits for the owner's approval, in the issue's order.
+  public var heldLineRemoval: [Line] {
+    lineRemovalHeldKeys.compactMap { key in lines.first { $0.key == key } }
+  }
+
+  var lineRemovalHeldKeys: [LineKey] {
+    issues.lazy.compactMap { issue -> [LineKey]? in
+      if case .lineRemovalHeld(let keys) = issue { keys } else { nil }
+    }.first ?? []
+  }
 }
 
 /// A calm, non-fatal problem found while importing; shown as a banner, never a crash.
@@ -291,6 +306,9 @@ public enum ImportIssue: Hashable, Sendable {
   case vault(path: String, line: Int?, problem: VaultProblem)
   /// A problem of the whole vault that belongs to no note (`budgetNoteMissing`).
   case vaultWide(VaultProblem)
+  /// A clean read no longer lists these lines, more than `Importer.massLineRemovalLimit` at
+  /// once: they stay, in stored order, until the owner approves exactly this set (S4-4e).
+  case lineRemovalHeld([LineKey])
 }
 
 /// What went wrong with one vault note. Never carries note content: `key` is a contract key

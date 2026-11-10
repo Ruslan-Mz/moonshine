@@ -20,7 +20,7 @@ An invented dataset; no real people. "Today" = **Thursday 1 October 2026, ISO we
 | 🎹    | Piano         | Creative   | maintenance                   | 1             | Keep repertoire alive     | last activity 2 Sep, **not** flagged        |
 | ✒️    | Calligraphy   | Creative   | paused                        | —             | —                         | paused since 14 Jul                         |
 | 🇮🇹    | Italian       | Languages  | active                        | 2             | B1 by summer 2027         | last activity 2 Sep → **quiet for 29 days** |
-| 🇯🇵    | Japanese      | Languages  | active                        | 1             | Kana and first 300 words  | **no activity yet**                         |
+| 🇯🇵    | Japanese      | Languages  | active                        | 1             | Kana and first 300 words  | **no completions since 6 July**             |
 | 📐    | Math          | Science    | active                        | 4             | Linear algebra foundation |                                             |
 | 👨‍👩‍👧    | Family        | Life       | active                        | —             | Family year 2026          |                                             |
 | 🧺    | Life ops      | —          | (bucket)                      | —             | —                         | household, errands, inbox                   |
@@ -156,7 +156,7 @@ Invented. Weeks 33–40; today is Thu 1 Oct 2026 (W40, in progress). ISO weeks: 
 
 **Dates the takes were set (added for the mockups):** the Sunday of their week (W35 30 Aug, W36 6 Sep, W37 13 Sep, W38 20 Sep, W39 27 Sep), except 🎻 W39, which was changed after the week ended and shows `set Tue 29 Sep`.
 
-**Measured facts shown next to the takes in the review (W40, 4-week average W36–W39):** 🧘 8 sessions · avg 12.0 · 💪 4 sessions · avg 3.3, 0 tasks · avg 0.3 · 🤖 3 tasks · avg 3.0 · 🔬 1 task · avg 1.0 · 🎻 4 sessions · avg 4.0, 1 task · avg 1.0 · 🇮🇹 quiet for 29 days · 🇯🇵 no activity yet · 📐 1 session · avg 2.0, 1 task · avg 1.5 · 👨‍👩‍👧 3 sessions · avg 5.0, 1 task · avg 1.0. 🧘 Core practice weekly sessions W33–W40: 12 13 11 9 12 13 14 8 (as on Lines; it was missing from the weekly-stats table above).
+**Measured facts shown next to the takes in the review (W40, 4-week average W36–W39):** 🧘 8 sessions · avg 12.0 · 💪 4 sessions · avg 3.3, 0 tasks · avg 0.3 · 🤖 3 tasks · avg 3.0 · 🔬 1 task · avg 1.0 · 🎻 4 sessions · avg 4.0, 1 task · avg 1.0 · 🇮🇹 quiet for 29 days · 🇯🇵 no completions since 6 July · 📐 1 session · avg 2.0, 1 task · avg 1.5 · 👨‍👩‍👧 3 sessions · avg 5.0, 1 task · avg 1.0. 🧘 Core practice weekly sessions W33–W40: 12 13 11 9 12 13 14 8 (as on Lines; it was missing from the weekly-stats table above).
 
 **Used only on the states sheet (not demo data):** hours against the budget — 🎻 W36 `2 h of 6 h budget`, 🔬 W38 `5 h of 3 h budget` (phase-2 time data; the states sheet still shows the prompt's `of 6 planned`) · a 🇮🇹 Italian draft `Rise` in W40 to show `my take: Rise` in place of `quiet for 29 days` · the Sunday confirmation of 🎻 W40 as `Steady`, `set Sun 4 Oct` · the notes in other scripts: `Вибрато наконец получилось`, `Sarabande: темп ♩ = 54, legato come una voce — やっと`, `סוף סוף ויברטו עובד`.
 
@@ -241,18 +241,18 @@ Demo fixtures: 🧘 `Shoulders down, breathe out` · 💪 `Stand up and stretch`
 
 These values **replace** the Last activity, Next actions and Estimated this week cells drawn in `Lines.dc.html` (which shows, for example, Research `yesterday` · 5 · `≈ 2 h 25 min`): the generated file is not edited and is listed as stale in `README.md` § Pending design rounds, Before 3b.
 
-| Line             | Last activity     | Next actions | Estimated this week |
-| ---------------- | ----------------- | ------------ | ------------------- |
-| 🧘 Core practice | today             | 2            | ≈ 1 h est.          |
-| 💪 Calisthenics  | today             | 2            | ≈ 40 min est.       |
-| 🤖 AI/ML         | yesterday         | 4            | ≈ 4 h 10 min est.   |
-| 🔬 Research      | 2 days ago        | 3            | ≈ 1 h 15 min est.   |
-| 🎻 Violin        | today             | 9            | ≈ 6 h 40 min est.   |
-| 🇮🇹 Italian       | quiet for 29 days | 3            | —                   |
-| 🇯🇵 Japanese      | no activity yet   | 2            | ≈ 10 min est.       |
-| 📐 Math          | yesterday         | 5            | ≈ 1 h 30 min est.   |
-| 👨‍👩‍👧 Family        | today             | 3            | ≈ 35 min est.       |
-| 🎹 Piano         | 29 days ago       | 1            | —                   |
+| Line             | Last activity               | Next actions | Estimated this week |
+| ---------------- | --------------------------- | ------------ | ------------------- |
+| 🧘 Core practice | today                       | 2            | ≈ 1 h est.          |
+| 💪 Calisthenics  | today                       | 2            | ≈ 40 min est.       |
+| 🤖 AI/ML         | yesterday                   | 4            | ≈ 4 h 10 min est.   |
+| 🔬 Research      | 2 days ago                  | 3            | ≈ 1 h 15 min est.   |
+| 🎻 Violin        | today                       | 9            | ≈ 6 h 40 min est.   |
+| 🇮🇹 Italian       | quiet for 29 days           | 3            | —                   |
+| 🇯🇵 Japanese      | no completions since 6 July | 2            | ≈ 10 min est.       |
+| 📐 Math          | yesterday                   | 5            | ≈ 1 h 30 min est.   |
+| 👨‍👩‍👧 Family        | today                       | 3            | ≈ 35 min est.       |
+| 🎹 Piano         | 29 days ago                 | 1            | —                   |
 
 **Practice lines (phase 2):** 📓 Reflection, `within: core`, `measure: entries`, targets diary 5 per week and report 1 per month; diary entries W33–W40: 5 6 4 5 5 7 5 4 (W40 so far); the September report exists, October's not yet; last entry today; streak 4 weeks (W36–W39). 🎼 Practice journal, `within: violin`, target note 3 per week; entries 3 3 1 0 2 3 3 2; last entry yesterday; streak 2 weeks (W38–W39).
 

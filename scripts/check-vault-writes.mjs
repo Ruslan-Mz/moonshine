@@ -51,7 +51,12 @@ const optional = ["Apps"];
 // an allowed call never hides another call on the same line or elsewhere in the file.
 const allowed = {
   // The store: MoonShine's own data.
-  "Adapters/Sources/SQLiteStore/SQLiteStore.swift": ["DatabasePool(path: path)", "DatabaseQueue()"],
+  // `moonshine-import timings` reads the app's store read-only (S4-4c-3).
+  "Adapters/Sources/SQLiteStore/SQLiteStore.swift": [
+    "DatabasePool(path: path)",
+    "DatabaseQueue()",
+    "DatabaseQueue(path: path, configuration: configuration)",
+  ],
   // The data folder that holds the stores (S4-4c-1).
   "Adapters/Sources/SQLiteStore/DataFolder.swift": [
     "FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)",

@@ -61,17 +61,21 @@ Rule: active lines with no completion for ≥ 14 days. Never maintenance, never 
 
 ## NoActivityCard
 
-Dashed border, no fill: emoji + name + `no activity yet`; "First step: …", the same next-action rule as the QuietLineCard, or `no next action`. An active line with no completions at all, foundation lines included (owner, 2026-10-28).
+Dashed border, no fill: emoji + name + `no completions since 6 July`, the first day of OmniFocus' completed-task window, or `no activity yet` while that day is not known (S4-4c-3, owner 2026-11-09); "First step: …", the same next-action rule as the QuietLineCard, or `no next action`. An active line with no completions in the store, foundation lines included (owner, 2026-10-28).
+
+## LineRemovalNotice
+
+Above the Today table, outside it, plain card background, an info glyph, no red, no dismiss (S4-4e, owner 2026-11-09): the held lines by emoji and name (the first three, then `…`) and that they stay until removed; the button `Remove N lines`, or, once pressed, `They will be removed at the next import` in secondary text (`…, once OmniFocus is open` while OmniFocus is not running). Strings in `design/copy.md` § Held line removal.
 
 ## LineStateLabel
 
-| State                  | Text                                                 | Style                                        |
-| ---------------------- | ---------------------------------------------------- | -------------------------------------------- |
-| active                 | `active`                                             | primary                                      |
-| maintenance            | `maintenance`                                        | secondary                                    |
-| paused                 | `paused on purpose` + pause symbol                   | whole row in `paused`, emoji at 50 % opacity |
-| active, no completions | `active` + last activity `no activity yet`           | secondary                                    |
-| active, quiet          | `active` + last activity: moon + `quiet for 29 days` | secondary                                    |
+| State                  | Text                                                                                                | Style                                        |
+| ---------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| active                 | `active`                                                                                            | primary                                      |
+| maintenance            | `maintenance`                                                                                       | secondary                                    |
+| paused                 | `paused on purpose` + pause symbol                                                                  | whole row in `paused`, emoji at 50 % opacity |
+| active, no completions | `active` + last activity `no completions since 6 July` (`no activity yet` without the window start) | secondary                                    |
+| active, quiet          | `active` + last activity: moon + `quiet for 29 days`                                                | secondary                                    |
 
 ## StatusBar
 

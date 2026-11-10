@@ -15,6 +15,11 @@ import SQLiteStore
   ///     swift run -c release --package-path Adapters moonshine-import probe
   ///     swift run -c release --package-path Adapters moonshine-import vault <folder>
   ///     swift run -c release --package-path Adapters moonshine-import vault --paths <folder>
+  ///     swift run -c release --package-path Adapters moonshine-import timings
+  ///
+  /// `timings` reads the app's own store, `MoonShine.sqlite` in the data folder, read-only:
+  /// per trigger, how long from the signal to the landing, and the 5 s target (ADR-0011).
+  /// It writes nothing and creates no folder.
   ///
   /// `vault` only reads the vault folder and writes nothing: no store, no files. `--paths` also
   /// prints each problem's kind, vault-relative path and line: owner only, in the owner's own
@@ -56,6 +61,7 @@ import SQLiteStore
           }
           try vault(at: arguments[2], paths: true)
         case ("vault", let folder?) where arguments.count == 2: try vault(at: folder, paths: false)
+        case ("timings", nil): try timings(base: try applicationSupport())
         default: usage()
         }
       } catch {
@@ -68,11 +74,12 @@ import SQLiteStore
       print(
         """
         usage: moonshine-import full [runs] | incremental <minutes> | probe
-                             | vault [--paths] <folder>
+                             | vault [--paths] <folder> | timings
           vault <folder>  reads the vault and prints counts only; writes nothing (no store, no files)
           vault --paths <folder>  also prints each problem's kind, vault-relative path and line;
                           for the owner's own terminal only: never run by an agent, never pasted
                           into a log, commit or PR
+          timings         reads the app's store read-only and prints counts and seconds only
         """)
       exit(2)
     }
@@ -118,7 +125,7 @@ import SQLiteStore
         var identities = try await store.identityMap()
         let imported = Importer(metaTagGroups: groups).makeWorkspace(
           tasks: source, vault: .notRead(), stored: try await store.workspace(),
-          identities: &identities.map, now: Date())
+          approvedLineRemovals: [], identities: &identities.map, now: Date())
         workspace = imported
         marks.append(clock.now)
         // The measurement records its own phases; it adds no row to `imports`.
@@ -205,6 +212,23 @@ import SQLiteStore
       guard paths else { return }
       print("problems (owner only; do not paste):")
       for location in read.problemLocations { print("  " + location) }
+    }
+
+    /// The target's runs start at PR #49's merge, 2026-11-08 13:41:14 +02:00 (`a79c52c`): rows
+    /// before it hold resign-actives the launch-order bug faked (owner, 2026-11-09; ADR-0011).
+    static let targetSince = Date(timeIntervalSince1970: 1_794_138_074)
+
+    struct NoAppStore: Error {}
+
+    static func timings(base: URL) throws {
+      for line in try timingsLines(base: base) { print(line) }
+    }
+
+    /// The report from the app's store under `base`; the tool's own store is never read.
+    static func timingsLines(base: URL) throws -> [String] {
+      let path = DataFolder.appStorePath(in: DataFolder.url(base: base))
+      guard FileManager.default.fileExists(atPath: path) else { throw NoAppStore() }
+      return Timings.lines(try SQLiteStore.importRuns(readOnlyAt: path), targetSince: targetSince)
     }
 
     /// `full`'s store under `base`, the folder created first: the tool's own, never the app's.
@@ -313,6 +337,14 @@ import SQLiteStore
         return "mapping.yaml is not a regular file or cannot be read"
       case MappingFileError.invalid(let kind, let key):
         return "mapping.yaml: \(kind.rawValue) at \(key.rawValue)"
+      case is NoAppStore: return "no app store in the data folder"
+      case SQLiteStoreError.missingTable(let table): return "the app store has no \(table) table"
+      case SQLiteStoreError.unknownValue(let column):
+        return "the app store holds an unknown value in \(column)"
+      case SQLiteStoreError.outOfRange(let column):
+        return "the app store holds a value out of range in \(column)"
+      case SQLiteStoreError.cannotOpenReadOnly:
+        return "the app store cannot be opened read-only; open MoonShine once, then quit it"
       case VaultReadError.rootUnreadable: return "the vault folder cannot be read"
       case VaultReadError.tooManyNotes(let limit):
         return "the vault has more than \(limit) notes; nothing was read"

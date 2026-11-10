@@ -5,7 +5,10 @@
 //   any string of its language, the English source keys included; a phrase matches as whole
 //   words, case ignored ("late" does not match "later");
 // - every plural entry has the categories its language needs: en one, other; ru one, few,
-//   many, other; a key with a plural in one language has a plural in every language.
+//   many, other; a key with a plural in one language has a plural in every language;
+// - so does every plural substitution (`%#@name@`, a count inside a sentence), in every
+//   language; a substitution the string names is defined, and a defined one is named (owner,
+//   2026-11-10, PR #52 round 1).
 // The literal-string check of the same Confirmation comes with S4-3c.
 // Usage: node scripts/check-catalog.mjs [folder…] (default `Apps`). Exit 0 clean, 1 with
 // `file: key [language]: rule` per finding, 2 when the glossary or a catalog cannot be read.
@@ -53,6 +56,48 @@ function values(node) {
   return found;
 }
 
+/** The substitutions a string names: `%#@name@`, positional or not. */
+function substitutionNames(value) {
+  return [...(value ?? "").matchAll(/%(?:\d+\$)?#@([^@]+)@/g)].map((match) => match[1]);
+}
+
+/** Findings for one key's substitutions, per language of `pluralCategories`. */
+function checkSubstitutions(key, localizations) {
+  const findings = [];
+  const languages = Object.keys(pluralCategories);
+  const everywhere = new Set(
+    languages.flatMap((language) => Object.keys(localizations[language]?.substitutions ?? {})),
+  );
+  for (const language of languages) {
+    const node = localizations[language];
+    const defined = node?.substitutions ?? {};
+    const named = substitutionNames(node?.stringUnit?.value);
+    for (const name of named) {
+      if (!defined[name]) findings.push(`${key} [${language}]: substitution "${name}" is not defined`);
+    }
+    for (const name of Object.keys(defined)) {
+      if (!named.includes(name)) {
+        findings.push(`${key} [${language}]: substitution "${name}" is not named in the string`);
+      }
+    }
+    for (const name of everywhere) {
+      if (!defined[name] && !named.includes(name)) {
+        findings.push(`${key} [${language}]: no substitution "${name}"`);
+      }
+    }
+    for (const [name, substitution] of Object.entries(defined)) {
+      const plural = substitution?.variations?.plural;
+      if (!plural) continue;
+      for (const category of pluralCategories[language]) {
+        if (!plural[category]) {
+          findings.push(`${key} [${language}]: substitution "${name}" plural "${category}" missing`);
+        }
+      }
+    }
+  }
+  return findings;
+}
+
 /** Findings for one parsed catalog, as `key [language]: rule`. */
 export function checkCatalog(catalog, banned) {
   const findings = [];
@@ -70,6 +115,7 @@ export function checkCatalog(catalog, banned) {
         }
       }
     }
+    findings.push(...checkSubstitutions(key, localizations));
     const plurals = Object.entries(localizations).filter(([, node]) => node.variations?.plural);
     if (plurals.length === 0) continue;
     for (const language of Object.keys(pluralCategories)) {

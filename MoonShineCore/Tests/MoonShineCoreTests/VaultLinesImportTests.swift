@@ -32,7 +32,7 @@ import Testing
     let first = Importer(metaTagGroups: []).makeWorkspace(
       tasks: source, vault: vault(.read([violin, piano], complete: true)),
       stored: Workspace(timeZone: .gmt),
-      identities: &identities, now: earlier)
+      approvedLineRemovals: [], identities: &identities, now: earlier)
     return (StoredWorkspace(timeZone: TestWorld.timeZone).merging(first, at: earlier), identities)
   }
 
@@ -41,8 +41,8 @@ import Testing
     var (stored, identities) = storedAfterACleanRead()
     let before = stored.workspace.lines
     let workspace = Importer(metaTagGroups: []).makeWorkspace(
-      tasks: source, vault: vault(lines), stored: stored.workspace, identities: &identities,
-      now: now)
+      tasks: source, vault: vault(lines), stored: stored.workspace, approvedLineRemovals: [],
+      identities: &identities, now: now)
     stored = stored.merging(workspace, at: now)
     return (workspace, stored, before)
   }
@@ -134,7 +134,7 @@ import Testing
     let workspace = Importer(metaTagGroups: []).makeWorkspace(
       tasks: source, vault: vault(.read([core, piano], complete: true)),
       stored: Workspace(timeZone: .gmt),
-      identities: &identities, now: now)
+      approvedLineRemovals: [], identities: &identities, now: now)
     let line = try #require(workspace.lines.first)
     #expect(line.foundation)
     #expect(line.floorHoursPerDay == 1.5)

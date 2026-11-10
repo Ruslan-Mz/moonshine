@@ -25,8 +25,13 @@ public protocol Store: Sendable {
     _ workspace: Workspace, identities: IdentityMap, expectedVersion: Int, at now: Date,
     run: PendingImportRun?
   ) async throws
+  /// Records `run` as failed with `kind`, in a write of its own: no version bump, nothing else
+  /// changed. A committed run is recorded only by `commit`.
+  func recordFailure(_ run: PendingImportRun, _ kind: ImportFailure) async throws
   /// The newest import that committed; nil before the first.
   func lastCommittedImport() async throws -> ImportRun?
+  /// The newest import recorded, committed or failed; nil before the first.
+  func lastImportAttempt() async throws -> ImportRun?
   /// What services read: everything not removed from its provider.
   func workspace() async throws -> Workspace
   /// Everything kept, including history its providers no longer return.
@@ -74,11 +79,15 @@ public struct TaskSourceSnapshot: Sendable {
   public let tasks: [SourceTask]
   /// How long reading it held the source, as the provider measured it; nil = not measured.
   public let heldFor: Duration?
+  /// The start of the window the completed tasks come from: the start of that day in
+  /// `timeZone`. nil = not known, read as no window.
+  public let completedSince: Date?
 
   public init(
     provider: ProviderID, generatedAt: Date, timeZone: TimeZone,
     defaultTimes: DefaultTimeSettings?, modifiedSince: Date? = nil, tags: [SourceTag],
-    projects: [SourceProject], tasks: [SourceTask], heldFor: Duration? = nil
+    projects: [SourceProject], tasks: [SourceTask], heldFor: Duration? = nil,
+    completedSince: Date? = nil
   ) {
     self.provider = provider
     self.generatedAt = generatedAt
@@ -89,6 +98,7 @@ public struct TaskSourceSnapshot: Sendable {
     self.projects = projects
     self.tasks = tasks
     self.heldFor = heldFor
+    self.completedSince = completedSince
   }
 }
 

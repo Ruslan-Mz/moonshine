@@ -39,7 +39,7 @@ import Testing
     var identities = IdentityMap()
     return Importer(metaTagGroups: DemoMapping.metaTagGroups).makeWorkspace(
       tasks: source, vault: try await DemoVault().vault(), stored: Workspace(timeZone: .gmt),
-      identities: &identities, now: source.generatedAt)
+      approvedLineRemovals: [], identities: &identities, now: source.generatedAt)
   }
 
   func hhmm(_ time: TimeOfDay?) -> String? {

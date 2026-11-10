@@ -203,8 +203,6 @@ import Testing
       (.outOfRange(column: "imports.duration_ms"), { try await insertImport($0, duration: -40) }),
       (.outOfRange(column: "imports.held_ms"), { try await insertImport($0, held: -40) }),
       (.outOfRange(column: "imports.attrs"), { try await insertImport($0, tasks: -40) }),
-      // Started at 0: an end before the start.
-      (.outOfRange(column: "imports.finished_at"), { try await insertImport($0, finishedAt: -40) }),
     ]
     for (expected, insert) in cases {
       let store = try SQLiteStore()
@@ -215,6 +213,105 @@ import Testing
       #expect(error == expected)
       #expect(!String(reflecting: try #require(error)).contains(planted))
       #expect(!String(reflecting: try #require(error)).contains("-40"))
+    }
+  }
+
+  /// Started at 0, ended before it: the wall clock stepped back during the import. Its
+  /// instants are kept and it reads as not measured, so one such row never fails a read
+  /// (owner, 2026-11-10).
+  @Test func aRowThatEndsBeforeItsStartReadsAsNotMeasured() async throws {
+    let store = try SQLiteStore()
+    try await insertImport(store, finishedAt: -40, waited: 5, duration: 7)
+    let run = try #require(try await store.lastCommittedImport())
+    #expect(run.finishedAt < run.startedAt)
+    #expect(run.waited == nil)
+    #expect(run.duration == nil)
+  }
+
+  func insertRaw(_ store: SQLiteStore, outcome: String, attrs: String) async throws {
+    try await store.writer.write { db in
+      try db.execute(
+        sql: """
+          INSERT INTO imports
+            (trigger, started_at, finished_at, waited_ms, duration_ms, held_ms, outcome, attrs)
+          VALUES ('timer', 0, 1, 0, 1, NULL, ?, ?)
+          """, arguments: [outcome, attrs])
+    }
+  }
+
+  @Test func aStoredRowWithAMismatchedOutcomeAndAttrsThrowsNamingTheColumn() async throws {
+    let counts = #"{"lines":0,"notes":0,"artifacts":0,"projects":0,"tasks":0,"tags":0"#
+    let planted = "planted-kind-7f3a"
+    let cases: [(String, String, SQLiteStoreError)] = [
+      ("committed", counts + #","failure":"timedOut"}"#, .outOfRange(column: "imports.attrs")),
+      ("committed", #"{"lines":0}"#, .outOfRange(column: "imports.attrs")),
+      ("failed", "{}", .outOfRange(column: "imports.attrs")),
+      ("failed", counts + #","failure":"timedOut"}"#, .outOfRange(column: "imports.attrs")),
+      ("failed", #"{"failure":"\#(planted)"}"#, .unknownValue(column: "imports.attrs.failure")),
+      (planted, #"{"failure":"timedOut"}"#, .unknownValue(column: "imports.outcome")),
+    ]
+    for (outcome, attrs, expected) in cases {
+      let store = try SQLiteStore()
+      try await insertRaw(store, outcome: outcome, attrs: attrs)
+      let error = await #expect(throws: SQLiteStoreError.self) {
+        try await store.lastImportAttempt()
+      }
+      #expect(error == expected)
+      #expect(!String(reflecting: try #require(error)).contains(planted))
+    }
+    let store = try SQLiteStore()
+    try await insertRaw(store, outcome: "failed", attrs: #"{"failure":"timedOut"}"#)
+    #expect(try await store.lastImportAttempt()?.outcome == .failed(.timedOut))
+  }
+
+  @Test func aWorkspaceRowFromBeforeTheWindowStartReadsWithout() throws {
+    let attrs = Data(#"{"issues":[]}"#.utf8)
+    let decoded = try JSONDecoder().decode(WorkspaceRecord.Attrs.self, from: attrs)
+    #expect(decoded.completedSince == nil)
+  }
+
+  func sideFiles(_ path: String) -> [String] {
+    ["-wal", "-shm"].filter { FileManager.default.fileExists(atPath: path + $0) }
+  }
+
+  @Test func importRunsReadsAClosedStoreReadOnlyWithoutWritingIt() async throws {
+    let path = temporaryDatabasePath()
+    let store = try SQLiteStore(path: path)
+    try await run(try fixtureSnapshot(), store, at: first)
+    try await store.recordFailure(
+      PendingImportRun(
+        request: ImportRequest(trigger: .timer, signalledAt: .zero), startedAt: second,
+        started: .zero, clock: .frozen(at: second)), .timedOut)
+    try store.close()
+    let before = try Data(contentsOf: URL(filePath: path))
+    let runs = try SQLiteStore.importRuns(readOnlyAt: path)
+    #expect(runs.map(\.trigger) == [.manual, .timer])
+    #expect(runs.last?.outcome == .failed(.timedOut))
+    #expect(try Data(contentsOf: URL(filePath: path)) == before)
+  }
+
+  /// A store without its side files, such as a copy made without them (a crash leaves them in
+  /// place). They are never created, so it cannot be opened read-only, and the error says so
+  /// without a path.
+  @Test func importRunsRefusesAStoreWithoutItsSideFilesAndCreatesNone() async throws {
+    let path = temporaryDatabasePath()
+    let store = try SQLiteStore(path: path)
+    try await run(try fixtureSnapshot(), store, at: first)
+    try store.close()
+    for suffix in ["-wal", "-shm"] { try? FileManager.default.removeItem(atPath: path + suffix) }
+    #expect(throws: SQLiteStoreError.cannotOpenReadOnly) {
+      try SQLiteStore.importRuns(readOnlyAt: path)
+    }
+    #expect(sideFiles(path).isEmpty)
+  }
+
+  @Test func importRunsNamesAMissingTable() async throws {
+    let path = temporaryDatabasePath()
+    let queue = try DatabaseQueue(path: path)
+    try await queue.write { try $0.execute(sql: "CREATE TABLE other (id INTEGER)") }
+    try queue.close()
+    #expect(throws: SQLiteStoreError.missingTable("imports")) {
+      try SQLiteStore.importRuns(readOnlyAt: path)
     }
   }
 
@@ -464,7 +561,8 @@ import Testing
     var workspace = Workspace(timeZone: .gmt)
     let build = clock.measure {
       workspace = Importer(metaTagGroups: DemoMapping.metaTagGroups).makeWorkspace(
-        tasks: source, vault: vault, stored: Workspace(timeZone: .gmt), identities: &identities,
+        tasks: source, vault: vault, stored: Workspace(timeZone: .gmt), approvedLineRemovals: [],
+        identities: &identities,
         now: first)
     }
     let commit = try await clock.measure {

@@ -52,7 +52,9 @@ struct TodayRail: View {
         ForEach(screen.quiet) {
           QuietLineCard(line: $0, today: screen.day, timeZone: screen.timeZone)
         }
-        ForEach(screen.noActivity) { NoActivityCard(line: $0) }
+        ForEach(screen.noActivity) {
+          NoActivityCard(line: $0, today: screen.day, timeZone: screen.timeZone)
+        }
         Text(
           "Quiet: an active line with no completed task for \(Overview.quietAfterDays) days or more. Foundation, maintenance and paused lines are never quiet."
         )
@@ -189,14 +191,26 @@ private struct QuietLineCard: View {
 /// `design/components.md` § NoActivityCard: dashed border, no fill.
 private struct NoActivityCard: View {
   let line: TodayScreen.NoActivity
+  let today: Date
+  let timeZone: TimeZone
+  @Environment(\.locale) private var locale
 
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      HStack(alignment: .firstTextBaseline) {
-        LineName(emoji: line.emoji, name: line.name).fontWeight(.semibold)
-        Spacer(minLength: 6)
-        Text("no activity yet").foregroundStyle(.secondary).lineLimit(1)
+      LineName(emoji: line.emoji, name: line.name).fontWeight(.semibold)
+      // With the window start known, the fact is bounded by it (S4-4c-3). Its own line, as
+      // QuietLineCard's `Last:`, and it wraps: the date is the news, never truncated.
+      Group {
+        if let since = line.since {
+          Text(
+            "no completions since \(TodayFormat.lastDate(since, today: today, timeZone: timeZone, locale: locale))"
+          )
+        } else {
+          Text("no activity yet")
+        }
       }
+      .foregroundStyle(.secondary)
+      .fixedSize(horizontal: false, vertical: true)
       NextStepBlock(label: "First step", next: line.next)
     }
     .padding(14)

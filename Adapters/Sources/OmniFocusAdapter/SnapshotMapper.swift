@@ -95,6 +95,9 @@ public enum SnapshotValidator {
     case (true, .some(let since)): checkOffset("modifiedSince", since)
     case (false, nil): break
     }
+    if SnapshotMapper.dayStart(document.window.completedSince, in: .gmt) == nil {
+      found.append(.init("window.completedSince", "is not a date YYYY-MM-DD"))
+    }
     if let times = document.defaultTimes {
       for (name, time) in [("due", times.due), ("defer", times.defer), ("planned", times.planned)]
       where time.map({ $0.wholeMatch(of: SnapshotMapper.timeShape) == nil }) == true {
@@ -179,6 +182,9 @@ public enum SnapshotMapper {
     guard let timeZone = TimeZone(identifier: document.timeZone) else {
       throw SnapshotError.badValue(path: "timeZone")
     }
+    guard let completedSince = dayStart(document.window.completedSince, in: timeZone) else {
+      throw SnapshotError.badValue(path: "window.completedSince")
+    }
 
     let folders = Dictionary(uniqueKeysWithValues: document.folders.map { ($0.id, $0) })
     func folderPath(_ id: String?) -> [String] {
@@ -230,7 +236,22 @@ public enum SnapshotMapper {
           completedAt: try optional(task.completionDate, "completionDate"),
           modifiedAt: try date(task.modified, at: at("modified")),
           repeatOfExternalId: task.repeatOf)
-      })
+      },
+      completedSince: completedSince)
+  }
+
+  /// `YYYY-MM-DD`, ASCII digits only, a day that exists in the Gregorian calendar
+  /// (`2026-02-30` is none); nil otherwise. The start of that day in `timeZone`.
+  static func dayStart(_ string: String, in timeZone: TimeZone) -> Date? {
+    guard string.wholeMatch(of: /[0-9]{4}-[0-9]{2}-[0-9]{2}/) != nil else { return nil }
+    let parts = string.split(separator: "-").compactMap { Int($0) }
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = timeZone
+    let day = DateComponents(year: parts[0], month: parts[1], day: parts[2])
+    guard let start = calendar.date(from: day),
+      calendar.dateComponents([.year, .month, .day], from: start) == day
+    else { return nil }
+    return start
   }
 
   /// The ISO 8601 shape with every field in range. Built once: a snapshot holds ~10 000

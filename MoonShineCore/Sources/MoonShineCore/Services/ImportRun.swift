@@ -79,8 +79,9 @@ public struct ImportCounts: Sendable, Equatable {
 }
 
 /// Why an import did not commit, by kind only: never a value, an id or a provider's text.
-/// Held in memory in S4-4c-1; S4-4c-3 records it. One writer per store, so an identity
-/// conflict cannot happen and is `other`.
+/// Recorded as a failed run (S4-4c-3). One writer per store, so an identity conflict cannot
+/// happen and is `other`. A cancelled import may record nothing: the store can refuse a write
+/// once cancelled, and the record is dropped. Nothing cancels an import today.
 public enum ImportFailure: String, Sendable, CaseIterable {
   case providerNotRunning
   case permissionDenied
@@ -101,9 +102,10 @@ extension PartialSnapshotError: ImportFailureKind {
   public var importFailure: ImportFailure { .partialSnapshot }
 }
 
-/// How an import ended. Only committed runs are recorded until failures are (S4-4c).
+/// How an import ended: committed with its rows, or failed with its kind.
 public enum ImportOutcome: Sendable, Equatable {
   case committed(ImportCounts)
+  case failed(ImportFailure)
 }
 
 /// One recorded import. A duration is nil when it could not be measured, never 0.
@@ -136,9 +138,9 @@ public struct ImportRun: Sendable, Equatable {
   }
 }
 
-/// An import that has read its sources and is about to be committed. The store finishes it
-/// inside its write, so `duration` covers the decode, the merge and every row written; only
-/// the run's own row and the transaction's commit fall outside.
+/// An import under way, from its start. The store finishes it inside its write, so a committed
+/// run's `duration` covers the reads, the decode, the merge and every row written; only the
+/// run's own row and the transaction's commit fall outside. A failed one ends where it failed.
 public struct PendingImportRun: Sendable {
   public let trigger: ImportTrigger
   public let startedAt: Date
@@ -147,13 +149,13 @@ public struct PendingImportRun: Sendable {
   /// From the signal to the start; zero without a signal time, nil when the signal reads
   /// after the start.
   public let waited: Duration?
-  public let providerHeld: Duration?
-  public let counts: ImportCounts
+  /// Set once the task provider has answered, as it reported.
+  public var providerHeld: Duration?
   public let clock: ImportClock
 
   public init(
-    request: ImportRequest, startedAt: Date, started: Duration, providerHeld: Duration?,
-    counts: ImportCounts, clock: ImportClock
+    request: ImportRequest, startedAt: Date, started: Duration, providerHeld: Duration? = nil,
+    clock: ImportClock
   ) {
     trigger = request.trigger
     self.startedAt = startedAt
@@ -164,14 +166,21 @@ public struct PendingImportRun: Sendable {
       waited = .zero
     }
     self.providerHeld = providerHeld
-    self.counts = counts
     self.clock = clock
   }
 
-  public func finished() -> ImportRun {
-    let duration = clock.monotonic() - started
-    return ImportRun(
+  public func finished(counts: ImportCounts) -> ImportRun {
+    ended(providerHeld: providerHeld, outcome: .committed(counts))
+  }
+
+  /// No snapshot came back to commit, so no held time is recorded.
+  public func failed(_ kind: ImportFailure) -> ImportRun {
+    ended(providerHeld: nil, outcome: .failed(kind))
+  }
+
+  private func ended(providerHeld: Duration?, outcome: ImportOutcome) -> ImportRun {
+    ImportRun(
       trigger: trigger, startedAt: startedAt, finishedAt: clock.wall(), waited: waited,
-      duration: duration, providerHeld: providerHeld, outcome: .committed(counts))
+      duration: clock.monotonic() - started, providerHeld: providerHeld, outcome: outcome)
   }
 }

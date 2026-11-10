@@ -15,7 +15,7 @@ import Testing
     var identities = IdentityMap()
     let workspace = Importer(metaTagGroups: DemoMapping.metaTagGroups).makeWorkspace(
       tasks: source, vault: try await DemoVault().vault(), stored: Workspace(timeZone: .gmt),
-      identities: &identities, now: source.generatedAt)
+      approvedLineRemovals: [], identities: &identities, now: source.generatedAt)
     overview = Overview(workspace: workspace, now: source.generatedAt)
   }
 
@@ -138,8 +138,8 @@ import Testing
     }
   }
 
-  /// The rail: `quiet for 29 days · Last: 2 September` (owner, 2026-10-24), 🇯🇵 no activity
-  /// yet, ✒️ paused, and the Q4 focus, 2 of 5 done.
+  /// The rail: `quiet for 29 days · Last: 2 September` (owner, 2026-10-24), 🇯🇵 no completions
+  /// since 6 July (S4-4c-3), ✒️ paused, and the Q4 focus, 2 of 5 done.
   @Test func theRailMatchesTheDesign() throws {
     let today = overview.today()
     #expect(today.quietLines.map(\.line.key) == ["italian", "japanese"])
@@ -152,7 +152,7 @@ import Testing
     #expect(last.title == "Lesson 14 review")
     #expect(last.completedAt == (try date(9, 2, 19)))
     #expect(italian.nextStep?.title == "Lesson 15 — passato prossimo")
-    #expect(today.quietLines.last?.reason == .noActivityYet)
+    #expect(today.quietLines.last?.reason == .noActivity(since: try date(7, 6, 0)))
     #expect(today.quietLines.last?.nextStep?.title == "Hiragana row あ–お")
     #expect(today.pausedLines.map(\.key) == ["calligraphy"])
     #expect(

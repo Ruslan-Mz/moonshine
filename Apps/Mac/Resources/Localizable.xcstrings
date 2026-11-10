@@ -761,6 +761,74 @@
         }
       }
     },
+    "Remove %lld lines": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Remove %lld line"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Remove %lld lines"
+                }
+              }
+            }
+          }
+        },
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Убрать %lld линию"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Убрать %lld линии"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Убрать %lld линий"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Убрать %lld линии"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Remove Lines No Longer in the Budget Note": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove Lines No Longer in the Budget Note"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Убрать линии, которых больше нет в заметке с бюджетом"
+          }
+        }
+      }
+    },
     "Rhythm": {
       "localizations": {
         "en": {
@@ -937,6 +1005,78 @@
         }
       }
     },
+    "The budget note no longer lists %lld lines: %@. They stay in MoonShine until you remove them.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The budget note no longer lists %#@lines@: %2$@. They stay in MoonShine until you remove them."
+          },
+          "substitutions": {
+            "lines": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg line"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg lines"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "В заметке с бюджетом больше нет %#@lines@: %2$@. Они остаются в MoonShine, пока вы их не уберёте."
+          },
+          "substitutions": {
+            "lines": {
+              "argNum": 1,
+              "formatSpecifier": "lld",
+              "variations": {
+                "plural": {
+                  "one": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg линии"
+                    }
+                  },
+                  "few": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg линий"
+                    }
+                  },
+                  "many": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg линий"
+                    }
+                  },
+                  "other": {
+                    "stringUnit": {
+                      "state": "translated",
+                      "value": "%arg линии"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "The last import did not finish": {
       "localizations": {
         "en": {
@@ -965,6 +1105,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Файл соответствий не читается — исправьте его, затем завершите MoonShine (⌘Q) и откройте снова"
+          }
+        }
+      }
+    },
+    "They will be removed at the next import": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They will be removed at the next import"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Они будут убраны при следующем импорте"
+          }
+        }
+      }
+    },
+    "They will be removed at the next import, once OmniFocus is open": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They will be removed at the next import, once OmniFocus is open"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Они будут убраны при следующем импорте, когда OmniFocus будет открыт"
           }
         }
       }
@@ -1205,6 +1377,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "пока без активности"
+          }
+        }
+      }
+    },
+    "no completions since %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "no completions since %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "нет выполненных задач с %@"
           }
         }
       }

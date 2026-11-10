@@ -26,10 +26,18 @@ public actor InMemoryStore: Store {
     current = current.merging(workspace, at: now)
     self.identities = identities
     version += 1
-    if let run { runs.append(run.finished()) }
+    if let run { runs.append(run.finished(counts: ImportCounts(workspace))) }
   }
 
-  public func lastCommittedImport() -> ImportRun? { runs.last }
+  public func recordFailure(_ run: PendingImportRun, _ kind: ImportFailure) {
+    runs.append(run.failed(kind))
+  }
+
+  public func lastCommittedImport() -> ImportRun? {
+    runs.last { if case .committed = $0.outcome { true } else { false } }
+  }
+
+  public func lastImportAttempt() -> ImportRun? { runs.last }
 
   public func workspace() -> Workspace { current.workspace }
 

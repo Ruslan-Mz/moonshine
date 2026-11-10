@@ -131,6 +131,10 @@ struct UnreadableStore: Store {
       workspace, identities: identities, expectedVersion: expectedVersion, at: now, run: run)
   }
   func lastCommittedImport() async throws -> ImportRun? { try await inner.lastCommittedImport() }
+  func recordFailure(_ run: PendingImportRun, _ kind: ImportFailure) async throws {
+    try await inner.recordFailure(run, kind)
+  }
+  func lastImportAttempt() async throws -> ImportRun? { try await inner.lastImportAttempt() }
   func workspace() async throws -> Workspace { try await inner.workspace() }
   func stored() async throws -> StoredWorkspace { try await inner.stored() }
 }
@@ -154,6 +158,10 @@ struct HalfReadableStore: Store {
       workspace, identities: identities, expectedVersion: expectedVersion, at: now, run: run)
   }
   func lastCommittedImport() async throws -> ImportRun? { nil }
+  func recordFailure(_ run: PendingImportRun, _ kind: ImportFailure) async throws {
+    try await inner.recordFailure(run, kind)
+  }
+  func lastImportAttempt() async throws -> ImportRun? { nil }
   func workspace() async throws -> Workspace { throw Unreadable() }
   func stored() async throws -> StoredWorkspace { try await inner.stored() }
 }
@@ -179,6 +187,7 @@ final class RecordingStorage: SettingsStorage {
 /// Today shows; the mapping file names Demo's groups unless `mapping` says otherwise.
 private func live(
   _ state: OmniFocusState, tasks: FakeTasks = FakeTasks(),
+  notes: any NoteProvider = DemoVault(),
   store: any Store = InMemoryStore(timeZone: DemoVault.calendar.timeZone),
   reading: Reading? = nil, clock: ImportClock = DemoEnvironment.clock,
   source: (any ChangeSignalSource)? = nil, closes: Closes? = nil,
@@ -191,9 +200,34 @@ private func live(
   var close: (@Sendable () -> Void)?
   if let closes { close = { @Sendable in closes.count.withLock { $0 += 1 } } }
   return AppEnvironment.make(
-    tasks: mapped.tasks, notes: DemoVault(), store: store, importer: mapped.importer,
+    tasks: mapped.tasks, notes: notes, store: store, importer: mapped.importer,
     mapping: mapped.state, clock: clock,
     source: source ?? OneState(state: state), omniFocusReading: now, close: close)
+}
+
+/// Demo's vault, with `dropped` left out of a clean read, or its lines unavailable.
+actor ShrinkingVault: NoteProvider {
+  private var dropped: Set<LineKey> = []
+  private var unavailable = false
+
+  func drop(_ keys: Set<LineKey>) { dropped = keys }
+  func makeUnavailable() { unavailable = true }
+
+  func vault() async throws -> VaultSnapshot {
+    let full = try await DemoVault().vault()
+    return VaultSnapshot(
+      lines: unavailable
+        ? .unavailable
+        : .read(full.lines.read.filter { !dropped.contains($0.key) }, complete: true),
+      artifacts: full.artifacts, notes: full.notes, issues: full.issues, unread: full.unread)
+  }
+}
+
+/// A failed attempt as the import service records it.
+private func failedAttempt() -> PendingImportRun {
+  PendingImportRun(
+    request: ImportRequest(trigger: .launch, signalledAt: .zero), startedAt: DemoEnvironment.now,
+    started: .zero, clock: DemoEnvironment.clock)
 }
 
 /// A store holding one committed launch import of the tracked snapshot.
@@ -742,5 +776,124 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
       OmniFocusLine(
         source: model.source, lastImport: model.lastImport, note: model.omniFocusNote,
         unavailable: TodayPlaceholder(model) == .liveUnavailable) == .unavailable)
+  }
+
+  // MARK: S4-4c-3, a recorded failure
+
+  /// A launch that imports nothing (OmniFocus not running) still says why the last one failed.
+  @MainActor @Test func aStoredFailureSaysWhyAfterARelaunch() async throws {
+    let store = try await storeWithAnImport()
+    try await store.recordFailure(failedAttempt(), .permissionDenied)
+    let model = liveModel(live(.notRunning, store: store))
+    model.start()
+    await waitFor { isLoaded(model.state) && model.omniFocusState == .notRunning }
+    #expect(model.lastFailure == .permissionDenied)
+  }
+
+  /// A store with only failure rows is at version 0: the failure is still said.
+  @MainActor @Test func aStoredFailureInAStoreThatNeverCommittedSaysWhy() async throws {
+    let store = InMemoryStore(timeZone: DemoVault.calendar.timeZone)
+    try await store.recordFailure(failedAttempt(), .timedOut)
+    let model = liveModel(live(.notRunning, store: store))
+    model.start()
+    await waitFor { model.storeChecked && model.omniFocusState == .notRunning }
+    #expect(model.lastFailure == .timedOut)
+  }
+
+  /// This process reads the mapping file itself: a stored mapping failure says nothing.
+  @MainActor @Test func aStoredMappingFailureIsNotSeeded() async throws {
+    let store = try await storeWithAnImport()
+    try await store.recordFailure(failedAttempt(), .mappingInvalid)
+    let model = liveModel(live(.notRunning, store: store))
+    model.start()
+    await waitFor { isLoaded(model.state) && model.omniFocusState == .notRunning }
+    #expect(model.lastFailure == nil)
+  }
+
+  // MARK: S4-4e, a held removal
+
+  /// Launch with every line, then a clean read without the first four: held.
+  @MainActor private func heldModel(
+    _ vault: ShrinkingVault, source: PushSource
+  ) async throws -> (AppModel, [LineKey]) {
+    let model = liveModel(live(.background, notes: vault, source: source))
+    source.send(.omniFocus(.background))
+    await model.load()
+    guard case .loaded(let overview) = model.state else { throw NotLoaded() }
+    let keys = Array(overview.workspace.lines.map(\.key).prefix(4))
+    await vault.drop(Set(keys))
+    model.refresh()
+    await waitFor { model.importOutcomes == 2 }
+    #expect(model.heldLineRemoval.map(\.key) == keys)
+    #expect(!model.removalApproved)
+    return (model, keys)
+  }
+
+  struct NotLoaded: Error {}
+
+  @MainActor @Test
+  func theNoticeListsTheHeldLinesAndRemoveApprovesExactlyThemAndTheRemovalLandsOnThatImport()
+    async throws
+  {
+    let vault = ShrinkingVault()
+    let (model, keys) = try await heldModel(vault, source: PushSource())
+    guard case .loaded(let held) = model.state else { throw NotLoaded() }
+    #expect(TodayScreen(held).heldRemoval.map(\.id) == model.heldLineRemoval.map(\.id))
+    model.approveHeldRemoval()
+    await waitFor { model.importOutcomes == 3 }
+    #expect(model.heldLineRemoval.isEmpty)
+    #expect(!model.removalApproved)
+    guard case .loaded(let overview) = model.state else { throw NotLoaded() }
+    #expect(!overview.workspace.lines.contains { keys.contains($0.key) })
+    #expect(TodayScreen(overview).heldRemoval.isEmpty)
+  }
+
+  @MainActor @Test func removeWhileOmniFocusIsNotRunningShowsApprovedPending() async throws {
+    let source = PushSource()
+    let (model, _) = try await heldModel(ShrinkingVault(), source: source)
+    source.send(.omniFocus(.notRunning))
+    await waitFor { model.omniFocusState == .notRunning }
+    let dropped = model.droppedRequests
+    model.approveHeldRemoval()
+    // Remove's ⌘R reached the coordinator and was dropped, so no import ran.
+    await waitFor { model.droppedRequests == dropped + 1 }
+    #expect(model.removalApproved)
+    #expect(model.omniFocusNote == .notRunning)
+    #expect(model.importOutcomes == 2)
+    #expect(model.heldLineRemoval.count == 4)
+  }
+
+  @MainActor @Test func anIncompleteReadAfterRemoveKeepsTheButtonsStateHonest() async throws {
+    let source = PushSource()
+    let vault = ShrinkingVault()
+    let (model, _) = try await heldModel(vault, source: source)
+    source.send(.omniFocus(.notRunning))
+    await waitFor { model.omniFocusState == .notRunning }
+    model.approveHeldRemoval()
+    await waitFor { model.removalApproved }
+    await vault.makeUnavailable()
+    source.send(.omniFocus(.background))
+    await waitFor { model.omniFocusState == .background }
+    model.refresh()
+    await waitFor { model.importOutcomes == 3 }
+    #expect(model.heldLineRemoval.count == 4)
+    #expect(model.removalApproved)
+  }
+
+  @MainActor @Test func aChangedHeldSetAfterRemoveShowsTheButtonAgain() async throws {
+    let source = PushSource()
+    let vault = ShrinkingVault()
+    let (model, keys) = try await heldModel(vault, source: source)
+    source.send(.omniFocus(.notRunning))
+    await waitFor { model.omniFocusState == .notRunning }
+    model.approveHeldRemoval()
+    await waitFor { model.removalApproved }
+    await vault.drop(Set(keys.dropLast()))
+    source.send(.omniFocus(.background))
+    await waitFor { model.omniFocusState == .background }
+    model.refresh()
+    await waitFor { model.importOutcomes == 3 }
+    #expect(model.heldLineRemoval.map(\.key) == Array(keys.dropLast()))
+    #expect(!model.removalApproved)
   }
 }

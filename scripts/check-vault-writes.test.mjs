@@ -219,6 +219,10 @@ test("a line that is only a comment is searched for member calls, not for names"
 test("an allowed text passes in its own file only", () => {
   passes("try self.init(writer: DatabasePool(path: path), timeZone: timeZone)", store);
   passes("try self.init(writer: DatabaseQueue(), timeZone: timeZone)", store);
+  // The read-only open of `moonshine-import timings` (S4-4c-3), in the store's file only.
+  passes("      let queue = try DatabaseQueue(path: path, configuration: configuration)", store);
+  fails("let queue = try DatabaseQueue(path: path, configuration: configuration)", tool, "database");
+  fails("let queue = try DatabaseQueue(path: other, configuration: configuration)", store, "database");
   passes("try FileManager.default.removeItem(atPath: storePath + suffix)", tool);
   passes('FileHandle.standardError.write(Data((refusal + "\\n").utf8))', tool);
   passes("let process = Process()", bridge);
