@@ -284,19 +284,27 @@ import Testing
   @Test(arguments: StoreKind.allCases)
   func aCommittedRunReadsBackExactly(kind: StoreKind) async throws {
     let store = try kind.make()
+    var identities = IdentityMap()
+    let workspace = Importer(metaTagGroups: DemoMapping.metaTagGroups).makeWorkspace(
+      tasks: try fixtureSnapshot(), vault: try await DemoVault().vault(),
+      stored: Workspace(timeZone: .gmt), approvedLineRemovals: [], identities: &identities,
+      now: first)
+    // Six different counts, none zero, so a field stored or read as another fails.
+    let counts = ImportCounts(workspace)
+    let values = [
+      counts.lines, counts.notes, counts.artifacts, counts.projects, counts.tasks, counts.tags,
+    ]
+    try #require(Set(values).count == 6 && !values.contains(0))
     for (version, held) in [Duration.milliseconds(2_700), nil].enumerated() {
       let (run, _) = pending(.resignActive, held: held)
       try await store.commit(
-        Workspace(timeZone: .gmt), identities: IdentityMap(), expectedVersion: version,
-        at: first, run: run)
+        workspace, identities: identities, expectedVersion: version, at: first, run: run)
       #expect(
         try await store.lastCommittedImport()
           == ImportRun(
             trigger: .resignActive, startedAt: first,
             finishedAt: first.addingTimeInterval(2.5), waited: .milliseconds(400),
-            duration: .milliseconds(1_500), providerHeld: held,
-            outcome: .committed(
-              ImportCounts(lines: 0, notes: 0, artifacts: 0, projects: 0, tasks: 0, tags: 0))))
+            duration: .milliseconds(1_500), providerHeld: held, outcome: .committed(counts)))
     }
   }
 

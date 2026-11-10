@@ -221,10 +221,14 @@ import SQLiteStore
     struct NoAppStore: Error {}
 
     static func timings(base: URL) throws {
+      for line in try timingsLines(base: base) { print(line) }
+    }
+
+    /// The report from the app's store under `base`; the tool's own store is never read.
+    static func timingsLines(base: URL) throws -> [String] {
       let path = DataFolder.appStorePath(in: DataFolder.url(base: base))
       guard FileManager.default.fileExists(atPath: path) else { throw NoAppStore() }
-      let runs = try SQLiteStore.importRuns(readOnlyAt: path)
-      for line in Timings.lines(runs, targetSince: targetSince) { print(line) }
+      return Timings.lines(try SQLiteStore.importRuns(readOnlyAt: path), targetSince: targetSince)
     }
 
     /// `full`'s store under `base`, the folder created first: the tool's own, never the app's.

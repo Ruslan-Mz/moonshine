@@ -99,7 +99,8 @@ public struct SQLiteStore: Store {
 
   /// Every recorded run, oldest first, for `moonshine-import timings` (S4-4c-3). Opened
   /// read-only and never migrated: nothing is written, and no side file is created, so a store
-  /// whose `-shm` and `-wal` are gone (a copy, or after a crash) cannot be opened.
+  /// whose `-shm` and `-wal` are missing (a copy made without them) cannot be opened; a crash
+  /// leaves them in place.
   public static func importRuns(readOnlyAt path: String) throws -> [ImportRun] {
     var configuration = Configuration()
     configuration.readonly = true

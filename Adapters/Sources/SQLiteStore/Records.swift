@@ -477,10 +477,11 @@ struct ImportRecord: Codable, FetchableRecord, PersistableRecord {
     duration.components.seconds * 1000 + duration.components.attoseconds / 1_000_000_000_000_000
   }
 
-  /// Every column is checked: an unknown text, a negative number, an end before the start or
-  /// attrs that do not match the outcome throw, naming only the column. An instant is not
-  /// checked against the clock: a future end cannot be told from a clock set back, and the
-  /// status bar reads both as just now.
+  /// Every column is checked: an unknown text, a negative number or attrs that do not match the
+  /// outcome throw, naming only the column. An end before the start is the wall clock stepped
+  /// back during the import: the row reads as not measured, so it never fails a read (owner,
+  /// 2026-11-10). An instant is not checked against the clock: a future end cannot be told from
+  /// a clock set back, and the status bar reads both as just now.
   func run() throws -> ImportRun {
     func duration(_ ms: Int64?, _ column: String) throws -> Duration? {
       guard let ms else { return nil }
@@ -508,13 +509,13 @@ struct ImportRecord: Codable, FetchableRecord, PersistableRecord {
     default:
       throw SQLiteStoreError.unknownValue(column: "imports.outcome")
     }
-    guard finishedAt >= startedAt else {
-      throw SQLiteStoreError.outOfRange(column: "imports.finished_at")
-    }
+    let waited = try duration(waitedMs, "waited_ms")
+    let took = try duration(durationMs, "duration_ms")
+    let measured = finishedAt >= startedAt
     return ImportRun(
       trigger: try decode(trigger, "imports.trigger"), startedAt: Date(millis: startedAt),
-      finishedAt: Date(millis: finishedAt), waited: try duration(waitedMs, "waited_ms"),
-      duration: try duration(durationMs, "duration_ms"),
+      finishedAt: Date(millis: finishedAt), waited: measured ? waited : nil,
+      duration: measured ? took : nil,
       providerHeld: try duration(heldMs, "held_ms"), outcome: result)
   }
 }

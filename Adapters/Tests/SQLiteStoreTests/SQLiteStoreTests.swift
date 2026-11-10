@@ -203,8 +203,6 @@ import Testing
       (.outOfRange(column: "imports.duration_ms"), { try await insertImport($0, duration: -40) }),
       (.outOfRange(column: "imports.held_ms"), { try await insertImport($0, held: -40) }),
       (.outOfRange(column: "imports.attrs"), { try await insertImport($0, tasks: -40) }),
-      // Started at 0: an end before the start.
-      (.outOfRange(column: "imports.finished_at"), { try await insertImport($0, finishedAt: -40) }),
     ]
     for (expected, insert) in cases {
       let store = try SQLiteStore()
@@ -216,6 +214,18 @@ import Testing
       #expect(!String(reflecting: try #require(error)).contains(planted))
       #expect(!String(reflecting: try #require(error)).contains("-40"))
     }
+  }
+
+  /// Started at 0, ended before it: the wall clock stepped back during the import. Its
+  /// instants are kept and it reads as not measured, so one such row never fails a read
+  /// (owner, 2026-11-10).
+  @Test func aRowThatEndsBeforeItsStartReadsAsNotMeasured() async throws {
+    let store = try SQLiteStore()
+    try await insertImport(store, finishedAt: -40, waited: 5, duration: 7)
+    let run = try #require(try await store.lastCommittedImport())
+    #expect(run.finishedAt < run.startedAt)
+    #expect(run.waited == nil)
+    #expect(run.duration == nil)
   }
 
   func insertRaw(_ store: SQLiteStore, outcome: String, attrs: String) async throws {
@@ -280,8 +290,9 @@ import Testing
     #expect(try Data(contentsOf: URL(filePath: path)) == before)
   }
 
-  /// A copied store, or one after a crash: no side files. They are never created, so it
-  /// cannot be opened read-only, and the error says so without a path.
+  /// A store without its side files, such as a copy made without them (a crash leaves them in
+  /// place). They are never created, so it cannot be opened read-only, and the error says so
+  /// without a path.
   @Test func importRunsRefusesAStoreWithoutItsSideFilesAndCreatesNone() async throws {
     let path = temporaryDatabasePath()
     let store = try SQLiteStore(path: path)

@@ -80,7 +80,8 @@ public struct ImportCounts: Sendable, Equatable {
 
 /// Why an import did not commit, by kind only: never a value, an id or a provider's text.
 /// Recorded as a failed run (S4-4c-3). One writer per store, so an identity conflict cannot
-/// happen and is `other`; so is a cancelled import.
+/// happen and is `other`. A cancelled import may record nothing: the store can refuse a write
+/// once cancelled, and the record is dropped. Nothing cancels an import today.
 public enum ImportFailure: String, Sendable, CaseIterable {
   case providerNotRunning
   case permissionDenied

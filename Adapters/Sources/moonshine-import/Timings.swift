@@ -30,13 +30,19 @@ enum Timings {
     // The target's runs: resign-active from the cutoff only (owner, 2026-11-09).
     let targeted = runs.filter { $0.trigger == .resignActive && $0.startedAt >= targetSince }
     let landings = targeted.filter(\.isCommitted).compactMap(\.landing)
+    let targetUnmeasured = targeted.filter(\.isCommitted).count - landings.count
     let day = targetSince.formatted(
       Date.ISO8601FormatStyle(timeZone: .gmt).year().month().day())
     lines.append(
       "target (resign-active since \(day)): \(targeted.filter(\.isCommitted).count) committed"
         + " · signal → landing median \(seconds(percentile(50, landings)))"
         + " · over 5 s: \(landings.filter { $0 > target }.count)"
+        + " · not measured \(targetUnmeasured)"
         + " · not committed \(targeted.count - targeted.filter(\.isCommitted).count)")
+    // The store reads these as not measured (owner, 2026-11-10); they are counted above too.
+    lines.append(
+      "ended before they started (clock set back): "
+        + "\(runs.filter { $0.finishedAt < $0.startedAt }.count)")
     return lines
   }
 
