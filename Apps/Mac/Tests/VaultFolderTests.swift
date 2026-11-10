@@ -173,6 +173,22 @@ private let trackedSnapshot = URL(fileURLWithPath: #filePath)
     #expect(VaultRefusalLine(refusal: .notAVault, chosen: model.vaultFolder.chosen) == .notAVault)
   }
 
+  /// Owner, 2026-11-10: a first folder that cannot be kept is readable, so the sentence says it
+  /// could not be kept, never that it cannot be read.
+  @Test func aFirstFolderThatCannotBeKeptSaysSoAndSavesNothing() throws {
+    let settings = CountingSettings("live")
+    let fake = FakeBookmarks()
+    fake.makeFails = true
+    let folder = VaultFolder(settings: settings, bookmarks: fake.bookmarks)
+    let model = AppModel(isTestHost: false, settings: settings, vaultFolder: folder) { _ in nil }
+    model.chooseVault(try folders.make())
+    #expect(model.vaultRefusal == .bookmarkFailed)
+    #expect(model.vaultFolder.chosen == nil)
+    #expect(settings.vaultWrites.isEmpty)
+    let line = VaultRefusalLine(refusal: .bookmarkFailed, chosen: model.vaultFolder.chosen)
+    #expect(line == .notKept)
+  }
+
   @Test func aStaleBookmarkIsMadeAgainAndKeepsItsTime() async throws {
     let settings = CountingSettings("live")
     let fake = FakeBookmarks()
