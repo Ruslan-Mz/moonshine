@@ -42,7 +42,7 @@ struct SettingsView: View {
                 "This folder is not an Obsidian vault — choose the folder that holds .obsidian")
             case .keptPrevious(let name):
               Text("Couldn't keep the new folder — the vault is still \(name)")
-            case .notKept: Text("Can't be read — choose it again")
+            case .notKept: Text("Couldn't keep this folder — choose it again")
             }
           }
           .font(.caption)
@@ -182,7 +182,8 @@ enum VaultRefusalLine: Equatable {
   /// No bookmark could be made of the new folder; the vault chosen before stays and is named
   /// (owner, 2026-11-10, PR #53 round 1).
   case keptPrevious(String)
-  /// The same, with no vault chosen before.
+  /// The same, with no vault chosen before: the folder is readable, it just could not be kept
+  /// (owner, 2026-11-10).
   case notKept
 
   init(refusal: VaultFolder.Refusal, chosen: StoredBookmark?) {
