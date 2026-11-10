@@ -25,7 +25,7 @@ struct RootView: View {
         overview: overview,
         removal: LineRemovalHold(
           isApproved: model.removalApproved, omniFocusClosed: model.omniFocusNote == .notRunning,
-          approve: { model.approveHeldRemoval() })
+          keptByIncompleteRead: model.removalKept, approve: { model.approveHeldRemoval() })
       )
       .environment(\.timeZone, zone)
       .environment(\.calendar, TodayFormat.calendar(zone))
@@ -111,7 +111,11 @@ enum LiveNote: Hashable {
     var notes: [LiveNote] = []
     if case .loaded = model.state, model.omniFocusNote == .notRunning { notes.append(.notRunning) }
     if model.mapping == .invalid { notes.append(.mappingInvalid) }
-    return notes + [.vaultNotRead]
+    // Only while the shown import did not read the vault; Settings says why (owner, 2026-11-10).
+    var workspace: Workspace?
+    if case .loaded(let overview) = model.state { workspace = overview.workspace }
+    if VaultLine.vaultNotRead(workspace) { notes.append(.vaultNotRead) }
+    return notes
   }
 }
 
@@ -138,7 +142,6 @@ struct StatusBar: View {
         case .notRunning: Text("OmniFocus is not running — showing the last import")
         // The one sentence for an invalid file, here and in Settings.
         case .mappingInvalid: OmniFocusWords.text(.failure(.mappingInvalid))
-        // Until the vault picker (S4-4d).
         case .vaultNotRead: Text("Vault not read yet")
         }
       }

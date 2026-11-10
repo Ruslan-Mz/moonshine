@@ -53,7 +53,7 @@ import Testing
   ) -> ImportService {
     ImportService(
       tasks: provider, notes: DemoVault(), store: store, importer: Importer(metaTagGroups: []),
-      clock: time.clock)
+      vaultTimeZone: { TestWorld.timeZone }, clock: time.clock)
   }
 
   @Test func aFailedImportIsRecordedWithItsKindAndTheLastCommittedRunStays() async throws {

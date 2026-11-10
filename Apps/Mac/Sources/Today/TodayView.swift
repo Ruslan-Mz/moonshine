@@ -55,7 +55,22 @@ struct LineRemovalHold {
   /// Remove was pressed for exactly the lines held now; they go with the next import.
   let isApproved: Bool
   let omniFocusClosed: Bool
+  /// Approved, and an import since then could not read the budget note in full (S4-4d).
+  var keptByIncompleteRead = false
   let approve: () -> Void
+
+  /// The sentence under an approved notice (`design/copy.md` § Held line removal): with
+  /// OmniFocus closed no import runs at all, so that sentence wins (owner, 2026-11-10).
+  enum ApprovedNote: Equatable {
+    case nextImport
+    case onceOmniFocusIsOpen
+    case notReadInFull
+  }
+
+  var approvedNote: ApprovedNote {
+    if omniFocusClosed { return .onceOmniFocusIsOpen }
+    return keptByIncompleteRead ? .notReadInFull : .nextImport
+  }
 
   /// The notice names the first three, then `…`.
   static func names(_ lines: [TodayScreen.HeldLine]) -> String {
@@ -137,9 +152,12 @@ private struct LineRemovalNotice: View {
         )
         if removal.isApproved {
           Group {
-            if removal.omniFocusClosed {
+            switch removal.approvedNote {
+            case .onceOmniFocusIsOpen:
               Text("They will be removed at the next import, once OmniFocus is open")
-            } else {
+            case .notReadInFull:
+              Text("The budget note was not read in full — they will be removed once it is")
+            case .nextImport:
               Text("They will be removed at the next import")
             }
           }

@@ -35,7 +35,8 @@ import Testing
   func run(_ source: TaskSourceSnapshot, _ store: SQLiteStore, at now: Date) async throws {
     try await ImportService(
       tasks: FixedTaskProvider(source: source), notes: DemoVault(), store: store,
-      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups), clock: .frozen(at: now)
+      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups),
+      vaultTimeZone: { DemoVault.calendar.timeZone }, clock: .frozen(at: now)
     ).run(ImportRequest(trigger: .manual))
   }
 
@@ -342,7 +343,8 @@ import Testing
       })
     try await ImportService(
       tasks: FixedTaskProvider(source: try fixtureSnapshot()), notes: DemoVault(), store: store,
-      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups), clock: clock
+      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups),
+      vaultTimeZone: { DemoVault.calendar.timeZone }, clock: clock
     ).run(ImportRequest(trigger: .manual))
 
     let recorded = order.recorded
@@ -407,7 +409,8 @@ import Testing
     let store = try SQLiteStore()
     try await ImportService(
       tasks: FixedTaskProvider(source: try fixtureSnapshot()), notes: DemoVault(), store: store,
-      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups), clock: .frozen(at: first)
+      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups),
+      vaultTimeZone: { DemoVault.calendar.timeZone }, clock: .frozen(at: first)
     ).run(ImportRequest(trigger: .manual))
     let kinds = try await store.writer.read { db in
       try String.fetchSet(db, sql: "SELECT DISTINCT kind FROM external_ref")
@@ -420,7 +423,8 @@ import Testing
     let committed = try await ImportService(
       tasks: FixedTaskProvider(source: try fixtureSnapshot()), notes: DemoVault(),
       store: try SQLiteStore(path: path),
-      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups), clock: .frozen(at: first)
+      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups),
+      vaultTimeZone: { DemoVault.calendar.timeZone }, clock: .frozen(at: first)
     ).run(ImportRequest(trigger: .manual))
     expectSame(try await SQLiteStore(path: path).workspace(), committed)
   }
@@ -551,7 +555,7 @@ import Testing
   /// as a metric (target < 1 s), never asserted: a slow CI runner made a time guard flake.
   @Test func bulkImportOfTheFixtureTimesTwentyInOneTransaction() async throws {
     let source = try fixtureSnapshot().scaled(20)
-    let vault = try await DemoVault().vault()
+    let vault = DemoVault.snapshot
     let store = try SQLiteStore(path: temporaryDatabasePath())
     let clock = ContinuousClock()
     let commits = CommitCounter()

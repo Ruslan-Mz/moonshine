@@ -8,7 +8,8 @@ public struct DemoVault: NoteProvider {
 
   public init() {}
 
-  public func vault() async throws -> VaultSnapshot { Self.snapshot }
+  /// Demo is Moscow (`calendar`), whatever zone the import passes.
+  public func vault(timeZone: TimeZone) async -> VaultSnapshot { Self.snapshot }
 
   private static let budget = "00_Strategy/Hours_budget_by_line.md"
   private static let year = "00_Strategy/Years/Artifacts_2026.md"

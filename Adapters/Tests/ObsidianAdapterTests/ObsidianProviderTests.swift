@@ -36,7 +36,8 @@ import Testing
     let time = SettableClock(Date(timeIntervalSince1970: 1_790_000_000))
     let service = ImportService(
       tasks: OneTask(), notes: ObsidianVault(root: vault.root, timeZone: moscow), store: store,
-      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups), clock: time.clock)
+      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups), vaultTimeZone: { moscow },
+      clock: time.clock)
     var runs: [Workspace] = []
     for (index, state) in states.enumerated() {
       time.set(Date(timeIntervalSince1970: 1_790_000_000 + 86_400 * Double(index)))
@@ -50,7 +51,7 @@ import Testing
   }
 
   @Test func theFixtureVaultEqualsTheDemoVault() async throws {
-    let snapshot = try await ObsidianVault(root: fixtureVault, timeZone: moscow).vault()
+    let snapshot = await ObsidianVault(root: fixtureVault, timeZone: moscow).vault(timeZone: moscow)
     #expect(snapshot == DemoVault.snapshot)
   }
 
@@ -61,7 +62,7 @@ import Testing
     try vault.write("c.md", "no frontmatter")
     let provider = ObsidianVault(root: vault.root, timeZone: moscow)
     let read = try provider.read()
-    let snapshot = try await provider.vault()
+    let snapshot = await provider.vault(timeZone: moscow)
     #expect(snapshot.isRead)
     #expect(snapshot.issues == read.issues && !snapshot.issues.isEmpty)
     #expect(
@@ -97,7 +98,62 @@ import Testing
     #expect(read.lines.read.count == 7)
   }
 
+  @Test func periodsFollowTheZoneTheImportPasses() async throws {
+    let vault = try TemporaryVault()
+    try vault.write("y.md", note(Self.year(2026, "  - {id: a, title: A}")))
+    let tokyo = TimeZone(identifier: "Asia/Tokyo")!
+    let snapshot = await ObsidianVault(root: vault.root, timeZone: moscow).vault(timeZone: tokyo)
+    let inTokyo = try ObsidianVault(root: vault.root, timeZone: tokyo).read()
+    let inMoscow = try ObsidianVault(root: vault.root, timeZone: moscow).read()
+    #expect(snapshot.notes == inTokyo.notes)
+    #expect(snapshot.notes != inMoscow.notes)
+  }
+
   // MARK: Through ImportService
+
+  /// A service over the vault folder; the first import reads the budget note and a year note.
+  func importedOnce(
+    _ vault: TemporaryVault, limits: VaultLimits = VaultLimits()
+  ) async throws -> (ImportService, Workspace) {
+    try vault.write("budget.md", note(Self.budget))
+    try vault.write("y.md", note(Self.year(2026, "  - {id: a, title: A}")))
+    let service = ImportService(
+      tasks: OneTask(), notes: ObsidianVault(root: vault.root, timeZone: moscow, limits: limits),
+      store: InMemoryStore(timeZone: moscow),
+      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups), vaultTimeZone: { moscow },
+      clock: .frozen(at: Date(timeIntervalSince1970: 1_790_000_000)))
+    return (service, try await service.run(ImportRequest(trigger: .manual)))
+  }
+
+  /// `docs/specs/phase-1-see.md`, S4: a vault that cannot be read at all must not fail the
+  /// task import; everything read before is kept (S4-4d).
+  @Test func aVaultFolderThatDisappearsImportsTheTasksAndKeepsLinesNotesAndArtifacts()
+    async throws
+  {
+    let vault = try TemporaryVault()
+    let (service, first) = try await importedOnce(vault)
+    try #require(first.lines.count == 1 && first.notes.count == 2 && first.artifacts.count == 1)
+    try FileManager.default.removeItem(at: vault.root)
+    let second = try await service.run(ImportRequest(trigger: .manual))
+    #expect(second.tasks.count == 1)
+    #expect(second.lines == first.lines)
+    #expect(second.notes == first.notes)
+    #expect(second.artifacts == first.artifacts)
+    #expect(second.issues.contains(.vaultWide(VaultProblem(.vaultUnreadable))))
+  }
+
+  @Test func aVaultWithTooManyNotesImportsTheTasksAndKeepsEverything() async throws {
+    let vault = try TemporaryVault()
+    var limits = VaultLimits()
+    limits.maxNotes = 2
+    let (service, first) = try await importedOnce(vault, limits: limits)
+    try vault.write("z.md", note("type: journal"))
+    let second = try await service.run(ImportRequest(trigger: .manual))
+    #expect(second.tasks.count == 1)
+    #expect(second.lines == first.lines && second.notes == first.notes)
+    #expect(second.artifacts == first.artifacts)
+    #expect(second.issues.contains(.vaultWide(VaultProblem(.vaultTooLarge))))
+  }
 
   @Test func anItemThatTurnsInvalidKeepsItsStoredArtifactAndPosition() async throws {
     let items = ["  - {id: a, title: A, line: violin}", "  - {id: c, title: C}"]

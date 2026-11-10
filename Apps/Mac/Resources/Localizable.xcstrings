@@ -265,6 +265,38 @@
         }
       }
     },
+    "Can't be read — choose it again": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't be read — choose it again"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не читается — выберите его снова"
+          }
+        }
+      }
+    },
+    "Choose…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выбрать…"
+          }
+        }
+      }
+    },
     "Completed": {
       "localizations": {
         "en": {
@@ -277,6 +309,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Выполнено"
+          }
+        }
+      }
+    },
+    "Couldn't keep the new folder — the vault is still %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't keep the new folder — the vault is still %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось запомнить новую папку — хранилище по-прежнему %@"
           }
         }
       }
@@ -537,6 +585,90 @@
         }
       }
     },
+    "MoonShine only reads the vault; the folder is remembered as a bookmark": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine only reads the vault; the folder is remembered as a bookmark"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine только читает хранилище; папка запоминается закладкой"
+          }
+        }
+      }
+    },
+    "More than %lld notes — not read": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "More than %lld note — not read"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "More than %lld notes — not read"
+                }
+              }
+            }
+          }
+        },
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Больше %lld заметки — не прочитано"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Больше %lld заметок — не прочитано"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Больше %lld заметок — не прочитано"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Больше %lld заметки — не прочитано"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Not chosen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not chosen"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не выбрано"
+          }
+        }
+      }
+    },
     "Not completed": {
       "localizations": {
         "en": {
@@ -553,6 +685,22 @@
         }
       }
     },
+    "Not read yet": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not read yet"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ещё не прочитано"
+          }
+        }
+      }
+    },
     "Nothing on the rail today": {
       "localizations": {
         "en": {
@@ -565,6 +713,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Сегодня на панели ничего нет"
+          }
+        }
+      }
+    },
+    "Obsidian vault": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obsidian vault"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Хранилище Obsidian"
           }
         }
       }
@@ -1077,6 +1241,22 @@
         }
       }
     },
+    "The budget note was not read in full — they will be removed once it is": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The budget note was not read in full — they will be removed once it is"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заметка с бюджетом прочитана не полностью — линии будут убраны, когда её удастся прочитать целиком"
+          }
+        }
+      }
+    },
     "The last import did not finish": {
       "localizations": {
         "en": {
@@ -1137,6 +1317,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Они будут убраны при следующем импорте, когда OmniFocus будет открыт"
+          }
+        }
+      }
+    },
+    "This folder is not an Obsidian vault — choose the folder that holds .obsidian": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This folder is not an Obsidian vault — choose the folder that holds .obsidian"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Эта папка — не хранилище Obsidian: выберите папку, в которой есть .obsidian"
           }
         }
       }

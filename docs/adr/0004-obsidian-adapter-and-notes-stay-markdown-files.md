@@ -43,6 +43,8 @@ The owner's rule: goals, artifacts, plans and budgets live in Obsidian; OmniFocu
 - Bad — table and YAML in the budget note can drift; YAML is authoritative for MoonShine.
 - Neutral — vault path via security-scoped bookmark; default `~/ObsidianV`.
 
+**Amendment (2026-11-10, owner; S4-4d, PR #53).** There is no default vault path: the Neutral consequence above no longer holds in its second half. The owner chooses the vault folder in Settings; the app keeps a security-scoped, read-only bookmark of it, and refuses a folder that holds no `.obsidian/` folder. A chosen folder that no longer holds `.obsidian/` is not read at all, so nothing stored is removed. Read-only is enforced by MoonShine's code and by `scripts/check-vault-writes.mjs` in CI, not by the system: the app is not sandboxed (ADR-0003), so the bookmark's read-only option restricts nothing until it is.
+
 ### Confirmation
 
 Parser tests on fixture notes; invalid YAML shows a banner, never a crash; until the Write phase no code path writes to the vault: a CI check (added in S3b-3) that covers every target that can reach the vault — `MoonShineCore`, all of `Adapters/` (the `moonshine-import` CLI included) and `Apps/` once it exists — and fails on any file-writing call outside a short allowlist of files that write MoonShine's own data (the store); from the Write phase `VaultWriter` joins the allowlist.

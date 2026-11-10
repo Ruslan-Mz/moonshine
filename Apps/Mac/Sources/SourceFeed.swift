@@ -30,6 +30,8 @@ final class SourceFeed {
   /// What the import service holds as approved for removal, read after Remove and after every
   /// import (S4-4e).
   private(set) var approvedLineRemovals: Set<LineKey> = []
+  /// An import read the approval and kept it, its read of the budget note incomplete (S4-4d).
+  private(set) var approvalKept = false
   /// Nil when it could not be built: Today is then unavailable.
   let environment: AppEnvironment?
   private var starting: Task<Void, Never>?
@@ -61,6 +63,9 @@ final class SourceFeed {
     let held = heldLineRemoval
     return !held.isEmpty && Set(held.map(\.key)) == approvedLineRemovals
   }
+
+  /// Approved, and an import since then could not read the budget note in full (S4-4d).
+  var removalKept: Bool { removalApproved && approvalKept }
 
   /// The store holds data that could not be read: never "not read yet" (`TodayPlaceholder`).
   private(set) var storeUnreadable = false
@@ -115,7 +120,9 @@ final class SourceFeed {
   }
 
   private func readApproval() async {
-    approvedLineRemovals = await environment?.coordinator.service.approvedLineRemovals ?? []
+    let service = environment?.coordinator.service
+    approvedLineRemovals = await service?.approvedLineRemovals ?? []
+    approvalKept = await service?.approvalKeptByIncompleteRead ?? false
   }
 
   /// A source not shown imports nothing and keeps tracking OmniFocus (owner, 2026-11-07).

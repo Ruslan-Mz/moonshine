@@ -99,7 +99,7 @@ import Testing
 
     init(_ lines: SourceLine) { self.lines = lines }
 
-    func vault() async throws -> VaultSnapshot {
+    func vault(timeZone: TimeZone) async -> VaultSnapshot {
       reads += 1
       return VaultSnapshot(
         lines: reads == 1 ? .read([lines], complete: true) : .unavailable, artifacts: [],
@@ -117,7 +117,8 @@ import Testing
     let time = SettableClock(earlier)
     let service = ImportService(
       tasks: OneTask(source: source), notes: FlakyVault(piano), store: store,
-      importer: Importer(metaTagGroups: []), clock: time.clock)
+      importer: Importer(metaTagGroups: []), vaultTimeZone: { TestWorld.timeZone },
+      clock: time.clock)
     try await service.run(ImportRequest(trigger: .manual))
     time.set(now)
     try await service.run(ImportRequest(trigger: .manual))

@@ -9,7 +9,10 @@ public protocol TaskProvider: Sendable {
 /// A notes vault (Obsidian today): lines, artifacts and horizon notes. Read-only until the Write
 /// phase (ADR-0015).
 public protocol NoteProvider: Sendable {
-  func vault() async throws -> VaultSnapshot
+  /// One read, with periods in `timeZone`. It never throws: a vault that cannot be read at all
+  /// is `VaultSnapshot.notRead` with a vault-wide problem, and the task import goes on
+  /// (`docs/specs/phase-1-see.md`, S4).
+  func vault(timeZone: TimeZone) async -> VaultSnapshot
 }
 
 /// The local store. The UI and services read only from here.

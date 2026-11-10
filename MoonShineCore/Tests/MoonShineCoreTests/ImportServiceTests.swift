@@ -9,7 +9,7 @@ import Testing
     let provider = GatedTaskProvider()
     let service = ImportService(
       tasks: provider, notes: DemoVault(), store: InMemoryStore(),
-      importer: Importer(metaTagGroups: []),
+      importer: Importer(metaTagGroups: []), vaultTimeZone: { TestWorld.timeZone },
       clock: .frozen(at: Date(timeIntervalSince1970: 1_790_000_000)))
 
     let running = Task { try await service.run(ImportRequest(trigger: .launch)) }
@@ -33,7 +33,7 @@ import Testing
     let store = InMemoryStore()
     let service = ImportService(
       tasks: provider, notes: DemoVault(), store: store, importer: Importer(metaTagGroups: []),
-      clock: time.clock)
+      vaultTimeZone: { TestWorld.timeZone }, clock: time.clock)
 
     let running = Task { try await service.run(ImportRequest(trigger: .launch)) }
     await eventually { await provider.calls == 1 }
@@ -61,7 +61,7 @@ import Testing
     let store = InMemoryStore()
     let service = ImportService(
       tasks: provider, notes: DemoVault(), store: store, importer: Importer(metaTagGroups: []),
-      clock: time.clock)
+      vaultTimeZone: { TestWorld.timeZone }, clock: time.clock)
 
     let running = Task { try await service.run(ImportRequest(trigger: .launch)) }
     await eventually { await provider.calls == 1 }
@@ -84,7 +84,7 @@ import Testing
     await provider.open()
     let service = ImportService(
       tasks: provider, notes: DemoVault(), store: InMemoryStore(),
-      importer: Importer(metaTagGroups: []))
+      importer: Importer(metaTagGroups: []), vaultTimeZone: { TestWorld.timeZone })
     try await service.run(ImportRequest(trigger: .manual))
     try await service.run(ImportRequest(trigger: .manual))
     #expect(await provider.calls == 2)
@@ -105,7 +105,8 @@ import Testing
     let store = InMemoryStore()
     let provider = PartialTaskProvider()
     let service = ImportService(
-      tasks: provider, notes: DemoVault(), store: store, importer: Importer(metaTagGroups: []))
+      tasks: provider, notes: DemoVault(), store: store, importer: Importer(metaTagGroups: []),
+      vaultTimeZone: { TestWorld.timeZone })
     await #expect(throws: PartialSnapshotError(modifiedSince: provider.since)) {
       try await service.run(ImportRequest(trigger: .manual))
     }
@@ -129,13 +130,15 @@ import Testing
     let now = Date(timeIntervalSince1970: 1_790_000_000)
     try await ImportService(
       tasks: TimedTaskProvider(defaultTimes: times), notes: DemoVault(), store: store,
-      importer: Importer(metaTagGroups: []), clock: .frozen(at: now)
+      importer: Importer(metaTagGroups: []), vaultTimeZone: { TestWorld.timeZone },
+      clock: .frozen(at: now)
     ).run(ImportRequest(trigger: .manual))
     #expect(try await store.workspace().defaultTimeSettings == times)
 
     try await ImportService(
       tasks: TimedTaskProvider(defaultTimes: nil), notes: DemoVault(), store: store,
-      importer: Importer(metaTagGroups: []), clock: .frozen(at: now.addingTimeInterval(60))
+      importer: Importer(metaTagGroups: []), vaultTimeZone: { TestWorld.timeZone },
+      clock: .frozen(at: now.addingTimeInterval(60))
     ).run(ImportRequest(trigger: .manual))
     let after = try await store.workspace()
     #expect(after.defaultTimeSettings == times)

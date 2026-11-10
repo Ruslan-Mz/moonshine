@@ -16,7 +16,8 @@ import Testing
   ) -> ImportService {
     ImportService(
       tasks: FixedTaskProvider(source: source), notes: DemoVault(), store: store,
-      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups), clock: clock)
+      importer: Importer(metaTagGroups: DemoMapping.metaTagGroups),
+      vaultTimeZone: { DemoVault.calendar.timeZone }, clock: clock)
   }
 
   func importer(_ source: TaskSourceSnapshot, into store: any Store, at now: Date) -> ImportService
@@ -47,7 +48,7 @@ import Testing
     let source = try fixtureSnapshot()
     var identities = IdentityMap()
     let workspace = Importer(metaTagGroups: DemoMapping.metaTagGroups).makeWorkspace(
-      tasks: source, vault: try await DemoVault().vault(), stored: Workspace(timeZone: .gmt),
+      tasks: source, vault: DemoVault.snapshot, stored: Workspace(timeZone: .gmt),
       approvedLineRemovals: [], identities: &identities,
       now: first)
     try await store.commit(
@@ -207,7 +208,7 @@ import Testing
   func staleVersionCommitThrowsIdentityConflictAndChangesNothing(kind: StoreKind) async throws {
     let store = try kind.make()
     let source = try fixtureSnapshot()
-    let vault = try await DemoVault().vault()
+    let vault = DemoVault.snapshot
     let stale = try await store.identityMap()
     var mine = stale.map
     let workspace = Importer(metaTagGroups: DemoMapping.metaTagGroups).makeWorkspace(
@@ -286,7 +287,7 @@ import Testing
     let store = try kind.make()
     var identities = IdentityMap()
     let workspace = Importer(metaTagGroups: DemoMapping.metaTagGroups).makeWorkspace(
-      tasks: try fixtureSnapshot(), vault: try await DemoVault().vault(),
+      tasks: try fixtureSnapshot(), vault: DemoVault.snapshot,
       stored: Workspace(timeZone: .gmt), approvedLineRemovals: [], identities: &identities,
       now: first)
     // Six different counts, none zero, so a field stored or read as another fails.

@@ -188,7 +188,7 @@ import Testing
   actor ScriptedVault: NoteProvider {
     private var lines: VaultLines = .read(LineRemovalHoldTests.all, complete: true)
     func set(_ lines: VaultLines) { self.lines = lines }
-    func vault() async throws -> VaultSnapshot { LineRemovalHoldTests.vault(lines) }
+    func vault(timeZone: TimeZone) async -> VaultSnapshot { LineRemovalHoldTests.vault(lines) }
   }
 
   struct Source: TaskProvider {
@@ -205,7 +205,7 @@ import Testing
     let store = InMemoryStore(timeZone: TestWorld.timeZone)
     let service = ImportService(
       tasks: tasks, notes: vault, store: store, importer: Importer(metaTagGroups: []),
-      clock: .frozen(at: Self.now))
+      vaultTimeZone: { TestWorld.timeZone }, clock: .frozen(at: Self.now))
     try await service.run(ImportRequest(trigger: .launch))
     await vault.set(.read(Self.lines(["drum", "violin"]), complete: true))
     let held = try await service.run(ImportRequest(trigger: .manual))
@@ -244,9 +244,51 @@ import Testing
   @Test func anApprovalIsKeptByAnIncompleteRead() async throws {
     let (service, vault, _) = try await heldService()
     await service.approveLineRemovals(Set(Self.four))
+    #expect(await !service.approvalKeptByIncompleteRead)
     await vault.set(.unavailable)
     #expect(Self.held(try await service.run(ImportRequest(trigger: .manual))) == Self.four)
     #expect(await service.approvedLineRemovals == Set(Self.four))
+    // S4-4d: the notice says the approval waits for a complete read.
+    #expect(await service.approvalKeptByIncompleteRead)
+  }
+
+  @Test func aKeptApprovalIsClearedByTheReadThatAppliesIt() async throws {
+    let (service, vault, store) = try await heldService()
+    await service.approveLineRemovals(Set(Self.four))
+    await vault.set(.unavailable)
+    try await service.run(ImportRequest(trigger: .manual))
+    #expect(await service.approvalKeptByIncompleteRead)
+    await vault.set(.read(Self.lines(["drum", "violin"]), complete: true))
+    try await service.run(ImportRequest(trigger: .manual))
+    #expect(await !service.approvalKeptByIncompleteRead)
+    #expect(try await store.workspace().lines.map(\.key) == ["drum", "violin"])
+  }
+
+  @Test func aNewApprovalIsNotYetKept() async throws {
+    let (service, vault, _) = try await heldService()
+    await service.approveLineRemovals(Set(Self.four))
+    await vault.set(.unavailable)
+    try await service.run(ImportRequest(trigger: .manual))
+    #expect(await service.approvalKeptByIncompleteRead)
+    await service.approveLineRemovals(Set(Self.four))
+    #expect(await !service.approvalKeptByIncompleteRead)
+  }
+
+  /// An import that started before Remove never read the approval, so it never kept it, even
+  /// when its read is incomplete and it commits while the approval matches the hold.
+  @Test func anImportStartedBeforeTheApprovalNeverSaysItWasKept() async throws {
+    let tasks = GatedTaskProvider(open: true)
+    let (service, vault, _) = try await heldService(tasks: tasks)
+    await vault.set(.unavailable)
+    await tasks.close()
+    let calls = await tasks.calls
+    let running = Task { try await service.run(ImportRequest(trigger: .timer)) }
+    await eventually { await tasks.calls == calls + 1 }
+    await service.approveLineRemovals(Set(Self.four))
+    await tasks.open()
+    #expect(Self.held(try await running.value) == Self.four)
+    #expect(await service.approvedLineRemovals == Set(Self.four))
+    #expect(await !service.approvalKeptByIncompleteRead)
   }
 
   /// (a) Approved while no import ran, then the lines came back: the same drop later is held

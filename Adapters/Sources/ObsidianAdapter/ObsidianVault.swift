@@ -61,10 +61,20 @@ public struct ObsidianVault: NoteProvider {
       artifactsSkipped: artifacts.skipped, artifactProblems: Self.count(artifacts.issues))
   }
 
-  /// One read, as an import takes it. A vault that cannot be read at all throws
-  /// `VaultReadError`; the caller decides what that means (S4: `VaultSnapshot.notRead`).
-  public func vault() async throws -> VaultSnapshot {
-    let read = try read()
+  /// One read, as an import takes it, with periods in `timeZone`. A vault that cannot be read at
+  /// all is not read, with its vault-wide problem; the task import goes on (S4-4d).
+  public func vault(timeZone: TimeZone) async -> VaultSnapshot {
+    let read: VaultRead
+    do {
+      read = try ObsidianVault(root: root, timeZone: timeZone, limits: limits).read()
+    } catch {
+      let kind: VaultProblem.Kind =
+        switch error {
+        case .rootUnreadable: .vaultUnreadable
+        case .tooManyNotes: .vaultTooLarge
+        }
+      return .notRead(issues: [.vaultWide(VaultProblem(kind))])
+    }
     return VaultSnapshot(
       lines: read.lines, artifacts: read.artifacts, notes: read.notes, issues: read.issues,
       unread: read.unread)

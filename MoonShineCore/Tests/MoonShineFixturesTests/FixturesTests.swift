@@ -55,7 +55,7 @@ import Testing
     let store = InMemoryStore()
     let service = ImportService(
       tasks: OneTaskProvider(), notes: DemoVault(), store: store,
-      importer: Importer(metaTagGroups: []))
+      importer: Importer(metaTagGroups: []), vaultTimeZone: { DemoVault.calendar.timeZone })
     let first = try await service.run(ImportRequest(trigger: .manual))
     let second = try await service.run(ImportRequest(trigger: .manual))
     let stored = await store.workspace()

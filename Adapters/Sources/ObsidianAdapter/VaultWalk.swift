@@ -10,7 +10,8 @@ public struct VaultLimits: Sendable {
   /// anchor together with an alias, and any directive, are rejected before Yams parses
   /// (`FrontNode.preParseFailure`, contract §3).
   public var maxNodes = 10_000
-  /// Nesting of YAML collections, checked before parsing for flow style and after it for all.
+  /// Nesting of YAML collections, bounded before parsing for block and flow style together
+  /// (S4-4d) and checked after it for all.
   public var maxDepth = 32
 
   public init() {}

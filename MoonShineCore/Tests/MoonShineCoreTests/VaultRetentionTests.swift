@@ -295,7 +295,7 @@ import Testing
   actor Vaults: NoteProvider {
     private var snapshots: [VaultSnapshot]
     init(_ snapshots: [VaultSnapshot]) { self.snapshots = snapshots }
-    func vault() async throws -> VaultSnapshot { snapshots.removeFirst() }
+    func vault(timeZone: TimeZone) async -> VaultSnapshot { snapshots.removeFirst() }
   }
 
   struct Tasks: TaskProvider {
@@ -310,7 +310,8 @@ import Testing
     let service = ImportService(
       tasks: Tasks(source: source),
       notes: Vaults([vault([yearNote()], [artifact("a")]), vault([], [], unread: unread)]),
-      store: store, importer: Importer(metaTagGroups: []), clock: time.clock)
+      store: store, importer: Importer(metaTagGroups: []), vaultTimeZone: { TestWorld.timeZone },
+      clock: time.clock)
     let before = try await service.run(ImportRequest(trigger: .manual))
     time.set(second)
     try await service.run(ImportRequest(trigger: .manual))

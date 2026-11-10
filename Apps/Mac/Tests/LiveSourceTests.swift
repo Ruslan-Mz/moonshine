@@ -32,6 +32,20 @@ final class CountingSettings: AppSettings, @unchecked Sendable {
   func setSource(_ value: String) {
     writes.append(value)
   }
+
+  /// The vault bookmark (S4-4d), counted apart from the source.
+  private(set) var vaultReads = 0
+  private(set) var vaultWrites: [StoredBookmark] = []
+  var storedBookmark: StoredBookmark?
+
+  var vaultBookmark: StoredBookmark? {
+    vaultReads += 1
+    return vaultWrites.last ?? storedBookmark
+  }
+
+  func setVaultBookmark(_ value: StoredBookmark) {
+    vaultWrites.append(value)
+  }
 }
 
 /// An error that names its kind, as the bridge's do.
@@ -170,16 +184,21 @@ struct HalfReadableStore: Store {
 final class RecordingStorage: SettingsStorage {
   private(set) var reads: [String] = []
   private(set) var writes: [String] = []
-  private var values: [String: String] = [:]
+  private var values: [String: Any] = [:]
 
   func string(forKey key: String) -> String? {
     reads.append(key)
-    return values[key]
+    return values[key] as? String
+  }
+
+  func data(forKey key: String) -> Data? {
+    reads.append(key)
+    return values[key] as? Data
   }
 
   func set(_ value: Any?, forKey key: String) {
     writes.append(key)
-    values[key] = value as? String
+    values[key] = value
   }
 }
 
@@ -201,7 +220,7 @@ private func live(
   if let closes { close = { @Sendable in closes.count.withLock { $0 += 1 } } }
   return AppEnvironment.make(
     tasks: mapped.tasks, notes: notes, store: store, importer: mapped.importer,
-    mapping: mapped.state, clock: clock,
+    vaultTimeZone: { DemoVault.calendar.timeZone }, mapping: mapped.state, clock: clock,
     source: source ?? OneState(state: state), omniFocusReading: now, close: close)
 }
 
@@ -213,8 +232,8 @@ actor ShrinkingVault: NoteProvider {
   func drop(_ keys: Set<LineKey>) { dropped = keys }
   func makeUnavailable() { unavailable = true }
 
-  func vault() async throws -> VaultSnapshot {
-    let full = try await DemoVault().vault()
+  func vault(timeZone: TimeZone) async -> VaultSnapshot {
+    let full = DemoVault.snapshot
     return VaultSnapshot(
       lines: unavailable
         ? .unavailable
@@ -563,7 +582,7 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     let base = FileManager.default.temporaryDirectory.appending(path: "base-\(UUID().uuidString)")
     try FileManager.default.createDirectory(at: base, withIntermediateDirectories: false)
     defer { try? FileManager.default.removeItem(at: base) }
-    #expect(AppEnvironment.live(base: base) == nil)
+    #expect(AppEnvironment.live(base: base, vault: VaultFolder(settings: NoSettings())) == nil)
     #expect(try FileManager.default.contentsOfDirectory(atPath: base.path).isEmpty)
   }
 
@@ -580,6 +599,22 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     app.setSource("live")
     #expect(app.source == "live")
     #expect(storage.writes == ["source"])
+  }
+
+  /// S4-4d: the bookmark too; read and written as one value, data, name and time together.
+  @Test func aTestHostReadsNoBookmarkAndWritesNone() throws {
+    try #require(AppModel.isTestHost)
+    let storage = RecordingStorage()
+    let bookmark = StoredBookmark(
+      data: Data([1, 2]), name: "Vault", savedAt: Date(timeIntervalSince1970: 1_790_000_000))
+    let host = StandardSettings(storage: storage)
+    #expect(host.vaultBookmark == nil)
+    host.setVaultBookmark(bookmark)
+    #expect(storage.reads.isEmpty && storage.writes.isEmpty)
+    let app = StandardSettings(storage: storage, isTestHost: false)
+    app.setVaultBookmark(bookmark)
+    #expect(app.vaultBookmark == bookmark)
+    #expect(storage.writes == ["vaultBookmark"])
   }
 
   @MainActor @Test func aReadableIdentityMapOverAnUnreadableWorkspaceIsUnavailable() async {
@@ -703,7 +738,7 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     #expect(await tasks.calls == 0)
     #expect(model.lastImport?.trigger == .launch)
     #expect(model.omniFocusNote == .failure(.mappingInvalid))
-    #expect(LiveNote.notes(model) == [.mappingInvalid, .vaultNotRead])
+    #expect(LiveNote.notes(model) == [.mappingInvalid])
     #expect(TagGroupsLine(model) == .invalid)
   }
 
@@ -712,7 +747,7 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     let model = liveModel(live(.notRunning, store: store, mapping: .failure(.unreadable)))
     model.start()
     await waitFor { isLoaded(model.state) && model.omniFocusState == .notRunning }
-    #expect(LiveNote.notes(model) == [.notRunning, .mappingInvalid, .vaultNotRead])
+    #expect(LiveNote.notes(model) == [.notRunning, .mappingInvalid])
   }
 
   @MainActor @Test func demoHasNoLiveNotes() async {
@@ -810,6 +845,29 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     #expect(model.lastFailure == nil)
   }
 
+  // MARK: S4-4d, choosing the vault
+
+  /// `design/screens/settings.md`: a folder chosen in Live is read at once, as ⌘R; in Demo a
+  /// choice imports nothing (PR #53 round 1).
+  @MainActor @Test func choosingAFolderInLiveImportsAtOnceAndInDemoDoesNot() async throws {
+    let root = try VaultFolderTests.folder()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let model = liveModel(live(.background))
+    await model.load()
+    let before = model.importOutcomes
+    model.chooseVault(root)
+    await waitFor { model.importOutcomes == before + 1 }
+    #expect(model.importOutcomes == before + 1)
+    #expect(model.vaultRefusal == nil)
+
+    let demo = AppModel(snapshot: trackedSnapshot, isTestHost: true)
+    await demo.load()
+    let demoBefore = demo.importOutcomes
+    demo.chooseVault(root)
+    try await Task.sleep(for: .milliseconds(300))
+    #expect(demo.importOutcomes == demoBefore)
+  }
+
   // MARK: S4-4e, a held removal
 
   /// Launch with every line, then a clean read without the first four: held.
@@ -871,6 +929,7 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     await waitFor { model.omniFocusState == .notRunning }
     model.approveHeldRemoval()
     await waitFor { model.removalApproved }
+    #expect(!model.removalKept)
     await vault.makeUnavailable()
     source.send(.omniFocus(.background))
     await waitFor { model.omniFocusState == .background }
@@ -878,6 +937,8 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     await waitFor { model.importOutcomes == 3 }
     #expect(model.heldLineRemoval.count == 4)
     #expect(model.removalApproved)
+    // S4-4d: the notice says the budget note was not read in full.
+    #expect(model.removalKept)
   }
 
   @MainActor @Test func aChangedHeldSetAfterRemoveShowsTheButtonAgain() async throws {

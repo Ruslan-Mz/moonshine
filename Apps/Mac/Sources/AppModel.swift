@@ -12,11 +12,24 @@ enum SidebarItem: Hashable {
 protocol AppSettings {
   var source: String? { get }
   func setSource(_ value: String)
+  /// The vault folder's bookmark (S4-4d); nil while none is chosen.
+  var vaultBookmark: StoredBookmark? { get }
+  func setVaultBookmark(_ value: StoredBookmark)
+}
+
+/// The vault folder's bookmark, its name and when it was chosen: one value under one key, so a
+/// reader never pairs new data with an old time (S4-4d). Kept in the app's defaults only.
+struct StoredBookmark: Codable, Equatable, Sendable {
+  var data: Data
+  /// The folder's own name, which the Settings row shows; never its path.
+  var name: String
+  var savedAt: Date
 }
 
 /// Where `StandardSettings` keeps its values; tests pass an in-memory one.
 protocol SettingsStorage {
   func string(forKey key: String) -> String?
+  func data(forKey key: String) -> Data?
   func set(_ value: Any?, forKey key: String)
 }
 
@@ -24,6 +37,7 @@ extension UserDefaults: SettingsStorage {}
 
 struct StandardSettings: AppSettings {
   private static let sourceKey = "source"
+  private static let vaultKey = "vaultBookmark"
   private let storage: any SettingsStorage
   private let isTestHost: Bool
 
@@ -41,6 +55,16 @@ struct StandardSettings: AppSettings {
   func setSource(_ value: String) {
     guard !isTestHost else { return }
     storage.set(value, forKey: Self.sourceKey)
+  }
+
+  var vaultBookmark: StoredBookmark? {
+    guard !isTestHost, let data = storage.data(forKey: Self.vaultKey) else { return nil }
+    return try? PropertyListDecoder().decode(StoredBookmark.self, from: data)
+  }
+
+  func setVaultBookmark(_ value: StoredBookmark) {
+    guard !isTestHost, let data = try? PropertyListEncoder().encode(value) else { return }
+    storage.set(data, forKey: Self.vaultKey)
   }
 }
 
@@ -68,6 +92,10 @@ final class AppModel {
   private let isTestHost: Bool
   private var termination: (any NSObjectProtocol)?
   private var closed = false
+  /// The vault folder Live reads (S4-4d).
+  let vaultFolder: VaultFolder
+  /// Why the last folder picked was not kept; cleared by a kept one.
+  private(set) var vaultRefusal: VaultFolder.Refusal?
 
   /// The unit tests run inside the app (`project.yml`), so every test run launches it.
   nonisolated static var isTestHost: Bool {
@@ -82,13 +110,16 @@ final class AppModel {
   }
 
   /// `environments` builds a source's environment on its first selection, once per process.
+  /// Live's environment reads `vaultFolder`, which keeps its bookmark in `settings`.
   init(
     isTestHost: Bool = AppModel.isTestHost, settings: any AppSettings,
+    vaultFolder: VaultFolder? = nil,
     environments: @escaping @MainActor (Source) -> AppEnvironment?
   ) {
     self.isTestHost = isTestHost
     self.settings = settings
     self.environments = environments
+    self.vaultFolder = vaultFolder ?? VaultFolder(settings: settings)
     source = Self.source(isTestHost: isTestHost, settings: settings)
   }
 
@@ -109,12 +140,14 @@ final class AppModel {
 
   /// The app's own: the setting, the bundled Demo and Live in Application Support.
   static func production() -> AppModel {
-    let model = AppModel(settings: StandardSettings()) { source in
+    let settings = StandardSettings()
+    let vault = VaultFolder(settings: settings)
+    let model = AppModel(settings: settings, vaultFolder: vault) { source in
       switch source {
       case .demo:
         DemoEnvironment.bundledSnapshot.flatMap { try? AppEnvironment.demo(snapshot: $0) }
       case .live:
-        applicationSupport().flatMap { AppEnvironment.live(base: $0) }
+        applicationSupport().flatMap { AppEnvironment.live(base: $0, vault: vault) }
       }
     }
     model.closeStores(onTerminationOf: .default)
@@ -160,6 +193,7 @@ final class AppModel {
   var storeChecked: Bool { feed?.storeChecked ?? false }
   var heldLineRemoval: [Line] { feed?.heldLineRemoval ?? [] }
   var removalApproved: Bool { feed?.removalApproved ?? false }
+  var removalKept: Bool { feed?.removalKept ?? false }
 
   /// Starts the selected source's feed. Idempotent.
   func start() {
@@ -188,6 +222,18 @@ final class AppModel {
     feed?.approveHeldRemoval()
   }
 
+  /// The folder a picker returned (S4-4d): kept when it is an Obsidian vault, then read at once
+  /// in Live; otherwise nothing is saved and the row says why.
+  func chooseVault(_ url: URL) {
+    do throws(VaultFolder.Refusal) {
+      try vaultFolder.choose(url)
+      vaultRefusal = nil
+      if source == .live { refresh() }
+    } catch {
+      vaultRefusal = error
+    }
+  }
+
   /// For tests: `start()`, then wait until the first import has ended (bounded).
   func load() async {
     start()
@@ -214,4 +260,6 @@ final class AppModel {
 struct NoSettings: AppSettings {
   var source: String? { nil }
   func setSource(_ value: String) {}
+  var vaultBookmark: StoredBookmark? { nil }
+  func setVaultBookmark(_ value: StoredBookmark) {}
 }
