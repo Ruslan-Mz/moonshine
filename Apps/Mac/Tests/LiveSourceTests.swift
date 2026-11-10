@@ -845,6 +845,29 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     #expect(model.lastFailure == nil)
   }
 
+  // MARK: S4-4d, choosing the vault
+
+  /// `design/screens/settings.md`: a folder chosen in Live is read at once, as ⌘R; in Demo a
+  /// choice imports nothing (PR #53 round 1).
+  @MainActor @Test func choosingAFolderInLiveImportsAtOnceAndInDemoDoesNot() async throws {
+    let root = try VaultFolderTests.folder()
+    defer { try? FileManager.default.removeItem(at: root) }
+    let model = liveModel(live(.background))
+    await model.load()
+    let before = model.importOutcomes
+    model.chooseVault(root)
+    await waitFor { model.importOutcomes == before + 1 }
+    #expect(model.importOutcomes == before + 1)
+    #expect(model.vaultRefusal == nil)
+
+    let demo = AppModel(snapshot: trackedSnapshot, isTestHost: true)
+    await demo.load()
+    let demoBefore = demo.importOutcomes
+    demo.chooseVault(root)
+    try await Task.sleep(for: .milliseconds(300))
+    #expect(demo.importOutcomes == demoBefore)
+  }
+
   // MARK: S4-4e, a held removal
 
   /// Launch with every line, then a clean read without the first four: held.

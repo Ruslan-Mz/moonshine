@@ -132,15 +132,17 @@ struct FrontNode: Equatable {
     return 2 * columns.count
   }
 
-  /// The text split at every line break libyaml knows, each line without its leading
-  /// byte-order marks (`hasDirective` skips them the same way).
+  /// The text split at every line break libyaml knows. A byte-order mark at a line's start is
+  /// a blank that takes a column: libyaml skips one there and counts its column (PR #53
+  /// round 1); a second one is text.
   private static func lines(of text: String) -> [[Unicode.Scalar]] {
     var lines: [[Unicode.Scalar]] = [[]]
     for scalar in text.unicodeScalars {
       if lineBreaks.contains(scalar) {
         lines.append([])
-      } else if !(scalar == "\u{FEFF}" && lines[lines.count - 1].isEmpty) {
-        lines[lines.count - 1].append(scalar)
+      } else {
+        let atStart = lines[lines.count - 1].isEmpty
+        lines[lines.count - 1].append(scalar == "\u{FEFF}" && atStart ? " " : scalar)
       }
     }
     return lines

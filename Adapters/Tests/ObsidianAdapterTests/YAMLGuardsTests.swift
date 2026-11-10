@@ -282,6 +282,22 @@ import Yams
     #expect(rejectedBeforeYams(text))
   }
 
+  /// PR #53 round 1: libyaml skips a byte-order mark at a line's start but counts its column.
+  /// Each column holds a mapping and an indentless sequence; every odd column is written as a
+  /// mark plus one space fewer, so a bound that drops the mark merges it with the even one.
+  @Test func aByteOrderMarkAtALinesStartTakesAColumn() throws {
+    let indent = { (column: Int) in
+      column.isMultiple(of: 2)
+        ? String(repeating: " ", count: column)
+        : "\u{FEFF}" + String(repeating: " ", count: column - 1)
+    }
+    let text =
+      (0..<30).map { indent($0) + "k:\n" + indent($0) + "-" }.joined(separator: "\n") + "\n"
+      + indent(30) + "k: x"
+    #expect(try composedDepth(text) > 32)
+    #expect(rejectedBeforeYams(text))
+  }
+
   @Test(arguments: ["|", "|-", "|2", ">", ">+"])
   func aDeepCodeBlockInABlockScalarIsAccepted(header: String) throws {
     let code = (1...40).map { String(repeating: " ", count: 2 + $0) + "- - k: v" }
@@ -323,7 +339,8 @@ import Yams
       column += indicator.count
       columns.append(column)
     }
-    let bom = !clean && Int.random(in: 0..<40, using: &generator) == 0 ? "\u{FEFF}" : ""
+    // Marks go into the clean, deep documents too (PR #53 round 1).
+    let bom = Int.random(in: 0..<(clean ? 6 : 40), using: &generator) == 0 ? "\u{FEFF}" : ""
     return bom + line + (clean ? cleanTails : tails).randomElement(using: &generator)!
   }
 
@@ -338,6 +355,7 @@ import Yams
     let start = clock.now
     var parsed = 0
     var deep = 0
+    var deepWithMarks = 0
     for _ in 0..<20_000 {
       let count = Int.random(in: 1...16, using: &generator)
       var text = ""
@@ -350,14 +368,18 @@ import Yams
       guard let root = try? Yams.compose(yaml: text) else { continue }
       parsed += 1
       let real = depth(root)
-      if real > 4 { deep += 1 }
+      if real > 4 {
+        deep += 1
+        if text.unicodeScalars.contains("\u{FEFF}") { deepWithMarks += 1 }
+      }
       let bound = FrontNode.blockDepthBound(of: text) + FrontNode.flowDepth(of: text)
       #expect(real <= bound, "\(text.debugDescription)")
     }
     print(
       "theBlockBoundNeverUndercountsYams: \(parsed) parsed, \(deep) deeper than 4,",
-      clock.now - start)
-    #expect(parsed > 2_000)
+      "\(deepWithMarks) of them with a byte-order mark,", clock.now - start)
+    #expect(parsed > 1_500)
     #expect(deep > 500)
+    #expect(deepWithMarks > 50)
   }
 }

@@ -41,9 +41,9 @@ The owner's rule: goals, artifacts, plans and budgets live in Obsidian; OmniFocu
 
 - Good — the owner already uses frontmatter (`type`, `parent`, `related`, `review_cadence`).
 - Bad — table and YAML in the budget note can drift; YAML is authoritative for MoonShine.
-- Neutral — vault path via security-scoped bookmark, with no default (amendment of 2026-11-10, below).
+- Neutral — vault path via security-scoped bookmark; default `~/ObsidianV`.
 
-**Amendment (owner, 2026-11-10, S4-4d).** There is no default vault path. The owner chooses the vault folder in Settings; the app keeps a security-scoped, read-only bookmark of it, and refuses a folder that holds no `.obsidian/` folder. A chosen folder that no longer holds `.obsidian/` is not read at all, so nothing stored is removed.
+**Amendment (2026-11-10, owner; S4-4d, PR #53).** There is no default vault path: the Neutral consequence above no longer holds in its second half. The owner chooses the vault folder in Settings; the app keeps a security-scoped, read-only bookmark of it, and refuses a folder that holds no `.obsidian/` folder. A chosen folder that no longer holds `.obsidian/` is not read at all, so nothing stored is removed. Read-only is enforced by MoonShine's code and by `scripts/check-vault-writes.mjs` in CI, not by the system: the app is not sandboxed (ADR-0003), so the bookmark's read-only option restricts nothing until it is.
 
 ### Confirmation
 

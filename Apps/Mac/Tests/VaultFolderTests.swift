@@ -3,6 +3,7 @@ import MoonShineCore
 import MoonShineFixtures
 import ObsidianAdapter
 import OmniFocusAdapter
+import Synchronization
 import Testing
 
 @testable import MoonShineMac
@@ -15,11 +16,29 @@ private let trackedSnapshot = URL(fileURLWithPath: #filePath)
 /// The vault folder in the live import (S4-4d): the bookmark, the provider, the Settings row
 /// and the status bar. Every folder is a temporary one with invented notes.
 @MainActor @Suite struct VaultFolderTests {
-  static let budget =
+  nonisolated static let budget =
     "---\nmoonshine: budget\nlines:\n  - {id: violin, name: Violin, block: Creative, state: active}\n---\n"
 
-  /// A temporary folder; with `.obsidian` and the budget note unless told otherwise.
-  static func folder(vault: Bool = true) throws -> URL {
+  /// Temporary vault folders, removed when the test ends (PR #53 round 1).
+  final class Folders {
+    private var made: [URL] = []
+
+    /// With `.obsidian` and the budget note unless told otherwise.
+    func make(vault: Bool = true) throws -> URL {
+      let root = try VaultFolderTests.folder(vault: vault)
+      made.append(root)
+      return root
+    }
+
+    deinit {
+      for root in made { try? FileManager.default.removeItem(at: root) }
+    }
+  }
+
+  let folders = Folders()
+
+  /// A temporary folder; the caller removes it (`Folders` does).
+  nonisolated static func folder(vault: Bool = true) throws -> URL {
     let root = FileManager.default.temporaryDirectory
       .appending(path: "vault-\(UUID().uuidString)", directoryHint: .isDirectory)
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -35,20 +54,29 @@ private let trackedSnapshot = URL(fileURLWithPath: #filePath)
   final class FakeBookmarks: @unchecked Sendable {
     var stale = false
     var fails = false
-    /// Run once inside the next `make`, as a choice landing during a refresh would. Every
-    /// bookmark call runs on the main actor (`VaultFolder`).
+    var makeFails = false
+    /// Runs inside `resolve`, which runs off the main actor.
+    var whileResolving: (@Sendable () -> Void)?
+    /// Run once on the main actor inside the next `make` off it, as a choice landing during a
+    /// refresh would.
     var duringMake: (@MainActor () -> Void)?
 
     var bookmarks: VaultFolder.Bookmarks {
       VaultFolder.Bookmarks(
         make: { [self] url in
+          if makeFails { throw CocoaError(.fileWriteNoPermission) }
           if let run = duringMake {
             duringMake = nil
-            MainActor.assumeIsolated { run() }
+            if Thread.isMainThread {
+              MainActor.assumeIsolated { run() }
+            } else {
+              DispatchQueue.main.sync { MainActor.assumeIsolated { run() } }
+            }
           }
           return Data(url.path(percentEncoded: false).utf8)
         },
         resolve: { [self] data in
+          whileResolving?()
           if fails { throw CocoaError(.fileReadCorruptFile) }
           return (URL(filePath: String(decoding: data, as: UTF8.self)), stale)
         })
@@ -72,21 +100,36 @@ private let trackedSnapshot = URL(fileURLWithPath: #filePath)
     #expect(vaultWide(snapshot) == [.vaultNotChosen])
   }
 
-  @Test func anUnresolvableBookmarkIsUnreadable() async throws {
+  /// PR #53 round 1: resolving runs off the main actor, so a slow or unreachable folder never
+  /// blocks the window. The fake resolution waits for a main-actor task: on the main actor it
+  /// would wait out its 5 s and report that the main actor was busy.
+  @Test func anUnresolvableBookmarkIsUnreadableWithoutBlockingTheMainActor() async throws {
     let settings = CountingSettings("live")
     let fake = FakeBookmarks()
     let folder = VaultFolder(settings: settings, bookmarks: fake.bookmarks)
-    try folder.choose(Self.folder())
+    try folder.choose(folders.make())
     fake.fails = true
+    let mainRan = DispatchSemaphore(value: 0)
+    let mainWasFree = Mutex(false)
+    fake.whileResolving = {
+      let ran = mainRan.wait(timeout: .now() + .seconds(5)) == .success
+      mainWasFree.withLock { $0 = ran }
+    }
+    Task { @MainActor in mainRan.signal() }
     let snapshot = await BookmarkedVault(folder: folder).vault(timeZone: .gmt)
+    #expect(mainWasFree.withLock { $0 })
     #expect(!snapshot.isRead)
     #expect(vaultWide(snapshot) == [.vaultUnreadable])
   }
 
+  @Test func theRealResolutionNeverShowsUIOrMounts() {
+    #expect(
+      VaultFolder.Bookmarks.resolveOptions == [.withSecurityScope, .withoutUI, .withoutMounting])
+  }
+
   /// The real security-scoped bookmark, made and resolved in the test host (unsandboxed).
   @Test func aBookmarkOfATemporaryFolderReadsItsBudgetNote() async throws {
-    let root = try Self.folder()
-    defer { try? FileManager.default.removeItem(at: root) }
+    let root = try folders.make()
     let settings = CountingSettings("live")
     let folder = VaultFolder(settings: settings)
     try folder.choose(root)
@@ -100,37 +143,58 @@ private let trackedSnapshot = URL(fileURLWithPath: #filePath)
   @Test func aFolderWithoutObsidianIsRefusedAndNothingIsSaved() throws {
     let settings = CountingSettings("live")
     let model = AppModel(isTestHost: false, settings: settings) { _ in nil }
-    model.chooseVault(try Self.folder(vault: false))
+    model.chooseVault(try folders.make(vault: false))
     #expect(model.vaultRefusal == .notAVault)
     #expect(settings.vaultWrites.isEmpty)
     #expect(model.vaultFolder.chosen == nil)
-    model.chooseVault(try Self.folder())
+    model.chooseVault(try folders.make())
     #expect(model.vaultRefusal == nil)
     #expect(settings.vaultWrites.count == 1)
   }
 
-  @Test func aStaleBookmarkIsMadeAgainAndKeepsItsTime() throws {
+  /// Owner, 2026-11-10 (PR #53 round 1): a new folder whose bookmark cannot be made keeps the
+  /// old vault, and the sentence says so.
+  @Test func aNewFolderThatCannotBeKeptKeepsTheOldVaultAndSaysSo() throws {
+    let settings = CountingSettings("live")
+    let fake = FakeBookmarks()
+    let folder = VaultFolder(settings: settings, bookmarks: fake.bookmarks)
+    let model = AppModel(isTestHost: false, settings: settings, vaultFolder: folder) { _ in nil }
+    #expect(VaultRefusalLine(refusal: .bookmarkFailed, chosen: nil) == .notKept)
+    let old = try folders.make()
+    model.chooseVault(old)
+    fake.makeFails = true
+    model.chooseVault(try folders.make())
+    #expect(model.vaultRefusal == .bookmarkFailed)
+    #expect(model.vaultFolder.chosen?.name == old.lastPathComponent)
+    #expect(settings.vaultWrites.count == 1)
+    #expect(
+      VaultRefusalLine(refusal: .bookmarkFailed, chosen: model.vaultFolder.chosen)
+        == .keptPrevious(old.lastPathComponent))
+    #expect(VaultRefusalLine(refusal: .notAVault, chosen: model.vaultFolder.chosen) == .notAVault)
+  }
+
+  @Test func aStaleBookmarkIsMadeAgainAndKeepsItsTime() async throws {
     let settings = CountingSettings("live")
     let fake = FakeBookmarks()
     let folder = VaultFolder(settings: settings, bookmarks: fake.bookmarks, now: { Self.chosenAt })
-    let root = try Self.folder()
+    let root = try folders.make()
     try folder.choose(root)
     fake.stale = true
-    #expect(folder.resolve() == .folder(URL(filePath: root.path(percentEncoded: false))))
+    #expect(await folder.resolve() == .folder(URL(filePath: root.path(percentEncoded: false))))
     #expect(settings.vaultWrites.count == 2)
     #expect(settings.vaultWrites.last?.savedAt == Self.chosenAt)
   }
 
   /// Compare-and-set: a choice that lands while a stale bookmark is made again wins.
-  @Test func aRefreshNeverOverwritesANewerChoice() throws {
+  @Test func aRefreshNeverOverwritesANewerChoice() async throws {
     let settings = CountingSettings("live")
     let fake = FakeBookmarks()
     let folder = VaultFolder(settings: settings, bookmarks: fake.bookmarks)
-    try folder.choose(Self.folder())
-    let newer = try Self.folder()
+    try folder.choose(folders.make())
+    let newer = try folders.make()
     fake.stale = true
     fake.duringMake = { try? folder.choose(newer) }
-    _ = folder.resolve()
+    _ = await folder.resolve()
     #expect(settings.vaultWrites.count == 2)
     #expect(settings.vaultWrites.last?.name == newer.lastPathComponent)
     #expect(folder.chosen?.name == newer.lastPathComponent)
@@ -139,8 +203,7 @@ private let trackedSnapshot = URL(fileURLWithPath: #filePath)
   /// The owner's Q5 (2026-11-10): a folder that is still there but no longer holds `.obsidian`
   /// (a sync reset) is unreadable, and nothing stored is soft-deleted.
   @Test func aFolderThatLosesObsidianIsUnreadableAndNothingIsSoftDeleted() async throws {
-    let root = try Self.folder()
-    defer { try? FileManager.default.removeItem(at: root) }
+    let root = try folders.make()
     let settings = CountingSettings("live")
     let folder = VaultFolder(settings: settings, bookmarks: FakeBookmarks().bookmarks)
     try folder.choose(root)

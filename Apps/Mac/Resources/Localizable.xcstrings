@@ -313,6 +313,22 @@
         }
       }
     },
+    "Couldn't keep the new folder — the vault is still %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't keep the new folder — the vault is still %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось запомнить новую папку — хранилище по-прежнему %@"
+          }
+        }
+      }
+    },
     "Data": {
       "localizations": {
         "en": {
@@ -565,6 +581,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "У MoonShine пока нет доступа к OmniFocus — разрешите его в Системных настройках → Конфиденциальность и безопасность → Автоматизация"
+          }
+        }
+      }
+    },
+    "MoonShine only reads the vault; the folder is remembered as a bookmark": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine only reads the vault; the folder is remembered as a bookmark"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine только читает хранилище; папка запоминается закладкой"
           }
         }
       }
@@ -1253,22 +1285,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Файл соответствий не читается — исправьте его, затем завершите MoonShine (⌘Q) и откройте снова"
-          }
-        }
-      }
-    },
-    "The vault is opened read-only through a security-scoped bookmark.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The vault is opened read-only through a security-scoped bookmark."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Хранилище открывается только для чтения, через защищённую закладку macOS."
           }
         }
       }

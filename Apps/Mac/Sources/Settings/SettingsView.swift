@@ -36,11 +36,13 @@ struct SettingsView: View {
         }
         if let refusal = model.vaultRefusal {
           Group {
-            switch refusal {
+            switch VaultRefusalLine(refusal: refusal, chosen: model.vaultFolder.chosen) {
             case .notAVault:
               Text(
                 "This folder is not an Obsidian vault — choose the folder that holds .obsidian")
-            case .bookmarkFailed: Text("Can't be read — choose it again")
+            case .keptPrevious(let name):
+              Text("Couldn't keep the new folder — the vault is still \(name)")
+            case .notKept: Text("Can't be read — choose it again")
             }
           }
           .font(.caption)
@@ -59,7 +61,7 @@ struct SettingsView: View {
           Text(
             "Demo shows bundled sample data — nothing is read from OmniFocus or your vault."
           )
-          Text("The vault is opened read-only through a security-scoped bookmark.")
+          Text("MoonShine only reads the vault; the folder is remembered as a bookmark")
         }
         .font(.caption)
         .foregroundStyle(.secondary)
@@ -171,6 +173,23 @@ enum VaultLine: Equatable {
       (workspace?.issues ?? []).compactMap { issue in
         if case .vaultWide(let problem) = issue { problem.kind } else { nil }
       })
+  }
+}
+
+/// The sentence under the vault row after a picked folder was not kept (S4-4d).
+enum VaultRefusalLine: Equatable {
+  case notAVault
+  /// No bookmark could be made of the new folder; the vault chosen before stays and is named
+  /// (owner, 2026-11-10, PR #53 round 1).
+  case keptPrevious(String)
+  /// The same, with no vault chosen before.
+  case notKept
+
+  init(refusal: VaultFolder.Refusal, chosen: StoredBookmark?) {
+    switch refusal {
+    case .notAVault: self = .notAVault
+    case .bookmarkFailed: self = chosen.map { .keptPrevious($0.name) } ?? .notKept
+    }
   }
 }
 

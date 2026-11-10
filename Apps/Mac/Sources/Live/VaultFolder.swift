@@ -5,14 +5,21 @@ import ObsidianAdapter
 
 /// The vault folder the owner chose (S4-4d; `design/screens/settings.md`, Data group): a
 /// security-scoped, read-only bookmark kept in `AppSettings`, never a path in a file. Every
-/// read and write of it runs on the main actor, so a choice and a refresh never interleave.
-/// The path is never logged, printed or put into an error.
+/// read and write of the stored bookmark runs on the main actor, so a choice and a refresh
+/// never interleave; resolving it runs off the main actor (PR #53 round 1). The path is never
+/// logged, printed or put into an error.
 @MainActor @Observable
 final class VaultFolder {
   /// How a bookmark is made and resolved; tests pass fakes.
   struct Bookmarks: Sendable {
     let make: @Sendable (URL) throws -> Data
     let resolve: @Sendable (Data) throws -> (url: URL, isStale: Bool)
+
+    /// No UI and no mounting: a folder on a volume that is not mounted is simply not read,
+    /// never a prompt from a background import.
+    static let resolveOptions: URL.BookmarkResolutionOptions = [
+      .withSecurityScope, .withoutUI, .withoutMounting,
+    ]
 
     static let securityScoped = Bookmarks(
       make: { url in
@@ -23,7 +30,7 @@ final class VaultFolder {
       resolve: { data in
         var isStale = false
         let url = try URL(
-          resolvingBookmarkData: data, options: .withSecurityScope, relativeTo: nil,
+          resolvingBookmarkData: data, options: resolveOptions, relativeTo: nil,
           bookmarkDataIsStale: &isStale)
         return (url, isStale)
       })
@@ -46,7 +53,7 @@ final class VaultFolder {
   /// What the Settings row shows.
   private(set) var chosen: StoredBookmark?
   private let settings: any AppSettings
-  private let bookmarks: Bookmarks
+  private nonisolated let bookmarks: Bookmarks
   private let now: () -> Date
 
   init(
@@ -68,20 +75,27 @@ final class VaultFolder {
     save(StoredBookmark(data: data, name: url.lastPathComponent, savedAt: now()))
   }
 
-  /// The folder for one import. A stale bookmark is made again and saved only if the stored one
-  /// is still the one resolved (compare-and-set), keeping the time it was chosen.
-  func resolve() -> Resolved {
-    guard let stored = settings.vaultBookmark else { return .notChosen }
+  /// The folder for one import, resolved off the main actor. A stale bookmark is made again and
+  /// saved only if the stored one is still the one resolved (compare-and-set, on the main
+  /// actor), keeping the time it was chosen.
+  @concurrent nonisolated func resolve() async -> Resolved {
+    guard let stored = await storedBookmark() else { return .notChosen }
     guard let resolved = try? bookmarks.resolve(stored.data) else { return .unreadable }
     guard resolved.isStale else { return .folder(resolved.url) }
     let url = resolved.url
     let scoped = url.startAccessingSecurityScopedResource()
     defer { if scoped { url.stopAccessingSecurityScopedResource() } }
     guard let data = try? bookmarks.make(url) else { return .unreadable }
-    if settings.vaultBookmark == stored {
-      save(StoredBookmark(data: data, name: url.lastPathComponent, savedAt: stored.savedAt))
-    }
+    await replace(
+      stored, with: StoredBookmark(data: data, name: url.lastPathComponent, savedAt: stored.savedAt)
+    )
     return .folder(url)
+  }
+
+  private func storedBookmark() -> StoredBookmark? { settings.vaultBookmark }
+
+  private func replace(_ stored: StoredBookmark, with fresh: StoredBookmark) {
+    if settings.vaultBookmark == stored { save(fresh) }
   }
 
   private func save(_ bookmark: StoredBookmark) {
