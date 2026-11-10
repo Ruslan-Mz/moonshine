@@ -29,7 +29,7 @@ The iPad is the **planning studio** (`platforms.md`). Today exists there so the 
   3. One card per line, foundation first; header = emoji + line + summary (`foundation · floor 1 h/day · 1 open · ≈ 40 min est.`).
   4. From earlier, with `· planned 3 days ago` in the meta line.
   5. Life ops: one collapsed row.
-- **Inspector** (340, `.inspector`, **closed by default on 11″**, toggled from the toolbar; artboard `iPadToday-Mixed` shows it open with the sidebar hidden): Quarter focus card · Touched today (Rhythm | Progress columns) · Quiet lines card (Italian, quiet + next step; Japanese, no activity yet) · Not in focus line.
+- **Inspector** (340, `.inspector`, **closed by default on 11″**, toggled from the toolbar; artboard `iPadToday-Mixed` shows it open with the sidebar hidden): Quarter focus card · Touched today (Rhythm | Progress columns) · Quiet lines card (Italian, quiet + next step; Japanese, no completions since 6 July) · Not in focus line.
 
 Task row: check 24 · title 17 · meta 13 (trace chip + estimate) · due badge (amber, real due only).
 

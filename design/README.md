@@ -61,7 +61,7 @@ Each `*-Dark` artboard is a wrapper that renders the light one with `dark = true
 - Direction: **hybrid**. Dense, one-line rows with columns (from option B) inside calm typography and an airy right rail (from option A). Options A and B stay on the canvas page "Today directions" for history.
 - Rhythm and progress are two series with two colours (blue / teal, checked for colour-blind separation) and are never summed.
 - Month uses a fixed-order **dot strip per day** (one dot slot per line) plus a soft tint for total activity.
-- A new line state appears in the data: an active line with no completions shows "no activity yet" (example: 🇯🇵 Japanese).
+- A new line state appears in the data: an active line with no completions shows "no completions since 6 July", or "no activity yet" while the window start is not known (example: 🇯🇵 Japanese; S4-4c-3).
 - Settings: the spec recommends a native `Settings` scene (⌘,). The canvas draws it as a sheet so it is visible next to the window.
 
 ## Resolved in draft-2

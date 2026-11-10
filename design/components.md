@@ -69,13 +69,13 @@ Above the Today table, outside it, plain card background, an info glyph, no red,
 
 ## LineStateLabel
 
-| State                  | Text                                                 | Style                                        |
-| ---------------------- | ---------------------------------------------------- | -------------------------------------------- |
-| active                 | `active`                                             | primary                                      |
-| maintenance            | `maintenance`                                        | secondary                                    |
-| paused                 | `paused on purpose` + pause symbol                   | whole row in `paused`, emoji at 50 % opacity |
-| active, no completions | `active` + last activity `no activity yet`           | secondary                                    |
-| active, quiet          | `active` + last activity: moon + `quiet for 29 days` | secondary                                    |
+| State                  | Text                                                                                                | Style                                        |
+| ---------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| active                 | `active`                                                                                            | primary                                      |
+| maintenance            | `maintenance`                                                                                       | secondary                                    |
+| paused                 | `paused on purpose` + pause symbol                                                                  | whole row in `paused`, emoji at 50 % opacity |
+| active, no completions | `active` + last activity `no completions since 6 July` (`no activity yet` without the window start) | secondary                                    |
+| active, quiet          | `active` + last activity: moon + `quiet for 29 days`                                                | secondary                                    |
 
 ## StatusBar
 

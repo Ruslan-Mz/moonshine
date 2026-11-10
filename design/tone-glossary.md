@@ -10,31 +10,32 @@ Translators (human or AI) must use these terms; CI greps the catalog per languag
 
 ## Canonical terms
 
-| Concept             | EN                  | RU                  | LV                                    | IT                                      | DE                                   |
-| ------------------- | ------------------- | ------------------- | ------------------------------------- | --------------------------------------- | ------------------------------------ |
-| quiet line          | quiet for N days    | тихо N дней         | klusums N dienas                      | ferma da N giorni                       | seit N Tagen ruhig                   |
-| paused on purpose   | paused on purpose   | на паузе намеренно  | apzināti pauzēts                      | in pausa di proposito                   | bewusst pausiert                     |
-| maintenance         | maintenance         | на поддержании      | uzturēšana                            | mantenimento                            | Erhaltung                            |
-| foundation          | foundation          | фундамент           | pamats                                | fondamenta                              | Fundament                            |
-| floor               | floor N h/day       | пол N ч/день        | minimums N st./dienā                  | minimo N h/giorno                       | Untergrenze N Std./Tag               |
-| no activity yet     | no activity yet     | пока без активности | vēl nav aktivitātes                   | ancora nessuna attività                 | noch keine Aktivität                 |
-| suggested next step | suggested next step | следующий шаг       | ieteicamais nākamais solis            | prossimo passo suggerito                | nächster Schritt                     |
-| from earlier        | from earlier        | с прошлых дней      | no iepriekšējām dienām                | dai giorni scorsi                       | von früher                           |
-| rhythm / progress   | rhythm / progress   | ритм / продвижение  | ritms / progress                      | ritmo / progresso                       | Rhythmus / Fortschritt               |
-| real due date       | Due 18:00           | Срок 18:00          | Termiņš 18:00                         | Scadenza 18:00                          | Fällig 18:00                         |
-| my take (feature)   | My take             | Мой взгляд          | Mans skatījums (draft — owner review) | La mia lettura (draft — owner review)   | Mein Eindruck (draft — owner review) |
-| take: leap          | Leap                | Рывок               | Lēciens (draft — owner review)        | Balzo (draft — owner review)            | Sprung (draft — owner review)        |
-| take: rise          | Rise                | Подъём              | Kāpums (draft — owner review)         | Salita (draft — owner review)           | Anstieg (draft — owner review)       |
-| take: steady        | Steady              | Ровно               | Stabili (draft — owner review)        | Stabile (draft — owner review)          | Stetig (draft — owner review)        |
-| take: dip           | Dip                 | Спуск               | Nokāpums (draft — owner review)       | Discesa (draft — owner review)          | Abstieg (draft — owner review)       |
-| take: draft         | draft               | черновик            | melnraksts (draft — owner review)     | bozza (draft — owner review)            | Entwurf (draft — owner review)       |
-| tracked (time)      | tracked             | учтено              | uzskaitīts (draft — owner review)     | registrato (draft — owner review)       | erfasst (draft — owner review)       |
-| by the clock        | by the clock        | по часам            | pēc pulksteņa (draft — owner review)  | sull’orologio (draft — owner review)    | nach der Uhr (draft — owner review)  |
-| in parallel         | in parallel         | параллельно         | paralēli (draft — owner review)       | in parallelo (draft — owner review)     | parallel (draft — owner review)      |
-| not tracked         | not tracked         | не учтено           | neuzskaitīts (draft — owner review)   | non registrato (draft — owner review)   | nicht erfasst (draft — owner review) |
-| day portion         | day portion         | доля дня            | dienas daļa (draft — owner review)    | quota del giorno (draft — owner review) | Tagesanteil (draft — owner review)   |
-| activity (palette)  | activity            | активность          | aktivitāte (draft — owner review)     | attività (draft — owner review)         | Aktivität (draft — owner review)     |
-| keep running        | Keep running        | Не останавливать    | Neapturēt (draft — owner review)      | Continua (draft — owner review)         | Weiterlaufen (draft — owner review)  |
+| Concept              | EN                          | RU                             | LV                                    | IT                                      | DE                                   |
+| -------------------- | --------------------------- | ------------------------------ | ------------------------------------- | --------------------------------------- | ------------------------------------ |
+| quiet line           | quiet for N days            | тихо N дней                    | klusums N dienas                      | ferma da N giorni                       | seit N Tagen ruhig                   |
+| paused on purpose    | paused on purpose           | на паузе намеренно             | apzināti pauzēts                      | in pausa di proposito                   | bewusst pausiert                     |
+| maintenance          | maintenance                 | на поддержании                 | uzturēšana                            | mantenimento                            | Erhaltung                            |
+| foundation           | foundation                  | фундамент                      | pamats                                | fondamenta                              | Fundament                            |
+| floor                | floor N h/day               | пол N ч/день                   | minimums N st./dienā                  | minimo N h/giorno                       | Untergrenze N Std./Tag               |
+| no activity yet      | no activity yet             | пока без активности            | vēl nav aktivitātes                   | ancora nessuna attività                 | noch keine Aktivität                 |
+| no completions since | no completions since <date> | нет выполненных задач с <даты> | —                                     | —                                       | —                                    |
+| suggested next step  | suggested next step         | следующий шаг                  | ieteicamais nākamais solis            | prossimo passo suggerito                | nächster Schritt                     |
+| from earlier         | from earlier                | с прошлых дней                 | no iepriekšējām dienām                | dai giorni scorsi                       | von früher                           |
+| rhythm / progress    | rhythm / progress           | ритм / продвижение             | ritms / progress                      | ritmo / progresso                       | Rhythmus / Fortschritt               |
+| real due date        | Due 18:00                   | Срок 18:00                     | Termiņš 18:00                         | Scadenza 18:00                          | Fällig 18:00                         |
+| my take (feature)    | My take                     | Мой взгляд                     | Mans skatījums (draft — owner review) | La mia lettura (draft — owner review)   | Mein Eindruck (draft — owner review) |
+| take: leap           | Leap                        | Рывок                          | Lēciens (draft — owner review)        | Balzo (draft — owner review)            | Sprung (draft — owner review)        |
+| take: rise           | Rise                        | Подъём                         | Kāpums (draft — owner review)         | Salita (draft — owner review)           | Anstieg (draft — owner review)       |
+| take: steady         | Steady                      | Ровно                          | Stabili (draft — owner review)        | Stabile (draft — owner review)          | Stetig (draft — owner review)        |
+| take: dip            | Dip                         | Спуск                          | Nokāpums (draft — owner review)       | Discesa (draft — owner review)          | Abstieg (draft — owner review)       |
+| take: draft          | draft                       | черновик                       | melnraksts (draft — owner review)     | bozza (draft — owner review)            | Entwurf (draft — owner review)       |
+| tracked (time)       | tracked                     | учтено                         | uzskaitīts (draft — owner review)     | registrato (draft — owner review)       | erfasst (draft — owner review)       |
+| by the clock         | by the clock                | по часам                       | pēc pulksteņa (draft — owner review)  | sull’orologio (draft — owner review)    | nach der Uhr (draft — owner review)  |
+| in parallel          | in parallel                 | параллельно                    | paralēli (draft — owner review)       | in parallelo (draft — owner review)     | parallel (draft — owner review)      |
+| not tracked          | not tracked                 | не учтено                      | neuzskaitīts (draft — owner review)   | non registrato (draft — owner review)   | nicht erfasst (draft — owner review) |
+| day portion          | day portion                 | доля дня                       | dienas daļa (draft — owner review)    | quota del giorno (draft — owner review) | Tagesanteil (draft — owner review)   |
+| activity (palette)   | activity                    | активность                     | aktivitāte (draft — owner review)     | attività (draft — owner review)         | Aktivität (draft — owner review)     |
+| keep running         | Keep running                | Не останавливать               | Neapturēt (draft — owner review)      | Continua (draft — owner review)         | Weiterlaufen (draft — owner review)  |
 
 LV/IT/DE columns are **AI drafts** (wave 2) — not shipped until reviewed.
 
