@@ -329,6 +329,22 @@
         }
       }
     },
+    "Couldn't keep this folder — choose it again": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't keep this folder — choose it again"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось запомнить папку — выберите её снова"
+          }
+        }
+      }
+    },
     "Data": {
       "localizations": {
         "en": {
