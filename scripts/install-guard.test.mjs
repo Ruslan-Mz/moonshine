@@ -120,13 +120,17 @@ function installedGuard(work) {
 function documentedLine() {
   const line = /`(git fetch origin && m=[^`]+)`/.exec(readFileSync(join(repo, "CLAUDE.md"), "utf8"))?.[1];
   assert.ok(line?.includes(github), "CLAUDE.md documents the install command");
+  assert.ok(line.endsWith(' "$HOME/Library/Application Support/MoonShine/deny-list.txt"'), "the command names the data folder's deny-list");
   return line;
 }
 
 /// The documented command run by `shell`, with the fixture's bare repository for the GitHub one.
 function documented(work, shell = ["bash", "-c"]) {
   const line = documentedLine();
-  writeFileSync(join(work.cwd, "deny-list.txt"), "zephyrine\n");
+  // The data folder of S4-4c-2, under the temporary HOME.
+  const dataFolder = join(work.home, "Library", "Application Support", "MoonShine");
+  mkdirSync(dataFolder, { recursive: true });
+  writeFileSync(join(dataFolder, "deny-list.txt"), "zephyrine\n");
   return spawnSync(shell[0], [...shell.slice(1), line.replaceAll(github, work.remote)], {
     cwd: work.cwd,
     env: environment(work.home, { MOONSHINE_ORIGIN_URL: work.remote, ...work.env }),
