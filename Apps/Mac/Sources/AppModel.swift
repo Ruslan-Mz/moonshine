@@ -3,10 +3,6 @@ import Foundation
 import MoonShineCore
 import Observation
 
-enum SidebarItem: Hashable {
-  case today
-}
-
 /// The app's settings. Tests pass their own; `StandardSettings` reads and writes nothing in a
 /// test host, whose defaults domain is the owner's app's (`dev.moonshine.mac`).
 protocol AppSettings {

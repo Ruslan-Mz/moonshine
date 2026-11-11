@@ -1,6 +1,12 @@
 import MoonShineCore
 import SwiftUI
 
+/// The sidebar's entries; a plain path for auto-merge (scripts/guard/plain-rules.mjs), so a slice
+/// that adds a screen need not touch AppModel.swift.
+enum SidebarItem: Hashable {
+  case today
+}
+
 struct RootView: View {
   @Bindable var model: AppModel
 

@@ -11,7 +11,9 @@
 # worktree) under a temporary name and swaps it in, writes the git hook and the gh-post command that
 # run it, and points core.hooksPath (this repository only) at the absolute hook folder last. The
 # folder also gets main's build script and project check, and bin/ the xcbuild command that runs
-# them in a cleared environment (H1c): the only build the local settings allow.
+# them in a cleared environment (H1c): the only build the local settings allow. The state folder
+# next to it, where gh-post records what it sent (gh-post merge reads it), is created once and kept
+# across installs.
 # MOONSHINE_GUARD_DIR, MOONSHINE_SCRATCH_BASE and MOONSHINE_ORIGIN_URL override the two locations
 # and the expected origin (tests use them).
 set -eu
@@ -56,10 +58,10 @@ main=$(printf '%s\n' "$heads" | awk -F '\t' '$2 == "refs/heads/main" { print $1 
 [ -n "$main" ] || fail "origin has no main."
 git cat-file -e "$main^{commit}" 2> /dev/null || fail "origin's main is not here yet; run git fetch origin first."
 
-mkdir -p "$dir/hooks" "$dir/bin"
+mkdir -p "$dir/hooks" "$dir/bin" "$dir/state"
 stage=$(mktemp -d "$dir/guard.new.XXXXXX")
 trap 'rm -rf "$stage" "$stage.old"' EXIT
-for file in matcher.mjs commit-scan.mjs pre-push.mjs gh-post.mjs binary-allowlist.txt; do
+for file in matcher.mjs commit-scan.mjs pre-push.mjs gh-post.mjs merge.mjs plain-rules.mjs binary-allowlist.txt; do
   git cat-file blob "$main:scripts/guard/$file" > "$stage/$file" ||
     fail "origin's main has no scripts/guard/$file; the old guard is unchanged."
 done

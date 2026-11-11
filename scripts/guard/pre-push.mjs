@@ -20,7 +20,15 @@ import { denyList, match } from "./matcher.mjs";
 const zero = /^0+$/;
 const mainRef = "refs/heads/main";
 const reportLimit = 20;
-const guardFiles = ["matcher.mjs", "commit-scan.mjs", "pre-push.mjs", "gh-post.mjs", "binary-allowlist.txt"];
+const guardFiles = [
+  "matcher.mjs",
+  "commit-scan.mjs",
+  "pre-push.mjs",
+  "gh-post.mjs",
+  "merge.mjs",
+  "plain-rules.mjs",
+  "binary-allowlist.txt",
+];
 
 function block(message) {
   process.stderr.write(`pre-push: push blocked. ${message}\n`);
