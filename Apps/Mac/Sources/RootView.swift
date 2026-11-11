@@ -27,14 +27,9 @@ struct RootView: View {
     if case .loaded(let overview) = model.state {
       // Dates follow the workspace's zone, so Demo reads the same on any Mac.
       let zone = overview.workspace.timeZone
-      TodayContainer(
-        overview: overview,
-        removal: LineRemovalHold(
-          isApproved: model.removalApproved, omniFocusClosed: model.omniFocusNote == .notRunning,
-          keptByIncompleteRead: model.removalKept, approve: { model.approveHeldRemoval() })
-      )
-      .environment(\.timeZone, zone)
-      .environment(\.calendar, TodayFormat.calendar(zone))
+      TodayDetail(model: model, overview: overview)
+        .environment(\.timeZone, zone)
+        .environment(\.calendar, TodayFormat.calendar(zone))
     } else {
       switch TodayPlaceholder(model) {
       case .importing, nil:

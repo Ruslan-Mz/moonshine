@@ -2,9 +2,10 @@
 // repositories: node --test scripts/plain-rules.test.mjs
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import { environment, ok } from "./guard-fixture.mjs";
 import { changedLines, classify, readChanges } from "./guard/plain-rules.mjs";
@@ -74,7 +75,7 @@ function twoCommits(base, head, setUp = () => {}) {
 
 function judge(base, head, setUp) {
   const { git, from, to } = twoCommits(base, head, setUp);
-  return classify(readChanges(git, from, to));
+  return classify(readChanges(git, from, to), []);
 }
 
 function plain(base, head, setUp) {
@@ -275,12 +276,164 @@ test("a global config with colour, a relative diff and no prefix changes nothing
   const config = join(work.root, "gitconfig");
   writeFileSync(config, "[color]\n\tui = always\n[diff]\n\trelative = true\n\tnoprefix = true\n");
   mkdirSync(join(work.cwd, "Apps", "Mac"), { recursive: true });
-  const fromSubfolder = (args, options = {}) =>
-    git(args, { cwd: join(work.cwd, "Apps", "Mac"), env: environment(work.home, { GIT_CONFIG_GLOBAL: config }), ...options });
-  const result = classify(readChanges(fromSubfolder, from, to));
+  const calls = [];
+  const fromSubfolder = (args, options = {}) => {
+    calls.push(args);
+    return git(args, { cwd: join(work.cwd, "Apps", "Mac"), env: environment(work.home, { GIT_CONFIG_GLOBAL: config }), ...options });
+  };
+  const result = classify(readChanges(fromSubfolder, from, to), []);
   assert.equal(result.plain, false);
   assert.ok(result.reasons.some((reason) => reason.includes("Adapters/Sources/X.swift")), result.reasons.join("; "));
   assert.ok(result.reasons.some((reason) => reason.includes("process")), result.reasons.join("; "));
+  // diff-tree is plumbing and ignores most of that config today; the flags keep it so.
+  const diffs = calls.filter((args) => args[0] === "diff-tree");
+  assert.equal(diffs.length, 4);
+  for (const args of diffs) {
+    for (const flag of ["--no-color", "--no-relative", "--no-ext-diff", "--no-textconv", "--no-renames"]) {
+      if (flag === "--no-renames" && args.includes("-p")) continue;
+      assert.ok(args.includes(flag), `${flag} missing in: ${args.join(" ")}`);
+    }
+  }
+  for (const args of diffs.filter((call) => call.includes("-p"))) {
+    for (const flag of ["--src-prefix=a/", "--dst-prefix=b/", "--text", "--unified=3"]) assert.ok(args.includes(flag), `${flag} missing`);
+  }
+});
+
+test("a patch that does not match git's line counts stops", () => {
+  const { git, from, to } = twoCommits({}, { "fixtures/a.md": "1\n2\n" });
+  const padded = (args, options) => {
+    const out = git(args, options);
+    return args.includes("-p") ? out + "+3\n" : out;
+  };
+  assert.throws(() => readChanges(padded, from, to), /line counts/);
+});
+
+test("file lists that do not agree stop", () => {
+  const { git, from, to } = twoCommits({}, { "fixtures/a.md": "1\n", "fixtures/b.md": "2\n" });
+  const short = (args, options) => {
+    const out = git(args, options);
+    return args.includes("--numstat") ? out.split("\0").slice(1).join("\0") : out;
+  };
+  assert.throws(() => readChanges(short, from, to), /do not agree/);
+});
+
+test("a spec run whose added line comes before its removed one is not a tick", () => {
+  const change = (hunk) => ({ path: spec, status: "M", oldMode: "100644", newMode: "100644", binary: false, hunks: [hunk] });
+  const tick = [
+    { kind: "-", text: "- [ ] **S5**" },
+    { kind: "+", text: "- [x] **S5**" },
+  ];
+  assert.equal(classify([change(tick)], []).plain, true);
+  assert.equal(classify([change([...tick].reverse())], []).plain, false);
+});
+
+test("classify needs the deny-list, and names a matching path by kind only", () => {
+  const changes = [{ path: "Adapters/Mirelbrook.swift", status: "A", oldMode: "000000", newMode: "100644", binary: false, hunks: [] }];
+  assert.throws(() => classify(changes), /deny-list/);
+  const result = classify(changes, ["mirelbrook"]);
+  assert.equal(result.plain, false);
+  assert.ok(result.reasons.every((reason) => !/mirelbrook/i.test(reason)), result.reasons.join("; "));
+  assert.ok(result.reasons.some((reason) => reason.includes("a file whose name matches")), result.reasons.join("; "));
+});
+
+for (const line of [
+  "if from < span.start {",
+  "let first = range.start",
+  "Text(event.start, style: .time)",
+  "let end = DateInterval(start: a, end: b).end",
+  "let hours = day.load",
+  "let selection = appModel.selection",
+  "items.remove(at: 0)",
+  "items.removeAll()",
+  "let name = file.rename",
+]) {
+  test(`a harmless member passes: ${line}`, () => {
+    plain({}, { "Apps/Mac/Sources/Today/Probe.swift": `${line}\n` });
+  });
+}
+
+for (const [line, kind] of [
+  ["Button(\"Go\", action: model.start)", "model action"],
+  ["Button(\"Go\", action: appModel.load)", "model action"],
+  ["appModel.refresh()", "model action"],
+  ["model .load()", "model action"],
+  ["feed.start()", "model action"],
+  ["store.load ()", "model action"],
+  [".onDrop(of: [.data], isTargeted: nil) { _ in true }", "drag, pasteboard or sharing"],
+  [".dropDestination(for: Data.self) { items, _ in true }", "drag, pasteboard or sharing"],
+  [".draggable(row.title)", "drag, pasteboard or sharing"],
+  ["let provider = NSItemProvider(object: text)", "drag, pasteboard or sharing"],
+  ["NSPasteboard.general.clearContents()", "drag, pasteboard or sharing"],
+  ["let board = UIPasteboard.general", "drag, pasteboard or sharing"],
+  ["ShareLink(item: url)", "drag, pasteboard or sharing"],
+  ["let service = NSSharingService(named: .sendViaAirDrop)", "drag, pasteboard or sharing"],
+  ["_ = execv(\"/bin/sh\", argv)", "process"],
+  ["_ = execve(path, argv, envp)", "process"],
+  ["_ = execlp(\"sh\", \"sh\")", "process"],
+  ["_ = fexecve(fd, argv, envp)", "process"],
+  ["let task = try NSUserUnixTask(url: script)", "process"],
+  ["let task = try NSUserScriptTask(url: script)", "process"],
+  ["let task = try NSUserAppleScriptTask(url: script)", "process"],
+  ["let task = try NSUserAutomatorTask(url: script)", "process"],
+  ["_ = unlink(path)", "storage"],
+  ["_ = rename(from, to)", "storage"],
+  ["_ = rmdir(path)", "storage"],
+  ["_ = remove(path)", "storage"],
+]) {
+  test(`a risky token is risky: ${line}`, () => {
+    risky({}, { "Apps/Mac/Sources/Today/Probe.swift": `${line}\n` }, kind);
+  });
+}
+
+test("in a test file, drag and pasteboard tokens stay risky, and import Synchronization too", () => {
+  risky({}, { "Apps/Mac/Tests/ProbeTests.swift": "let board = NSPasteboard.general\n" }, "drag, pasteboard or sharing");
+  risky({}, { "Apps/Mac/Tests/ProbeTests.swift": "import Synchronization\n" }, "an import");
+});
+
+test("@testable import MoonShineFixtures passes in a test file", () => {
+  plain({}, { "MoonShineCore/Tests/MoonShineCoreTests/ProbeTests.swift": "@testable import MoonShineFixtures\nimport Testing\n" });
+});
+
+// The screen slices S4-2 and S5 (owner, 2026-11-11): on the repository's own files, a new screen,
+// its sidebar case and its shortcut compute plain; the held line removal stays risky.
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const own = (path) => readFileSync(join(repoRoot, path), "utf8");
+const screenFiles = ["Apps/Mac/Sources/RootView.swift", "Apps/Mac/Sources/ViewCommands.swift", "Apps/Mac/Sources/LineRemoval.swift", today];
+
+function edited(path, old, replacement) {
+  const text = own(path);
+  assert.ok(text.includes(old), `${path} no longer holds: ${old}`);
+  return text.replace(old, replacement);
+}
+
+test("a screen slice computes plain: a new view, a sidebar case and its shortcut", () => {
+  const base = Object.fromEntries(screenFiles.map((path) => [path, own(path)]));
+  plain(base, {
+    "Apps/Mac/Sources/Lines/LinesView.swift": "import SwiftUI\n\nstruct LinesView: View {\n  var body: some View { Text(\"Lines\") }\n}\n",
+    "Apps/Mac/Sources/RootView.swift": edited("Apps/Mac/Sources/RootView.swift", "  case today\n", "  case today\n  case lines\n")
+      .replace(
+        '        Label("Today", systemImage: "sun.max").tag(SidebarItem.today)\n',
+        '        Label("Today", systemImage: "sun.max").tag(SidebarItem.today)\n        Label("Lines", systemImage: "list.bullet").tag(SidebarItem.lines)\n',
+      )
+      .replace(
+        "      TodayDetail(model: model, overview: overview)\n",
+        "      if model.selection == .lines {\n        LinesView()\n      } else {\n        TodayDetail(model: model, overview: overview)\n      }\n",
+      ),
+    "Apps/Mac/Sources/ViewCommands.swift": edited(
+      "Apps/Mac/Sources/ViewCommands.swift",
+      "        .keyboardShortcut(\"1\", modifiers: .command)\n",
+      '        .keyboardShortcut("1", modifiers: .command)\n      Button("Lines") { model.selection = .lines }\n        .keyboardShortcut("2", modifiers: .command)\n',
+    ),
+  });
+});
+
+test("a slice that touches the held line removal computes risky", () => {
+  const base = Object.fromEntries(screenFiles.map((path) => [path, own(path)]));
+  risky(
+    base,
+    { "Apps/Mac/Sources/LineRemoval.swift": edited("Apps/Mac/Sources/LineRemoval.swift", "        Divider()\n", "        Divider().padding(.top, 2)\n") },
+    "a path outside the plain list",
+  );
 });
 
 test("changedLines counts added and removed lines, and null for a binary change", () => {

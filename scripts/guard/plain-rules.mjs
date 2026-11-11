@@ -14,7 +14,7 @@ const spec = "docs/specs/phase-1-see.md";
 /// Paths a plain pull request may change (old and new name alike).
 const plainPaths = [
   /^Apps\/Mac\/Sources\/(?:Today|Lines|Week|Palette)\/[^/]+\.swift$/,
-  /^Apps\/Mac\/Sources\/(?:RootView|Tokens)\.swift$/,
+  /^Apps\/Mac\/Sources\/(?:RootView|Tokens|ViewCommands)\.swift$/,
   /^Apps\/Mac\/Resources\/Localizable\.xcstrings$/,
   /^Apps\/Mac\/Tests\/[^/]+\.swift$/,
   /^MoonShineCore\/Tests\/(?:[^/]+\/)*[^/]+\.swift$/,
@@ -37,6 +37,13 @@ const part = (list) => new RegExp(names(list));
 const cCall = (list) => new RegExp(`(?<![A-Za-z0-9_.])(?:${names(list)})\\s*\\(`);
 // A member, called or passed: `.refresh(` and `action: model.refresh`, not `.selection`.
 const member = (list) => new RegExp(`\\.(?:${names(list)})(?![A-Za-z0-9_])`);
+// A member called: `.start(`, not `span.start`.
+const call = (list) => new RegExp(`\\.(?:${names(list)})\\s*\\(`);
+// The app model's member, called or passed: `model.start` and `appModel.load`. A reference through
+// another name passes; every plain pull request still has its full review (owner, 2026-11-11).
+const onModel = (list) => new RegExp(`(?<![A-Za-z0-9_])(?:model|appModel)\\s*\\.\\s*(?:${names(list)})(?![A-Za-z0-9_])`);
+
+const modelActions = ["select", "refresh", "approveHeldRemoval", "chooseVault", "setSource", "setVaultBookmark", "closeStores"];
 
 // [kind, pattern, also in test files]
 const tokens = [
@@ -47,16 +54,19 @@ const tokens = [
   ["concurrency", part(["TaskGroup", "Dispatch", "OperationQueue", "Async\\w*Stream", "Continuation"]), true],
   ["process", word(["Process", "typealias", "dlopen", "dlsym", "getenv", "fopen", "popen"]), true],
   ["process", part(["ProcessInfo", "NSWorkspace", "NSAppleScript", "OSAKit", "NotificationCenter", "posix_spawn"]), true],
-  ["process", part(["NSClassFromString", "@_", "[Uu]nsafe"]), true],
-  ["process", cCall(["kill", "open", "system"]), true],
+  ["process", part(["NSClassFromString", "@_", "[Uu]nsafe", "NSUser\\w*Task"]), true],
+  ["process", cCall(["kill", "open", "system", "f?exec[lv]p?e?"]), true],
+  ["storage", cCall(["unlink", "rename", "rmdir", "remove"]), true],
   ["storage", part(["UserDefaults", "FileManager", "FileHandle", "write\\(to", "fileURLWithPath", "URL\\(filePath"]), true],
   ["storage", part(["NSHomeDirectory", "homeDirectory", "fileImporter", "fileExporter", "NSOpenPanel", "NSSavePanel"]), true],
   ["storage", part(["[Bb]ookmark", "SecurityScoped", "EventKit", "GRDB", "Yams"]), true],
   ["storage", /(?<![A-Za-z0-9_])contentsOf/, true],
   ["URL", part(["URLSession", "openURL", "onOpenURL"]), true],
   ["URL", /(?<![A-Za-z0-9_])Link\s*\(/, true],
-  ["model action", member(["select", "refresh", "approveHeldRemoval", "chooseVault", "setSource", "setVaultBookmark", "closeStores"]), true],
-  ["model action", member(["start", "load"]), false],
+  ["drag, pasteboard or sharing", part(["onDrop", "dropDestination", "draggable", "NSItemProvider", "NSPasteboard", "UIPasteboard", "ShareLink", "NSSharingService"]), true],
+  ["model action", member(modelActions), true],
+  ["model action", call(["start", "load"]), false],
+  ["model action", onModel([...modelActions, "start", "load"]), false],
   ["line removal", part(["[Aa]pprov", "[Hh]eldRemoval", "[Ll]ineRemoval"]), true],
 ];
 
@@ -71,7 +81,8 @@ const importModules = new Set([
   "Testing",
   "XCTest",
 ]);
-const testableModules = new Set(["MoonShineCore", "MoonShineMac"]);
+// `import Synchronization` stays risky in tests too: a lock is concurrency (rule 2).
+const testableModules = new Set(["MoonShineCore", "MoonShineFixtures", "MoonShineMac"]);
 
 /// Why a Swift line is risky, as a kind, or null.
 function riskyToken(text, inTests) {
@@ -159,8 +170,10 @@ function onlyTicks(change) {
   return true;
 }
 
-/// Plain, or risky with the reasons.
-export function classify(changes, entries = []) {
+/// Plain, or risky with the reasons. `entries` is the deny-list: a path that matches it is named by
+/// kind only, so the caller must pass it.
+export function classify(changes, entries) {
+  if (!Array.isArray(entries)) throw new Error("classify needs the deny-list's entries");
   const reasons = [];
   for (const change of changes) {
     const where = printable(change.path, entries);

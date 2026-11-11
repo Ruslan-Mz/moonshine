@@ -73,13 +73,6 @@ struct TodayScreen: Equatable {
     let name: String
   }
 
-  /// A line the budget note no longer lists, kept until the owner removes it (S4-4e).
-  struct HeldLine: Identifiable, Hashable {
-    let id: LineID
-    let emoji: String?
-    let name: String
-  }
-
   /// The Quarter focus card: the current quarter note's artifacts, dropped ones left out.
   struct QuarterFocus: Equatable {
     struct Row: Identifiable, Hashable {
@@ -117,8 +110,6 @@ struct TodayScreen: Equatable {
   let noActivity: [NoActivity]
   let paused: [Paused]
   let quarterFocus: QuarterFocus?
-  /// The held removal, in the issue's order; empty when nothing is held.
-  let heldRemoval: [HeldLine]
 
   /// With nothing to show, the rail holds one calm line (owner, 2026-10-27).
   var railIsEmpty: Bool {
@@ -202,9 +193,6 @@ struct TodayScreen: Equatable {
     self.quiet = quiet
     self.noActivity = noActivity
     paused = today.pausedLines.map { Paused(id: $0.id, emoji: $0.emoji, name: $0.name) }
-    heldRemoval = overview.workspace.heldLineRemoval.map {
-      HeldLine(id: $0.id, emoji: $0.emoji, name: $0.name)
-    }
     quarterFocus = today.quarterFocus.flatMap { focus in
       guard let start = focus.note.period?.start else { return nil }
       let month = overview.calendar.component(.month, from: start)

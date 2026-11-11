@@ -50,53 +50,14 @@ struct FlaggedToggle {
   let showsAll: Binding<Bool>
 }
 
-/// A held line removal as Today and the menu command see it (S4-4e).
-struct LineRemovalHold {
-  /// Remove was pressed for exactly the lines held now; they go with the next import.
-  let isApproved: Bool
-  let omniFocusClosed: Bool
-  /// Approved, and an import since then could not read the budget note in full (S4-4d).
-  var keptByIncompleteRead = false
-  let approve: () -> Void
-
-  /// The sentence under an approved notice (`design/copy.md` § Held line removal): with
-  /// OmniFocus closed no import runs at all, so that sentence wins (owner, 2026-11-10).
-  enum ApprovedNote: Equatable {
-    case nextImport
-    case onceOmniFocusIsOpen
-    case notReadInFull
-  }
-
-  var approvedNote: ApprovedNote {
-    if omniFocusClosed { return .onceOmniFocusIsOpen }
-    return keptByIncompleteRead ? .notReadInFull : .nextImport
-  }
-
-  /// The notice names the first three, then `…`.
-  static func names(_ lines: [TodayScreen.HeldLine]) -> String {
-    let shown = lines.prefix(3).map {
-      [$0.emoji, $0.name].compactMap { $0 }.joined(separator: " ")
-    }
-    return (shown + (lines.count > 3 ? ["…"] : [])).joined(separator: ", ")
-  }
-
-  /// The menu command acts while a hold stands unapproved; nil is nothing held.
-  static func canApprove(_ removal: LineRemovalHold?) -> Bool {
-    removal.map { !$0.isApproved } ?? false
-  }
-}
-
 extension FocusedValues {
   @Entry var flaggedToggle: FlaggedToggle?
-  /// Nil when nothing is held.
-  @Entry var lineRemoval: LineRemovalHold?
 }
 
 /// ⌥⌘F in the View menu: it works wherever the list is scrolled, unlike a shortcut on the
 /// Top 3 header, which is drawn only while visible.
 struct TodayCommands: Commands {
   @FocusedValue(\.flaggedToggle) private var toggle
-  @FocusedValue(\.lineRemoval) private var removal
 
   var body: some Commands {
     CommandGroup(after: .sidebar) {
@@ -111,75 +72,33 @@ struct TodayCommands: Commands {
       }
       .keyboardShortcut("f", modifiers: [.option, .command])
       .disabled(toggle?.isAvailable != true)
-      Button("Remove Lines No Longer in the Budget Note") { removal?.approve() }
-        .disabled(!LineRemovalHold.canApprove(removal))
     }
   }
 }
 
 /// Builds Today from the store's overview with the scene's own state, so "Show all" and a
 /// stored choice take effect.
-struct TodayContainer: View {
+struct TodayContainer<Notice: View>: View {
   let overview: Overview
-  let removal: LineRemovalHold
+  /// Above the table, with its own divider; the app's notices (`TodayDetail`).
+  @ViewBuilder let notice: Notice
   @SceneStorage("today.showAllFlagged") private var showAllFlagged = false
 
   var body: some View {
     let screen = TodayScreen(overview, showAllFlagged: showAllFlagged)
-    TodayView(screen: screen, removal: removal, showAllFlagged: $showAllFlagged)
+    TodayView(screen: screen, notice: notice, showAllFlagged: $showAllFlagged)
       .focusedSceneValue(
         \.flaggedToggle,
         FlaggedToggle(isAvailable: screen.showsFlaggedCaption, showsAll: $showAllFlagged)
       )
-      .focusedSceneValue(\.lineRemoval, screen.heldRemoval.isEmpty ? nil : removal)
-  }
-}
-
-/// `design/components.md` § LineRemovalNotice: a calm fact above the table, with no dismiss;
-/// the lines stay until Remove (S4-4e).
-private struct LineRemovalNotice: View {
-  let lines: [TodayScreen.HeldLine]
-  let removal: LineRemovalHold
-
-  private var names: String { LineRemovalHold.names(lines) }
-
-  var body: some View {
-    HStack(alignment: .firstTextBaseline, spacing: 12) {
-      Image(systemName: "info.circle").foregroundStyle(.secondary)
-      VStack(alignment: .leading, spacing: 4) {
-        Text(
-          "The budget note no longer lists \(lines.count) lines: \(names). They stay in MoonShine until you remove them."
-        )
-        if removal.isApproved {
-          Group {
-            switch removal.approvedNote {
-            case .onceOmniFocusIsOpen:
-              Text("They will be removed at the next import, once OmniFocus is open")
-            case .notReadInFull:
-              Text("The budget note was not read in full — they will be removed once it is")
-            case .nextImport:
-              Text("They will be removed at the next import")
-            }
-          }
-          .foregroundStyle(.secondary)
-        }
-      }
-      Spacer(minLength: 12)
-      if !removal.isApproved {
-        Button("Remove \(lines.count) lines") { removal.approve() }
-      }
-    }
-    .padding(.horizontal, 16)
-    .padding(.vertical, 10)
-    .background(Tokens.card)
   }
 }
 
 /// `design/screens/today.md`, draft-2 list. Checkboxes show state only; opening a task in
 /// OmniFocus comes with the link opener (S4-5).
-struct TodayView: View {
+struct TodayView<Notice: View>: View {
   let screen: TodayScreen
-  let removal: LineRemovalHold
+  let notice: Notice
   @Binding var showAllFlagged: Bool
   @SceneStorage("today.fromEarlierExpanded") private var fromEarlierExpanded = true
   @SceneStorage("today.lifeOpsExpanded") private var lifeOpsExpanded = false
@@ -194,10 +113,7 @@ struct TodayView: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      if !screen.heldRemoval.isEmpty {
-        LineRemovalNotice(lines: screen.heldRemoval, removal: removal)
-        Divider()
-      }
+      notice
       if !screen.anchors.isEmpty {
         AnchorStrip(anchors: screen.anchors, total: screen.anchorsTotal, done: screen.anchorsDone)
         Divider()

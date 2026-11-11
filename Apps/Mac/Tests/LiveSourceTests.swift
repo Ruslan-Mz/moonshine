@@ -896,14 +896,14 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     let vault = ShrinkingVault()
     let (model, keys) = try await heldModel(vault, source: PushSource())
     guard case .loaded(let held) = model.state else { throw NotLoaded() }
-    #expect(TodayScreen(held).heldRemoval.map(\.id) == model.heldLineRemoval.map(\.id))
+    #expect(TodayScreen.heldLines(held).map(\.id) == model.heldLineRemoval.map(\.id))
     model.approveHeldRemoval()
     await waitFor { model.importOutcomes == 3 }
     #expect(model.heldLineRemoval.isEmpty)
     #expect(!model.removalApproved)
     guard case .loaded(let overview) = model.state else { throw NotLoaded() }
     #expect(!overview.workspace.lines.contains { keys.contains($0.key) })
-    #expect(TodayScreen(overview).heldRemoval.isEmpty)
+    #expect(TodayScreen.heldLines(overview).isEmpty)
   }
 
   @MainActor @Test func removeWhileOmniFocusIsNotRunningShowsApprovedPending() async throws {

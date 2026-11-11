@@ -11,17 +11,13 @@ struct MoonShineApp: App {
     }
     .defaultSize(width: 1440, height: 900)
     .commands {
-      CommandGroup(before: .sidebar) {
-        // ⌘2–⌘4 come with the views they open (S4-2, S5).
-        Button("Today") { model.selection = .today }
-          .keyboardShortcut("1", modifiers: .command)
-        Divider()
-      }
+      ViewCommands(model: model)
       CommandGroup(after: .toolbar) {
         Button("Refresh") { model.refresh() }
           .keyboardShortcut("r", modifiers: .command)
       }
       TodayCommands()
+      LineRemovalCommands()
       // Show / Hide Inspector, ⌃⌘I, in the View menu.
       InspectorCommands()
     }
