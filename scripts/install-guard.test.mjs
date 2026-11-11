@@ -11,7 +11,7 @@ import { commit, denyListFile, environment, git, install, installed, ok, reposit
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..");
 const github = "https://github.com/Ruslan-Mz/moonshine.git";
-const guardFiles = ["binary-allowlist.txt", "commit-scan.mjs", "gh-post.mjs", "matcher.mjs", "pre-push.mjs"];
+const guardFiles = ["binary-allowlist.txt", "commit-scan.mjs", "gh-post.mjs", "matcher.mjs", "merge.mjs", "plain-rules.mjs", "pre-push.mjs"];
 
 function setUp() {
   const work = repository();
@@ -38,6 +38,8 @@ test("a good install writes the guard, the config and the hook, and sets core.ho
     "config.json",
     "gh-post.mjs",
     "matcher.mjs",
+    "merge.mjs",
+    "plain-rules.mjs",
     "pre-push.mjs",
     "xcbuild.sh",
   ]);
@@ -62,6 +64,14 @@ test("every live worktree gets a scratchpad root; a prunable one does not", () =
   ]);
 });
 
+test("a reinstall keeps the state file", () => {
+  const work = setUp();
+  assert.equal(install(work, [work.denyList]).status, 0);
+  writeFileSync(installed(work, "state", "posts.jsonl"), '{"kind":"comment"}\n');
+  assert.equal(install(work, [work.denyList]).status, 0);
+  assert.equal(readFileSync(installed(work, "state", "posts.jsonl"), "utf8"), '{"kind":"comment"}\n');
+});
+
 test("a reinstall replaces the guard folder and leaves no staging folder", () => {
   const work = setUp();
   assert.equal(install(work, [work.denyList]).status, 0);
@@ -71,7 +81,7 @@ test("a reinstall replaces the guard folder and leaves no staging folder", () =>
   assert.equal(again.status, 0, again.stderr);
   assert.ok(!readFileSync(installed(work, "guard", "matcher.mjs"), "utf8").includes("// edited"));
   assert.ok(!existsSync(installed(work, "guard", "stray.txt")));
-  assert.deepEqual(readdirSync(installed(work)).sort(), ["bin", "guard", "hooks"]);
+  assert.deepEqual(readdirSync(installed(work)).sort(), ["bin", "guard", "hooks", "state"]);
 });
 
 for (const [name, args, expected] of [

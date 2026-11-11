@@ -85,8 +85,8 @@ jobs:
       - name: Demo snapshot is the generator's output
         run: node --test scripts/demo-snapshot.test.mjs
 
-      - name: Push and post guard (pre-push hook, gh-post, install script) and the guard in CI (scan, workflow rules)
-        run: node --test scripts/matcher.test.mjs scripts/pre-push.test.mjs scripts/gh-post.test.mjs scripts/install-guard.test.mjs scripts/guard-scan.test.mjs scripts/guard-workflow.test.mjs
+      - name: Push and post guard (pre-push hook, gh-post and its merge, install script) and the guard in CI (scan, workflow rules)
+        run: node --test scripts/matcher.test.mjs scripts/pre-push.test.mjs scripts/gh-post.test.mjs scripts/plain-rules.test.mjs scripts/gh-merge.test.mjs scripts/install-guard.test.mjs scripts/guard-scan.test.mjs scripts/guard-workflow.test.mjs
 
       - name: Markdown format check
         run: |

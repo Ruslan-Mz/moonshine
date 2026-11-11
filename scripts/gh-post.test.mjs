@@ -19,7 +19,12 @@ function setUp({ withGh = true, worktrees = [], prunable = [] } = {}) {
   mkdirSync(bin);
   const log = join(work.root, "gh.log");
   if (withGh) {
-    writeFileSync(join(bin, "gh"), `#!/bin/sh\nprintf '%s\\n' "$@" > '${log}'\ncat >> '${log}'\n`, { mode: 0o755 });
+    // It prints FAKE_GH_OUT, as gh prints what it created, and exits with FAKE_GH_STATUS.
+    writeFileSync(
+      join(bin, "gh"),
+      `#!/bin/sh\nprintf '%s\\n' "$@" > '${log}'\ncat >> '${log}'\nprintf '%s' "$FAKE_GH_OUT"\nexit "\${FAKE_GH_STATUS:-0}"\n`,
+      { mode: 0o755 },
+    );
   } else {
     const git = spawnSync("/bin/sh", ["-c", "command -v git"], { encoding: "utf8" }).stdout.trim();
     symlinkSync(process.execPath, join(bin, "node"));
@@ -34,13 +39,14 @@ function setUp({ withGh = true, worktrees = [], prunable = [] } = {}) {
   const scratchpad = join(scratchRoot, "session-1", "scratchpad");
   mkdirSync(scratchpad, { recursive: true });
   const env = environment(work.home, { PATH: `${bin}:${process.env.PATH}` });
-  const post = (...args) =>
+  const postWith = (extra, ...args) =>
     spawnSync(installed(work, "bin", "gh-post"), args, {
       cwd: work.cwd,
       // Without the fake gh, PATH holds only links to node and git: a real gh is never reachable.
-      env: withGh ? env : { ...env, PATH: bin },
+      env: withGh ? { ...env, ...extra } : { ...env, PATH: bin },
       encoding: "utf8",
     });
+  const post = (...args) => postWith({}, ...args);
   const file = (name, text, folder = scratchpad) => {
     mkdirSync(folder, { recursive: true });
     const path = join(folder, name);
@@ -49,7 +55,11 @@ function setUp({ withGh = true, worktrees = [], prunable = [] } = {}) {
   };
   const sent = () => (existsSync(log) ? readFileSync(log, "utf8") : null);
   const git = (...args) => ok(work, ...args);
-  return { root: work.root, work, scratchBase, scratchRoot, post, file, sent, git };
+  const posts = () => {
+    const path = installed(work, "state", "posts.jsonl");
+    return existsSync(path) ? readFileSync(path, "utf8") : "";
+  };
+  return { root: work.root, work, scratchBase, scratchRoot, post, postWith, file, sent, git, posts };
 }
 
 function refused(context, result, ...expected) {
@@ -209,7 +219,7 @@ test("a body with a vertical tab is refused", () => {
 
 test("an unknown command prints usage", () => {
   const context = setUp();
-  const result = context.post("merge", "27");
+  const result = context.post("deploy", "27");
   assert.equal(result.status, 2);
   assert.equal(context.sent(), null);
 });
@@ -239,4 +249,74 @@ test("a gh that cannot be started is reported, and nothing is sent", () => {
   const result = context.post("comment", "27", context.file("body.md", "clean\n"));
   assert.equal(result.status, 1);
   assert.match(result.stderr, /gh could not be started \(ENOENT\); nothing was sent/);
+});
+
+/// The one state line, without its time.
+function onlyPost(context) {
+  const lines = context.posts().split("\n").filter((line) => line !== "");
+  assert.equal(lines.length, 1, context.posts());
+  const { time, ...rest } = JSON.parse(lines[0]);
+  assert.ok(!Number.isNaN(Date.parse(time)), lines[0]);
+  return rest;
+}
+
+test("a sent comment is recorded with its PR, id and session, and none of its text", () => {
+  const context = setUp();
+  const out = "https://github.com/o/r/pull/27#issuecomment-555\n";
+  const result = context.postWith({ FAKE_GH_OUT: out }, "comment", "27", context.file("body.md", "the answer text\n"));
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout, out);
+  assert.deepEqual(onlyPost(context), { kind: "comment", pr: 27, id: 555, session: "session-1" });
+  assert.ok(!context.posts().includes("answer text"));
+});
+
+test("a sent review is recorded with the id GitHub gave it", () => {
+  const context = setUp();
+  const out = JSON.stringify({ id: 901, body: "the review text" });
+  const result = context.postWith({ FAKE_GH_OUT: out }, "review", "27", context.file("review.json", '{"event":"COMMENT","body":"ok"}'));
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(onlyPost(context), { kind: "review", pr: 27, id: 901, session: "session-1" });
+  assert.ok(!context.posts().includes("review text"));
+});
+
+test("a created PR is recorded with its number", () => {
+  const context = setUp();
+  const out = "https://github.com/o/r/pull/31\n";
+  const result = context.postWith({ FAKE_GH_OUT: out }, "pr-create", "a title", context.file("body.md", "text\n"));
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(onlyPost(context), { kind: "pr-create", pr: 31, id: 31, session: "session-1" });
+});
+
+test("a PR edit is not recorded", () => {
+  const context = setUp();
+  const result = context.postWith({ FAKE_GH_OUT: "https://github.com/o/r/pull/27\n" }, "pr-edit", "27", context.file("body.md", "x\n"));
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(context.posts(), "");
+});
+
+test("output gh-post cannot read records nothing and says so", () => {
+  const context = setUp();
+  for (const [kind, file] of [["comment", "body.md"], ["review", "review.json"]]) {
+    const result = context.postWith({ FAKE_GH_OUT: "{ not an id" }, kind, "27", context.file(file, "{}"));
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stderr, /not recorded in the state file; gh-post merge refuses this PR/);
+  }
+  assert.equal(context.posts(), "");
+});
+
+test("a failed post records nothing", () => {
+  const context = setUp();
+  const result = context.postWith(
+    { FAKE_GH_OUT: "https://github.com/o/r/pull/27#issuecomment-555\n", FAKE_GH_STATUS: "1" },
+    "comment",
+    "27",
+    context.file("body.md", "x\n"),
+  );
+  assert.equal(result.status, 1);
+  assert.equal(context.posts(), "");
+});
+
+test("the installer creates the state folder", () => {
+  const context = setUp();
+  assert.ok(existsSync(installed(context.work, "state")));
 });
