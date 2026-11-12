@@ -67,9 +67,10 @@ function setUp() {
     return head;
   };
   context.setChecks = (head, runs = ["docs", "swift", "core-linux", "guard"].map((name) => checkRun(name))) => {
+    const forThisPR = runs.map((run) => ({ head_sha: head, pull_requests: [{ number: 7 }], ...run }));
     context.fake.api[`${repo}/commits/${head}/check-runs?filter=latest&per_page=100`] = {
-      total_count: runs.length,
-      check_runs: runs,
+      total_count: forThisPR.length,
+      check_runs: forThisPR,
     };
     context.fake.api[`${repo}/commits/${head}/status`] = { state: "pending", total_count: 0, statuses: [] };
   };
@@ -127,8 +128,10 @@ function setUp() {
   return context;
 }
 
+let checkRunId = 0;
 function checkRun(name, status = "completed", conclusion = "success") {
-  return { name, status, conclusion: status === "completed" ? conclusion : null };
+  checkRunId += 1;
+  return { id: checkRunId, name, status, conclusion: status === "completed" ? conclusion : null };
 }
 
 function merges(context, cwd) {
@@ -426,4 +429,249 @@ test("a risky token pushed after the review is refused", () => {
   const context = setUp();
   context.commit("Apps/Mac/Sources/Today/Probe.swift", "Task { }\n");
   refused(context, "computed: risky", "concurrency");
+});
+
+test("exactly 100 lines pushed after the review merge; 101 are refused", () => {
+  const rows = (count) => "| a row |\n" + Array.from({ length: count }, (_, n) => `| row ${n} |\n`).join("");
+  const context = setUp();
+  context.commit("docs/method/log/2026-11.md", rows(100));
+  merges(context);
+  const over = setUp();
+  over.commit("docs/method/log/2026-11.md", rows(101));
+  refused(over, "after the last review");
+});
+
+test("main's own lines merged into the branch after the review do not count", () => {
+  const context = setUp();
+  ok(context.work, "switch", "-q", "main");
+  commit(context.work, "README.md", Array.from({ length: 150 }, (_, n) => `line ${n}\n`).join(""), "main moved");
+  context.fake.api[`${repo}/branches/main`].commit.sha = context.head();
+  ok(context.work, "switch", "-q", "slice/one");
+  ok(context.work, "merge", "-q", "--no-edit", "main");
+  context.publish();
+  merges(context);
+});
+
+test("the PR's own lines after the review count, though main was merged in too", () => {
+  const context = setUp();
+  ok(context.work, "switch", "-q", "main");
+  commit(context.work, "README.md", "moved\n", "main moved");
+  context.fake.api[`${repo}/branches/main`].commit.sha = context.head();
+  ok(context.work, "switch", "-q", "slice/one");
+  ok(context.work, "merge", "-q", "--no-edit", "main");
+  context.commit("docs/method/log/2026-11.md", "| a row |\n" + Array.from({ length: 101 }, (_, n) => `| row ${n} |\n`).join(""));
+  refused(context, "after the last review");
+});
+
+test("a replace ref does not change the commit that is judged", () => {
+  const context = setUp();
+  const before = context.head();
+  const risky = context.commit("Adapters/Sources/X.swift", "let a = 1\n");
+  const tree = ok(context.work, "rev-parse", `${before}^{tree}`).trim();
+  const benign = ok(context.work, "commit-tree", tree, "-p", before, "-m", "benign").trim();
+  ok(context.work, "replace", risky, benign);
+  context.setReviews([context.review(901, marker(1, risky))]);
+  refused(context, "computed: risky", "Adapters/Sources/X.swift");
+});
+
+test("a checkout with grafts is refused", () => {
+  const context = setUp();
+  const grafts = ok(context.work, "rev-parse", "--path-format=absolute", "--git-path", "info/grafts").trim();
+  mkdirSync(join(grafts, ".."), { recursive: true });
+  writeFileSync(grafts, "");
+  refused(context, "grafts");
+});
+
+test("the newest run of a check counts: a passed guard after a failed one merges", () => {
+  const context = setUp();
+  const others = ["docs", "swift", "core-linux"].map((name) => checkRun(name));
+  context.setChecks(context.head(), [checkRun("guard", "completed", "failure"), ...others, checkRun("guard")]);
+  merges(context);
+});
+
+test("the newest run of a check counts: a failed guard after a passed one is refused", () => {
+  const context = setUp();
+  const others = ["docs", "swift", "core-linux"].map((name) => checkRun(name));
+  context.setChecks(context.head(), [checkRun("guard"), ...others, checkRun("guard", "completed", "failure")]);
+  refused(context, "guard");
+});
+
+test("a matching branch name is refused", () => {
+  const context = setUp();
+  pr(context).head.ref = `slice/${secret}`;
+  refused(context, "the branch name");
+});
+
+test("a deny-listed word in a risky path is not printed", () => {
+  const context = setUp();
+  const head = context.commit("Adapters/Sources/Mirelbrook.swift", "let a = 1\n");
+  context.setReviews([context.review(901, marker(1, head))]);
+  refused(context, "computed: risky");
+});
+
+test("a review recorded for another PR does not count", () => {
+  const context = setUp();
+  context.posts = context.posts.map((post) => (post.kind === "review" ? { ...post, pr: 8 } : post));
+  refused(context, "no review");
+});
+
+test("the highest round is the last: a clean round 1 and a round 2 with a High are refused", () => {
+  const context = setUp();
+  const head = context.head();
+  context.record("review", 7, 902, "session-c");
+  context.record("comment", 7, 990, "session-a");
+  context.fake.api[`${repo}/issues/7/comments?per_page=100&page=1`] = [{ id: 990, user: { login }, created_at: "2026-11-11T13:00:00Z" }];
+  context.setReviews([
+    context.review(901, marker(1, head)),
+    context.review(902, marker(2, head, { high: 1 }), { submitted_at: "2026-11-11T12:00:00Z" }),
+  ]);
+  refused(context, "High");
+});
+
+test("the highest round is the last: a round 1 with a High, answered, and a clean round 2 merge", () => {
+  const context = setUp();
+  const head = context.head();
+  context.record("review", 7, 902, "session-c");
+  context.record("comment", 7, 990, "session-a");
+  context.fake.api[`${repo}/issues/7/comments?per_page=100&page=1`] = [{ id: 990, user: { login }, created_at: "2026-11-11T11:00:00Z" }];
+  context.setReviews([
+    context.review(902, marker(2, head), { submitted_at: "2026-11-11T12:00:00Z" }),
+    context.review(901, marker(1, head, { high: 1 })),
+  ]);
+  merges(context);
+});
+
+test("within one round the later review is the last", () => {
+  const context = setUp();
+  const head = context.head();
+  context.record("review", 7, 902, "session-c");
+  context.setReviews([
+    context.review(902, marker(1, head, { high: 1 }), { submitted_at: "2026-11-11T12:00:00Z" }),
+    context.review(901, marker(1, head)),
+  ]);
+  refused(context, "High");
+});
+
+test("an unrecorded marker review at the same round, after the recorded one, is refused", () => {
+  const context = setUp();
+  const head = context.head();
+  context.setReviews([
+    context.review(901, marker(1, head)),
+    context.review(950, marker(1, head, { high: 1 }), { submitted_at: "2026-11-11T12:00:00Z" }),
+  ]);
+  refused(context, "not recorded");
+});
+
+test("an owner finding in an unrecorded earlier round is refused", () => {
+  const context = setUp();
+  const head = context.head();
+  context.record("review", 7, 902, "session-c");
+  context.setReviews([
+    context.review(950, marker(1, head, { owner: 1 })),
+    context.review(902, marker(2, head), { submitted_at: "2026-11-11T12:00:00Z" }),
+  ]);
+  refused(context, "owner");
+});
+
+test("an earlier round with findings and no answer is refused, though the last round is clean", () => {
+  const context = setUp();
+  const head = context.head();
+  context.record("review", 7, 902, "session-c");
+  context.setReviews([
+    context.review(901, marker(1, head, { high: 1, medium: 2 })),
+    context.review(902, marker(2, head), { submitted_at: "2026-11-11T12:00:00Z" }),
+  ]);
+  refused(context, "answer");
+});
+
+test("an answer comment missing from the state file does not count", () => {
+  const context = setUp();
+  withFinding(context, null, null);
+  context.fake.api[`${repo}/issues/7/comments?per_page=100&page=1`] = [{ id: 990, user: { login }, created_at: "2026-11-11T11:00:00Z" }];
+  refused(context, "answer");
+});
+
+test("a shallow checkout is refused", () => {
+  const context = setUp();
+  const shallow = ok(context.work, "rev-parse", "--path-format=absolute", "--git-path", "shallow").trim();
+  writeFileSync(shallow, `${context.main}\n`);
+  refused(context, "shallow");
+});
+
+test("a check run without an id is refused", () => {
+  const context = setUp();
+  const runs = ["docs", "swift", "core-linux", "guard"].map((name) => checkRun(name));
+  delete runs[0].id;
+  context.setChecks(context.head(), runs);
+  refused(context, "no id");
+});
+
+for (const name of [undefined, ""]) {
+  test(`a check run without a name is refused (${JSON.stringify(name)})`, () => {
+    const context = setUp();
+    const runs = ["docs", "swift", "core-linux", "guard"].map((check) => checkRun(check));
+    context.setChecks(context.head(), [{ ...checkRun("x", "completed", "failure"), name }, ...runs]);
+    refused(context, "no name");
+  });
+}
+
+test("a passed run for another PR on the same head does not hide this PR's failed one", () => {
+  const context = setUp();
+  const others = ["docs", "swift", "core-linux"].map((name) => checkRun(name));
+  context.setChecks(context.head(), [
+    checkRun("guard", "completed", "failure"),
+    ...others,
+    { ...checkRun("guard"), pull_requests: [{ number: 8 }] },
+  ]);
+  refused(context, "guard");
+});
+
+test("a run on another head does not count", () => {
+  const context = setUp();
+  const others = ["docs", "swift", "core-linux"].map((name) => checkRun(name));
+  context.setChecks(context.head(), [{ ...checkRun("guard"), head_sha: context.main }, ...others]);
+  refused(context, "guard has not run");
+});
+
+test("a reviewed commit that does not merge cleanly with main is refused", () => {
+  const context = setUp();
+  ok(context.work, "switch", "-q", "main");
+  commit(context.work, "docs/method/log/2026-11.md", "| main's row |\n", "main moved");
+  context.fake.api[`${repo}/branches/main`].commit.sha = context.head();
+  ok(context.work, "switch", "-q", "slice/one");
+  ok(context.work, "merge", "-q", "--no-edit", "-X", "ours", "main");
+  context.publish();
+  refused(context, "merge cleanly");
+});
+
+/// Round 1 (10:00) and round 2 (12:00), both with findings, recorded from session-b and session-c,
+/// and the answer comments at `times`, recorded from session-a.
+function twoRoundsWithFindings(context, times) {
+  const head = context.head();
+  context.record("review", 7, 902, "session-c");
+  context.setReviews([
+    context.review(901, marker(1, head, { high: 1, medium: 2 })),
+    context.review(902, marker(2, head, { low: 1 }), { submitted_at: "2026-11-11T12:00:00Z" }),
+  ]);
+  const comments = times.map((at, index) => ({ id: 990 + index, user: { login }, created_at: `2026-11-11T${at}:00Z` }));
+  context.fake.api[`${repo}/issues/7/comments?per_page=100&page=1`] = comments;
+  for (const comment of comments) context.record("comment", 7, comment.id, "session-a");
+}
+
+test("each round with findings answered before the next round merges", () => {
+  const context = setUp();
+  twoRoundsWithFindings(context, ["11:00", "13:00"]);
+  merges(context);
+});
+
+test("one answer after the last round does not answer an earlier round", () => {
+  const context = setUp();
+  twoRoundsWithFindings(context, ["13:00"]);
+  refused(context, "answer");
+});
+
+test("one answer between the rounds does not answer the last round", () => {
+  const context = setUp();
+  twoRoundsWithFindings(context, ["11:00"]);
+  refused(context, "answer");
 });

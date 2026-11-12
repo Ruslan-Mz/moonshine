@@ -5,22 +5,28 @@
 //      by the account gh is signed in as;
 //   2. the commits: origin/pr/<n> is the PR's head, and main is an ancestor of it;
 //   3. the class: the body's one `Class: plain` line, and plain-rules.mjs on the diff from main;
-//   4. CI: docs and guard succeeded, swift and core-linux succeeded or were skipped, every other
-//      check completed and succeeded, was skipped or neutral, and the commit status is not failed;
+//   4. CI, the newest run of each check name among the runs on the head for this PR (every run
+//      named and with an id): docs and guard succeeded, swift and core-linux
+//      succeeded or were skipped, every other check completed and succeeded, was skipped or
+//      neutral, and the commit status is success or there is none;
 //   5. the guard, again: commit-scan.mjs over the new commits, the title, the body, the branch name;
 //   6. the review: the last round by the same account, recorded by gh-post review in a session other
 //      than the one that created the PR, with the counted marker of /review-pr and no High; no
-//      round with an owner finding; no unrecorded marker review at that round or later; no inline
-//      High or owner decision; nobody's changes requested; at most 100 lines changed since;
-//   7. with findings, the answer comment: recorded, later than the review, from another session.
+//      marker review by that account, recorded or not, with an owner finding; no unrecorded marker
+//      review at that round or later; no inline High or owner decision; nobody's changes requested;
+//      at most 100 lines changed since, counted from the reviewed commit merged with main;
+//   7. after every marker review with findings, its own answer comment: recorded, later than that
+//      review and earlier than the account's next marker review, from another session than that
+//      review's.
 // Then `gh pr merge <n> --merge --match-head-commit <head>`, once. A refusal names the check, never
-// PR text. The state file records each sent comment, review and PR (kind, PR, id, session, time).
+// PR text. git runs with replace refs off, in a full clone without grafts, so it reads the commits
+// GitHub merges. The state file records each sent comment, review and PR (kind, PR, id, session, time).
 // It and the session id guard against mistakes, not against a session set on getting around them:
 // test code runs outside the sandbox and can write the state file.
 // Tests: node --test scripts/gh-merge.test.mjs
 import { spawnSync } from "node:child_process";
-import { appendFileSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { binaryAllowlist, scan } from "./commit-scan.mjs";
 import { denyList, match, printable } from "./matcher.mjs";
@@ -93,10 +99,11 @@ function reviewMarker(body, stop) {
 /// Merges PR `pr` (a checked number, as text) or calls `stop`, which must not return. Returns gh's
 /// exit status.
 export function merge(pr, stop) {
-  const where = spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" });
+  const env = { ...process.env, GIT_NO_REPLACE_OBJECTS: "1" };
+  const where = spawnSync("git", ["rev-parse", "--show-toplevel"], { env, encoding: "utf8" });
   if (where.status !== 0) stop("Run it inside a checkout of this repository.");
   const top = where.stdout.trim();
-  const run = (args, options = {}) => spawnSync("git", args, { cwd: top, encoding: "utf8", maxBuffer: 1 << 30, ...options });
+  const run = (args, options = {}) => spawnSync("git", args, { cwd: top, env, encoding: "utf8", maxBuffer: 1 << 30, ...options });
   const git = (args, options = {}) => {
     const result = run(args, options);
     if (result.status !== 0) stop(`git ${args[0]} failed (exit ${result.status}).`);
@@ -145,6 +152,8 @@ export function merge(pr, stop) {
   const body = (info.body ?? "").replace(/\r/g, "");
 
   // 2. The commits.
+  if (git(["rev-parse", "--is-shallow-repository"]).trim() !== "false") stop("The checkout is shallow; the owner merges.");
+  if (existsSync(resolve(top, git(["rev-parse", "--git-path", "info/grafts"]).trim()))) stop("The checkout has grafts; the owner merges.");
   if (run(["rev-parse", "--verify", "--quiet", `refs/remotes/origin/pr/${pr}^{commit}`]).stdout?.trim() !== head) {
     stop(`origin/pr/${pr} is not the PR's head; run git fetch origin, then gh-post merge again.`);
   }
@@ -172,14 +181,26 @@ export function merge(pr, stop) {
 
   // 4. CI.
   const checks = api(`${repo}/commits/${head}/check-runs?filter=latest&per_page=100`);
-  const runs = checks?.check_runs;
-  if (!Array.isArray(runs) || !Number.isSafeInteger(checks.total_count)) stop("GitHub returned no check runs.");
-  if (checks.total_count > runs.length) stop("The head has more check runs than one page; the owner merges.");
+  if (!Array.isArray(checks?.check_runs) || !Number.isSafeInteger(checks.total_count)) stop("GitHub returned no check runs.");
+  if (checks.total_count > checks.check_runs.length) stop("The head has more check runs than one page; the owner merges.");
+  // A workflow run again on the same head (guard on an edited body) is another check suite, which
+  // filter=latest does not fold: the newest run of each name counts, by its id. Runs belong to a
+  // commit, not a PR: only runs on this head for this PR count, so another PR on the same commit
+  // cannot hide a failure.
+  const newest = new Map();
+  for (const check of checks.check_runs) {
+    if (!Number.isSafeInteger(check?.id)) stop("A check run has no id.");
+    if (typeof check.name !== "string" || check.name === "") stop("A check run has no name.");
+    const forThisPR = Array.isArray(check.pull_requests) && check.pull_requests.some((item) => item?.number === Number(pr));
+    if (check.head_sha !== head || !forThisPR) continue;
+    if (!newest.has(check.name) || check.id > newest.get(check.name).id) newest.set(check.name, check);
+  }
+  const runs = [...newest.values()];
   for (const name of Object.keys(required)) {
     if (!runs.some((check) => check?.name === name)) stop(`The required check ${name} has not run on the head.`);
   }
   for (const check of runs) {
-    const name = typeof check?.name === "string" ? printable(check.name, entries) : "a check without a name";
+    const name = printable(check.name, entries);
     if (check?.status !== "completed") stop(`The check ${name} is still running; run gh-post merge again when it has finished.`);
     const allowed = required[check.name] ?? otherConclusions;
     if (!allowed.includes(check.conclusion)) stop(`The check ${name} did not pass.`);
@@ -222,6 +243,7 @@ export function merge(pr, stop) {
     .filter(({ marker }) => marker !== null);
   const recorded = marked.filter(({ session }) => session !== undefined);
   if (recorded.length === 0) stop("There is no review recorded by gh-post review for this PR.");
+  if (marked.some(({ marker }) => marker.owner > 0)) stop("A review round counts an owner finding; the owner merges.");
   const time = (text) => {
     const value = Date.parse(text);
     if (Number.isNaN(value)) stop("A review or comment has no time.");
@@ -237,7 +259,6 @@ export function merge(pr, stop) {
     stop("A review by this account at the last round or later is not recorded in the state file; the owner merges.");
   }
   if (last.marker.high > 0) stop("The last review round counts a High; fix it and run another round.");
-  if (recorded.some(({ marker }) => marker.owner > 0)) stop("A review round counts an owner finding; the owner merges.");
   if (/Changes required/.test(last.review.body)) stop("The last review says Changes required.");
   const reviewed = last.review.commit_id;
   if (last.marker.head !== reviewed) stop("The last review's marker names another head than the commit it was posted on.");
@@ -246,7 +267,11 @@ export function merge(pr, stop) {
     const text = typeof comment?.body === "string" ? comment.body : "";
     if (text.startsWith("**High ·") || text.includes("decision: owner")) stop("An inline comment of the last review is a High or an owner decision.");
   }
-  const since = changedLines(git, reviewed, head);
+  // The PR's own lines since the review: from the reviewed commit merged with main, so lines that
+  // main brought in do not count.
+  const merged = run(["merge-tree", "--write-tree", "--no-messages", reviewed, main]);
+  if (merged.status !== 0) stop("The last review's commit does not merge cleanly with main; the owner merges, or another round runs.");
+  const since = changedLines(git, merged.stdout.split("\n")[0], head);
   if (since === null || since > maxUnreviewed) {
     stop(`More than ${maxUnreviewed} lines (or a binary file) changed after the last review; the owner merges, or another round runs.`);
   }
@@ -254,21 +279,27 @@ export function merge(pr, stop) {
   if (creators.size === 0) stop("The PR's creation is not recorded (it was not created with gh-post pr-create); the owner merges.");
   if (creators.has(last.session)) stop("The last review was posted from the session that created the PR.");
 
-  // 7. The answer comment.
-  const { high, medium, low } = last.marker;
-  if (high + medium + low > 0) {
-    const reviewedAt = time(last.review.submitted_at);
-    const answered = pages(`${repo}/issues/${pr}/comments`).some((comment) => {
-      const session = sessionOf("comment", comment?.id);
-      return (
-        comment?.user?.login === login && session !== undefined && session !== last.session && time(comment.created_at) > reviewedAt
-      );
+  // 7. The answer comments: each round with findings has its own, after that round and before the
+  // account's next marker review (or after the last), so one comment cannot answer two rounds.
+  const rounds = marked
+    .map((item) => ({ ...item, at: time(item.review.submitted_at) }))
+    .sort((a, b) => a.at - b.at);
+  if (rounds.some(({ marker }) => marker.high + marker.medium + marker.low > 0)) {
+    const answers = pages(`${repo}/issues/${pr}/comments`)
+      .filter((comment) => comment?.user?.login === login)
+      .map((comment) => ({ session: sessionOf("comment", comment.id), at: time(comment.created_at) }))
+      .filter(({ session }) => session !== undefined);
+    rounds.forEach(({ marker, session, at }, index) => {
+      if (marker.high + marker.medium + marker.low === 0) return;
+      const until = index + 1 < rounds.length ? rounds[index + 1].at : Infinity;
+      if (!answers.some((answer) => answer.session !== session && answer.at > at && answer.at < until)) {
+        stop("A review round has findings and no recorded answer comment of its own, from another session, before the next round.");
+      }
     });
-    if (!answered) stop("The last review has findings and no recorded answer comment after it from another session.");
   }
 
   // Merge, pinned to the head checked above.
-  const merged = spawnSync("gh", ["pr", "merge", pr, "--merge", "--match-head-commit", head], { cwd: top, stdio: "inherit" });
-  if (merged.error) stop(`gh could not be started (${merged.error.code ?? "unknown error"}).`);
-  return merged.status ?? 1;
+  const done = spawnSync("gh", ["pr", "merge", pr, "--merge", "--match-head-commit", head], { cwd: top, stdio: "inherit" });
+  if (done.error) stop(`gh could not be started (${done.error.code ?? "unknown error"}).`);
+  return done.status ?? 1;
 }
