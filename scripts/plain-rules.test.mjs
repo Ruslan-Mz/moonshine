@@ -346,6 +346,9 @@ for (const line of [
   "items.remove(at: 0)",
   "items.removeAll()",
   "let name = file.rename",
+  "let id = Foundation.UUID()",
+  "let done = job.executed",
+  "items.truncateTail(2)",
 ]) {
   test(`a harmless member passes: ${line}`, () => {
     plain({}, { "Apps/Mac/Sources/Today/Probe.swift": `${line}\n` });
@@ -379,6 +382,39 @@ for (const [line, kind] of [
   ["_ = rename(from, to)", "storage"],
   ["_ = rmdir(path)", "storage"],
   ["_ = remove(path)", "storage"],
+  ["Text(row.title).copyable([row.title])", "drag, pasteboard or sharing"],
+  [".cuttable(for: String.self) { [row.title] }", "drag, pasteboard or sharing"],
+  ["PasteButton(payloadType: String.self) { _ in }", "drag, pasteboard or sharing"],
+  [".pasteDestination(for: String.self) { _ in }", "drag, pasteboard or sharing"],
+  [".onPasteCommand(of: [.text]) { _ in }", "drag, pasteboard or sharing"],
+  [".onCopyCommand { [] }", "drag, pasteboard or sharing"],
+  [".onCutCommand { [] }", "drag, pasteboard or sharing"],
+  [".onDrag { makeProvider(row) }", "drag, pasteboard or sharing"],
+  [".exportableToServices { [row.title] }", "drag, pasteboard or sharing"],
+  [".importableFromServices(for: String.self) { _ in true }", "drag, pasteboard or sharing"],
+  [".importsItemProviders([.text]) { _ in true }", "drag, pasteboard or sharing"],
+  ["_ = execvP(\"sh\", \"/bin\", argv)", "process"],
+  ["_ = execvpe(file, argv, envp)", "process"],
+  ["_ = unlinkat(AT_FDCWD, path, 0)", "storage"],
+  ["_ = renameat(a, from, b, to)", "storage"],
+  ["_ = renamex_np(from, to, 0)", "storage"],
+  ["_ = renameatx_np(a, from, b, to, 0)", "storage"],
+  ["_ = truncate(path, 0)", "storage"],
+  ["_ = ftruncate(fd, 0)", "storage"],
+  ["_ = creat(path, 0o644)", "storage"],
+  ["_ = Foundation.unlink(path)", "storage"],
+  ["_ = Foundation . rename(from, to)", "storage"],
+  ["_ = Glibc.truncate(path, 0)", "storage"],
+  ["_ = Foundation.kill(pid, SIGTERM)", "process"],
+  ["_ = Foundation.open(path, O_RDONLY)", "process"],
+  ["_ = Foundation.system(command)", "process"],
+  ["AsyncImage(url: url)", "URL"],
+  ["let image = NSImage(byReferencing: url)", "URL"],
+  ["let type = Bundle.main.classNamed(name)", "process"],
+  ["_ = object.perform(NSSelectorFromString(name))", "process"],
+  ["let stream = InputStream(url: url)", "process"],
+  ["let stream = OutputStream(toFileAtPath: path, append: false)", "process"],
+  ["_ = Bundle(path: path)?.load()", "process"],
 ]) {
   test(`a risky token is risky: ${line}`, () => {
     risky({}, { "Apps/Mac/Sources/Today/Probe.swift": `${line}\n` }, kind);
@@ -388,6 +424,11 @@ for (const [line, kind] of [
 test("in a test file, drag and pasteboard tokens stay risky, and import Synchronization too", () => {
   risky({}, { "Apps/Mac/Tests/ProbeTests.swift": "let board = NSPasteboard.general\n" }, "drag, pasteboard or sharing");
   risky({}, { "Apps/Mac/Tests/ProbeTests.swift": "import Synchronization\n" }, "an import");
+  risky({}, { "Apps/Mac/Tests/ProbeTests.swift": "Text(title).copyable([title])\n" }, "drag, pasteboard or sharing");
+  risky({}, { "Apps/Mac/Tests/ProbeTests.swift": "_ = Foundation.unlink(path)\n" }, "storage");
+  risky({}, { "Apps/Mac/Tests/ProbeTests.swift": "let image = AsyncImage(url: url)\n" }, "URL");
+  risky({}, { "Apps/Mac/Tests/ProbeTests.swift": "_ = Bundle(path: path)?.load()\n" }, "process");
+  risky({}, { "Apps/Mac/Tests/ProbeTests.swift": "let stream = InputStream(url: url)\n" }, "process");
 });
 
 test("@testable import MoonShineFixtures passes in a test file", () => {
@@ -400,29 +441,38 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const own = (path) => readFileSync(join(repoRoot, path), "utf8");
 const screenFiles = ["Apps/Mac/Sources/RootView.swift", "Apps/Mac/Sources/ViewCommands.swift", "Apps/Mac/Sources/LineRemoval.swift", today];
 
-function edited(path, old, replacement) {
-  const text = own(path);
-  assert.ok(text.includes(old), `${path} no longer holds: ${old}`);
-  return text.replace(old, replacement);
+// Each edit must find its text, so a test cannot pass on an edit that did nothing.
+function edited(path, ...edits) {
+  let text = own(path);
+  for (const [old, replacement] of edits) {
+    assert.ok(text.includes(old), `${path} no longer holds: ${old}`);
+    text = text.replace(old, replacement);
+  }
+  return text;
 }
 
 test("a screen slice computes plain: a new view, a sidebar case and its shortcut", () => {
   const base = Object.fromEntries(screenFiles.map((path) => [path, own(path)]));
   plain(base, {
     "Apps/Mac/Sources/Lines/LinesView.swift": "import SwiftUI\n\nstruct LinesView: View {\n  var body: some View { Text(\"Lines\") }\n}\n",
-    "Apps/Mac/Sources/RootView.swift": edited("Apps/Mac/Sources/RootView.swift", "  case today\n", "  case today\n  case lines\n")
-      .replace(
+    "Apps/Mac/Sources/RootView.swift": edited(
+      "Apps/Mac/Sources/RootView.swift",
+      ["  case today\n", "  case today\n  case lines\n"],
+      [
         '        Label("Today", systemImage: "sun.max").tag(SidebarItem.today)\n',
         '        Label("Today", systemImage: "sun.max").tag(SidebarItem.today)\n        Label("Lines", systemImage: "list.bullet").tag(SidebarItem.lines)\n',
-      )
-      .replace(
+      ],
+      [
         "      TodayDetail(model: model, overview: overview)\n",
         "      if model.selection == .lines {\n        LinesView()\n      } else {\n        TodayDetail(model: model, overview: overview)\n      }\n",
-      ),
+      ],
+    ),
     "Apps/Mac/Sources/ViewCommands.swift": edited(
       "Apps/Mac/Sources/ViewCommands.swift",
-      "        .keyboardShortcut(\"1\", modifiers: .command)\n",
-      '        .keyboardShortcut("1", modifiers: .command)\n      Button("Lines") { model.selection = .lines }\n        .keyboardShortcut("2", modifiers: .command)\n',
+      [
+        "        .keyboardShortcut(\"1\", modifiers: .command)\n",
+        '        .keyboardShortcut("1", modifiers: .command)\n      Button("Lines") { model.selection = .lines }\n        .keyboardShortcut("2", modifiers: .command)\n',
+      ],
     ),
   });
 });
@@ -431,7 +481,7 @@ test("a slice that touches the held line removal computes risky", () => {
   const base = Object.fromEntries(screenFiles.map((path) => [path, own(path)]));
   risky(
     base,
-    { "Apps/Mac/Sources/LineRemoval.swift": edited("Apps/Mac/Sources/LineRemoval.swift", "        Divider()\n", "        Divider().padding(.top, 2)\n") },
+    { "Apps/Mac/Sources/LineRemoval.swift": edited("Apps/Mac/Sources/LineRemoval.swift", ["        Divider()\n", "        Divider().padding(.top, 2)\n"]) },
     "a path outside the plain list",
   );
 });

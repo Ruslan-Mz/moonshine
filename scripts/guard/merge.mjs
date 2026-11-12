@@ -5,7 +5,8 @@
 //      by the account gh is signed in as;
 //   2. the commits: origin/pr/<n> is the PR's head, and main is an ancestor of it;
 //   3. the class: the body's one `Class: plain` line, and plain-rules.mjs on the diff from main;
-//   4. CI, the newest run of each check name: docs and guard succeeded, swift and core-linux
+//   4. CI, the newest run of each check name among the runs on the head for this PR (every run
+//      named and with an id): docs and guard succeeded, swift and core-linux
 //      succeeded or were skipped, every other check completed and succeeded, was skipped or
 //      neutral, and the commit status is success or there is none;
 //   5. the guard, again: commit-scan.mjs over the new commits, the title, the body, the branch name;
@@ -14,8 +15,9 @@
 //      marker review by that account, recorded or not, with an owner finding; no unrecorded marker
 //      review at that round or later; no inline High or owner decision; nobody's changes requested;
 //      at most 100 lines changed since, counted from the reviewed commit merged with main;
-//   7. after every marker review with findings, an answer comment: recorded, later than that review,
-//      from another session than that review's.
+//   7. after every marker review with findings, its own answer comment: recorded, later than that
+//      review and earlier than the account's next marker review, from another session than that
+//      review's.
 // Then `gh pr merge <n> --merge --match-head-commit <head>`, once. A refusal names the check, never
 // PR text. git runs with replace refs off, in a full clone without grafts, so it reads the commits
 // GitHub merges. The state file records each sent comment, review and PR (kind, PR, id, session, time).
@@ -182,19 +184,23 @@ export function merge(pr, stop) {
   if (!Array.isArray(checks?.check_runs) || !Number.isSafeInteger(checks.total_count)) stop("GitHub returned no check runs.");
   if (checks.total_count > checks.check_runs.length) stop("The head has more check runs than one page; the owner merges.");
   // A workflow run again on the same head (guard on an edited body) is another check suite, which
-  // filter=latest does not fold: the newest run of each name counts, by its id.
+  // filter=latest does not fold: the newest run of each name counts, by its id. Runs belong to a
+  // commit, not a PR: only runs on this head for this PR count, so another PR on the same commit
+  // cannot hide a failure.
   const newest = new Map();
   for (const check of checks.check_runs) {
     if (!Number.isSafeInteger(check?.id)) stop("A check run has no id.");
-    const name = typeof check.name === "string" ? check.name : "";
-    if (!newest.has(name) || check.id > newest.get(name).id) newest.set(name, check);
+    if (typeof check.name !== "string" || check.name === "") stop("A check run has no name.");
+    const forThisPR = Array.isArray(check.pull_requests) && check.pull_requests.some((item) => item?.number === Number(pr));
+    if (check.head_sha !== head || !forThisPR) continue;
+    if (!newest.has(check.name) || check.id > newest.get(check.name).id) newest.set(check.name, check);
   }
   const runs = [...newest.values()];
   for (const name of Object.keys(required)) {
     if (!runs.some((check) => check?.name === name)) stop(`The required check ${name} has not run on the head.`);
   }
   for (const check of runs) {
-    const name = typeof check?.name === "string" ? printable(check.name, entries) : "a check without a name";
+    const name = printable(check.name, entries);
     if (check?.status !== "completed") stop(`The check ${name} is still running; run gh-post merge again when it has finished.`);
     const allowed = required[check.name] ?? otherConclusions;
     if (!allowed.includes(check.conclusion)) stop(`The check ${name} did not pass.`);
@@ -273,19 +279,23 @@ export function merge(pr, stop) {
   if (creators.size === 0) stop("The PR's creation is not recorded (it was not created with gh-post pr-create); the owner merges.");
   if (creators.has(last.session)) stop("The last review was posted from the session that created the PR.");
 
-  // 7. The answer comments.
-  const withFindings = marked.filter(({ marker }) => marker.high + marker.medium + marker.low > 0);
-  if (withFindings.length > 0) {
+  // 7. The answer comments: each round with findings has its own, after that round and before the
+  // account's next marker review (or after the last), so one comment cannot answer two rounds.
+  const rounds = marked
+    .map((item) => ({ ...item, at: time(item.review.submitted_at) }))
+    .sort((a, b) => a.at - b.at);
+  if (rounds.some(({ marker }) => marker.high + marker.medium + marker.low > 0)) {
     const answers = pages(`${repo}/issues/${pr}/comments`)
       .filter((comment) => comment?.user?.login === login)
       .map((comment) => ({ session: sessionOf("comment", comment.id), at: time(comment.created_at) }))
       .filter(({ session }) => session !== undefined);
-    for (const { review, session } of withFindings) {
-      const reviewedAt = time(review.submitted_at);
-      if (!answers.some((answer) => answer.session !== session && answer.at > reviewedAt)) {
-        stop("A review round has findings and no recorded answer comment after it from another session.");
+    rounds.forEach(({ marker, session, at }, index) => {
+      if (marker.high + marker.medium + marker.low === 0) return;
+      const until = index + 1 < rounds.length ? rounds[index + 1].at : Infinity;
+      if (!answers.some((answer) => answer.session !== session && answer.at > at && answer.at < until)) {
+        stop("A review round has findings and no recorded answer comment of its own, from another session, before the next round.");
       }
-    }
+    });
   }
 
   // Merge, pinned to the head checked above.

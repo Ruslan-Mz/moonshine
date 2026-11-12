@@ -67,9 +67,10 @@ function setUp() {
     return head;
   };
   context.setChecks = (head, runs = ["docs", "swift", "core-linux", "guard"].map((name) => checkRun(name))) => {
+    const forThisPR = runs.map((run) => ({ head_sha: head, pull_requests: [{ number: 7 }], ...run }));
     context.fake.api[`${repo}/commits/${head}/check-runs?filter=latest&per_page=100`] = {
-      total_count: runs.length,
-      check_runs: runs,
+      total_count: forThisPR.length,
+      check_runs: forThisPR,
     };
     context.fake.api[`${repo}/commits/${head}/status`] = { state: "pending", total_count: 0, statuses: [] };
   };
@@ -587,5 +588,90 @@ test("an answer comment missing from the state file does not count", () => {
   const context = setUp();
   withFinding(context, null, null);
   context.fake.api[`${repo}/issues/7/comments?per_page=100&page=1`] = [{ id: 990, user: { login }, created_at: "2026-11-11T11:00:00Z" }];
+  refused(context, "answer");
+});
+
+test("a shallow checkout is refused", () => {
+  const context = setUp();
+  const shallow = ok(context.work, "rev-parse", "--path-format=absolute", "--git-path", "shallow").trim();
+  writeFileSync(shallow, `${context.main}\n`);
+  refused(context, "shallow");
+});
+
+test("a check run without an id is refused", () => {
+  const context = setUp();
+  const runs = ["docs", "swift", "core-linux", "guard"].map((name) => checkRun(name));
+  delete runs[0].id;
+  context.setChecks(context.head(), runs);
+  refused(context, "no id");
+});
+
+for (const name of [undefined, ""]) {
+  test(`a check run without a name is refused (${JSON.stringify(name)})`, () => {
+    const context = setUp();
+    const runs = ["docs", "swift", "core-linux", "guard"].map((check) => checkRun(check));
+    context.setChecks(context.head(), [{ ...checkRun("x", "completed", "failure"), name }, ...runs]);
+    refused(context, "no name");
+  });
+}
+
+test("a passed run for another PR on the same head does not hide this PR's failed one", () => {
+  const context = setUp();
+  const others = ["docs", "swift", "core-linux"].map((name) => checkRun(name));
+  context.setChecks(context.head(), [
+    checkRun("guard", "completed", "failure"),
+    ...others,
+    { ...checkRun("guard"), pull_requests: [{ number: 8 }] },
+  ]);
+  refused(context, "guard");
+});
+
+test("a run on another head does not count", () => {
+  const context = setUp();
+  const others = ["docs", "swift", "core-linux"].map((name) => checkRun(name));
+  context.setChecks(context.head(), [{ ...checkRun("guard"), head_sha: context.main }, ...others]);
+  refused(context, "guard has not run");
+});
+
+test("a reviewed commit that does not merge cleanly with main is refused", () => {
+  const context = setUp();
+  ok(context.work, "switch", "-q", "main");
+  commit(context.work, "docs/method/log/2026-11.md", "| main's row |\n", "main moved");
+  context.fake.api[`${repo}/branches/main`].commit.sha = context.head();
+  ok(context.work, "switch", "-q", "slice/one");
+  ok(context.work, "merge", "-q", "--no-edit", "-X", "ours", "main");
+  context.publish();
+  refused(context, "merge cleanly");
+});
+
+/// Round 1 (10:00) and round 2 (12:00), both with findings, recorded from session-b and session-c,
+/// and the answer comments at `times`, recorded from session-a.
+function twoRoundsWithFindings(context, times) {
+  const head = context.head();
+  context.record("review", 7, 902, "session-c");
+  context.setReviews([
+    context.review(901, marker(1, head, { high: 1, medium: 2 })),
+    context.review(902, marker(2, head, { low: 1 }), { submitted_at: "2026-11-11T12:00:00Z" }),
+  ]);
+  const comments = times.map((at, index) => ({ id: 990 + index, user: { login }, created_at: `2026-11-11T${at}:00Z` }));
+  context.fake.api[`${repo}/issues/7/comments?per_page=100&page=1`] = comments;
+  for (const comment of comments) context.record("comment", 7, comment.id, "session-a");
+}
+
+test("each round with findings answered before the next round merges", () => {
+  const context = setUp();
+  twoRoundsWithFindings(context, ["11:00", "13:00"]);
+  merges(context);
+});
+
+test("one answer after the last round does not answer an earlier round", () => {
+  const context = setUp();
+  twoRoundsWithFindings(context, ["13:00"]);
+  refused(context, "answer");
+});
+
+test("one answer between the rounds does not answer the last round", () => {
+  const context = setUp();
+  twoRoundsWithFindings(context, ["11:00"]);
   refused(context, "answer");
 });

@@ -33,8 +33,10 @@ const names = (list) => list.join("|");
 const word = (list) => new RegExp(`(?<![A-Za-z0-9_])(?:${names(list)})(?![A-Za-z0-9_])`);
 // A part of a name: `withTaskGroup`, `DispatchQueue`.
 const part = (list) => new RegExp(names(list));
-// A C call: the name directly followed by `(`, not after a letter, digit, `_` or `.`.
-const cCall = (list) => new RegExp(`(?<![A-Za-z0-9_.])(?:${names(list)})\\s*\\(`);
+// A C call: the name directly followed by `(`, not after a letter, digit, `_` or `.`, unless the `.`
+// follows a C module's name: `unlink(` and `Foundation.unlink(`, not `items.remove(`.
+const cCall = (list) =>
+  new RegExp(`(?<![A-Za-z0-9_.])(?:(?:Foundation|Darwin|Glibc|Musl)\\s*\\.\\s*)?(?:${names(list)})\\s*\\(`);
 // A member, called or passed: `.refresh(` and `action: model.refresh`, not `.selection`.
 const member = (list) => new RegExp(`\\.(?:${names(list)})(?![A-Za-z0-9_])`);
 // A member called: `.start(`, not `span.start`.
@@ -54,16 +56,19 @@ const tokens = [
   ["concurrency", part(["TaskGroup", "Dispatch", "OperationQueue", "Async\\w*Stream", "Continuation"]), true],
   ["process", word(["Process", "typealias", "dlopen", "dlsym", "getenv", "fopen", "popen"]), true],
   ["process", part(["ProcessInfo", "NSWorkspace", "NSAppleScript", "OSAKit", "NotificationCenter", "posix_spawn"]), true],
-  ["process", part(["NSClassFromString", "@_", "[Uu]nsafe", "NSUser\\w*Task"]), true],
-  ["process", cCall(["kill", "open", "system", "f?exec[lv]p?e?"]), true],
-  ["storage", cCall(["unlink", "rename", "rmdir", "remove"]), true],
+  ["process", part(["NSClassFromString", "NSSelectorFromString", "classNamed", "@_", "[Uu]nsafe", "NSUser\\w*Task"]), true],
+  ["process", part(["InputStream", "OutputStream", "Bundle\\s*\\(\\s*(?:path|url)"]), true],
+  // The exec family by prefix: execl, execle, execlp, execv, execve, execvp, execvP, fexecve.
+  ["process", cCall(["kill", "open", "system", "f?exec[lv]\\w*"]), true],
+  ["storage", cCall(["unlink(?:at)?", "rename(?:at)?(?:x_np)?", "rmdir", "remove", "f?truncate", "creat"]), true],
   ["storage", part(["UserDefaults", "FileManager", "FileHandle", "write\\(to", "fileURLWithPath", "URL\\(filePath"]), true],
   ["storage", part(["NSHomeDirectory", "homeDirectory", "fileImporter", "fileExporter", "NSOpenPanel", "NSSavePanel"]), true],
   ["storage", part(["[Bb]ookmark", "SecurityScoped", "EventKit", "GRDB", "Yams"]), true],
   ["storage", /(?<![A-Za-z0-9_])contentsOf/, true],
-  ["URL", part(["URLSession", "openURL", "onOpenURL"]), true],
+  ["URL", part(["URLSession", "openURL", "onOpenURL", "AsyncImage", "byReferencing"]), true],
   ["URL", /(?<![A-Za-z0-9_])Link\s*\(/, true],
   ["drag, pasteboard or sharing", part(["onDrop", "dropDestination", "draggable", "NSItemProvider", "NSPasteboard", "UIPasteboard", "ShareLink", "NSSharingService"]), true],
+  ["drag, pasteboard or sharing", part(["copyable", "cuttable", "PasteButton", "pasteDestination", "onPasteCommand", "onCopyCommand", "onCutCommand", "onDrag", "exportableToServices", "importableFromServices", "importsItemProviders"]), true],
   ["model action", member(modelActions), true],
   ["model action", call(["start", "load"]), false],
   ["model action", onModel([...modelActions, "start", "load"]), false],
