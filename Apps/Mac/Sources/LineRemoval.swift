@@ -134,3 +134,11 @@ private struct LineRemovalNotice: View {
     .background(Tokens.card)
   }
 }
+
+extension Overview {
+  /// Whether the line is held for removal: no longer in the budget note (S4-4e). Here, beside
+  /// the removal, so the Lines screen names no removal and stays plain (PR #58 round 1).
+  func isHeld(_ id: LineID) -> Bool {
+    workspace.heldLineRemoval.contains { $0.id == id }
+  }
+}

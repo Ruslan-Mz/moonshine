@@ -121,6 +121,20 @@ import Testing
     #expect(try activity("violin", world).last == expected)
   }
 
+  /// Just after midnight in the workspace zone (Moscow, UTC+3), when UTC still has the
+  /// previous day: the day count follows the zone.
+  @Test(arguments: [
+    (W.date(2026, 9, 30, 0, 10), LastActivity.today),
+    (W.date(2026, 9, 29, 23, 50), .yesterday),
+    (W.date(2026, 9, 28, 23, 30), .daysAgo(2)),
+  ])
+  func lastActivityJustAfterMidnightInTheZone(completed: Date, expected: LastActivity) throws {
+    var world = W()
+    let violin = world.line("violin")
+    world.task("Etude", line: .line(violin.id), completed: completed)
+    #expect(try activity("violin", world, at: W.date(2026, 9, 30, 0, 30)).last == expected)
+  }
+
   @Test func maintenanceAndFoundationLinesAreNeverQuiet() throws {
     var world = W()
     let piano = world.line("piano", state: .maintenance)
@@ -209,7 +223,18 @@ import Testing
     world.task(
       "Group deferred", line: violin, status: .blocked, inheritedDefer: W.date(2026, 10, 3, 9),
       estimate: 5)
-    #expect(try activity("violin", world, at: thursday).estimatedThisWeekMinutes == 80)
+    // Effective planned and due dates count as the task's own.
+    world.task(
+      "Inherits planned", line: violin, inheritedPlanned: W.date(2026, 10, 2), estimate: 100)
+    world.task("Inherits due", line: violin, inheritedDue: W.date(2026, 10, 3), estimate: 200)
+    // Planned first: planned this week and due next week counts.
+    world.task(
+      "Planned Friday, due next week", line: violin, planned: W.date(2026, 10, 2),
+      due: W.date(2026, 10, 7), estimate: 400)
+    // A group whose only child is done is a leaf among the open tasks.
+    let group = world.task("Group", line: violin, planned: W.date(2026, 10, 2), estimate: 800)
+    world.task("Its done child", line: violin, parent: group.id, completed: W.date(2026, 9, 29))
+    #expect(try activity("violin", world, at: thursday).estimatedThisWeekMinutes == 1580)
   }
 
   @Test func estimatedThisWeekLeavesOutWhatIsNotPlacedThisWeek() throws {
@@ -224,6 +249,14 @@ import Testing
       defer: W.date(2026, 9, 29), estimate: 40)
     world.task("Planned last week", line: violin, planned: W.date(2026, 9, 25), estimate: 40)
     world.task("Planned next week", line: violin, planned: W.date(2026, 10, 6), estimate: 40)
+    // Planned first: planned next week and due this week does not count; nor does a task
+    // deferred to before this week and due in it.
+    world.task(
+      "Planned next week, due Sunday", line: violin, planned: W.date(2026, 10, 6),
+      due: W.date(2026, 10, 4), estimate: 40)
+    world.task(
+      "Deferred last week, due Sunday", line: violin, defer: W.date(2026, 9, 25),
+      due: W.date(2026, 10, 4), estimate: 40)
     world.task("No date", line: violin, estimate: 40)
     world.task("Zero", line: violin, planned: W.date(2026, 10, 2), estimate: 0)
     world.task("Negative", line: violin, planned: W.date(2026, 10, 2), estimate: -5)
@@ -234,6 +267,24 @@ import Testing
       "Done", line: violin, planned: W.date(2026, 10, 2), estimate: 40,
       completed: W.date(2026, 10, 1, 9))
     #expect(try activity("violin", world, at: thursday).estimatedThisWeekMinutes == 7)
+  }
+
+  /// An on-hold project's work is paused on purpose (owner, 2026-11-13): none of its tasks
+  /// counts; the same task in an active project does.
+  @Test func estimatedThisWeekLeavesOutOnHoldProjects() throws {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    let held = world.project("Held", line: violin, status: .onHold)
+    let active = world.project("Active", line: violin)
+    for project in [held, active] {
+      world.task(
+        "Deferred to Saturday", line: violin, project: project.id, status: .blocked,
+        defer: W.date(2026, 10, 3, 9), estimate: 15)
+      world.task(
+        "Planned Friday", line: violin, project: project.id, planned: W.date(2026, 10, 2),
+        estimate: 30)
+    }
+    #expect(try activity("violin", world, at: thursday).estimatedThisWeekMinutes == 45)
   }
 
   @Test func theWeekRunsFromMondayMidnightToTheNextInTheWorkspaceZone() throws {

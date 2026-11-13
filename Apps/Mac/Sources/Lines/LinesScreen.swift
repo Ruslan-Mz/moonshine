@@ -56,7 +56,6 @@ struct LinesScreen: Equatable {
 
   init(_ overview: Overview) {
     let lines = overview.lines()
-    let held = Set(overview.workspace.heldLineRemoval.map(\.id))
     tiers = lines.tiers.map { tier in
       Tier(
         kind: tier.kind,
@@ -64,7 +63,7 @@ struct LinesScreen: Equatable {
           let line = row.line
           return Row(
             id: line.id, emoji: line.emoji, name: line.name, block: line.block, state: line.state,
-            isFoundation: line.foundation, isHeld: held.contains(line.id),
+            isFoundation: line.foundation, isHeld: overview.isHeld(line.id),
             budget: LinesFormat.budget(line), sparkline: row.activity.sparkline,
             last: row.activity.last, nextActions: row.activity.nextActions,
             estimateMinutes: row.activity.estimatedThisWeekMinutes)

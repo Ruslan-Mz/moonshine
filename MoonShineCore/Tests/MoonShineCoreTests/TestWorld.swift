@@ -28,9 +28,11 @@ struct TestWorld {
   }
 
   @discardableResult
-  mutating func project(_ title: String, line: LineAssignment, tags: [TagID] = []) -> Project {
+  mutating func project(
+    _ title: String, line: LineAssignment, tags: [TagID] = [], status: ProjectStatus = .active
+  ) -> Project {
     let project = Project(
-      id: .generate(), refs: [], title: title, status: .active, tagIDs: tags, line: line)
+      id: .generate(), refs: [], title: title, status: status, tagIDs: tags, line: line)
     workspace.projects.append(project)
     return project
   }

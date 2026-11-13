@@ -476,17 +476,19 @@ public struct Overview: Sendable {
 
   /// Estimated this week (owner, 2026-11-12; `docs/specs/phase-1-see.md` → S4-2): the positive
   /// estimates of each line's open leaf tasks whose anchor (planned, else defer, else due) lies
-  /// in the current week, available, or blocked with a defer date after now. The store cannot
-  /// tell a deferred task from one a sequential project blocks, so that clause stands in for
-  /// "blocked only by its own defer date". Saturating.
+  /// in the current week, available, or blocked with a defer date after now, outside on-hold
+  /// projects. The store cannot tell a deferred task from one a sequential project blocks, so
+  /// that clause stands in for "blocked only by its own defer date". Saturating.
   private func estimatedThisWeek() -> [LineAssignment: Int] {
     let week =
       ISOWeek(containing: now, calendar: calendar).horizon(calendar: calendar)
       ?? day(containing: now)
     let open = workspace.tasks.filter { $0.status == .available || $0.status == .blocked }
     let parents = Set(open.compactMap(\.parentTaskID))
+    let onHold = Set(workspace.projects.filter { $0.status == .onHold }.map(\.id))
     var totals: [LineAssignment: Int] = [:]
     for task in open where !parents.contains(task.id) {
+      if let project = task.projectID, onHold.contains(project) { continue }
       let deferredLater = task.effectiveDeferUntil.map { $0 > now } ?? false
       if task.status == .blocked && !deferredLater { continue }
       guard

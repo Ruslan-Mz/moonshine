@@ -135,11 +135,9 @@ import Testing
       #expect(row.activity.nextActions == nextActions, "\(key)")
       #expect(row.activity.estimatedThisWeekMinutes == estimate, "\(key)")
     }
+    // Paused, with no completed brush task in the fixture: `—`.
     let calligraphy = try #require(rows.first { $0.line.key == "calligraphy" })
-    guard case .paused = calligraphy.activity.last else {
-      Issue.record("Calligraphy is not paused")
-      return
-    }
+    #expect(calligraphy.activity.last == .paused(last: nil))
   }
 
   /// § Draft-5, Lines: `11 lines · 2 foundation · 7 active · 1 maintenance · 1 paused`, by tier.
