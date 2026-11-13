@@ -10,20 +10,20 @@ An invented dataset; no real people. "Today" = **Thursday 1 October 2026, ISO we
 
 ## Lines
 
-| Emoji | Line          | Block      | State                         | Budget h/week | Parent artifact           | Notes                                       |
-| ----- | ------------- | ---------- | ----------------------------- | ------------- | ------------------------- | ------------------------------------------- |
-| 🧘    | Core practice | Foundation | **foundation**, floor 3 h/day | —             | Daily practice 2026       | morning + evening session; both are anchors |
-| 💪    | Calisthenics  | Foundation | **foundation**, floor 1 h/day | —             | 20 strict pull-ups        | moved from "active" (draft-2)               |
-| 🤖    | AI/ML         | Profession | active                        | 6             | Eval toolkit v1           | no repeating tasks → rhythm "—"             |
-| 🔬    | Research      | Profession | active                        | 3             | Practice-drift paper      |                                             |
-| 🎻    | Violin        | Creative   | active                        | 6             | Spring recital 2027       |                                             |
-| 🎹    | Piano         | Creative   | maintenance                   | 1             | Keep repertoire alive     | last activity 2 Sep, **not** flagged        |
-| ✒️    | Calligraphy   | Creative   | paused                        | —             | —                         | paused since 14 Jul                         |
-| 🇮🇹    | Italian       | Languages  | active                        | 2             | B1 by summer 2027         | last activity 2 Sep → **quiet for 29 days** |
-| 🇯🇵    | Japanese      | Languages  | active                        | 1             | Kana and first 300 words  | **no completions since 6 July**             |
-| 📐    | Math          | Science    | active                        | 4             | Linear algebra foundation |                                             |
-| 👨‍👩‍👧    | Family        | Life       | active                        | —             | Family year 2026          |                                             |
-| 🧺    | Life ops      | —          | (bucket)                      | —             | —                         | household, errands, inbox                   |
+| Emoji | Line          | Block      | State                         | Budget h/week | Parent artifact           | Notes                                                      |
+| ----- | ------------- | ---------- | ----------------------------- | ------------- | ------------------------- | ---------------------------------------------------------- |
+| 🧘    | Core practice | Foundation | **foundation**, floor 3 h/day | —             | Daily practice 2026       | morning + evening session; both are anchors                |
+| 💪    | Calisthenics  | Foundation | **foundation**, floor 1 h/day | —             | 20 strict pull-ups        | moved from "active" (draft-2)                              |
+| 🤖    | AI/ML         | Profession | active                        | 6             | Eval toolkit v1           | no repeating tasks → rhythm "—"                            |
+| 🔬    | Research      | Profession | active                        | 3             | Practice-drift paper      |                                                            |
+| 🎻    | Violin        | Creative   | active                        | 6             | Spring recital 2027       |                                                            |
+| 🎹    | Piano         | Creative   | maintenance                   | 1             | Keep repertoire alive     | last activity 2 Sep, **not** flagged                       |
+| ✒️    | Calligraphy   | Creative   | paused                        | —             | —                         | no completed task in the fixture: Last activity `—` (Q1.1) |
+| 🇮🇹    | Italian       | Languages  | active                        | 2             | B1 by summer 2027         | last activity 2 Sep → **quiet for 29 days**                |
+| 🇯🇵    | Japanese      | Languages  | active                        | 1             | Kana and first 300 words  | **no completions since 6 July**                            |
+| 📐    | Math          | Science    | active                        | 4             | Linear algebra foundation |                                                            |
+| 👨‍👩‍👧    | Family        | Life       | active                        | —             | Family year 2026          |                                                            |
+| 🧺    | Life ops      | —          | (bucket)                      | —             | —                         | household, errands, inbox                                  |
 
 ## Weekly stats W33–W40 (W40 partial)
 
@@ -254,7 +254,7 @@ These values **replace** the Last activity, Next actions and Estimated this week
 | 👨‍👩‍👧 Family        | today                       | 3            | ≈ 20 min est.       |
 | 🎹 Piano         | 29 days ago                 | 1            | —                   |
 
-The Estimated this week column is the output of S4-2's rule (`docs/specs/phase-1-see.md` → S4-2a) on the Demo fixture. Draft-5's first figures predate the rule: they left out tomorrow's occurrence of a daily repeating task (deferred to Friday 06:00) and a task planned earlier this week, both of which the rule counts on purpose (owner, 2026-11-12). `scripts/demo-snapshot.mjs` was not tuned to the old figures.
+The Estimated this week column is the output of S4-2's rule (`docs/specs/phase-1-see.md` → S4-2a) on the Demo fixture. Draft-5's first figures were not produced by a rule: four lines came out higher with the rule and four lower (🤖, 🎻, 🇯🇵, 👨‍👩‍👧, whose first figures also counted next actions not placed in this week). Examples the rule counts on purpose: tomorrow's occurrence of a daily repeating task (deferred to Friday 06:00) and a task planned earlier this week (owner, 2026-11-12); it leaves out tasks placed in another week or in none, parents of open tasks, and tasks of on-hold projects (owner, 2026-11-13). `scripts/demo-snapshot.mjs` was not tuned to the old figures.
 
 **Practice lines (phase 2):** 📓 Reflection, `within: core`, `measure: entries`, targets diary 5 per week and report 1 per month; diary entries W33–W40: 5 6 4 5 5 7 5 4 (W40 so far); the September report exists, October's not yet; last entry today; streak 4 weeks (W36–W39). 🎼 Practice journal, `within: violin`, target note 3 per week; entries 3 3 1 0 2 3 3 2; last entry yesterday; streak 2 weeks (W38–W39).
 
