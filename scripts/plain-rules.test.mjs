@@ -451,27 +451,27 @@ function edited(path, ...edits) {
   return text;
 }
 
+// The edits are anchored on the lines a screen slice adds to, not on lines it rewrites: the
+// sidebar enum's header, the sidebar list, the detail's switch on the selection and the View
+// menu's group (S4-2a rewrote the old anchor, `TodayDetail(…)`, into that switch; PR #58 round 1).
 test("a screen slice computes plain: a new view, a sidebar case and its shortcut", () => {
   const base = Object.fromEntries(screenFiles.map((path) => [path, own(path)]));
   plain(base, {
-    "Apps/Mac/Sources/Lines/LinesView.swift": "import SwiftUI\n\nstruct LinesView: View {\n  var body: some View { Text(\"Lines\") }\n}\n",
+    "Apps/Mac/Sources/Week/WeekView.swift": "import SwiftUI\n\nstruct WeekView: View {\n  var body: some View { Text(\"Week\") }\n}\n",
     "Apps/Mac/Sources/RootView.swift": edited(
       "Apps/Mac/Sources/RootView.swift",
-      ["  case today\n", "  case today\n  case lines\n"],
+      ["enum SidebarItem: Hashable {\n", "enum SidebarItem: Hashable {\n  case week\n"],
       [
-        '        Label("Today", systemImage: "sun.max").tag(SidebarItem.today)\n',
-        '        Label("Today", systemImage: "sun.max").tag(SidebarItem.today)\n        Label("Lines", systemImage: "list.bullet").tag(SidebarItem.lines)\n',
+        "      List(selection: $model.selection) {\n",
+        '      List(selection: $model.selection) {\n        Label("Week", systemImage: "calendar").tag(SidebarItem.week)\n',
       ],
-      [
-        "      TodayDetail(model: model, overview: overview)\n",
-        "      if model.selection == .lines {\n        LinesView()\n      } else {\n        TodayDetail(model: model, overview: overview)\n      }\n",
-      ],
+      ["        switch model.selection {\n", "        switch model.selection {\n        case .week: WeekView()\n"],
     ),
     "Apps/Mac/Sources/ViewCommands.swift": edited(
       "Apps/Mac/Sources/ViewCommands.swift",
       [
-        "        .keyboardShortcut(\"1\", modifiers: .command)\n",
-        '        .keyboardShortcut("1", modifiers: .command)\n      Button("Lines") { model.selection = .lines }\n        .keyboardShortcut("2", modifiers: .command)\n',
+        "    CommandGroup(before: .sidebar) {\n",
+        '    CommandGroup(before: .sidebar) {\n      Button("Week") { model.selection = .week }\n        .keyboardShortcut("2", modifiers: .command)\n',
       ],
     ),
   });
