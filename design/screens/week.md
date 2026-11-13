@@ -18,7 +18,7 @@ Toolbar: `Week 40`, subtitle `28 September – 4 October 2026 · ISO week`; ‹ 
 
 ## Data
 
-- Placement: effective planned ?? defer ?? due. Each task appears once.
+- Placement: effective planned ?? defer ?? due. Each task appears once. Placed tasks are open leaf tasks (not the parent of another available or blocked task), available or blocked with an effective defer date after now, outside on-hold projects: the rule of Estimated this week on Lines (`docs/specs/phase-1-see.md` → S4-2a, S5; owner, 2026-11-12 and 2026-11-13).
 - Past days show completed tasks (checked, **dimmed**) and tasks still open from that day (resolved open question, draft-2).
 - No plan: available tasks in **active** lines with no planned, defer or due date (mirrors the "Без плана" perspective).
 - Strip: per line, this week's rhythm and progress vs the mean of the previous 4 ISO weeks (Stats service).

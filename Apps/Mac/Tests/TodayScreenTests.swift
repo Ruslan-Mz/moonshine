@@ -671,3 +671,8 @@ private struct NotLoaded: Error {}
     #expect(widths[2] <= 240)
   }
 }
+
+/// Demo's overview as the app loads it, for the other screens' tests (Lines, S4-2a).
+@MainActor func demoOverview() async throws -> Overview {
+  try await demo().0
+}

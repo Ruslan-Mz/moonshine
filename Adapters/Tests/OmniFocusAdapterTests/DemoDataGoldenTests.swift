@@ -84,7 +84,7 @@ import Testing
       ("math", [2, 3, 2, 1, 2, 2, 3, 1], [2, 1, 2, 1, 2, 2, 1, 1]),
       ("family", [5, 6, 4, 6, 5, 5, 4, 3], [1, 0, 1, 1, 0, 2, 1, 1]),
     ]
-    let rows = overview.lines().blocks.flatMap(\.rows)
+    let rows = overview.lines().tiers.flatMap(\.rows)
     #expect(rows.count == expected.count)
     for (key, rhythm, progress) in expected {
       let row = try #require(rows.first { $0.line.key == key })
@@ -118,24 +118,40 @@ import Testing
     }
   }
 
-  /// § Draft-5, Lines: Last activity and Next actions (Estimated this week waits for S4-2's rule).
-  @Test func linesLastActivityAndNextActions() throws {
-    let expected: [(LineKey, Int?, Int)] = [
-      ("core", 0, 2), ("calisthenics", 0, 2), ("ai", 1, 4), ("research", 2, 3), ("violin", 0, 9),
-      ("italian", 29, 3), ("japanese", nil, 2), ("math", 1, 5), ("family", 0, 3), ("piano", 29, 1),
+  /// § Draft-5, Lines: Last activity, Next actions and Estimated this week (S4-2a's rule; the
+  /// column is the rule's output on Demo, owner 2026-11-12).
+  @Test func linesMatchTheDraftFiveTable() throws {
+    let since = try date(7, 6, 0)
+    let expected: [(LineKey, LastActivity, Int, Int)] = [
+      ("core", .today, 2, 150), ("calisthenics", .today, 2, 85), ("ai", .yesterday, 4, 205),
+      ("research", .daysAgo(2), 3, 85), ("violin", .today, 9, 140),
+      ("italian", .quiet(days: 29), 3, 0), ("japanese", .noCompletions(since: since), 2, 0),
+      ("math", .yesterday, 5, 120), ("family", .today, 3, 20), ("piano", .daysAgo(29), 1, 0),
     ]
-    let rows = overview.lines().blocks.flatMap(\.rows)
-    let calendar = overview.calendar
-    for (key, daysAgo, nextActions) in expected {
+    let rows = overview.lines().tiers.flatMap(\.rows)
+    for (key, last, nextActions, estimate) in expected {
       let row = try #require(rows.first { $0.line.key == key })
-      let days = row.activity.lastActivity.flatMap {
-        calendar.dateComponents(
-          [.day], from: calendar.startOfDay(for: $0), to: calendar.startOfDay(for: overview.now)
-        ).day
-      }
-      #expect(days == daysAgo, "\(key)")
+      #expect(row.activity.last == last, "\(key)")
       #expect(row.activity.nextActions == nextActions, "\(key)")
+      #expect(row.activity.estimatedThisWeekMinutes == estimate, "\(key)")
     }
+    // Paused, with no completed brush task in the fixture: `—`.
+    let calligraphy = try #require(rows.first { $0.line.key == "calligraphy" })
+    #expect(calligraphy.activity.last == .paused(last: nil))
+  }
+
+  /// § Draft-5, Lines: `11 lines · 2 foundation · 7 active · 1 maintenance · 1 paused`, by tier.
+  @Test func linesTiersAndCounts() {
+    let lines = overview.lines()
+    #expect(
+      lines.counts == LineCounts(lines: 11, foundation: 2, active: 7, maintenance: 1, paused: 1))
+    #expect(
+      lines.tiers.map { $0.rows.map(\.line.key.rawValue) } == [
+        ["core", "calisthenics"],
+        ["ai", "research", "violin", "italian", "japanese", "math", "family"],
+        ["piano"], ["calligraphy"],
+      ])
+    #expect(lines.tiers.first?.dailyFloorHours == 4)
   }
 
   /// The rail: `quiet for 29 days · Last: 2 September` (owner, 2026-10-24), 🇯🇵 no completions

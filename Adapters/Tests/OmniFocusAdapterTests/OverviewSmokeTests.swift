@@ -17,21 +17,16 @@ import Testing
     return Overview(workspace: workspace, now: source.generatedAt)
   }
 
-  func daysSinceLastActivity(_ key: LineKey, in overview: Overview) throws -> Int? {
-    let row = try #require(overview.lines().blocks.flatMap(\.rows).first { $0.line.key == key })
-    let lastActivity = try #require(row.activity.lastActivity)
-    return overview.calendar.dateComponents(
-      [.day], from: overview.calendar.startOfDay(for: lastActivity),
-      to: overview.calendar.startOfDay(for: overview.now)
-    ).day
+  func last(_ key: LineKey, in overview: Overview) throws -> LastActivity {
+    try #require(overview.lines().tiers.flatMap(\.rows).first { $0.line.key == key }).activity.last
   }
 
   /// Italian (active) and Piano (maintenance) both last moved 29 days ago; only the active
   /// line is quiet, because maintenance is never quiet. Japanese has no activity yet.
   @Test func activeItalianIsQuietAndMaintenancePianoIsNot() async throws {
     let overview = try await overview()
-    #expect(try daysSinceLastActivity("italian", in: overview) == 29)
-    #expect(try daysSinceLastActivity("piano", in: overview) == 29)
+    #expect(try last("italian", in: overview) == .quiet(days: 29))
+    #expect(try last("piano", in: overview) == .daysAgo(29))
     let quiet = overview.today().quietLines
     #expect(quiet.map(\.line.key) == ["italian", "japanese"])
     guard case .quiet(let days, let last) = quiet.first?.reason else {
@@ -53,7 +48,7 @@ import Testing
     #expect(week.days.count == 7)
     #expect(week.header.count == 12)
     let lines = overview.lines()
-    #expect(lines.blocks.flatMap(\.rows).count == 11)
-    #expect(lines.blocks.flatMap(\.rows).allSatisfy { $0.activity.sparkline.count == 8 })
+    #expect(lines.tiers.flatMap(\.rows).count == 11)
+    #expect(lines.tiers.flatMap(\.rows).allSatisfy { $0.activity.sparkline.count == 8 })
   }
 }
