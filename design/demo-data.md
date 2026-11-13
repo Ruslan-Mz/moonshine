@@ -243,16 +243,18 @@ These values **replace** the Last activity, Next actions and Estimated this week
 
 | Line             | Last activity               | Next actions | Estimated this week |
 | ---------------- | --------------------------- | ------------ | ------------------- |
-| 🧘 Core practice | today                       | 2            | ≈ 1 h est.          |
-| 💪 Calisthenics  | today                       | 2            | ≈ 40 min est.       |
-| 🤖 AI/ML         | yesterday                   | 4            | ≈ 4 h 10 min est.   |
-| 🔬 Research      | 2 days ago                  | 3            | ≈ 1 h 15 min est.   |
-| 🎻 Violin        | today                       | 9            | ≈ 6 h 40 min est.   |
+| 🧘 Core practice | today                       | 2            | ≈ 2 h 30 min est.   |
+| 💪 Calisthenics  | today                       | 2            | ≈ 1 h 25 min est.   |
+| 🤖 AI/ML         | yesterday                   | 4            | ≈ 3 h 25 min est.   |
+| 🔬 Research      | 2 days ago                  | 3            | ≈ 1 h 25 min est.   |
+| 🎻 Violin        | today                       | 9            | ≈ 2 h 20 min est.   |
 | 🇮🇹 Italian       | quiet for 29 days           | 3            | —                   |
-| 🇯🇵 Japanese      | no completions since 6 July | 2            | ≈ 10 min est.       |
-| 📐 Math          | yesterday                   | 5            | ≈ 1 h 30 min est.   |
-| 👨‍👩‍👧 Family        | today                       | 3            | ≈ 35 min est.       |
+| 🇯🇵 Japanese      | no completions since 6 July | 2            | —                   |
+| 📐 Math          | yesterday                   | 5            | ≈ 2 h est.          |
+| 👨‍👩‍👧 Family        | today                       | 3            | ≈ 20 min est.       |
 | 🎹 Piano         | 29 days ago                 | 1            | —                   |
+
+The Estimated this week column is the output of S4-2's rule (`docs/specs/phase-1-see.md` → S4-2a) on the Demo fixture. Draft-5's first figures predate the rule: they left out tomorrow's occurrence of a daily repeating task (deferred to Friday 06:00) and a task planned earlier this week, both of which the rule counts on purpose (owner, 2026-11-12). `scripts/demo-snapshot.mjs` was not tuned to the old figures.
 
 **Practice lines (phase 2):** 📓 Reflection, `within: core`, `measure: entries`, targets diary 5 per week and report 1 per month; diary entries W33–W40: 5 6 4 5 5 7 5 4 (W40 so far); the September report exists, October's not yet; last entry today; streak 4 weeks (W36–W39). 🎼 Practice journal, `within: violin`, target note 3 per week; entries 3 3 1 0 2 3 3 2; last entry yesterday; streak 2 weeks (W38–W39).
 

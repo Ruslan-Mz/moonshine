@@ -16,12 +16,13 @@ struct TestWorld {
   @discardableResult
   mutating func line(
     _ key: LineKey, block: String = "Creative", state: LineState = .active,
-    budget: Double? = nil, parent: String? = nil, emoji: String? = nil, foundation: Bool = false
+    budget: Double? = nil, parent: String? = nil, emoji: String? = nil, foundation: Bool = false,
+    floor: Double? = nil
   ) -> Line {
     let line = Line(
       id: .generate(), refs: [], key: key, name: key.rawValue.capitalized, emoji: emoji,
       block: block, state: state, budgetHoursPerWeek: budget, parentLink: parent,
-      taskRules: LineTaskRules(), foundation: foundation)
+      taskRules: LineTaskRules(), foundation: foundation, floorHoursPerDay: floor)
     workspace.lines.append(line)
     return line
   }

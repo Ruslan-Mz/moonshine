@@ -130,14 +130,28 @@ public struct WeekOverview: Hashable, Sendable {
 
 // MARK: - Lines
 
+/// A line's last completion as Lines shows it; the same rule as Today's quiet lines.
+public enum LastActivity: Hashable, Sendable {
+  case today
+  case yesterday
+  /// Two days or more, and not quiet: maintenance and foundation lines are never quiet.
+  case daysAgo(Int)
+  case quiet(days: Int)
+  /// No completed task in the store since `since`, the start of the task provider's window;
+  /// nil when the window start is not known.
+  case noCompletions(since: Date?)
+  /// Paused on purpose; its last completion, nil when the store has none (owner, 2026-10-30).
+  case paused(last: Date?)
+}
+
 public struct LineActivity: Hashable, Sendable {
   /// 8 weeks, oldest first; the last one is the current, partial week.
   public let sparkline: [WeekPoint]
-  public let lastActivity: Date?
+  public let last: LastActivity
   public let nextActions: Int
-  /// Sum of task estimates: an estimate, and only over `estimatedTasks` of `nextActions`.
-  public let estimatedMinutes: Int
-  public let estimatedTasks: Int
+  /// Sum of the positive estimates of the tasks placed in the current week: an estimate
+  /// (`Overview.estimatedThisWeek`).
+  public let estimatedThisWeekMinutes: Int
 }
 
 public struct LineRow: Hashable, Sendable {
@@ -145,14 +159,51 @@ public struct LineRow: Hashable, Sendable {
   public let activity: LineActivity
 }
 
-public struct LineBlock: Hashable, Sendable {
-  public let name: String
-  /// Active, then maintenance, then paused; vault order within each.
+/// A section of Lines (design draft-2): tiers replace blocks.
+public struct LineTier: Hashable, Sendable {
+  public enum Kind: Hashable, Sendable, CaseIterable {
+    case foundation, active, maintenance, paused
+
+    /// Paused wins over foundation: "on purpose" (owner, 2026-10-30).
+    public init(_ line: Line) {
+      switch line.state {
+      case .paused: self = .paused
+      case _ where line.foundation: self = .foundation
+      case .active: self = .active
+      case .maintenance: self = .maintenance
+      }
+    }
+  }
+
+  public let kind: Kind
+  /// Vault order.
   public let rows: [LineRow]
+  /// Sum of the rows' weekly budgets; nil when no row has one.
+  public let weeklyBudgetHours: Double?
+  /// The foundation tier only: sum of the rows' daily floors above zero; nil when none.
+  public let dailyFloorHours: Double?
+}
+
+public struct LineCounts: Hashable, Sendable {
+  public let lines: Int
+  public let foundation: Int
+  public let active: Int
+  public let maintenance: Int
+  public let paused: Int
+
+  public init(lines: Int, foundation: Int, active: Int, maintenance: Int, paused: Int) {
+    self.lines = lines
+    self.foundation = foundation
+    self.active = active
+    self.maintenance = maintenance
+    self.paused = paused
+  }
 }
 
 public struct LinesOverview: Hashable, Sendable {
-  public let blocks: [LineBlock]
+  /// Foundation, active, maintenance, paused; empty tiers left out.
+  public let tiers: [LineTier]
+  public let counts: LineCounts
   public let lifeOps: LineActivity
 }
 
@@ -307,13 +358,7 @@ public struct Overview: Sendable {
   /// Active lines with no completion for `quietAfterDays`, foundation lines never (owner,
   /// 2026-10-24), or with none at all, foundation lines included (owner, 2026-10-28).
   private func quietLines(_ day: Horizon) -> [QuietLine] {
-    var lastDone: [LineAssignment: TaskItem] = [:]
-    for task in workspace.tasks where task.status == .completed {
-      guard let done = task.completedAt else { continue }
-      // The latest completion; the first in source order on a tie.
-      if let current = lastDone[task.line]?.completedAt, current >= done { continue }
-      lastDone[task.line] = task
-    }
+    let lastDone = lastCompletions
     let firstNext = Dictionary(
       nextActions.map { ($0.line, $0) }, uniquingKeysWith: { first, _ in first })
     return workspace.lines.filter { $0.state == .active }.compactMap { line in
@@ -323,9 +368,26 @@ public struct Overview: Sendable {
           line: line, reason: .noActivity(since: workspace.completedSince), nextStep: next)
       }
       let days = calendarDays(from: done, to: day)
-      guard !line.foundation, days >= Self.quietAfterDays else { return nil }
+      guard isQuiet(line, days: days) else { return nil }
       return QuietLine(line: line, reason: .quiet(days: days, last: last), nextStep: next)
     }
+  }
+
+  /// Each line's latest completion; the first in source order on a tie. Today and Lines both
+  /// read it, so the two cannot disagree.
+  private var lastCompletions: [LineAssignment: TaskItem] {
+    var lastDone: [LineAssignment: TaskItem] = [:]
+    for task in workspace.tasks where task.status == .completed {
+      guard let done = task.completedAt else { continue }
+      if let current = lastDone[task.line]?.completedAt, current >= done { continue }
+      lastDone[task.line] = task
+    }
+    return lastDone
+  }
+
+  /// Quiet: an active line, not foundation, `quietAfterDays` or more since its last completion.
+  private func isQuiet(_ line: Line, days: Int) -> Bool {
+    line.state == .active && !line.foundation && days >= Self.quietAfterDays
   }
 
   // MARK: Week
@@ -369,34 +431,71 @@ public struct Overview: Sendable {
 
   public func lines() -> LinesOverview {
     let nextActions = Dictionary(grouping: nextActions, by: \.line)
-    func activity(_ line: LineAssignment) -> LineActivity {
-      let actions = nextActions[line] ?? []
-      let estimates = actions.compactMap(\.estimateMinutes)
-      return LineActivity(
-        sparkline: stats.series(line, endingAt: stats.currentWeek, count: Self.sparklineWeeks),
-        lastActivity: stats.lastCompletion(line), nextActions: actions.count,
-        estimatedMinutes: estimates.reduce(0, +), estimatedTasks: estimates.count)
+    let lastDone = lastCompletions
+    let estimates = estimatedThisWeek()
+    let day = day(containing: now)
+    func activity(_ assignment: LineAssignment, _ line: Line?) -> LineActivity {
+      LineActivity(
+        sparkline: stats.series(
+          assignment, endingAt: stats.currentWeek, count: Self.sparklineWeeks),
+        last: lastActivity(line, completed: lastDone[assignment]?.completedAt, day: day),
+        nextActions: nextActions[assignment]?.count ?? 0,
+        estimatedThisWeekMinutes: estimates[assignment] ?? 0)
     }
 
-    func stateRank(_ state: LineState) -> Int {
-      switch state {
-      case .active: 0
-      case .maintenance: 1
-      case .paused: 2
-      }
+    let rows = workspace.lines.map { LineRow(line: $0, activity: activity(.line($0.id), $0)) }
+    let byKind = Dictionary(grouping: rows) { LineTier.Kind($0.line) }
+    let tiers = LineTier.Kind.allCases.compactMap { kind -> LineTier? in
+      guard let rows = byKind[kind] else { return nil }
+      let budgets = rows.compactMap(\.line.budgetHoursPerWeek)
+      let floors = rows.compactMap(\.line.floorHoursPerDay).filter { $0 > 0 }
+      return LineTier(
+        kind: kind, rows: rows, weeklyBudgetHours: budgets.isEmpty ? nil : budgets.reduce(0, +),
+        dailyFloorHours: kind == .foundation && !floors.isEmpty ? floors.reduce(0, +) : nil)
     }
-    var blockNames: [String] = []
-    for line in workspace.lines where !blockNames.contains(line.block) {
-      blockNames.append(line.block)
+    let count = { (kind: LineTier.Kind) in byKind[kind]?.count ?? 0 }
+    return LinesOverview(
+      tiers: tiers,
+      counts: LineCounts(
+        lines: rows.count, foundation: count(.foundation), active: count(.active),
+        maintenance: count(.maintenance), paused: count(.paused)),
+      lifeOps: activity(.lifeOps, nil))
+  }
+
+  /// `nil` for Life ops, which is never quiet and never paused.
+  private func lastActivity(_ line: Line?, completed: Date?, day: Horizon) -> LastActivity {
+    if line?.state == .paused { return .paused(last: completed) }
+    guard let completed else { return .noCompletions(since: workspace.completedSince) }
+    let days = calendarDays(from: completed, to: day)
+    // A completion after today's start (a clock set back) reads today, never a negative count.
+    if days <= 0 { return .today }
+    if days == 1 { return .yesterday }
+    if let line, isQuiet(line, days: days) { return .quiet(days: days) }
+    return .daysAgo(days)
+  }
+
+  /// Estimated this week (owner, 2026-11-12; `docs/specs/phase-1-see.md` → S4-2): the positive
+  /// estimates of each line's open leaf tasks whose anchor (planned, else defer, else due) lies
+  /// in the current week, available, or blocked with a defer date after now. The store cannot
+  /// tell a deferred task from one a sequential project blocks, so that clause stands in for
+  /// "blocked only by its own defer date". Saturating.
+  private func estimatedThisWeek() -> [LineAssignment: Int] {
+    let week =
+      ISOWeek(containing: now, calendar: calendar).horizon(calendar: calendar)
+      ?? day(containing: now)
+    let open = workspace.tasks.filter { $0.status == .available || $0.status == .blocked }
+    let parents = Set(open.compactMap(\.parentTaskID))
+    var totals: [LineAssignment: Int] = [:]
+    for task in open where !parents.contains(task.id) {
+      let deferredLater = task.effectiveDeferUntil.map { $0 > now } ?? false
+      if task.status == .blocked && !deferredLater { continue }
+      guard
+        let anchor = task.effectivePlannedAt ?? task.effectiveDeferUntil ?? task.effectiveDueAt,
+        week.contains(anchor), let estimate = task.estimateMinutes, estimate > 0
+      else { continue }
+      let (total, overflow) = (totals[task.line] ?? 0).addingReportingOverflow(estimate)
+      totals[task.line] = overflow ? .max : total
     }
-    let blocks = blockNames.map { name in
-      let rows = workspace.lines.enumerated().filter { $0.element.block == name }
-        .sorted {
-          (stateRank($0.element.state), $0.offset) < (stateRank($1.element.state), $1.offset)
-        }
-        .map { LineRow(line: $0.element, activity: activity(.line($0.element.id))) }
-      return LineBlock(name: name, rows: rows)
-    }
-    return LinesOverview(blocks: blocks, lifeOps: activity(.lifeOps))
+    return totals
   }
 }
