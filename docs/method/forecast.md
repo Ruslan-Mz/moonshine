@@ -32,7 +32,7 @@ Result (closed, owner 2026-11-12; ~800 is the permanent limit for risky slices f
 | S4-4d           | 445              | 12 (1 verified, 1 confirmed)                | 0              | no      | 2              |
 | AM              | 526              | 22 (12 verified, 11 confirmed, 1 plausible) | 0              | no      | 3              |
 
-AM's round 1 was posted on #55 after its merge (owner, 2026-11-15: it counts as AM's round 1); its fixes went into AM-fix. Confirmed findings per 100 production lines: 1.4, 0.2 and 2.1.
+AM's round 1 was posted on #55 after its merge (owner, 2026-11-15: it counts as AM's round 1); its fixes went into AM-fix. Confirmed findings per 100 production lines: 1.4, 0.2 and 2.1. Review tokens per production line: n/a for all three, since none of their method-log rows records the review's tokens (only the plan-critic's: S4-4d about 202 k).
 
 **Risky-slice limit experiment, third** (owner, 2026-11-12 and 2026-11-15): for the next three risky PRs after P-AM, the limit is about 1000 net production lines after the factor; past about 1050 while building, the author stops and shows the owner. Plain slices stay at about 800; P-AM does not count. Measured as above. After the third PR the owner keeps ~1000 or goes back to ~800.
 
@@ -66,7 +66,7 @@ The owner's figures, read from the method log:
 
 - **Pace:** 2026-10-05 to 2026-10-08, about 250 production lines and one merged PR a day (`docs/method/log/2026-10.md`).
 - **Factor:** 1.55, actual production lines against the plan's estimate (the figure of 2026-10-09; the size factor above replaces it for sizing).
-- **Size by risk:** risky slices up to about 400 production lines after the factor, plain slices up to about 800 (`CLAUDE.md` rule 2). Owner experiment, 2026-11-05: ~550 for the risky slices 4c-1, 4b-2 and 4c-2, closed with no loss of review quality; owner experiment, 2026-11-09: ~800 for risky slices, and two adjacent slices may share a PR when their factored sum fits, closed with no loss of review quality, so ~800 is permanent (owner, 2026-11-12); owner experiment from P-AM: ~1000 for the next three risky PRs, stop ~1050; see "Risky-slice limit experiment" above.
+- **Size by risk:** risky and plain slices up to about 800 production lines after the factor (`CLAUDE.md` rule 2); past the limit plus about 50 while building, the author stops and shows the owner (owner, 2026-11-16). Before: risky slices up to about 400. Owner experiment, 2026-11-05: ~550 for the risky slices 4c-1, 4b-2 and 4c-2, closed with no loss of review quality; owner experiment, 2026-11-09: ~800 for risky slices, and two adjacent slices may share a PR when their factored sum fits, closed with no loss of review quality, so ~800 is permanent (owner, 2026-11-12); owner experiment from P-AM: ~1000 for the next three risky PRs, stop ~1050; see "Risky-slice limit experiment" above.
 - **Slow scenario:** 0.6 of the pace from January (less owner time).
 - **Memos and practice lines (2026-10-19, ADR-0018, ADR-0019):** P1 ~400 and Practice lines ~350 production lines estimated, ~750 × 1.62 ≈ 1,215, at about 250 a day ≈ 5 days; phase 2 and every stage after it move 5 days later. The slow column keeps its months: 5 days do not change them.
 - **Timebox review after S4-1b (owner, 2026-10-28):** factor 1.47; phase 1 ends ~2026-11-20 (was 2026-11-03, 10-30 to 11-12), with live data first and the Month view and the README moved to the usage period after it (`docs/specs/phase-1-see.md`); the stages after phase 1 are not re-forecast here.
