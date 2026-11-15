@@ -435,6 +435,217 @@ test("@testable import MoonShineFixtures passes in a test file", () => {
   plain({}, { "MoonShineCore/Tests/MoonShineCoreTests/ProbeTests.swift": "@testable import MoonShineFixtures\nimport Testing\n" });
 });
 
+// P-AM (owner, 2026-11-12 and 2026-11-15): `Sendable` in a one-line conformance list passes in every
+// plain path; everything else that names `Sendable` stays risky.
+const plainSwiftPaths = [
+  "Apps/Mac/Sources/Today/Probe.swift",
+  "Apps/Mac/Sources/Lines/Probe.swift",
+  "MoonShineCore/Sources/MoonShineCore/Services/Overview.swift",
+  "MoonShineCore/Tests/MoonShineCoreTests/ProbeTests.swift",
+  "Apps/Mac/Tests/ProbeTests.swift",
+];
+
+for (const line of [
+  "public struct LineTier: Hashable, Sendable {",
+  "public enum Kind: Hashable, Sendable, CaseIterable {",
+  "extension Row: Sendable {}",
+  "@MainActor final class Probe: Sendable {",
+  "struct Row: Sendable { // checked by the compiler",
+  "public protocol Reading: Sendable {",
+]) {
+  for (const path of plainSwiftPaths) {
+    test(`a Sendable conformance passes: ${line} in ${path}`, () => plain({}, { [path]: `${line}\n` }));
+  }
+}
+
+for (const [line, kind] of [
+  ["final class Box: @unchecked Sendable {", "concurrency"],
+  ["final class Box: NSObject, @unchecked Sendable {", "concurrency"],
+  ["struct Box<T: Sendable>: Hashable {", "concurrency"],
+  ["extension Box: Hashable where T: Sendable {}", "concurrency"],
+  ["let run: @Sendable () -> Void", "concurrency"],
+  ["let value: any Sendable", "concurrency"],
+  ["func f(_ x: some Hashable & Sendable) {}", "concurrency"],
+  ["struct Row: Swift.Sendable {", "concurrency"],
+  ["actor Store: Sendable {}", "concurrency"],
+  ["@_spi(Probe) public struct Row: Sendable {}", "concurrency"],
+  ["@_frozen public struct Row: Sendable {}", "process"],
+  ["struct Row: Sendable { let p = Process() }", "concurrency"],
+  ["// Sendable because nothing mutates", "concurrency"],
+]) {
+  test(`a Sendable outside a conformance list stays risky: ${line}`, () => {
+    risky({}, { "Apps/Mac/Sources/Today/Probe.swift": `${line}\n` }, kind);
+    risky({}, { "MoonShineCore/Tests/MoonShineCoreTests/ProbeTests.swift": `${line}\n` }, kind);
+  });
+}
+
+test("a conformance list split over lines stays risky", () => {
+  risky({}, { "Apps/Mac/Sources/Today/Probe.swift": "struct Row:\n  Hashable, Sendable {\n}\n" }, "concurrency");
+});
+
+test("dropping Sendable leaves every other token on the line", () => {
+  risky({}, { "Apps/Mac/Sources/Today/Probe.swift": "struct LineRemovalRow: Hashable, Sendable {\n" }, "line removal");
+});
+
+// `.task` that cannot be SwiftUI's modifier passes (owner, 2026-11-15, A′); the modifier takes its
+// action unlabeled (`task(priority:_:)`), so every other `.task` stays risky.
+for (const line of [
+  "let id = item.task.id",
+  "let titles = rows.map(\\.task.title)",
+  "case .task(let task): Text(task.title)",
+  "case let .task(row): Text(row.title)",
+  "if case .task(let row) = item { }",
+  "TableRow(TodayTableRow.task(item))",
+  'world.task("Etude", line: violin)',
+  'let group = world.task("Group", line: violin, estimate: 40)',
+]) {
+  for (const path of plainSwiftPaths) {
+    test(`a .task that is not the modifier passes: ${line} in ${path}`, () => plain({}, { [path]: `${line}\n` }));
+  }
+}
+
+for (const line of [
+  ".task { }",
+  ".task(reload)",
+  "  .task(reload)",
+  ".task({ work() })",
+  "content.task(reload)",
+  "view.task(store.pollForever)",
+  ".task(id: model.selection) { }",
+  ".task(priority: .low) { }",
+  ".task(name: \"poll\") { }",
+  "Text(title).task { }",
+  "let run = view.task",
+]) {
+  test(`the .task modifier stays risky: ${line}`, () => {
+    risky({}, { "Apps/Mac/Sources/Today/Probe.swift": `${line}\n` }, "concurrency");
+    risky({}, { "Apps/Mac/Tests/ProbeTests.swift": `${line}\n` }, "concurrency");
+  });
+}
+
+test("a multi-line name.task( passes in a test file only", () => {
+  const text = 'let row = world.task(\n  "Etude", line: violin)\n';
+  plain({}, { "MoonShineCore/Tests/MoonShineCoreTests/ProbeTests.swift": text });
+  risky({}, { "Apps/Mac/Sources/Today/Probe.swift": text }, "concurrency");
+  risky({}, { "Apps/Mac/Tests/ProbeTests.swift": "Text(title).task(\n  id: key) { }\n" }, "concurrency");
+  risky({}, { "Apps/Mac/Tests/ProbeTests.swift": ".task(\n  id: key) { }\n" }, "concurrency");
+});
+
+// `typealias X = Y` in a test file passes when `Y` is one name and no token needs text after it
+// (owner, 2026-11-15). The names are read from the rules' own source: a capitalised name followed
+// in a pattern by `\s` or `\(`, so a token added later keyed on a type name is covered here too.
+const ruleSource = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "guard", "plain-rules.mjs"), "utf8");
+const namesNeedingText = [...new Set([...ruleSource.matchAll(/(?<![A-Za-z0-9_])([A-Z][A-Za-z0-9_]*)\\{1,2}(?:s\*|\()/g)].map((m) => m[1]))];
+
+test("the rules name the type names whose tokens need text after them", () => {
+  for (const name of ["Task", "Link", "Bundle", "URL"]) assert.ok(namesNeedingText.includes(name), `${name}: ${namesNeedingText.join(", ")}`);
+});
+
+for (const name of namesNeedingText) {
+  test(`a typealias of ${name} stays risky in a test file`, () => {
+    const result = judge({}, { "MoonShineCore/Tests/MoonShineCoreTests/ProbeTests.swift": `  typealias X = ${name}\n` });
+    assert.equal(result.plain, false, `typealias X = ${name} computed plain`);
+  });
+}
+
+for (const line of ["  typealias W = TestWorld", "typealias R = RigaDay", "  private typealias W = TestWorld // short"]) {
+  test(`a typealias of one name passes in a test file: ${line}`, () => {
+    plain({}, { "MoonShineCore/Tests/MoonShineCoreTests/ProbeTests.swift": `${line}\n` });
+    plain({}, { "Apps/Mac/Tests/ProbeTests.swift": `${line}\n` });
+  });
+}
+
+for (const [line, kind] of [
+  ["typealias P = Process", "process"],
+  ["typealias U = Foundation.URL", "process"],
+  ["typealias Box<T> = Array<T>", "process"],
+  ["typealias Pair = (Int, Int)", "process"],
+  ["typealias Run = () -> Void", "process"],
+]) {
+  test(`a typealias stays risky in a test file: ${line}`, () => {
+    risky({}, { "MoonShineCore/Tests/MoonShineCoreTests/ProbeTests.swift": `${line}\n` }, kind);
+  });
+}
+
+test("a typealias stays risky outside test files", () => {
+  risky({}, { "Apps/Mac/Sources/Today/Probe.swift": "typealias W = TestWorld\n" }, "process");
+  risky({}, { "MoonShineCore/Sources/MoonShineCore/Services/Overview.swift": "typealias W = TestWorld\n" }, "process");
+});
+
+test("a held line removal in a test file stays risky", () => {
+  risky({}, { "Apps/Mac/Tests/ProbeTests.swift": "workspace.issues.append(.lineRemovalHeld([held.key]))\n" }, "line removal");
+});
+
+// Gaps added in passing (P-AM; owner, 2026-11-15), in sources and in tests.
+for (const [line, kind] of [
+  ["let lock = NSLock()", "concurrency"],
+  ["let lock = NSRecursiveLock()", "concurrency"],
+  ["let ready = NSCondition()", "concurrency"],
+  ["let gate = NSConditionLock(condition: 0)", "concurrency"],
+  ["_ = pthread_create(&thread, nil, body, nil)", "concurrency"],
+  ["var lock = os_unfair_lock()", "concurrency"],
+  ["MainActor.assumeIsolated { run() }", "concurrency"],
+  ["func f(on actor: isolated (any Actor)) {}", "concurrency"],
+  ["@concurrent func work() async {}", "concurrency"],
+  ["let link = NSXPCConnection(serviceName: name)", "process"],
+  ["let peer = xpc_connection_create(name, nil)", "process"],
+  ["let event = NSAppleEventDescriptor(eventClass: a, eventID: b, targetDescriptor: c, returnID: 0, transactionID: 0)", "process"],
+  ["let manager = NSAppleEventManager.shared()", "process"],
+  ["NSRunningApplication.current.terminate()", "process"],
+  ["_ = setenv(name, value, 1)", "process"],
+  ["_ = unsetenv(name)", "process"],
+  ["_ = putenv(entry)", "process"],
+  ["_ = chdir(path)", "process"],
+  ["_ = mkdir(path, 0o700)", "storage"],
+  ["_ = mkdirat(fd, path, 0o700)", "storage"],
+  ["_ = symlink(target, path)", "storage"],
+  ["_ = link(from, to)", "storage"],
+  ["_ = chmod(path, 0o600)", "storage"],
+  ["_ = fchmod(fd, 0o600)", "storage"],
+  ["_ = copyfile(from, to, nil, 0)", "storage"],
+  ["_ = clonefile(from, to, 0)", "storage"],
+  ["_ = setxattr(path, name, value, size, 0, 0)", "storage"],
+  ["_ = removexattr(path, name, 0)", "storage"],
+  ["let fd = mkstemp(&template)", "storage"],
+  ["let dir = mkdtemp(&template)", "storage"],
+  ["let dir = opendir(path)", "storage"],
+  ["let entry = readdir(dir)", "storage"],
+  ["_ = scandir(path, &list, nil, nil)", "storage"],
+  ["let walk = fts_open(paths, 0, nil)", "storage"],
+  ["_ = realpath(path, nil)", "storage"],
+  ["_ = Darwin.mkdir(path, 0o700)", "storage"],
+  ["let wrapper = try FileWrapper(url: url)", "storage"],
+  ["NSUbiquitousKeyValueStore.default.set(value, forKey: key)", "storage"],
+  ["DocumentGroup(newDocument: Note()) { _ in EmptyView() }", "storage"],
+  ["struct Note: FileDocument {", "storage"],
+  ["final class Book: NSDocument {", "storage"],
+  ["let service = NetService(domain: \"\", type: kind, name: name)", "URL"],
+  ["Stream.getStreamsToHost(withName: host, port: 80, inputStream: &a, outputStream: &b)", "URL"],
+  ["let connection = NSURLConnection(request: request, delegate: self)", "URL"],
+  ["let activity = NSUserActivity(activityType: kind)", "drag, pasteboard or sharing"],
+  [".userActivity(kind) { _ in }", "drag, pasteboard or sharing"],
+  [".onContinueUserActivity(kind) { _ in }", "drag, pasteboard or sharing"],
+  [".handlesExternalEvents(preferring: [], allowing: [\"*\"])", "drag, pasteboard or sharing"],
+]) {
+  test(`a risky token added in P-AM is risky: ${line}`, () => {
+    risky({}, { "Apps/Mac/Sources/Today/Probe.swift": `${line}\n` }, kind);
+    risky({}, { "Apps/Mac/Tests/ProbeTests.swift": `${line}\n` }, kind);
+  });
+}
+
+for (const line of [
+  "NavigationLink(value: item) { }",
+  "let unlinked = rows.unlink",
+  "items.link(to: other)",
+  "let lockedOut = false",
+  "let dirName = folder.name",
+  "Text(isolatedCount.formatted())",
+]) {
+  test(`a harmless line next to a P-AM token passes: ${line}`, () => {
+    plain({}, { "Apps/Mac/Sources/Today/Probe.swift": `${line}\n` });
+  });
+}
+
 // The screen slices S4-2 and S5 (owner, 2026-11-11): on the repository's own files, a new screen,
 // its sidebar case and its shortcut compute plain; the held line removal stays risky.
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -491,4 +702,62 @@ test("changedLines counts added and removed lines, and null for a binary change"
   assert.equal(changedLines(text.git, text.from, text.to), 3);
   const binary = twoCommits({}, { "fixtures/data.bin": Buffer.from([0, 1, 2]) });
   assert.equal(changedLines(binary.git, binary.from, binary.to), null);
+});
+
+// S4-2a as merged (PR #58), read from the repository's history: its Core and test files compute
+// plain under P-AM's rules, except the test of the held line removal; the rest stays risky for its
+// own reasons. CI's docs job checks out full history (fetch-depth: 0).
+const s42a = { base: "5728d4f8c0aa5f8097f971f0a240c581f27b0b89", head: "3d398b86d3562164bc9b17f53540a68c63456fc9" };
+const repoGit = (args, options = {}) => {
+  const result = spawnSync("git", args, { cwd: repoRoot, encoding: "utf8", maxBuffer: 1 << 30, ...options });
+  assert.equal(result.status, 0, `git ${args.join(" ")}\n${result.stderr}`);
+  return result.stdout;
+};
+
+test("S4-2a: its Core and test files compute plain; the rest stays risky for its own reasons", () => {
+  for (const commit of [s42a.base, s42a.head]) {
+    const found = spawnSync("git", ["cat-file", "-e", `${commit}^{commit}`], { cwd: repoRoot });
+    assert.equal(found.status, 0, `the S4-2a commit ${commit} is missing: this test needs the full history (git fetch --unshallow)`);
+  }
+  const changes = readChanges(repoGit, s42a.base, s42a.head);
+  const judged = Object.fromEntries(changes.map((change) => [change.path, classify([change], []).reasons]));
+  for (const path of [
+    "MoonShineCore/Sources/MoonShineCore/Services/Overview.swift",
+    "MoonShineCore/Tests/MoonShineCoreTests/LinesTests.swift",
+    "MoonShineCore/Tests/MoonShineCoreTests/TestWorld.swift",
+    "Apps/Mac/Tests/TodayScreenTests.swift",
+    "Apps/Mac/Sources/Lines/LinesFormat.swift",
+    "Apps/Mac/Sources/Lines/LinesScreen.swift",
+    "Apps/Mac/Sources/Lines/LinesView.swift",
+    "Apps/Mac/Sources/Lines/Sparkline.swift",
+    "Apps/Mac/Sources/RootView.swift",
+    "Apps/Mac/Sources/ViewCommands.swift",
+    "Apps/Mac/Resources/Localizable.xcstrings",
+    "docs/method/forecast.md",
+    "docs/method/log/2026-11.md",
+  ]) {
+    assert.deepEqual(judged[path], [], `${path}: ${judged[path]?.join("; ")}`);
+  }
+  assert.deepEqual(judged["Apps/Mac/Tests/LinesScreenTests.swift"], ["a risky token (line removal) in or next to a change: \"Apps/Mac/Tests/LinesScreenTests.swift\""]);
+  assert.ok(judged[spec][0].startsWith("a spec change beyond ticking boxes"), judged[spec].join("; "));
+  const byPath = Object.entries(judged).filter(([, reasons]) => reasons.some((reason) => reason.startsWith("a path outside the plain list")));
+  assert.deepEqual(
+    byPath.map(([path]) => path).sort(),
+    [
+      "Adapters/Tests/OmniFocusAdapterTests/DemoDataGoldenTests.swift",
+      "Adapters/Tests/OmniFocusAdapterTests/OverviewSmokeTests.swift",
+      "Apps/Mac/Sources/LineRemoval.swift",
+      "design/README.md",
+      "design/components.md",
+      "design/copy.md",
+      "design/demo-data.md",
+      "design/principles.md",
+      "design/screens/line-detail.md",
+      "design/screens/lines.md",
+      "design/screens/week.md",
+      "scripts/plain-rules.test.mjs",
+    ],
+  );
+  assert.equal(Object.keys(judged).length, 27);
+  assert.equal(classify(changes, []).plain, false);
 });

@@ -52,23 +52,29 @@ const tokens = [
   ["concurrency", /(?<![A-Za-z0-9_])Task\s*[{(<.]/, true],
   ["concurrency", member(["task"]), true],
   ["concurrency", word(["async", "await"]), false],
-  ["concurrency", word(["actor", "Sendable", "nonisolated", "Thread", "Timer"]), true],
+  ["concurrency", word(["actor", "Sendable", "nonisolated", "isolated", "Thread", "Timer"]), true],
   ["concurrency", part(["TaskGroup", "Dispatch", "OperationQueue", "Async\\w*Stream", "Continuation"]), true],
+  ["concurrency", part(["NSLock", "NSRecursiveLock", "NSCondition", "pthread_", "os_unfair_lock", "assumeIsolated", "@concurrent"]), true],
   ["process", word(["Process", "typealias", "dlopen", "dlsym", "getenv", "fopen", "popen"]), true],
   ["process", part(["ProcessInfo", "NSWorkspace", "NSAppleScript", "OSAKit", "NotificationCenter", "posix_spawn"]), true],
   ["process", part(["NSClassFromString", "NSSelectorFromString", "classNamed", "@_", "[Uu]nsafe", "NSUser\\w*Task"]), true],
   ["process", part(["InputStream", "OutputStream", "Bundle\\s*\\(\\s*(?:path|url)"]), true],
+  ["process", part(["NSXPC", "xpc_", "NSAppleEventDescriptor", "NSAppleEventManager", "NSRunningApplication"]), true],
   // The exec family by prefix: execl, execle, execlp, execv, execve, execvp, execvP, fexecve.
-  ["process", cCall(["kill", "open", "system", "f?exec[lv]\\w*"]), true],
+  ["process", cCall(["kill", "open", "system", "f?exec[lv]\\w*", "setenv", "unsetenv", "putenv", "chdir"]), true],
   ["storage", cCall(["unlink(?:at)?", "rename(?:at)?(?:x_np)?", "rmdir", "remove", "f?truncate", "creat"]), true],
+  ["storage", cCall(["mkdir(?:at)?", "symlink(?:at)?", "link(?:at)?", "f?chmod(?:at)?", "f?copyfile", "clonefile(?:at)?"]), true],
+  ["storage", cCall(["f?setxattr", "f?removexattr", "mks?temps?", "mkdtemp", "f?opendir", "readdir", "scandir", "fts_open", "realpath"]), true],
   ["storage", part(["UserDefaults", "FileManager", "FileHandle", "write\\(to", "fileURLWithPath", "URL\\(filePath"]), true],
   ["storage", part(["NSHomeDirectory", "homeDirectory", "fileImporter", "fileExporter", "NSOpenPanel", "NSSavePanel"]), true],
   ["storage", part(["[Bb]ookmark", "SecurityScoped", "EventKit", "GRDB", "Yams"]), true],
+  ["storage", part(["FileWrapper", "NSUbiquitousKeyValueStore", "DocumentGroup", "FileDocument", "NSDocument"]), true],
   ["storage", /(?<![A-Za-z0-9_])contentsOf/, true],
-  ["URL", part(["URLSession", "openURL", "onOpenURL", "AsyncImage", "byReferencing"]), true],
+  ["URL", part(["URLSession", "openURL", "onOpenURL", "AsyncImage", "byReferencing", "NetService", "getStreamsToHost", "NSURLConnection"]), true],
   ["URL", /(?<![A-Za-z0-9_])Link\s*\(/, true],
   ["drag, pasteboard or sharing", part(["onDrop", "dropDestination", "draggable", "NSItemProvider", "NSPasteboard", "UIPasteboard", "ShareLink", "NSSharingService"]), true],
   ["drag, pasteboard or sharing", part(["copyable", "cuttable", "PasteButton", "pasteDestination", "onPasteCommand", "onCopyCommand", "onCutCommand", "onDrag", "exportableToServices", "importableFromServices", "importsItemProviders"]), true],
+  ["drag, pasteboard or sharing", part(["NSUserActivity", "userActivity", "onContinueUserActivity", "handlesExternalEvents"]), true],
   ["model action", member(modelActions), true],
   ["model action", call(["start", "load"]), false],
   ["model action", onModel([...modelActions, "start", "load"]), false],
@@ -89,6 +95,46 @@ const importModules = new Set([
 // `import Synchronization` stays risky in tests too: a lock is concurrency (rule 2).
 const testableModules = new Set(["MoonShineCore", "MoonShineFixtures", "MoonShineMac"]);
 
+// P-AM (owner, 2026-11-12 and 2026-11-15): three shapes are taken out of a line before the tokens
+// scan it; every other token still scans the rest of the line.
+//
+// `Sendable` as an item of a type's conformance list, the whole declaration on one line: in Swift 6
+// mode (Core and the app) the compiler checks the conformance, and `@unchecked`, which opts out, is
+// not a plain item, so it stays. A generic clause, `where`, `@Sendable` and `any Sendable` stay too.
+const conformance =
+  /^(\s*(?:(?:@\w+|public|package|internal|fileprivate|private|final|indirect)\s+)*(?:struct|enum|class|extension|protocol)\s+[A-Za-z_]\w*\s*:\s*)([\w.]+(?:\s*,\s*[\w.]+)*)(\s*\{?\s*\}?\s*(?:\/\/.*)?)$/;
+// `.task` where it cannot be SwiftUI's modifier, which is called or given a trailing closure, and
+// whose action may come unlabeled (`task(priority:_:)`): a property chain, an enum case pattern, a
+// capitalised type before it, a string literal as the first argument.
+const taskNotModifier = [
+  /\.\s*task(?=\s*\.)/g,
+  /(?<=(?<![A-Za-z0-9_])case\s+)\.\s*task(?=\s*\(\s*let(?![A-Za-z0-9_]))/g,
+  /(?<=(?<![A-Za-z0-9_])case\s+let\s+)\.\s*task(?=\s*\()/g,
+  /(?<=(?<![A-Za-z0-9_.])[A-Z][A-Za-z0-9_]*\s*)\.\s*task(?=\s*\()/g,
+  /\.\s*task(?=\s*\(\s*")/g,
+];
+// In test files also a helper call whose arguments start on the next line: `world.task(`.
+const taskHelperOverLines = /(?<=(?<![A-Za-z0-9_.])[A-Za-z_][A-Za-z0-9_]*\s*)\.\s*task(?=\s*\(\s*$)/g;
+// In test files, `typealias X = Y` for one name `Y`, unless a token needs text after `Y`
+// (`Task {`, `Link(`, `Bundle(path:`, `URL(filePath:`), which the alias would hide. `Y` is still
+// scanned. scripts/plain-rules.test.mjs reads these names from this file's patterns.
+const aliasOfOneName = /^(\s*(?:(?:public|package|internal|fileprivate|private)\s+)?)typealias(\s+[A-Za-z_]\w*\s*=\s*([A-Za-z_]\w*)\s*(?:\/\/.*)?)$/;
+const namesNeedingText = new Set(["Task", "Link", "Bundle", "URL"]);
+
+/// The line as the tokens scan it: P-AM's shapes taken out.
+function scanned(text, inTests) {
+  let line = text;
+  const list = conformance.exec(line);
+  if (list) {
+    const items = list[2].split(",").map((item) => item.trim());
+    if (items.includes("Sendable")) line = list[1] + items.filter((item) => item !== "Sendable").join(", ") + list[3];
+  }
+  for (const pattern of inTests ? [...taskNotModifier, taskHelperOverLines] : taskNotModifier) line = line.replace(pattern, ".task_");
+  const alias = inTests && aliasOfOneName.exec(line);
+  if (alias && !namesNeedingText.has(alias[3])) line = `${alias[1]}typealias_${alias[2]}`;
+  return line;
+}
+
 /// Why a Swift line is risky, as a kind, or null.
 function riskyToken(text, inTests) {
   if (/(?<![A-Za-z0-9_])import(?![A-Za-z0-9_])/.test(text)) {
@@ -97,8 +143,9 @@ function riskyToken(text, inTests) {
     const [, testable, module] = plainImport;
     if (testable ? !(inTests && testableModules.has(module)) : !importModules.has(module)) return "an import";
   }
+  const line = scanned(text, inTests);
   for (const [kind, pattern, inTestFiles] of tokens) {
-    if ((inTestFiles || !inTests) && pattern.test(text)) return kind;
+    if ((inTestFiles || !inTests) && pattern.test(line)) return kind;
   }
   return null;
 }
