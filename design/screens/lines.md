@@ -24,7 +24,7 @@ Cells:
 - State: `LineStateLabel`.
 - Budget: `6 h / week` from the vault, `—` when unset.
 - Sparkline: see `components.md`.
-- Last activity: `today` / `yesterday` / `29 days ago` (maintenance: neutral) / moon + `quiet for 29 days` / `no completions since 6 July` (`no activity yet` while the window start is not known) / `paused since 14 July`.
+- Last activity: `today` / `yesterday` / `29 days ago` (maintenance: neutral) / moon + `quiet for 29 days` / `no completions since 6 July` (`no activity yet` while the window start is not known) / `last 14 July` for a paused line (its last completion as neutral text, `—` without one; Q1.1, owner 2026-10-30).
 - Next actions: count of available next actions.
 - Estimated this week: `≈ 6 h 40 min est.` (sum of task estimates planned this week); `—` if none.
 
@@ -32,7 +32,7 @@ The selected row has the `selection` fill and a chevron: ↵ opens Line detail.
 
 ## SwiftUI
 
-`Table` with `Section`s per tier; the sparkline column hosts a small Swift Charts `Chart`. Navigation to detail via `NavigationStack` (`.navigationDestination(for: Line.ID.self)`).
+`Table` with `Section`s per tier; the sparkline column hosts the `Sparkline` view, drawn with shapes for the exact 5 · 1 · 5 · 6 pt geometry (S4-2a). Navigation to detail via `NavigationStack` (`.navigationDestination(for: Line.ID.self)`).
 
 ## Acceptance
 
@@ -64,7 +64,7 @@ Hovering a mark shows a tooltip `W36 · Leap — Vibrato finally works`. Clickin
 
 ### SwiftUI
 
-The sparkline cell becomes `VStack(spacing: 2) { Chart; HStack { ForEach(weeks) { TakeMarkView } } }` with the same x positions as the chart's week bands (shared `GeometryReader` or fixed slot width).
+The sparkline cell becomes `VStack(spacing: 2) { Sparkline; HStack { ForEach(weeks) { TakeMarkView } } }` with the same x positions as the sparkline's week pairs (shared `GeometryReader` or fixed slot width).
 
 ### Acceptance
 
@@ -92,7 +92,7 @@ Artboards: `Lines-Periods`, `Lines-Periods-RU` (+ `-Dark`). It also restores �
 
   This is the exact form the vault contract (`docs/discovery/vault-contract.md` § 1) and the phase-1 spec (S4) leave to the design round: the weekly budget stays the line's main number; the floor is a daily minimum under it, or the only number when there is no budget. **Floor format:** `floor_h_day` × 60, rounded to the whole minute. Under 60 min it is written in minutes, at least `1 min/day` (`floor_h_day: 0.33` → `20 min/day`; `0.99` → `59 min/day`; `0.02` → `1 min/day`). From 60 min on it is written in hours with up to two decimals and no trailing zeros, in the locale's decimal separator (`1 h/day`, `1.5 h/day`, `1.25 h/day`, `1,5 ч/день`). `0` is no floor. The tier header sums floors of foundation lines only (`floor 4 h/day`), in the same format.
 
-- **Last activity:** `today` · `yesterday` · `2 days ago` · moon + `quiet for 29 days` (active lines) · `no completions since 6 July` (`no activity yet` while the window start is not known) · `29 days ago` (maintenance, neutral) · `paused since 14 July`.
+- **Last activity:** `today` · `yesterday` · `2 days ago` · moon + `quiet for 29 days` (active lines) · `no completions since 6 July` (`no activity yet` while the window start is not known) · `29 days ago` (maintenance, neutral) · `last 14 July` (paused: the last completion as neutral text, `—` without one; Q1.1, owner 2026-10-30).
 - **Next actions:** the count of available next actions (the rule of `components.md` § QuietLineCard). **Estimated this week:** `≈ 6 h 40 min est.` or `—`.
 - No ▶ in S4-2: the start affordance on a Lines row (`timer-mac.md`) comes with the Timer slice.
 

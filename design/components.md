@@ -47,7 +47,7 @@ SwiftUI: `Section(header:)` content, or a `DisclosureGroup` label for Life ops.
 
 8 weekly pairs, 28 high, a baseline hairline. Each week: rhythm bar (5 wide, `rhythm`) and progress bar (5 wide, `progress`), 1 apart, 6 between weeks. Both series share one scale per line: max of either series = 24. Non-zero values get at least 3 high. The current week has a `track` backdrop, a dashed outline and opacity 0.6. A legend sits once per screen, never per row.
 
-SwiftUI: Swift Charts `BarMark(x: week, y: value).position(by: series)` with axes hidden, `.chartYScale(domain: 0...max)`. Current week: `RectangleMark` behind it, opacity on the marks.
+SwiftUI (S4-2a): drawn with shapes, not Swift Charts, so the 5 · 1 · 5 · 6 geometry is exact: an `HStack` of week pairs of 5 pt `Rectangle`s on a hairline baseline overlay; the current week has a rounded `chipFill` backdrop with a dashed border and its bars at 0.6 opacity (`Apps/Mac/Sources/Lines/Sparkline.swift`).
 
 ## MetricCard (Line detail)
 

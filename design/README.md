@@ -355,7 +355,7 @@ The canvas mockups are generated files and are not edited by hand; draft-5's wer
 
 #### Before 3b
 
-1. **`Lines.dc.html` — Math's block and stale cells** (draft-5's `Lines-Periods` shows Math under Science, and `demo-data.md` § Draft-5 replaces its Last activity, Next actions and Estimated this week cells for 8 of 10 lines; the generated file is unchanged): the draft-4 mockup shows 📐 Math under the block `Foundation` and has dropped the `Science` / «Наука» block label; `demo-data.md` keeps Math in **Science** (tier unchanged: active). Restore Science.
+1. **`Lines.dc.html` — Math's block and stale cells** (draft-5's `Lines-Periods` shows Math under Science, and `demo-data.md` § Draft-5 replaces its Last activity, Next actions and Estimated this week cells for all 10 lines, the Estimated column being S4-2a's rule output; the generated file is unchanged): the draft-4 mockup shows 📐 Math under the block `Foundation` and has dropped the `Science` / «Наука» block label; `demo-data.md` keeps Math in **Science** (tier unchanged: active). Restore Science.
 2. **Names in the mockups**: Forward / Back → Rise / Dip (EN, RU, LV, IT, DE); hours `2 h of 6 h budget`.
 3. **Draft-4 items not drawn**: Split View for the take section, the take on the Today rail, RTL marks, the Mac note popover.
 4. **Draft-3 items**: the day rail on iPad and iPhone (open question 14 above); free time on Today as the rest of the window (`≈ 2 h 25 min free until 22:00` at 16:20); the deadline rule (`screens/settings.md` § Deadlines: the setting, and plain `due 20:35` text and neutral day-rail marks for due dates that are not deadlines); read-only checkboxes on the day rail.

@@ -16,7 +16,7 @@ date: 2026-10-01
 
 ## Platform
 
-- macOS 26, SwiftUI. Use `NavigationSplitView`, a toolbar with title and subtitle, `.inspector` for right rails and a bottom status bar via `.safeAreaInset(edge: .bottom)`.
+- macOS 26, SwiftUI. Use `NavigationSplitView`, a toolbar with title and subtitle, `.inspector` for right rails and a bottom status bar that takes its own height, under the detail in a `VStack`, so no row ends under it (owner, 2026-11-11; it replaces `.safeAreaInset(edge: .bottom)`).
 - SF Pro and SF Mono only. No custom fonts.
 - Light and dark from semantic colours. Custom tokens: `tokens.md`.
 - Keyboard first: ⌘1–⌘4 switch views, ⌘K opens the palette, ⌘R refreshes, ↵ opens the selection, ⌘↵ opens it in OmniFocus or Obsidian.

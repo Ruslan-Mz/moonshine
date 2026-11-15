@@ -5,6 +5,7 @@ import SwiftUI
 /// that adds a screen need not touch AppModel.swift.
 enum SidebarItem: Hashable {
   case today
+  case lines
 }
 
 struct RootView: View {
@@ -12,14 +13,18 @@ struct RootView: View {
 
   var body: some View {
     NavigationSplitView {
-      // Week, Month and Lines join with their slices (S4-2, S5).
+      // Week and Month join with their slices (S5).
       List(selection: $model.selection) {
         Label("Today", systemImage: "sun.max").tag(SidebarItem.today)
+        Label("Lines", systemImage: "chart.bar").tag(SidebarItem.lines)
       }
       .navigationSplitViewColumnWidth(min: 180, ideal: 200)
     } detail: {
-      content
-        .safeAreaInset(edge: .bottom, spacing: 0) { StatusBar(model: model) }
+      // The bar takes its own height, so no row ends under it (owner, 2026-11-11).
+      VStack(spacing: 0) {
+        content.frame(maxHeight: .infinity)
+        StatusBar(model: model)
+      }
     }
   }
 
@@ -27,9 +32,14 @@ struct RootView: View {
     if case .loaded(let overview) = model.state {
       // Dates follow the workspace's zone, so Demo reads the same on any Mac.
       let zone = overview.workspace.timeZone
-      TodayDetail(model: model, overview: overview)
-        .environment(\.timeZone, zone)
-        .environment(\.calendar, TodayFormat.calendar(zone))
+      Group {
+        switch model.selection {
+        case .lines: LinesDetail(overview: overview)
+        case .today, nil: TodayDetail(model: model, overview: overview)
+        }
+      }
+      .environment(\.timeZone, zone)
+      .environment(\.calendar, TodayFormat.calendar(zone))
     } else {
       switch TodayPlaceholder(model) {
       case .importing, nil:
