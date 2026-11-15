@@ -45,6 +45,9 @@ const call = (list) => new RegExp(`\\.(?:${names(list)})\\s*\\(`);
 // another name passes; every plain pull request still has its full review (owner, 2026-11-11).
 const onModel = (list) => new RegExp(`(?<![A-Za-z0-9_])(?:model|appModel)\\s*\\.\\s*(?:${names(list)})(?![A-Za-z0-9_])`);
 
+// `](scheme:`, the target of a markdown link, also in a String Catalog's values.
+const markdownLink = /\]\(\s*[A-Za-z][A-Za-z0-9+.-]*:/;
+
 const modelActions = ["select", "refresh", "approveHeldRemoval", "chooseVault", "setSource", "setVaultBookmark", "closeStores"];
 
 // [kind, pattern, also in test files]
@@ -52,23 +55,39 @@ const tokens = [
   ["concurrency", /(?<![A-Za-z0-9_])Task\s*[{(<.]/, true],
   ["concurrency", member(["task"]), true],
   ["concurrency", word(["async", "await"]), false],
-  ["concurrency", word(["actor", "Sendable", "nonisolated", "Thread", "Timer"]), true],
+  ["concurrency", word(["actor", "Sendable", "nonisolated", "isolated", "Thread", "Timer"]), true],
   ["concurrency", part(["TaskGroup", "Dispatch", "OperationQueue", "Async\\w*Stream", "Continuation"]), true],
+  ["concurrency", part(["NSLock", "NSRecursiveLock", "NSCondition", "pthread_", "os_unfair_lock", "assumeIsolated", "@concurrent"]), true],
+  ["concurrency", part(["performSelector", "afterDelay"]), true],
   ["process", word(["Process", "typealias", "dlopen", "dlsym", "getenv", "fopen", "popen"]), true],
   ["process", part(["ProcessInfo", "NSWorkspace", "NSAppleScript", "OSAKit", "NotificationCenter", "posix_spawn"]), true],
   ["process", part(["NSClassFromString", "NSSelectorFromString", "classNamed", "@_", "[Uu]nsafe", "NSUser\\w*Task"]), true],
   ["process", part(["InputStream", "OutputStream", "Bundle\\s*\\(\\s*(?:path|url)"]), true],
+  ["process", part(["NSXPC", "xpc_", "NSAppleEventDescriptor", "NSAppleEventManager", "NSRunningApplication"]), true],
   // The exec family by prefix: execl, execle, execlp, execv, execve, execvp, execvP, fexecve.
-  ["process", cCall(["kill", "open", "system", "f?exec[lv]\\w*"]), true],
+  ["process", cCall(["kill", "open", "system", "f?exec[lv]\\w*", "setenv", "unsetenv", "putenv", "f?chdir"]), true],
   ["storage", cCall(["unlink(?:at)?", "rename(?:at)?(?:x_np)?", "rmdir", "remove", "f?truncate", "creat"]), true],
+  ["storage", cCall(["openat", "mkdir(?:at)?", "symlink(?:at)?", "link(?:at)?", "[fl]?chmod(?:at)?", "[fl]?chown(?:at)?", "f?copyfile", "f?clonefile(?:at)?"]), true],
+  ["storage", cCall(["mkfifo(?:at)?", "mknod(?:at)?", "[fl]?utimes", "futimens", "utimensat"]), true],
+  ["storage", cCall(["f?setxattr", "f?removexattr", "mko?s?temps?", "mkdtemp", "f?opendir", "fdopendir", "readdir(?:_r)?", "scandir", "fts_open", "n?ftw", "realpath"]), true],
   ["storage", part(["UserDefaults", "FileManager", "FileHandle", "write\\(to", "fileURLWithPath", "URL\\(filePath"]), true],
   ["storage", part(["NSHomeDirectory", "homeDirectory", "fileImporter", "fileExporter", "NSOpenPanel", "NSSavePanel"]), true],
   ["storage", part(["[Bb]ookmark", "SecurityScoped", "EventKit", "GRDB", "Yams"]), true],
-  ["storage", /(?<![A-Za-z0-9_])contentsOf/, true],
-  ["URL", part(["URLSession", "openURL", "onOpenURL", "AsyncImage", "byReferencing"]), true],
+  ["storage", part(["FileWrapper", "NSUbiquitousKeyValueStore", "DocumentGroup", "FileDocument", "NSDocument"]), true],
+  // `contentsOf`, `withContentsOf`, `ContentsOfFile`: reads of a file the tokens above do not name.
+  ["storage", part(["[Cc]ontentsOf", "NSAttributedString\\s*\\(\\s*(?:url|path)", "CGDataProvider", "CGPDFDocument", "CGImageSource"]), true],
+  ["storage", part(["applicationSupportDirectory", "documentsDirectory", "fileURLWithFileSystemRepresentation"]), true],
+  ["URL", part(["URLSession", "openURL", "onOpenURL", "AsyncImage", "byReferencing", "NetService", "getStreamsToHost", "NSURLConnection"]), true],
+  ["URL", part(["CFStreamCreate\\w*Socket", "CFSocket", "CF(?:Read|Write)Stream"]), true],
+  ["URL", cCall(["socket", "connect", "bind", "sendto"]), true],
   ["URL", /(?<![A-Za-z0-9_])Link\s*\(/, true],
+  // A markdown link opens the browser on a click, as `Link` does: in a string literal, which `Text`
+  // reads as markdown, in `AttributedString(markdown:)`, or as the `.link` attribute.
+  ["URL", part(["AttributedString\\s*\\(\\s*markdown", "\\.link\\s*="]), true],
+  ["URL", markdownLink, true],
   ["drag, pasteboard or sharing", part(["onDrop", "dropDestination", "draggable", "NSItemProvider", "NSPasteboard", "UIPasteboard", "ShareLink", "NSSharingService"]), true],
   ["drag, pasteboard or sharing", part(["copyable", "cuttable", "PasteButton", "pasteDestination", "onPasteCommand", "onCopyCommand", "onCutCommand", "onDrag", "exportableToServices", "importableFromServices", "importsItemProviders"]), true],
+  ["drag, pasteboard or sharing", part(["NSUserActivity", "userActivity", "onContinueUserActivity", "handlesExternalEvents"]), true],
   ["model action", member(modelActions), true],
   ["model action", call(["start", "load"]), false],
   ["model action", onModel([...modelActions, "start", "load"]), false],
@@ -89,16 +108,68 @@ const importModules = new Set([
 // `import Synchronization` stays risky in tests too: a lock is concurrency (rule 2).
 const testableModules = new Set(["MoonShineCore", "MoonShineFixtures", "MoonShineMac"]);
 
+// P-AM (owner, 2026-11-12, 2026-11-15 and 2026-11-16): three shapes are taken out of a line before
+// the tokens scan it; every other token still scans the rest of the line.
+//
+// `Sendable` as an item of a type's conformance list, the whole declaration on one line: in Swift 6
+// mode (Core and the app) the compiler checks the conformance, and `@unchecked`, which opts out, is
+// not a plain item, so it stays. A generic clause, `where`, `@Sendable` and `any Sendable` stay too.
+// The compiler does not check a subclass of an `@unchecked Sendable` class (`JSONDecoder`): a class
+// passes only with `Sendable` first, where no superclass can stand. An extension of such a subclass
+// cannot be told from the line and passes (accepted, owner 2026-11-16).
+// Every run is bounded and the tail has one parse, so a long line cannot make the match slow; a line
+// longer than `conformanceLength` is not read and stays risky.
+const conformanceLength = 400;
+const conformance =
+  /^([ \t]{0,40}(?:(?:@\w{1,40}|public|package|internal|fileprivate|private|final|indirect)[ \t]{1,8}){0,6}(struct|enum|class|extension|protocol)[ \t]{1,8}[A-Za-z_]\w{0,80}[ \t]{0,8}:[ \t]{0,8})([\w.]{1,80}(?:[ \t]{0,8},[ \t]{0,8}[\w.]{1,80}){0,20})([ \t]{0,8}(?:\{[ \t]{0,8}(?:\}[ \t]{0,8})?)?(?:\/\/.*)?)$/;
+// `.task` where it cannot be SwiftUI's modifier: a property chain or an enum case pattern.
+const taskNotModifier = [
+  /\.\s*task(?=\s*\.)/g,
+  /(?<=(?<![A-Za-z0-9_])case\s+)\.\s*task(?=\s*\(\s*let(?![A-Za-z0-9_]))/g,
+  /(?<=(?<![A-Za-z0-9_])case\s+let\s+)\.\s*task(?=\s*\()/g,
+];
+// And `.task(` on a receiver named here, in the paths named with it (owner, 2026-11-16): the app's
+// type with a `task` case and the test helpers. A variable that shares one of these names passes;
+// the review still reads every plain pull request. A new receiver needs a reviewed edit of this list.
+const taskReceivers = [
+  [/^Apps\/Mac\/(?:Sources\/Today|Tests)\//, ["TodayTableRow"]],
+  [testPath, ["world", "TestWorld"]],
+  [/^MoonShineCore\/Tests\/MoonShineCoreTests\/DayLoadTests\.swift$/, ["RigaDay", "R"]],
+].map(([path, list]) => [path, new RegExp(`(?<=(?<![A-Za-z0-9_.])(?:${names(list)})\\s*)\\.\\s*task(?=\\s*\\()`, "g")]);
+// In test files, `typealias X = Y` for one name `Y`, unless a token needs text after `Y`
+// (`Task {`, `Link(`, `Bundle(path:`, `URL(filePath:`, `NSAttributedString(url:`), which the alias would hide. `Y` is still
+// scanned. scripts/plain-rules.test.mjs reads these names from this file's patterns.
+const aliasOfOneName = /^(\s*(?:(?:public|package|internal|fileprivate|private)\s+)?)typealias(\s+[A-Za-z_]\w*\s*=\s*([A-Za-z_]\w*)\s*(?:\/\/.*)?)$/;
+const namesNeedingText = new Set(["Task", "Link", "Bundle", "URL", "NSAttributedString", "AttributedString"]);
+
+/// The line as the tokens scan it: P-AM's shapes taken out.
+function scanned(text, path, inTests) {
+  let line = text;
+  const list = line.length <= conformanceLength && conformance.exec(line);
+  if (list) {
+    const items = list[3].split(",").map((item) => item.trim());
+    const allowed = list[2] === "class" ? items[0] === "Sendable" : items.includes("Sendable");
+    if (allowed) line = list[1] + items.filter((item) => item !== "Sendable").join(", ") + list[4];
+  }
+  for (const pattern of taskNotModifier) line = line.replace(pattern, ".task_");
+  for (const [where, pattern] of taskReceivers) if (where.test(path)) line = line.replace(pattern, ".task_");
+  const alias = inTests && aliasOfOneName.exec(line);
+  if (alias && !namesNeedingText.has(alias[3])) line = `${alias[1]}typealias_${alias[2]}`;
+  return line;
+}
+
 /// Why a Swift line is risky, as a kind, or null.
-function riskyToken(text, inTests) {
+function riskyToken(text, path) {
+  const inTests = testPath.test(path);
   if (/(?<![A-Za-z0-9_])import(?![A-Za-z0-9_])/.test(text)) {
     const plainImport = /^\s*(@testable\s+)?import\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:\/\/.*)?$/.exec(text);
     if (!plainImport) return "an import";
     const [, testable, module] = plainImport;
     if (testable ? !(inTests && testableModules.has(module)) : !importModules.has(module)) return "an import";
   }
+  const line = scanned(text, path, inTests);
   for (const [kind, pattern, inTestFiles] of tokens) {
-    if ((inTestFiles || !inTests) && pattern.test(text)) return kind;
+    if ((inTestFiles || !inTests) && pattern.test(line)) return kind;
   }
   return null;
 }
@@ -199,12 +270,16 @@ export function classify(changes, entries) {
       reasons.push(`a spec change beyond ticking boxes: ${where}`);
       continue;
     }
+    // A catalog's value is markdown to `Text`: a link in it opens the browser on a click.
+    if (change.path.endsWith(".xcstrings") && change.hunks.some((hunk) => hunk.some((line) => markdownLink.test(line.text)))) {
+      reasons.push(`a risky token (URL) in or next to a change: ${where}`);
+      continue;
+    }
     if (!change.path.endsWith(".swift")) continue;
-    const inTests = testPath.test(change.path);
     const kinds = new Set();
     for (const hunk of change.hunks) {
       for (const line of hunk) {
-        const kind = riskyToken(line.text, inTests);
+        const kind = riskyToken(line.text, change.path);
         if (kind) kinds.add(kind);
       }
     }

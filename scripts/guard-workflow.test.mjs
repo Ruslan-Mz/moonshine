@@ -58,6 +58,8 @@ test("one job, in the guard environment, with no concurrency group, so no run is
     ["guard"],
   );
   assert.ok(under("jobs", "guard").some(({ line }) => line === "environment: guard"));
+  // A pinned image, not ubuntu-latest, so the job's tools change only with a reviewed edit (P-AM).
+  assert.ok(under("jobs", "guard").some(({ line }) => line === "runs-on: ubuntu-24.04"));
   // A group keeps one pending run and cancels it when a newer one arrives, whatever
   // cancel-in-progress says, so any group can leave a range of main unscanned.
   assert.ok(!all.some(({ key, line }) => key === "concurrency" || /\bconcurrency\b/.test(line)));
