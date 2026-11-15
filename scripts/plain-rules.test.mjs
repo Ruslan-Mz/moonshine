@@ -472,12 +472,33 @@ for (const [line, kind] of [
   ["@_frozen public struct Row: Sendable {}", "process"],
   ["struct Row: Sendable { let p = Process() }", "concurrency"],
   ["// Sendable because nothing mutates", "concurrency"],
+  ["final class Decoder: JSONDecoder, Sendable {", "concurrency"],
+  ["final class PushSource: ChangeSignalSource, Sendable {", "concurrency"],
 ]) {
   test(`a Sendable outside a conformance list stays risky: ${line}`, () => {
     risky({}, { "Apps/Mac/Sources/Today/Probe.swift": `${line}\n` }, kind);
     risky({}, { "MoonShineCore/Tests/MoonShineCoreTests/ProbeTests.swift": `${line}\n` }, kind);
   });
 }
+
+test("a conformance check stays fast on a long line, and a line too long for it stays risky", () => {
+  // The old pattern took about 5 s at 3,200 spaces and grew with the cube. The bound is far above a
+  // working run and far below a broken one, so a slow runner cannot fail it (CLAUDE.md, "Pull requests").
+  const lines = [
+    `extension Row: Sendable${" ".repeat(10_000)}where T == Int {}`,
+    `struct Row: ${"Hashable, ".repeat(2_000)}Sendable {`,
+    `struct Row${" ".repeat(10_000)}: Sendable {`,
+    `struct Row: Sendable${" ".repeat(10_000)}{`,
+  ];
+  for (const text of lines) {
+    const started = performance.now();
+    const result = classify([{ path: "Apps/Mac/Sources/Today/Probe.swift", oldMode: "000000", newMode: "100644", status: "A", binary: false, hunks: [[{ kind: "+", text }]] }], []);
+    const took = performance.now() - started;
+    console.log(`a ${text.length}-character declaration line: ${took.toFixed(1)} ms`);
+    assert.ok(took < 2_000, `${took} ms`);
+    assert.equal(result.plain, false);
+  }
+});
 
 test("a conformance list split over lines stays risky", () => {
   risky({}, { "Apps/Mac/Sources/Today/Probe.swift": "struct Row:\n  Hashable, Sendable {\n}\n" }, "concurrency");
@@ -487,20 +508,36 @@ test("dropping Sendable leaves every other token on the line", () => {
   risky({}, { "Apps/Mac/Sources/Today/Probe.swift": "struct LineRemovalRow: Hashable, Sendable {\n" }, "line removal");
 });
 
-// `.task` that cannot be SwiftUI's modifier passes (owner, 2026-11-15, A′); the modifier takes its
-// action unlabeled (`task(priority:_:)`), so every other `.task` stays risky.
+// `.task` that cannot be SwiftUI's modifier passes: a property chain or an enum case pattern, and a
+// call on a receiver of the rules' list, in its paths (owner, 2026-11-15 and 2026-11-16). The
+// modifier takes its action unlabeled (`task(priority:_:)`), so every other `.task` stays risky.
 for (const line of [
   "let id = item.task.id",
   "let titles = rows.map(\\.task.title)",
   "case .task(let task): Text(task.title)",
   "case let .task(row): Text(row.title)",
   "if case .task(let row) = item { }",
-  "TableRow(TodayTableRow.task(item))",
-  'world.task("Etude", line: violin)',
-  'let group = world.task("Group", line: violin, estimate: 40)',
 ]) {
   for (const path of plainSwiftPaths) {
     test(`a .task that is not the modifier passes: ${line} in ${path}`, () => plain({}, { [path]: `${line}\n` }));
+  }
+}
+
+const dayLoadTests = "MoonShineCore/Tests/MoonShineCoreTests/DayLoadTests.swift";
+for (const [line, passes] of [
+  ["TableRow(TodayTableRow.task(item))", ["Apps/Mac/Sources/Today/Probe.swift", "Apps/Mac/Tests/ProbeTests.swift"]],
+  ['world.task("Etude", line: violin)', ["MoonShineCore/Tests/MoonShineCoreTests/ProbeTests.swift", "Apps/Mac/Tests/ProbeTests.swift", dayLoadTests]],
+  ["let group = world.task(\n  \"Group\", line: violin, estimate: 40)", ["MoonShineCore/Tests/MoonShineCoreTests/ProbeTests.swift", "Apps/Mac/Tests/ProbeTests.swift", dayLoadTests]],
+  ["let row = TestWorld.task(id: 1)", ["MoonShineCore/Tests/MoonShineCoreTests/ProbeTests.swift", "Apps/Mac/Tests/ProbeTests.swift", dayLoadTests]],
+  ["let over = R.load([event], tasks: [R.task(R.at(13, 45), estimate: 30)])", [dayLoadTests]],
+  ["let task = RigaDay.task(RigaDay.at(10), estimate: 30)", [dayLoadTests]],
+]) {
+  for (const path of [...plainSwiftPaths, dayLoadTests]) {
+    const expected = passes.includes(path) ? "passes" : "stays risky";
+    test(`a .task on a listed receiver ${expected} in ${path}: ${line.split("\n")[0]}`, () => {
+      if (passes.includes(path)) plain({}, { [path]: `${line}\n` });
+      else risky({}, { [path]: `${line}\n` }, "concurrency");
+    });
   }
 }
 
@@ -510,7 +547,13 @@ for (const line of [
   "  .task(reload)",
   ".task({ work() })",
   "content.task(reload)",
+  "case .view(let V): return V.task(reload)",
+  "for Row in views { result.append(AnyView(Row.task(reload))) }",
   "view.task(store.pollForever)",
+  'content.task("poll")',
+  'huge.task("Big", line: .lifeOps, flagged: true, estimate: .max)',
+  "self.world.task(reload)",
+  "let row = R.task(reload)",
   ".task(id: model.selection) { }",
   ".task(priority: .low) { }",
   ".task(name: \"poll\") { }",
@@ -520,15 +563,17 @@ for (const line of [
   test(`the .task modifier stays risky: ${line}`, () => {
     risky({}, { "Apps/Mac/Sources/Today/Probe.swift": `${line}\n` }, "concurrency");
     risky({}, { "Apps/Mac/Tests/ProbeTests.swift": `${line}\n` }, "concurrency");
+    risky({}, { "MoonShineCore/Tests/MoonShineCoreTests/ProbeTests.swift": `${line}\n` }, "concurrency");
   });
 }
 
-test("a multi-line name.task( passes in a test file only", () => {
-  const text = 'let row = world.task(\n  "Etude", line: violin)\n';
-  plain({}, { "MoonShineCore/Tests/MoonShineCoreTests/ProbeTests.swift": text });
-  risky({}, { "Apps/Mac/Sources/Today/Probe.swift": text }, "concurrency");
-  risky({}, { "Apps/Mac/Tests/ProbeTests.swift": "Text(title).task(\n  id: key) { }\n" }, "concurrency");
-  risky({}, { "Apps/Mac/Tests/ProbeTests.swift": ".task(\n  id: key) { }\n" }, "concurrency");
+test("a multi-line .task( stays risky unless its receiver is listed", () => {
+  for (const path of ["Apps/Mac/Tests/ProbeTests.swift", "MoonShineCore/Tests/MoonShineCoreTests/ProbeTests.swift"]) {
+    risky({}, { [path]: "let hosted = content.task(\n  priority: .low) { reload() }\n" }, "concurrency");
+    risky({}, { [path]: "Text(title).task(\n  id: key) { }\n" }, "concurrency");
+    risky({}, { [path]: ".task(\n  id: key) { }\n" }, "concurrency");
+  }
+  risky({}, { "Apps/Mac/Sources/Today/Probe.swift": 'let row = world.task(\n  "Etude", line: violin)\n' }, "concurrency");
 });
 
 // `typealias X = Y` in a test file passes when `Y` is one name and no token needs text after it
@@ -585,7 +630,7 @@ for (const [line, kind] of [
   ["_ = pthread_create(&thread, nil, body, nil)", "concurrency"],
   ["var lock = os_unfair_lock()", "concurrency"],
   ["MainActor.assumeIsolated { run() }", "concurrency"],
-  ["func f(on actor: isolated (any Actor)) {}", "concurrency"],
+  ["func f(on a: isolated (any Actor)) {}", "concurrency"],
   ["@concurrent func work() async {}", "concurrency"],
   ["let link = NSXPCConnection(serviceName: name)", "process"],
   ["let peer = xpc_connection_create(name, nil)", "process"],
@@ -626,6 +671,56 @@ for (const [line, kind] of [
   [".userActivity(kind) { _ in }", "drag, pasteboard or sharing"],
   [".onContinueUserActivity(kind) { _ in }", "drag, pasteboard or sharing"],
   [".handlesExternalEvents(preferring: [], allowing: [\"*\"])", "drag, pasteboard or sharing"],
+  // Round 1 (PR #59): the C-call siblings, sockets, selectors, file reads and markdown links.
+  ["let fd = openat(AT_FDCWD, path, O_CREAT | O_WRONLY, 0o644)", "storage"],
+  ["_ = fchdir(fd)", "process"],
+  ["_ = chown(path, 0, 0)", "storage"],
+  ["_ = lchown(path, 0, 0)", "storage"],
+  ["_ = fchown(fd, 0, 0)", "storage"],
+  ["_ = fchownat(fd, path, 0, 0, 0)", "storage"],
+  ["_ = lchmod(path, 0o600)", "storage"],
+  ["_ = mkfifo(path, 0o600)", "storage"],
+  ["_ = mkfifoat(fd, path, 0o600)", "storage"],
+  ["_ = mknod(path, 0o600, 0)", "storage"],
+  ["let fd = mkostemp(&template, 0)", "storage"],
+  ["let fd = mkostemps(&template, 4, 0)", "storage"],
+  ["let dir = fdopendir(fd)", "storage"],
+  ["_ = readdir_r(dir, &entry, &result)", "storage"],
+  ["_ = nftw(path, visit, 8, 0)", "storage"],
+  ["_ = ftw(path, visit, 8)", "storage"],
+  ["_ = utimes(path, nil)", "storage"],
+  ["_ = lutimes(path, nil)", "storage"],
+  ["_ = futimens(fd, nil)", "storage"],
+  ["_ = utimensat(fd, path, nil, 0)", "storage"],
+  ["_ = fclonefileat(fd, dirfd, path, 0)", "storage"],
+  ["CFStreamCreatePairWithSocketToHost(nil, host as CFString, 443, &readStream, &writeStream)", "URL"],
+  ["var writeStream: Unmanaged<CFWriteStream>?", "URL"],
+  ["_ = CFWriteStreamWrite(output, bytes, bytes.count)", "URL"],
+  ["let read: Unmanaged<CFReadStream>? = nil", "URL"],
+  ["let socket = CFSocketCreate(nil, 0, 0, 0, 0, nil, nil)", "URL"],
+  ["let service = CFNetServiceCreate(nil, domain, kind, name, 0)", "URL"],
+  ["let fd = socket(AF_INET, SOCK_STREAM, 0)", "URL"],
+  ["_ = connect(fd, address, size)", "URL"],
+  ["_ = bind(fd, address, size)", "URL"],
+  ["_ = sendto(fd, bytes, count, 0, address, size)", "URL"],
+  ["self.performSelector(inBackground: #selector(work), with: nil)", "concurrency"],
+  ["performSelector(onMainThread: #selector(work), with: nil, waitUntilDone: false)", "concurrency"],
+  ["perform(#selector(work), with: nil, afterDelay: 1)", "concurrency"],
+  ["let reps = NSImageRep.imageReps(withContentsOf: noteURL)", "storage"],
+  ["let reps = NSImageRep.imageReps(withContentsOfFile: path)", "storage"],
+  ["let text = try NSAttributedString(url: noteURL, options: [:], documentAttributes: nil)", "storage"],
+  ["let text = NSAttributedString(path: path, documentAttributes: nil)", "storage"],
+  ["let data = CGDataProvider(url: url as CFURL)", "storage"],
+  ["let data = CGDataProvider(filename: path)", "storage"],
+  ["let pdf = CGPDFDocument(url as CFURL)", "storage"],
+  ["let image = CGImageSourceCreateWithURL(url as CFURL, nil)", "storage"],
+  ["let folder = URL.applicationSupportDirectory", "storage"],
+  ["let folder = URL.documentsDirectory", "storage"],
+  ["let url = URL(fileURLWithFileSystemRepresentation: path, isDirectory: false, relativeTo: nil)", "storage"],
+  ['Text(.init("[Open](https://example.com/?q=\\(row.title))"))', "URL"],
+  ['Text(try! AttributedString(markdown: text))', "URL"],
+  ['Text("[Mail](mailto:someone)")', "URL"],
+  ["s.link = URL(string: address)", "URL"],
 ]) {
   test(`a risky token added in P-AM is risky: ${line}`, () => {
     risky({}, { "Apps/Mac/Sources/Today/Probe.swift": `${line}\n` }, kind);
@@ -640,11 +735,24 @@ for (const line of [
   "let lockedOut = false",
   "let dirName = folder.name",
   "Text(isolatedCount.formatted())",
+  "items.connect(to: other)",
+  "let socketCount = rows.count",
+  "let contents = item.contents",
+  "let row = rows[index](value)",
+  'Text("[draft]")',
+  "let linked = row.isLinked",
 ]) {
   test(`a harmless line next to a P-AM token passes: ${line}`, () => {
     plain({}, { "Apps/Mac/Sources/Today/Probe.swift": `${line}\n` });
   });
 }
+
+test("a markdown link in a String Catalog's value is risky", () => {
+  const catalog = "Apps/Mac/Resources/Localizable.xcstrings";
+  const value = (text) => `{\n  "strings" : {\n    "Open" : {\n      "localizations" : { "en" : { "stringUnit" : { "value" : "${text}" } } }\n    }\n  }\n}\n`;
+  risky({}, { [catalog]: value("[Open](https://example.com)") }, "URL");
+  plain({}, { [catalog]: value("Open [this] one") });
+});
 
 // The screen slices S4-2 and S5 (owner, 2026-11-11): on the repository's own files, a new screen,
 // its sidebar case and its shortcut compute plain; the held line removal stays risky.
