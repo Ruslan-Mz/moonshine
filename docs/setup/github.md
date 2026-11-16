@@ -35,6 +35,12 @@ Until this step, the `guard` check fails on every pull request ("DENY_LIST is no
 
 A job skipped by its condition counts as passed: a docs-only pull request, whose `swift` and `core-linux` jobs are skipped, can still merge.
 
+## Step 7: the Actions event policy for `pull_request_target` (done, 2026-11-16)
+
+From 2026-12-02 GitHub blocks `pull_request_target` for public repositories unless an Actions event policy allows it; brownouts before that date apply the block for a few hours (the second, 2026-11-16 16:00–18:00 UTC, stopped two Guard runs on #62 with `startup_failure`: no job and no message). The owner added an event policy that allows `pull_request_target` for `.github/workflows/guard.yml` only (owner, 2026-11-16). Reason: `guard.yml` never checks out or runs the pull request's code. It runs as `main` holds it, fetches the pull request's commits as data and scans them, and reads the title, body and branch name from the event file (CLAUDE.md → Commands → Guard, "The guard in CI"). No other workflow may use `pull_request_target`: one that checks out or runs a pull request's files would run them with the base repository's token and secrets.
+
+Check after a change to the policy: a body edit of an open pull request (`gh-post pr-edit`) starts a Guard run that succeeds. A Guard run that ends in `startup_failure` with no job usually means the policy does not cover the run, not a fault in the branch.
+
 ## Live checks after step 6
 
 1. `guard` shows on a branch pull request's checks.
