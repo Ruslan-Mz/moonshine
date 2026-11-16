@@ -355,11 +355,8 @@ struct WhenText: View {
       if let days = row.plannedDaysAgo {
         Text("planned \(days) days ago").foregroundStyle(.secondary)
       }
-      if let due = row.due {
-        let date =
-          row.dueIsToday && row.dueHasTime
-          ? TodayFormat.time(due, timeZone: timeZone, locale: locale)
-          : TodayFormat.dueDate(due, timeZone: timeZone, locale: locale)
+      switch TodayFormat.when(row, timeZone: timeZone, locale: locale) {
+      case .due(let date):
         switch TodayFormat.dueStyle(isUrgent: row.isUrgent) {
         case .deadline:
           Text("Due \(date)")
@@ -370,10 +367,9 @@ struct WhenText: View {
         case .plain:
           Text("due \(date)").foregroundStyle(.secondary)
         }
-      } else if let planned = row.plannedTime {
-        Text(verbatim: TodayFormat.time(planned, timeZone: timeZone, locale: locale))
-          .foregroundStyle(.secondary)
-          .monospacedDigit()
+      case .planned(let time):
+        Text(verbatim: time).foregroundStyle(.secondary).monospacedDigit()
+      case nil: EmptyView()
       }
     }
     .lineLimit(1)

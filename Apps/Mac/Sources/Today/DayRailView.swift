@@ -87,6 +87,7 @@ struct DayRailView: View {
   }
 
   private var zone: TimeZone { screen.timeZone }
+  private var dayStart: Date { screen.calendar.startOfDay(for: screen.day) }
   private var facts: [DayFact] { TodayFormat.dayFact(rail.load) }
   private var window: DateInterval { rail.load.window }
 
@@ -146,26 +147,34 @@ struct DayRailView: View {
     switch mark.kind {
     case .event(let event):
       MarkLabel(
-        mark: mark, now: now, zone: zone, emoji: nil, color: color(event), reveal: reveal
+        mark: mark, now: now, dayStart: dayStart, zone: zone, emoji: nil, color: color(event),
+        reveal: reveal
       )
       .frame(width: width, height: max(bottom - top, 12), alignment: .topLeading)
       .offset(x: x, y: top)
     case .planned:
-      MarkLabel(mark: mark, now: now, zone: zone, emoji: emoji(mark), color: nil, reveal: reveal)
-        .frame(width: width, height: max(bottom - top, 14), alignment: .topLeading)
-        .offset(x: x, y: top)
+      MarkLabel(
+        mark: mark, now: now, dayStart: dayStart, zone: zone, emoji: emoji(mark), color: nil,
+        reveal: reveal
+      )
+      .frame(width: width, height: max(bottom - top, 14), alignment: .topLeading)
+      .offset(x: x, y: top)
     case .due:
-      MarkLabel(mark: mark, now: now, zone: zone, emoji: emoji(mark), color: nil, reveal: reveal)
-        .frame(width: width, height: 13, alignment: .leading)
-        .offset(x: x, y: top - 6.5)
-        .zIndex(1)
+      MarkLabel(
+        mark: mark, now: now, dayStart: dayStart, zone: zone, emoji: emoji(mark), color: nil,
+        reveal: reveal
+      )
+      .frame(width: width, height: 13, alignment: .leading)
+      .offset(x: x, y: top - 6.5)
+      .zIndex(1)
     }
   }
 
   private func pinned(_ mark: DayRail.Mark) -> some View {
     let color: Color? = if case .event(let event) = mark.kind { color(event) } else { nil }
     return MarkLabel(
-      mark: mark, now: now, zone: zone, emoji: emoji(mark), color: color, reveal: reveal
+      mark: mark, now: now, dayStart: dayStart, zone: zone, emoji: emoji(mark), color: color,
+      reveal: reveal
     )
     .frame(maxWidth: .infinity, minHeight: 16, maxHeight: 16, alignment: .leading)
   }
@@ -194,6 +203,8 @@ struct DayRailView: View {
 private struct MarkLabel: View {
   let mark: DayRail.Mark
   let now: Date
+  /// An event that began before it shows its weekday.
+  let dayStart: Date
   let zone: TimeZone
   let emoji: String?
   /// The calendar's colour, for an event.
@@ -255,6 +266,8 @@ private struct MarkLabel: View {
           Checkbox(isDone: item.status == .completed).imageScale(.small)
           due(isDeadline)
           Text(verbatim: item.title)
+            .strikethrough(item.status == .completed)
+            .foregroundStyle(item.status == .completed ? Tokens.doneText : Color.primary)
           Spacer(minLength: 0)
           if let emoji { Text(verbatim: emoji) }
         }
@@ -266,7 +279,9 @@ private struct MarkLabel: View {
     }
   }
 
-  private var time: String { TodayFormat.time(mark.start, timeZone: zone, locale: locale) }
+  private var time: String {
+    TodayFormat.markTime(mark.start, dayStart: dayStart, timeZone: zone, locale: locale)
+  }
 
   private func due(_ isDeadline: Bool) -> Text {
     isDeadline

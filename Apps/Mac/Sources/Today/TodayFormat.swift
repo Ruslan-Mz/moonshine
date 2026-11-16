@@ -35,7 +35,8 @@ enum TodayFormat {
     return sameYear ? style : style.year()
   }
 
-  /// `20:30`, on the 24-hour clock in every language (`design/copy.md` § Calendar strings).
+  /// `20:30`, on the 24-hour clock in every language: the rail's scale and labels need a fixed
+  /// width (`design/i18n.md` rule 3, owner 2026-11-16).
   static func time(_ date: Date, timeZone: TimeZone, locale: Locale) -> String {
     let hour = Date.FormatStyle.Symbol.VerbatimHour.twoDigits(
       clock: .twentyFourHour, hourCycle: .zeroBased)
@@ -43,6 +44,32 @@ enum TodayFormat {
       Date.VerbatimFormatStyle(
         format: "\(hour: hour):\(minute: .twoDigits)", locale: locale, timeZone: timeZone,
         calendar: calendar(timeZone)))
+  }
+
+  /// A mark's start on the Day rail: `23:00`, or `Wed 23:00` for an event that began on an
+  /// earlier day than `dayStart`'s (owner, 2026-11-16).
+  static func markTime(_ date: Date, dayStart: Date, timeZone: TimeZone, locale: Locale) -> String {
+    let time = time(date, timeZone: timeZone, locale: locale)
+    guard date < dayStart else { return time }
+    return "\(date.formatted(style(timeZone, locale).weekday(.abbreviated))) \(time)"
+  }
+
+  /// What the When column shows besides a planned age: a due date, else a planned time today.
+  enum When: Equatable {
+    /// `18:00` for a due time today, else the date, `1 Oct`; `Due` or `due` comes from the style.
+    case due(String)
+    /// `20:30`.
+    case planned(String)
+  }
+
+  static func when(_ row: TodayScreen.Row, timeZone: TimeZone, locale: Locale) -> When? {
+    if let due = row.due {
+      return .due(
+        row.dueIsToday && row.dueHasTime
+          ? time(due, timeZone: timeZone, locale: locale)
+          : dueDate(due, timeZone: timeZone, locale: locale))
+    }
+    return row.plannedTime.map { .planned(time($0, timeZone: timeZone, locale: locale)) }
   }
 
   /// `08`: the hour of a day window's edge, as `day window 08–22` reads it.

@@ -22,13 +22,19 @@ enum Tokens {
   /// saturation at most 35 %, lightness 50–60 % in light mode and 65–75 % in dark; `paused`
   /// without a colour.
   static func calendar(_ hex: String?) -> Color {
-    guard let hex, hex.count == 7, hex.first == "#", let value = Int(hex.dropFirst(), radix: 16)
+    guard let hex, isCalendarHex(hex), let value = Int(hex.dropFirst(), radix: 16)
     else { return paused }
     return Color(
       nsColor: NSColor(name: nil) { appearance in
         let isDark = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
         return toned(value, lightness: isDark ? 0.65...0.75 : 0.50...0.60)
       })
+  }
+
+  /// `#RRGGBB`.
+  static func isCalendarHex(_ hex: String) -> Bool {
+    hex.count == 7 && hex.first == "#" && hex.dropFirst().allSatisfy(\.isHexDigit)
+      && hex.dropFirst().allSatisfy(\.isASCII)
   }
 
   private static func toned(_ hex: Int, lightness range: ClosedRange<CGFloat>) -> NSColor {

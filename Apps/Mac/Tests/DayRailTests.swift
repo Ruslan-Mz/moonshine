@@ -116,6 +116,59 @@ import Testing
       fact(1, 30, 0, 0) == [.events(1), .inCalendar(.minutes(30)), .free(.minutes(0), until: end)])
   }
 
+  static func row(
+    due: Date? = nil, hasTime: Bool = false, today: Bool = false, planned: Date? = nil
+  )
+    -> TodayScreen.Row
+  {
+    TodayScreen.Row(
+      id: .generate(), title: "Invented", trace: [], estimateMinutes: nil, due: due,
+      dueHasTime: hasTime, dueIsToday: today, isUrgent: due != nil, plannedDaysAgo: nil,
+      plannedTime: planned, isDone: false)
+  }
+
+  /// The When column's four cases (`today.md` § Calendar).
+  @Test func theWhenColumnChoosesTheTimeOnlyForToday() {
+    let calendar = DemoCalendar.calendar
+    let at = { (day: Int, hour: Int, minute: Int) in
+      calendar.date(
+        from: DateComponents(year: 2026, month: 10, day: day, hour: hour, minute: minute))!
+    }
+    func when(_ row: TodayScreen.Row) -> TodayFormat.When? {
+      TodayFormat.when(row, timeZone: calendar.timeZone, locale: Locale(identifier: "en_GB"))
+    }
+    #expect(when(Self.row(due: at(1, 18, 0), hasTime: true, today: true)) == .due("18:00"))
+    #expect(when(Self.row(due: at(1, 17, 0), today: true)) == .due("1 Oct"))
+    #expect(when(Self.row(due: at(2, 17, 30), hasTime: true)) == .due("2 Oct"))
+    #expect(when(Self.row(planned: at(1, 20, 30))) == .planned("20:30"))
+    #expect(
+      when(Self.row(due: at(1, 18, 0), hasTime: true, today: true, planned: at(1, 9, 30)))
+        == .due("18:00"))
+    #expect(when(Self.row()) == nil)
+  }
+
+  /// An event that began on an earlier day shows that day's short weekday (owner, 2026-11-16).
+  @Test func anEarlierDaysStartNamesItsWeekday() {
+    let calendar = DemoCalendar.calendar
+    let zone = calendar.timeZone
+    let day = calendar.startOfDay(for: DemoCalendar.now)
+    let wednesday = calendar.date(byAdding: .hour, value: -1, to: day)!
+    let morning = calendar.date(byAdding: .hour, value: 8, to: day)!
+    func mark(_ date: Date, _ id: String) -> String {
+      TodayFormat.markTime(date, dayStart: day, timeZone: zone, locale: Locale(identifier: id))
+    }
+    #expect(mark(wednesday, "en_GB") == "Wed 23:00")
+    #expect(mark(wednesday, "ru") == "Ср 23:00")
+    #expect(mark(morning, "en_US") == "08:00")
+  }
+
+  @Test func aCalendarColourIsSixHexDigits() {
+    #expect(Tokens.isCalendarHex("#6C84AE"))
+    for bad in ["#-00001", "#+FFFFF", "6C84AE0", "#6C84A", "#6C84AG", "", "#６C84AE"] {
+      #expect(!Tokens.isCalendarHex(bad))
+    }
+  }
+
   @Test func timesAreOnTheTwentyFourHourClockInEveryLanguage() {
     let zone = DemoCalendar.calendar.timeZone
     let evening = DemoCalendar.calendar.date(
