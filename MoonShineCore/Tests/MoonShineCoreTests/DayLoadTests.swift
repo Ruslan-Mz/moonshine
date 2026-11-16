@@ -298,3 +298,165 @@ struct RigaDay {
     #expect(DemoDay.tasks.filter { $0.status == .completed }.count == 2)
   }
 }
+
+// MARK: - Day rail
+
+extension RigaDay {
+  static func rail(
+    _ events: [CalendarEvent] = [], tasks: [TaskItem] = [], deadlines: Set<TaskItemID> = [],
+    window: DayWindow = .standard, visibility: CalendarVisibility = CalendarVisibility(),
+    read: CalendarRead<[CalendarEvent]>? = nil
+  ) -> DayRail {
+    DayRail.compute(
+      day: at(12), now: at(7), window: window, events: read ?? .read(events, skipped: 0),
+      visibility: visibility, tasks: tasks, deadlines: deadlines,
+      defaultTimes: DefaultTimes(timeZone: zone, planned: TimeOfDay(hour: 9, minute: 0)),
+      calendar: calendar)
+  }
+
+  /// `event 13:00–14:00`, `planned 13:45–14:15`, `due 18:00`, `Due 18:00` for a deadline.
+  static func describe(_ mark: DayRail.Mark, calendar: Calendar = calendar) -> String {
+    func time(_ date: Date) -> String {
+      let parts = calendar.dateComponents([.hour, .minute], from: date)
+      return String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0)
+    }
+    let span = "\(time(mark.start))–\(time(mark.end))"
+    return switch mark.kind {
+    case .event: "event \(span)"
+    case .planned: "planned \(span)"
+    case .due(_, let isDeadline): "\(isDeadline ? "Due" : "due") \(time(mark.start))"
+    }
+  }
+}
+
+@Suite struct DemoDayRailTests {
+  @Test func thursdayAtSixTwentyMatchesTheDesign() {
+    let open = DemoDay.tasks.filter { $0.status != .completed && $0.effectiveDueAt != nil }
+    let rail = DayRail.compute(
+      day: DemoCalendar.now, now: DemoCalendar.now, window: .standard,
+      events: .read(DemoCalendar.events, skipped: 0), visibility: DemoCalendar.visibility,
+      tasks: DemoDay.tasks, deadlines: Set(open.map(\.id)), defaultTimes: DemoDay.defaultTimes,
+      calendar: DemoCalendar.calendar)
+    let describe = { RigaDay.describe($0, calendar: DemoCalendar.calendar) }
+    #expect(
+      rail.marks.map(describe) == [
+        "event 09:30–10:00", "planned 12:00–12:10", "event 13:00–14:00", "planned 15:00–15:20",
+        "event 17:00–18:00", "Due 18:00", "event 18:30–20:00", "planned 20:30–21:15",
+      ])
+    #expect(rail.above.map(describe) == ["planned 07:30–07:45"])
+    #expect(rail.below.map(describe) == ["Due 23:59"])
+    #expect(rail.allDay.isEmpty)
+    #expect(
+      rail.load
+        == DayLoad.compute(
+          day: DemoCalendar.now, now: DemoCalendar.now, window: .standard,
+          events: .read(DemoCalendar.events, skipped: 0), visibility: DemoCalendar.visibility,
+          tasks: DemoDay.tasks, defaultTimes: DemoDay.defaultTimes,
+          calendar: DemoCalendar.calendar))
+    // No overlap on the demo day: every mark spans the lane.
+    #expect(rail.marks.allSatisfy { $0.leading == 0 && $0.width == 1 })
+  }
+
+  @Test func theWeekendsAllDayEventIsARowNotAMark() {
+    let rail = DayRail.compute(
+      day: DemoCalendar.at(10, 3, 12, 0), now: DemoCalendar.at(10, 3, 7, 0), window: .standard,
+      events: .read(DemoCalendar.events, skipped: 0), visibility: DemoCalendar.visibility,
+      tasks: [], deadlines: [], defaultTimes: DemoDay.defaultTimes,
+      calendar: DemoCalendar.calendar)
+    #expect(rail.allDay.count == 1)
+    #expect(
+      rail.marks.map { RigaDay.describe($0, calendar: DemoCalendar.calendar) } == [
+        "event 11:00–12:30"
+      ])
+  }
+}
+
+@Suite struct DayRailRuleTests {
+  typealias R = RigaDay
+
+  @Test func aTaskOverAnEventTakesTheTrailingShare() {
+    let rail = R.rail([R.event(R.at(13), R.at(14))], tasks: [R.task(R.at(13, 45), estimate: 30)])
+    #expect(rail.marks.map { [$0.leading, $0.width] } == [[0, 0.55], [0.55, 0.45]])
+  }
+
+  @Test func twoOverlappingEventsTakeHalfEach() {
+    let rail = R.rail([R.event(R.at(16), R.at(17)), R.event(R.at(16, 30), R.at(17, 30))])
+    #expect(rail.marks.map { [$0.leading, $0.width] } == [[0, 0.5], [0.5, 0.5]])
+  }
+
+  @Test func threeEventsOrTwoTasksShareTheirPartEqually() {
+    // Owner, 2026-11-16: not in the spec; equal shares.
+    let rail = R.rail(
+      [R.event(R.at(10), R.at(12)), R.event(R.at(10), R.at(11)), R.event(R.at(11), R.at(12))],
+      tasks: [R.task(R.at(10, 30), estimate: 60), R.task(R.at(11), estimate: nil)])
+    let thousandths = { (value: Double) in Int((value * 1000).rounded()) }
+    // Events share the leading 55 %, tasks the trailing 45 %, in time order.
+    #expect(
+      rail.marks.map { [thousandths($0.leading), thousandths($0.width)] } == [
+        [0, 183], [183, 183], [550, 225], [367, 183], [775, 225],
+      ])
+  }
+
+  @Test func aLoneTaskSpansTheLaneAndMarksApartDoNotShare() {
+    let rail = R.rail(
+      [R.event(R.at(13), R.at(14))], tasks: [R.task(R.at(14), estimate: 30)])
+    #expect(rail.marks.map { [$0.leading, $0.width] } == [[0, 1], [0, 1]])
+    #expect(R.rail(tasks: [R.task(R.at(13), estimate: 30)]).marks.map(\.width) == [1])
+  }
+
+  @Test func theWindowsEdges() {
+    let rail = R.rail(
+      [R.event(R.at(7, 30), R.at(8, 30)), R.event(R.at(6, 40), R.at(7, 55))],
+      tasks: [R.task(nil, estimate: 10, due: R.at(22)), R.task(R.at(21, 50), estimate: 45)])
+    #expect(rail.marks.map { R.describe($0) } == ["event 07:30–08:30", "planned 21:50–22:35"])
+    #expect(rail.above.map { R.describe($0) } == ["event 06:40–07:55"])
+    #expect(rail.below.map { R.describe($0) } == ["due 22:00"])
+  }
+
+  @Test func aDateOnlyTimeGivesNoMark() {
+    let defaults = DefaultTimes(
+      timeZone: R.zone, due: TimeOfDay(hour: 17, minute: 0), planned: TimeOfDay(hour: 9, minute: 0))
+    func rail(_ defaults: DefaultTimes, _ tasks: [TaskItem]) -> DayRail {
+      DayRail.compute(
+        day: R.at(12), now: R.at(7), window: .standard, events: .read([], skipped: 0),
+        visibility: CalendarVisibility(), tasks: tasks, deadlines: [], defaultTimes: defaults,
+        calendar: R.calendar)
+    }
+    let dated = [R.task(R.at(9), estimate: 30), R.task(nil, estimate: nil, due: R.at(17))]
+    #expect(rail(defaults, dated).marks.isEmpty)
+    let none = DefaultTimes(timeZone: R.zone)
+    #expect(rail(none, dated).marks.map { R.describe($0) } == ["planned 09:00–09:30", "due 17:00"])
+    #expect(rail(none, [R.task(R.at(0), estimate: 30)]).marks.isEmpty)
+  }
+
+  @Test func hiddenUnreadAndAllDayEvents() {
+    let work = R.event(R.at(13), R.at(14))
+    let off = CalendarVisibility([R.work: CalendarSetting(show: false, countsAsBusy: true)])
+    #expect(R.rail([work], visibility: off).marks.isEmpty)
+    let task = R.task(R.at(15), estimate: 20)
+    let unread = R.rail(tasks: [task], read: .unavailable(.denied))
+    #expect(unread.marks.map { R.describe($0) } == ["planned 15:00–15:20"])
+    #expect(unread.allDay.isEmpty)
+    let allDay = R.event(R.at(0), R.at(0, day: 2), allDay: true)
+    let rail = R.rail([allDay, work])
+    #expect(rail.allDay == [allDay])
+    #expect(rail.marks.map { R.describe($0) } == ["event 13:00–14:00"])
+  }
+
+  @Test func anotherDaysTimesGiveNoMark() {
+    let rail = R.rail(tasks: [
+      R.task(R.at(23, 30, day: 30, month: 9), estimate: 60),
+      R.task(R.at(15, day: 30, month: 9), estimate: 20),
+      R.task(nil, estimate: nil, due: R.at(17, 30, day: 30, month: 9)),
+      R.task(nil, estimate: nil, due: R.at(9, day: 2)),
+    ])
+    #expect(rail.marks.isEmpty && rail.above.isEmpty && rail.below.isEmpty)
+  }
+
+  @Test func aTaskWithBothTimesHasBothMarksAndOnlyDeadlinesAreAmber() {
+    let both = R.task(R.at(14), estimate: 30, due: R.at(16))
+    let other = R.task(nil, estimate: nil, due: R.at(18))
+    let rail = R.rail(tasks: [both, other], deadlines: [both.id])
+    #expect(rail.marks.map { R.describe($0) } == ["planned 14:00–14:30", "Due 16:00", "due 18:00"])
+  }
+}
