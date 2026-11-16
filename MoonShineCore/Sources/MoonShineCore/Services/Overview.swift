@@ -237,16 +237,6 @@ public struct LineDetailItem: Hashable, Sendable {
   public let isToday: Bool
   /// Only a real due date before the day ends makes it urgent.
   public let isUrgent: Bool
-
-  public init(
-    task: TaskItem, project: Project?, placement: Date?, isToday: Bool, isUrgent: Bool
-  ) {
-    self.task = task
-    self.project = project
-    self.placement = placement
-    self.isToday = isToday
-    self.isUrgent = isUrgent
-  }
 }
 
 /// A completion of the line: a one-off task, or a completed repeating group as one session at

@@ -25,7 +25,7 @@ struct LineDetailDestination: View {
       if let screen = LineDetailScreen(overview, line: id) {
         LineDetailView(screen: screen)
       } else {
-        // A line an import removed while its detail was open.
+        // A line that left the workspace while its detail was open.
         ContentUnavailableView("This line is not in the data shown.", systemImage: "tray")
       }
     }

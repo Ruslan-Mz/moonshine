@@ -15,43 +15,46 @@ import Testing
   /// Wednesday of ISO week 40.
   static let now = date(9, 30)
 
-  static func item(
-    planned: Date? = nil, defer deferUntil: Date? = nil, due: Date? = nil,
-    isToday: Bool = false, isUrgent: Bool = false
-  ) -> LineDetailItem {
+  static let violin = Line(
+    id: .generate(), refs: [], key: "violin", name: "Violin", emoji: "🎻", block: "Creative",
+    state: .active, budgetHoursPerWeek: 6, parentLink: nil, taskRules: LineTaskRules())
+
+  /// The one next action of a line with one available task, as Core computes it at `now`.
+  static func item(planned: Date? = nil, defer deferUntil: Date? = nil, due: Date? = nil)
+    throws -> LineDetailItem
+  {
     let task = TaskItem(
       id: .generate(), refs: [], title: "Task", projectID: nil, parentTaskID: nil, tagIDs: [],
       status: .available, flagged: false, plannedAt: planned, deferUntil: deferUntil,
       dueAt: due, effectivePlannedAt: planned, effectiveDeferUntil: deferUntil,
       effectiveDueAt: due, estimateMinutes: nil, completedAt: nil, modifiedAt: nil,
-      occurrenceOf: nil, line: .lifeOps)
-    return LineDetailItem(
-      task: task, project: nil, placement: planned ?? deferUntil ?? due, isToday: isToday,
-      isUrgent: isUrgent)
+      occurrenceOf: nil, line: .line(violin.id))
+    let workspace = Workspace(timeZone: zone, lines: [violin], tasks: [task])
+    let detail = Overview(workspace: workspace, now: now).lineDetail(violin.id)
+    return try #require(detail?.nextActions.first)
   }
 
   // MARK: When
 
-  @Test func whenShowsTheDueBadgeThenTodayThenThePlacement() {
+  @Test func whenShowsTheDueBadgeThenTodayThenThePlacement() throws {
     let week = ISOWeek(containing: Self.now, calendar: Self.calendar)
       .horizon(calendar: Self.calendar)
     func when(_ item: LineDetailItem) -> LineDetailFormat.When {
       LineDetailFormat.when(item, now: Self.now, week: week)
     }
     let tonight = Self.date(9, 30, 23)
-    #expect(
-      when(Self.item(due: tonight, isToday: true, isUrgent: true)) == .due(tonight, urgent: true))
+    #expect(when(try Self.item(due: tonight)) == .due(tonight, urgent: true))
     let nextWeek = Self.date(10, 6)
-    #expect(when(Self.item(due: nextWeek)) == .due(nextWeek, urgent: false))
-    #expect(when(Self.item(planned: Self.date(9, 29), isToday: true)) == .today)
+    #expect(when(try Self.item(due: nextWeek)) == .due(nextWeek, urgent: false))
+    #expect(when(try Self.item(planned: Self.date(9, 29))) == .today)
     let friday = Self.date(10, 2)
-    #expect(when(Self.item(defer: friday)) == .weekday(friday))
+    #expect(when(try Self.item(defer: friday)) == .weekday(friday))
     let tuesday = Self.date(10, 6)
-    #expect(when(Self.item(planned: tuesday)) == .date(tuesday))
+    #expect(when(try Self.item(planned: tuesday)) == .date(tuesday))
     // An old defer date is not today's work (Today's rule): its date, not `today`.
     let longAgo = Self.date(9, 27)
-    #expect(when(Self.item(defer: longAgo)) == .date(longAgo))
-    #expect(when(Self.item()) == .none)
+    #expect(when(try Self.item(defer: longAgo)) == .date(longAgo))
+    #expect(when(try Self.item()) == .none)
   }
 
   @Test func horizonIsAYearOrAQuarter() {
@@ -82,12 +85,9 @@ import Testing
   }
 
   @Test func zeroCountsAreLeftOutOfTheSubtitle() throws {
-    let line = Line(
-      id: .generate(), refs: [], key: "violin", name: "Violin", emoji: "🎻", block: "Creative",
-      state: .active, budgetHoursPerWeek: 6, parentLink: nil, taskRules: LineTaskRules())
     let overview = Overview(
-      workspace: Workspace(timeZone: Self.zone, lines: [line]), now: Self.now)
-    let screen = try #require(LineDetailScreen(overview, line: line.id))
+      workspace: Workspace(timeZone: Self.zone, lines: [Self.violin]), now: Self.now)
+    let screen = try #require(LineDetailScreen(overview, line: Self.violin.id))
     #expect(screen.counts.isEmpty)
     #expect(screen.title == "🎻 Violin")
     #expect(screen.parent == nil)
