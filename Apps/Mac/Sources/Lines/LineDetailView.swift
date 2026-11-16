@@ -200,23 +200,18 @@ struct StateText: View {
   }
 }
 
-/// The line's last activity in one phrase (owner, 2026-11-10: one rule everywhere): a paused
-/// line reads `no completions since 14 July`, as the rail does, never `last activity last …`.
+/// The line's last activity in one phrase (owner, 2026-11-16): a known last completion is its
+/// date, so a paused line reads `last activity 14 July` in the header, with "last" once.
 private struct LineDetailLastText: View {
   let screen: LineDetailScreen
   /// `last activity today` in the header; the bare words in the inspector.
   let prefixed: Bool
-  @Environment(\.locale) private var locale
 
   var body: some View {
     switch screen.last {
-    case .paused(let last?):
-      let date = TodayFormat.lastDate(
-        last, today: screen.today, timeZone: screen.timeZone, locale: locale)
-      Text("no completions since \(date)")
     case .paused(nil): Text(verbatim: "—")
     case .noCompletions: words
-    case .today, .yesterday, .daysAgo, .quiet:
+    case .paused, .today, .yesterday, .daysAgo, .quiet:
       if prefixed {
         HStack(spacing: 6) {
           Text("last activity")

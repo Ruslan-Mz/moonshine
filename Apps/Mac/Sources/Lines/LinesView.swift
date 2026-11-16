@@ -330,7 +330,7 @@ struct LastActivityText: View {
     case .noCompletions(let since?):
       Text("no completions since \(date(since))").foregroundStyle(.secondary)
     case .noCompletions(nil): Text("no activity yet").foregroundStyle(.secondary)
-    case .paused(let last?): Text("last \(date(last))")
+    case .paused(let last?): Text(verbatim: date(last))
     case .paused(nil): Text(verbatim: "—")
     }
   }

@@ -18,6 +18,49 @@ enum Tokens {
   static let chipFill = dynamic(
     light: 0x000000, dark: 0xFFFFFF, lightAlpha: 0.045, darkAlpha: 0.075)
 
+  /// A calendar's colour toned toward the tokens (`design/components.md` § CalendarDot):
+  /// saturation at most 35 %, lightness 50–60 % in light mode and 65–75 % in dark; `paused`
+  /// without a colour.
+  static func calendar(_ hex: String?) -> Color {
+    guard let hex, hex.count == 7, hex.first == "#", let value = Int(hex.dropFirst(), radix: 16)
+    else { return paused }
+    return Color(
+      nsColor: NSColor(name: nil) { appearance in
+        let isDark = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+        return toned(value, lightness: isDark ? 0.65...0.75 : 0.50...0.60)
+      })
+  }
+
+  private static func toned(_ hex: Int, lightness range: ClosedRange<CGFloat>) -> NSColor {
+    let (r, g, b) = (
+      CGFloat((hex >> 16) & 0xFF) / 255, CGFloat((hex >> 8) & 0xFF) / 255, CGFloat(hex & 0xFF) / 255
+    )
+    let (high, low) = (max(r, g, b), min(r, g, b))
+    let delta = high - low
+    let hue: CGFloat =
+      if delta == 0 { 0 } else if high == r {
+        ((g - b) / delta).truncatingRemainder(dividingBy: 6)
+      } else if high == g { (b - r) / delta + 2 } else { (r - g) / delta + 4 }
+    let lightness = min(max((high + low) / 2, range.lowerBound), range.upperBound)
+    let source = delta == 0 ? 0 : delta / (1 - abs(high + low - 1))
+    let saturation = min(source, 0.35)
+    // HSL back to RGB.
+    let chroma = (1 - abs(2 * lightness - 1)) * saturation
+    let sector = (hue < 0 ? hue + 6 : hue)
+    let second = chroma * (1 - abs(sector.truncatingRemainder(dividingBy: 2) - 1))
+    let (r1, g1, b1): (CGFloat, CGFloat, CGFloat) =
+      switch Int(sector) {
+      case 0: (chroma, second, 0)
+      case 1: (second, chroma, 0)
+      case 2: (0, chroma, second)
+      case 3: (0, second, chroma)
+      case 4: (second, 0, chroma)
+      default: (chroma, 0, second)
+      }
+    let m = lightness - chroma / 2
+    return NSColor(srgbRed: r1 + m, green: g1 + m, blue: b1 + m, alpha: 1)
+  }
+
   private static func dynamic(
     light: Int, dark: Int, lightAlpha: CGFloat = 1, darkAlpha: CGFloat = 1
   ) -> Color {
