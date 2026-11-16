@@ -384,17 +384,33 @@ extension RigaDay {
     #expect(rail.marks.map { [$0.leading, $0.width] } == [[0, 0.5], [0.5, 0.5]])
   }
 
-  @Test func threeEventsOrTwoTasksShareTheirPartEqually() {
-    // Owner, 2026-11-16: not in the spec; equal shares.
-    let rail = R.rail(
-      [R.event(R.at(10), R.at(12)), R.event(R.at(10), R.at(11)), R.event(R.at(11), R.at(12))],
-      tasks: [R.task(R.at(10, 30), estimate: 60), R.task(R.at(11), estimate: nil)])
+  static func lanes(_ rail: DayRail) -> [[Int]] {
     let thousandths = { (value: Double) in Int((value * 1000).rounded()) }
-    // Events share the leading 55 %, tasks the trailing 45 %, in time order.
-    #expect(
-      rail.marks.map { [thousandths($0.leading), thousandths($0.width)] } == [
-        [0, 183], [183, 183], [550, 225], [367, 183], [775, 225],
-      ])
+    return rail.marks.map { [thousandths($0.leading), thousandths($0.width)] }
+  }
+
+  // The column rule (owner, 2026-11-16): the first free column in a cluster; the width is the
+  // part's share over the most marks of that kind at one moment.
+
+  @Test func tasksThatNeverMeetKeepTheWholeTaskPart() {
+    let tasks = [(9, 30), (11, 0), (13, 0), (15, 0)].map {
+      R.task(R.at($0.0, $0.1), estimate: 30)
+    }
+    let rail = R.rail([R.event(R.at(9), R.at(18))], tasks: tasks)
+    #expect(Self.lanes(rail) == [[0, 550]] + Array(repeating: [550, 450], count: 4))
+  }
+
+  @Test func threeEventsAtOnceTakeAThirdEach() {
+    let rail = R.rail((0..<3).map { _ in R.event(R.at(10), R.at(12)) })
+    #expect(Self.lanes(rail) == [[0, 333], [333, 333], [667, 333]])
+  }
+
+  @Test func aChainWithTwoAtOnceTakesTwoColumns() {
+    // A–B and B–C overlap; A and C do not: C reuses A's column.
+    let rail = R.rail([
+      R.event(R.at(10), R.at(11)), R.event(R.at(10, 30), R.at(11, 30)), R.event(R.at(11), R.at(12)),
+    ])
+    #expect(Self.lanes(rail) == [[0, 500], [500, 500], [0, 500]])
   }
 
   @Test func aLoneTaskSpansTheLaneAndMarksApartDoNotShare() {
@@ -411,6 +427,21 @@ extension RigaDay {
     #expect(rail.marks.map { R.describe($0) } == ["event 07:30–08:30", "planned 21:50–22:35"])
     #expect(rail.above.map { R.describe($0) } == ["event 06:40–07:55"])
     #expect(rail.below.map { R.describe($0) } == ["due 22:00"])
+    // Ending exactly at the window's start is above; an instant at the start and an item ending
+    // exactly at the end are on the scale.
+    let exact = R.rail(
+      [R.event(R.at(7), R.at(8)), R.event(R.at(21), R.at(22))],
+      tasks: [R.task(nil, estimate: nil, due: R.at(8))])
+    #expect(exact.above.map { R.describe($0) } == ["event 07:00–08:00"])
+    #expect(exact.marks.map { R.describe($0) } == ["due 08:00", "event 21:00–22:00"])
+    #expect(exact.below.isEmpty)
+  }
+
+  @Test func anEventFromTheDayBeforeKeepsItsOwnStart() {
+    let overnight = R.event(R.at(23, day: 30, month: 9), R.at(7))
+    let rail = R.rail([overnight, R.event(R.at(23, day: 30, month: 9), R.at(9))])
+    #expect(rail.above.map(\.start) == [R.at(23, day: 30, month: 9)])
+    #expect(rail.marks.map(\.start) == [R.at(23, day: 30, month: 9)])
   }
 
   @Test func aDateOnlyTimeGivesNoMark() {

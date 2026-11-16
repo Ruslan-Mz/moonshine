@@ -285,25 +285,47 @@ public struct DayRail: Hashable, Sendable {
     func pinned(_ item: (kind: Mark.Kind, start: Date, end: Date)) -> Mark {
       Mark(kind: item.kind, start: item.start, end: item.end, leading: 0, width: 1)
     }
-    let above = ordered.filter { $0.start < span.start && $0.end <= span.start }
-    let below = ordered.filter { $0.start >= span.end }
-    let scale = ordered.filter { !($0.start < span.start && $0.end <= span.start) }
-      .filter { $0.start < span.end }
+    // Over before the window opens (an instant at its start is on the scale); from its end on.
+    let isAbove = { (item: (kind: Mark.Kind, start: Date, end: Date)) in
+      item.start < span.start && item.end <= span.start
+    }
+    let above = ordered.filter(isAbove)
+    let below = ordered.filter { !isAbove($0) && $0.start >= span.end }
+    let scale = ordered.filter { !isAbove($0) && $0.start < span.end }
     return DayRail(
       load: load, allDay: shown.filter(\.isAllDay), above: above.map(pinned),
       marks: lanes(scale), below: below.map(pinned))
   }
 
-  /// Per cluster of marks that overlap in time: events share the leading 55 % when a task
-  /// overlaps them, else the whole width; tasks share the trailing 45 %, or the whole width
-  /// without events (`today.md` § Calendar). Three events or two tasks share their part
-  /// equally (owner, 2026-11-16). A due mark spans the lane. A mark with no length counts as
-  /// one minute here.
+  /// Per cluster of marks linked by overlap: events share the leading 55 % when a task is in
+  /// the cluster, else the whole width; tasks share the trailing 45 %, or the whole width
+  /// without events (`today.md` § Calendar). Each mark takes the first free column of its
+  /// kind, and the width is the part over the most marks of that kind at one moment, so marks
+  /// that only chain keep the whole part (the column rule, owner 2026-11-16). A due mark spans
+  /// the lane. A mark with no length counts as one minute here.
   private static func lanes(_ items: [(kind: Mark.Kind, start: Date, end: Date)]) -> [Mark] {
     var shares: [(leading: Double, width: Double)] = Array(
       repeating: (0, 1), count: items.count)
     let blocks = items.indices.filter {
       if case .due = items[$0].kind { false } else { true }
+    }
+    func end(_ index: Int) -> Date {
+      max(items[index].end, items[index].start.addingTimeInterval(60))
+    }
+    /// The first free column of each mark, in time order, and the number of columns used.
+    func columns(_ marks: [Int]) -> (column: [Int: Int], count: Int) {
+      var ends: [Date] = []
+      var column: [Int: Int] = [:]
+      for index in marks {
+        if let free = ends.firstIndex(where: { $0 <= items[index].start }) {
+          column[index] = free
+          ends[free] = end(index)
+        } else {
+          column[index] = ends.count
+          ends.append(end(index))
+        }
+      }
+      return (column, ends.count)
     }
     var cluster: [Int] = []
     var clusterEnd = Date.distantPast
@@ -312,24 +334,21 @@ public struct DayRail: Hashable, Sendable {
       let others = cluster.filter { !events.contains($0) }
       let (eventPart, taskPart) =
         events.isEmpty ? (0.0, 1.0) : others.isEmpty ? (1.0, 0.0) : (0.55, 0.45)
-      for (index, item) in events.enumerated() {
-        let width = eventPart / Double(events.count)
-        shares[item] = (width * Double(index), width)
-      }
-      for (index, item) in others.enumerated() {
-        let width = taskPart / Double(others.count)
-        shares[item] = (eventPart + width * Double(index), width)
+      for (marks, base, part) in [(events, 0.0, eventPart), (others, eventPart, taskPart)] {
+        let (column, count) = columns(marks)
+        for index in marks {
+          let width = part / Double(max(count, 1))
+          shares[index] = (base + width * Double(column[index] ?? 0), width)
+        }
       }
     }
     for index in blocks {
-      let item = items[index]
-      let end = max(item.end, item.start.addingTimeInterval(60))
-      if !cluster.isEmpty && item.start >= clusterEnd {
+      if !cluster.isEmpty && items[index].start >= clusterEnd {
         place()
         cluster = []
       }
       cluster.append(index)
-      clusterEnd = max(clusterEnd, end)
+      clusterEnd = max(clusterEnd, end(index))
     }
     place()
     return items.indices.map {
