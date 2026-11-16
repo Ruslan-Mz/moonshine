@@ -65,6 +65,22 @@
         }
       }
     },
+    "%@ · year": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · year"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · год"
+          }
+        }
+      }
+    },
     "%lld active": {
       "localizations": {
         "en": {
@@ -301,6 +317,58 @@
         }
       }
     },
+    "%lld next actions": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld next action"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld next actions"
+                }
+              }
+            }
+          }
+        },
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld следующий шаг"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld следующих шага"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld следующих шагов"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld следующих шага"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld of %lld done": {
       "localizations": {
         "en": {
@@ -365,6 +433,58 @@
         }
       }
     },
+    "%lld projects": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld project"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld projects"
+                }
+              }
+            }
+          }
+        },
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld проект"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld проекта"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld проектов"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld проекта"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld sessions": {
       "localizations": {
         "en": {
@@ -413,6 +533,22 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "%lld so far": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld so far"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld пока"
           }
         }
       }
@@ -497,6 +633,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Якоря"
+          }
+        }
+      }
+    },
+    "Back to Lines (⌘[)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to Lines (⌘[)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Назад к линиям (⌘[)"
           }
         }
       }
@@ -789,6 +941,70 @@
         }
       }
     },
+    "Horizon": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Horizon"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Горизонт"
+          }
+        }
+      }
+    },
+    "Inspector": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inspector"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Инспектор"
+          }
+        }
+      }
+    },
+    "Kind": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kind"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вид"
+          }
+        }
+      }
+    },
+    "Last 10 completions": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last 10 completions"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Последние 10 выполненных"
+          }
+        }
+      }
+    },
     "Last 8 weeks": {
       "localizations": {
         "en": {
@@ -853,6 +1069,22 @@
         }
       }
     },
+    "Line detail": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Line detail"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Линия подробно"
+          }
+        }
+      }
+    },
     "Lines": {
       "localizations": {
         "en": {
@@ -865,6 +1097,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Линии"
+          }
+        }
+      }
+    },
+    "Lines › %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lines › %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Линии › %@"
           }
         }
       }
@@ -1033,6 +1281,54 @@
         }
       }
     },
+    "Next actions (%lld)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next actions (%lld)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Следующие шаги (%lld)"
+          }
+        }
+      }
+    },
+    "No next actions": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No next actions"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет следующих шагов"
+          }
+        }
+      }
+    },
+    "No projects": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No projects"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет проектов"
+          }
+        }
+      }
+    },
     "Not chosen": {
       "localizations": {
         "en": {
@@ -1109,6 +1405,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ещё не прочитано"
+          }
+        }
+      }
+    },
+    "Note": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заметка"
           }
         }
       }
@@ -1209,6 +1521,38 @@
         }
       }
     },
+    "Parent artifact": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parent artifact"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Родительский артефакт"
+          }
+        }
+      }
+    },
+    "Parent note": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parent note"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Родительская заметка"
+          }
+        }
+      }
+    },
     "Paused on purpose": {
       "localizations": {
         "en": {
@@ -1273,6 +1617,22 @@
         }
       }
     },
+    "Project": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Project"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проект"
+          }
+        }
+      }
+    },
     "Project → Line → Artifact": {
       "localizations": {
         "en": {
@@ -1285,6 +1645,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Проект → Линия → Артефакт"
+          }
+        }
+      }
+    },
+    "Projects": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Projects"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проекты"
+          }
+        }
+      }
+    },
+    "Q%lld %@ · quarter": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Q%1$lld %2$@ · quarter"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld кв. %2$@ · квартал"
           }
         }
       }
@@ -1349,6 +1741,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Обновить"
+          }
+        }
+      }
+    },
+    "Remaining": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remaining"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Осталось"
           }
         }
       }
@@ -1529,6 +1937,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Показать меньше"
+          }
+        }
+      }
+    },
+    "Show or hide the inspector (⌃⌘I)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show or hide the inspector (⌃⌘I)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показать или скрыть инспектор (⌃⌘I)"
           }
         }
       }
@@ -1733,6 +2157,22 @@
         }
       }
     },
+    "The line has no parent artifact or note.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The line has no parent artifact or note."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "У линии нет родительского артефакта или заметки."
+          }
+        }
+      }
+    },
     "The mapping file cannot be read — fix it, then quit MoonShine (⌘Q) and open it again": {
       "localizations": {
         "en": {
@@ -1793,6 +2233,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Эта папка — не хранилище Obsidian: выберите папку, в которой есть .obsidian"
+          }
+        }
+      }
+    },
+    "This line is not in the data shown.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This line is not in the data shown."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Этой линии нет в показанных данных."
           }
         }
       }
@@ -1941,6 +2397,22 @@
         }
       }
     },
+    "W%lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W%lld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Н%lld"
+          }
+        }
+      }
+    },
     "Weeks %lld–%lld": {
       "localizations": {
         "en": {
@@ -1985,6 +2457,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "активная"
+          }
+        }
+      }
+    },
+    "avg %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "avg %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ср. %@"
           }
         }
       }
@@ -2101,6 +2589,22 @@
         }
       }
     },
+    "last activity": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "last activity"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "последняя активность"
+          }
+        }
+      }
+    },
     "last full import": {
       "localizations": {
         "en": {
@@ -2177,6 +2681,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "нет выполненных задач с %@"
+          }
+        }
+      }
+    },
+    "no date": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "no date"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "без даты"
           }
         }
       }
@@ -2273,6 +2793,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "ещё не прочитан"
+          }
+        }
+      }
+    },
+    "one-off tasks": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "one-off tasks"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "разовые задачи"
           }
         }
       }
@@ -2393,6 +2929,118 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "repeating sessions": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "repeating sessions"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "повторяющиеся занятия"
+          }
+        }
+      }
+    },
+    "session": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "session"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "занятие"
+          }
+        }
+      }
+    },
+    "sessions per week": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sessions per week"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "занятий в неделю"
+          }
+        }
+      }
+    },
+    "task": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "task"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "задача"
+          }
+        }
+      }
+    },
+    "tasks done per week": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tasks done per week"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "задач выполнено в неделю"
+          }
+        }
+      }
+    },
+    "this week so far": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "this week so far"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "на этой неделе пока"
+          }
+        }
+      }
+    },
+    "this week so far · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "this week so far · %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "на этой неделе пока · %@"
           }
         }
       }

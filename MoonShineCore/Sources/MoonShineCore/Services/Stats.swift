@@ -87,8 +87,9 @@ public struct Stats: Sendable {
     for (line, done) in oneOffs { oneOffDates[line, default: []].append(done) }
   }
 
-  /// The outermost occurrence above `task`: the cloned group it was completed with.
-  private static func sessionRoot(of task: TaskItem, in byID: [TaskItemID: TaskItem])
+  /// The outermost occurrence above `task`: the cloned group it was completed with. Line
+  /// detail groups its completions by it too.
+  static func sessionRoot(of task: TaskItem, in byID: [TaskItemID: TaskItem])
     -> TaskItemID
   {
     var current = task

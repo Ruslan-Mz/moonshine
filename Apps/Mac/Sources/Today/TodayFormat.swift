@@ -13,14 +13,25 @@ enum TodayFormat {
     date.formatted(style(timeZone, locale).day().month(.abbreviated))
   }
 
+  /// `29 Sep`, or `29 Sep 2027` when its year is not `today`'s: Line detail's dates.
+  static func dueDate(_ date: Date, today: Date, timeZone: TimeZone, locale: Locale) -> String {
+    date.formatted(
+      withYear(style(timeZone, locale).day().month(.abbreviated), date, today, timeZone))
+  }
+
   /// `2 September`: the day of a quiet line's last completion.
   /// `2 September 2025` when its year is not `today`'s (owner, 2026-10-28).
   static func lastDate(_ date: Date, today: Date, timeZone: TimeZone, locale: Locale) -> String {
-    var calendar = Calendar(identifier: .gregorian)
-    calendar.timeZone = timeZone
-    let style = style(timeZone, locale).day().month(.wide)
+    date.formatted(withYear(style(timeZone, locale).day().month(.wide), date, today, timeZone))
+  }
+
+  /// `style` with the year added when `date`'s year is not `today`'s.
+  private static func withYear(
+    _ style: Date.FormatStyle, _ date: Date, _ today: Date, _ timeZone: TimeZone
+  ) -> Date.FormatStyle {
+    let calendar = calendar(timeZone)
     let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: today)
-    return date.formatted(sameYear ? style : style.year())
+    return sameYear ? style : style.year()
   }
 
   /// An estimate as the catalog shows it: `≈ 45 min`, `≈ 2 h`, `≈ 1 h 15 min`.

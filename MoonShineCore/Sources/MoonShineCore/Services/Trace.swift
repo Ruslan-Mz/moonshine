@@ -71,4 +71,9 @@ public struct Tracer: Sendable {
       lineEntity: lineEntity, target: lineEntity.flatMap { targets[$0.id] })
   }
 
+  /// Where the line's thread ends, as every trace through it ends.
+  public func target(of line: LineID) -> TraceTarget? {
+    targets[line]
+  }
+
 }
