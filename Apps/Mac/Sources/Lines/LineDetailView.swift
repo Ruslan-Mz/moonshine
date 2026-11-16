@@ -310,8 +310,9 @@ private struct LineDetailInspector: View {
             GridRow {
               Text("Horizon").foregroundStyle(.secondary)
               switch horizon {
-              case .year(let year): Text(verbatim: String(year))
-              case .quarter(let quarter, let year): Text("Q\(quarter) \(String(year))")
+              // `2026 · year`, as the mockup writes it.
+              case .year(let year): Text("\(String(year)) · year")
+              case .quarter(let quarter, let year): Text("Q\(quarter) \(String(year)) · quarter")
               }
             }
           }

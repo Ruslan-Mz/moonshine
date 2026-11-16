@@ -65,6 +65,22 @@
         }
       }
     },
+    "%@ · year": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · year"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · год"
+          }
+        }
+      }
+    },
     "%lld active": {
       "localizations": {
         "en": {
@@ -1649,18 +1665,18 @@
         }
       }
     },
-    "Q%lld %@": {
+    "Q%lld %@ · quarter": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Q%1$lld %2$@"
+            "value": "Q%1$lld %2$@ · quarter"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$lld кв. %2$@"
+            "value": "%1$lld кв. %2$@ · квартал"
           }
         }
       }
