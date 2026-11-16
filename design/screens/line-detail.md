@@ -16,14 +16,14 @@ Toolbar: breadcrumb `Lines › 🎻 Violin`, subtitle `Line detail · 4 projects
 
 Main (scroll):
 
-1. Header: emoji 34, name 24 bold, meta line `Creative · active · budget 6 hours / week · last activity today`.
-2. Two `MetricCard`s side by side: **Rhythm** (sessions per week, 4-week avg 4.0) and **Progress** (tasks done per week, avg 1.0), W33–W40, current week partial.
-3. **Projects** table: Project (folder symbol + name; no project due badge in phase 1, Q1.4, owner 2026-10-30) · Kind (`plan · 4 steps`, `repeating sessions`, `one-off tasks`) · Next actions · Remaining (`≈ 2 h 15 min est.`).
-4. **Next actions** (count): `TaskRow`s; the When column shows `today` / `Fri` / `no date`, or a due badge.
+1. Header: emoji 34, name 24 bold, meta line on one line `Creative · active · 6 h / week · last activity today`. A budget with a floor stays on one line, the floor after the budget: `Science · active · 4 h / week · floor 20 min/day · last activity today` (the two-row budget cell is Lines' only). A paused line reads `no completions since 14 July`, `—` without one, never `last activity last …` (S4-2b, owner 2026-11-16).
+2. Two `MetricCard`s side by side: **Rhythm** (sessions per week, 4-week avg 4.0) and **Progress** (tasks done per week, avg 1.0), W33–W40, current week partial; the big number's context is `this week so far · Mon–Thu`, the days of the current week so far (`Mon` on a Monday; `components.md` § MetricCard).
+3. **Projects** table: Project (folder symbol + name; no project due badge in phase 1, Q1.4, owner 2026-10-30) · Kind (`plan · 4 steps`, `repeating sessions`, `one-off tasks`) · Next actions · Remaining (`≈ 2 h 15 min est.`). A row counts only this line's own tasks: a task of another line in the same project does not count, nor an open child task of another line under this line's task (S4-2b, owner 2026-11-16).
+4. **Next actions** (count): `TaskRow`s; the When column shows a due badge, or `today` / `Fri` / `12 Oct` / `no date`; a date in another year shows its year (`5 Jan 2027`). The rule is in `docs/specs/phase-1-see.md` → S4-2b.
 
-Inspector 360:
+Inspector 360, shown by default; ⌃⌘I and the toolbar button hide and show it (S4-2b):
 
-- **Parent artifact** card: label, title 17 bold, description, Horizon / Target / Note path grid, button "Open in Obsidian".
+- **Parent artifact** card: label, title 17 bold, description, Horizon / Target / Note path grid, button "Open in Obsidian". As built in S4-2b (owner, 2026-11-16): label (`Parent artifact`, or `Parent note` when the thread ends at a note), title, and a Horizon / Note grid. **Horizon** is the period of the note that holds the artifact, `2026 · year` or `Q3 2026 · quarter`: the vault contract gives an artifact no period of its own (`docs/discovery/vault-contract.md` § 2.1). No Target row (a target year on an artifact may come later, together with milestones) and **no Status row**. "Open in Obsidian" comes with the link opener (S4-5). The mockup's `2027 · year` and `Target May 2027` are stale (`README.md` § Pending design rounds, Before 3b); this spec wins.
 - **Last 10 completions**: date (`Today`, `Wed 30 Sep`) · title · tag (`session` rhythm colour / `task` progress colour).
 
 ## Data
@@ -34,9 +34,9 @@ Tasks with the reminder tag (ADR-0017, S4 bridge) are in none of these: not in n
 
 ## Acceptance
 
-- [ ] Two separate charts; the average is a dashed rule, not a third series.
-- [ ] "Open in Obsidian" uses `obsidian://open?vault=…&file=…`.
-- [ ] The kind "plan · 4 steps" appears only once plans exist (phase 2); in phase 1 show `one-off tasks` / `repeating sessions`.
+- [x] Two separate charts; the average is a dashed rule, not a third series (S4-2b).
+- [ ] "Open in Obsidian" uses `obsidian://open?vault=…&file=…` (with the link opener, S4-5).
+- [x] The kind "plan · 4 steps" appears only once plans exist (phase 2); in phase 1 show `one-off tasks` / `repeating sessions` (S4-2b).
 
 ## Calendar (draft-3)
 
