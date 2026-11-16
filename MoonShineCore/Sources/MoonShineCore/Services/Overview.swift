@@ -207,6 +207,69 @@ public struct LinesOverview: Hashable, Sendable {
   public let lifeOps: LineActivity
 }
 
+// MARK: - Line detail
+
+/// A project of the line (`design/screens/line-detail.md` § Layout 3). Its numbers count only
+/// the line's own tasks: a task of another line in the same project counts there (owner,
+/// 2026-11-16).
+public struct LineProjectRow: Hashable, Sendable {
+  /// No repeat flag is stored: repeating when one of its open tasks has a completed occurrence
+  /// in the store (Q1.2, owner 2026-10-30).
+  public enum Kind: Hashable, Sendable {
+    case repeatingSessions, oneOffTasks
+  }
+
+  public let project: Project
+  public let kind: Kind
+  public let nextActions: Int
+  /// Sum of the positive estimates of its open leaf tasks: an estimate, saturating.
+  public let remainingMinutes: Int
+}
+
+/// A next action of the line, in source order.
+public struct LineDetailItem: Hashable, Sendable {
+  public let task: TaskItem
+  public let project: Project?
+  /// Planned, else defer, else due (effective dates): where Week places it.
+  public let placement: Date?
+  /// A date puts it on Today's list: planned before the day ends, deferred to today, or due by
+  /// the day's end; the rule of `Overview.today()`, flags aside.
+  public let isToday: Bool
+  /// Only a real due date before the day ends makes it urgent.
+  public let isUrgent: Bool
+}
+
+/// A completion of the line: a one-off task, or a completed repeating group as one session at
+/// its first completion, the date Stats counts it on.
+public struct LineCompletion: Hashable, Sendable {
+  public enum Kind: Hashable, Sendable {
+    case session, oneOff
+  }
+
+  /// A group's outermost occurrence.
+  public let task: TaskItem
+  public let completedAt: Date
+  public let kind: Kind
+}
+
+public struct LineDetail: Hashable, Sendable {
+  public let line: Line
+  /// The same value Lines shows.
+  public let last: LastActivity
+  public let target: TraceTarget?
+  /// The target artifact's note, or the parent note itself; nil without a target.
+  public let targetNote: NoteRef?
+  /// Active and on-hold projects of the line, source order.
+  public let projects: [LineProjectRow]
+  public let nextActions: [LineDetailItem]
+  /// Most recent first, at most `Overview.completionsShown`.
+  public let completions: [LineCompletion]
+  /// 8 weeks, oldest first; the last one is the current, partial week.
+  public let weeks: [WeekPoint]
+  /// The 4 weeks before the current one.
+  public let average: WeekAverage
+}
+
 // MARK: - Service
 
 /// Today, Week and Lines, computed from the store's workspace at `now` in its time zone.
@@ -270,13 +333,7 @@ public struct Overview: Sendable {
     workspace.tasks.compactMap { task in
       let isDone = task.status == .completed && task.completedAt.map(day.contains) == true
       guard task.status == .available || isDone else { return nil }
-      var reasons: Set<TodayReason> = []
-      if let due = task.effectiveDueAt, due < day.end { reasons.insert(.due) }
-      if task.flagged { reasons.insert(.flagged) }
-      if let deferUntil = task.effectiveDeferUntil, day.contains(deferUntil) {
-        reasons.insert(.deferred)
-      }
-      if let planned = task.effectivePlannedAt, planned < day.end { reasons.insert(.planned) }
+      let reasons = todayReasons(task, day)
       guard isDone || !reasons.isEmpty else { return nil }
       let plannedEarlier = task.effectivePlannedAt.flatMap { $0 < day.start ? $0 : nil }
       return TodayItem(
@@ -284,6 +341,26 @@ public struct Overview: Sendable {
         isUrgent: !isDone && reasons.contains(.due),
         plannedDaysAgo: isDone ? nil : plannedEarlier.map { calendarDays(from: $0, to: day) },
         isDone: isDone)
+    }
+  }
+
+  /// Why a task is on the day's list; Line detail reads the same rule.
+  private func todayReasons(_ task: TaskItem, _ day: Horizon) -> Set<TodayReason> {
+    var reasons: Set<TodayReason> = []
+    if let due = task.effectiveDueAt, due < day.end { reasons.insert(.due) }
+    if task.flagged { reasons.insert(.flagged) }
+    if let deferUntil = task.effectiveDeferUntil, day.contains(deferUntil) {
+      reasons.insert(.deferred)
+    }
+    if let planned = task.effectivePlannedAt, planned < day.end { reasons.insert(.planned) }
+    return reasons
+  }
+
+  /// The positive estimates, summed; `Int.max` instead of an overflow.
+  private static func estimateSum(_ minutes: [Int?]) -> Int {
+    minutes.compactMap { $0 }.filter { $0 > 0 }.reduce(0) {
+      let (total, overflow) = $0.addingReportingOverflow($1)
+      return overflow ? .max : total
     }
   }
 
@@ -317,10 +394,7 @@ public struct Overview: Sendable {
       let (a, b) = ($0.element.task.completedAt ?? now, $1.element.task.completedAt ?? now)
       return a != b ? a > b : $0.offset < $1.offset
     }.map(\.element)
-    let estimate = open.compactMap(\.task.estimateMinutes).filter { $0 > 0 }.reduce(0) {
-      let (total, overflow) = $0.addingReportingOverflow($1)
-      return overflow ? .max : total
-    }
+    let estimate = Self.estimateSum(open.map(\.task.estimateMinutes))
 
     let paused = workspace.lines.filter { $0.state == .paused }
     let touched = Set(done.map(\.task.line)).subtracting(paused.map { .line($0.id) })
@@ -499,5 +573,91 @@ public struct Overview: Sendable {
       totals[task.line] = overflow ? .max : total
     }
     return totals
+  }
+
+  // MARK: Line detail
+
+  public static let completionsShown = 10
+
+  /// Nil for an id that is not a line of this workspace.
+  public func lineDetail(_ id: LineID) -> LineDetail? {
+    guard let line = workspace.lines.first(where: { $0.id == id }) else { return nil }
+    let assignment = LineAssignment.line(id)
+    let day = day(containing: now)
+    let own = workspace.tasks.filter { $0.line == assignment }
+    let next = Set(nextActions.map(\.id))
+    let isOpen = { (task: TaskItem) in task.status == .available || task.status == .blocked }
+    // A parent of an open task of any line is not a leaf.
+    let parents = Set(workspace.tasks.filter(isOpen).compactMap(\.parentTaskID))
+    let repeating = Set(
+      workspace.tasks.filter { $0.status == .completed }.compactMap(\.occurrenceOf))
+
+    let projects = workspace.projects.filter {
+      $0.line == assignment && ($0.status == .active || $0.status == .onHold)
+    }.map { project in
+      let open = own.filter { $0.projectID == project.id && isOpen($0) }
+      return LineProjectRow(
+        project: project,
+        kind: open.contains { repeating.contains($0.id) } ? .repeatingSessions : .oneOffTasks,
+        nextActions: open.filter { next.contains($0.id) }.count,
+        remainingMinutes: Self.estimateSum(
+          open.filter { !parents.contains($0.id) }.map(\.estimateMinutes)))
+    }
+
+    let projectsByID = Dictionary(
+      workspace.projects.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    let items = own.filter { next.contains($0.id) }.map { task in
+      let reasons = todayReasons(task, day).subtracting([.flagged])
+      return LineDetailItem(
+        task: task, project: task.projectID.flatMap { projectsByID[$0] },
+        placement: task.effectivePlannedAt ?? task.effectiveDeferUntil ?? task.effectiveDueAt,
+        isToday: !reasons.isEmpty, isUrgent: reasons.contains(.due))
+    }
+
+    let target = tracer.target(of: id)
+    let targetNote: NoteRef?
+    switch target {
+    case .artifact(let artifact):
+      targetNote = artifact.noteID.flatMap { note in workspace.notes.first { $0.id == note } }
+    case .note(let note): targetNote = note
+    case nil: targetNote = nil
+    }
+
+    let last = lastActivity(line, completed: lastCompletions[assignment]?.completedAt, day: day)
+    return LineDetail(
+      line: line, last: last, target: target, targetNote: targetNote, projects: projects,
+      nextActions: items, completions: completions(own),
+      weeks: stats.series(assignment, endingAt: stats.currentWeek, count: Self.sparklineWeeks),
+      average: stats.average(assignment, before: stats.currentWeek))
+  }
+
+  /// One row per one-off and per completed repeating group, most recent first, ties in source
+  /// order; the first `completionsShown`.
+  private func completions(_ tasks: [TaskItem]) -> [LineCompletion] {
+    let byID = Dictionary(
+      workspace.tasks.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    var rows: [LineCompletion] = []
+    var sessions: [TaskItemID: Int] = [:]
+    for task in tasks where task.status == .completed {
+      guard let done = task.completedAt else { continue }
+      guard task.isOccurrence else {
+        rows.append(LineCompletion(task: task, completedAt: done, kind: .oneOff))
+        continue
+      }
+      let root = Stats.sessionRoot(of: task, in: byID)
+      if let index = sessions[root] {
+        if done < rows[index].completedAt {
+          rows[index] = LineCompletion(task: rows[index].task, completedAt: done, kind: .session)
+        }
+      } else {
+        sessions[root] = rows.count
+        rows.append(LineCompletion(task: byID[root] ?? task, completedAt: done, kind: .session))
+      }
+    }
+    let recent = rows.enumerated().sorted {
+      let (a, b) = ($0.element.completedAt, $1.element.completedAt)
+      return a != b ? a > b : $0.offset < $1.offset
+    }
+    return recent.prefix(Self.completionsShown).map(\.element)
   }
 }
