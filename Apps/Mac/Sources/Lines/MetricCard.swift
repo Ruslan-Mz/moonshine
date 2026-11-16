@@ -11,7 +11,9 @@ struct MetricCard: View {
 
   let kind: Kind
   let metric: LineDetailScreen.Metric
-  let weeks: [Int]
+  /// The weeks, and the dates of `Mon–Thu`.
+  let screen: LineDetailScreen
+  @Environment(\.locale) private var locale
 
   static let chartHeight: CGFloat = 96
   /// Two cards side by side fit the narrowest Line detail.
@@ -36,7 +38,7 @@ struct MetricCard: View {
       HStack(alignment: .firstTextBaseline, spacing: 6) {
         Text(metric.thisWeek, format: .number).font(.system(size: 30, weight: .bold))
           .monospacedDigit()
-        Text("this week so far").font(.caption).foregroundStyle(.secondary)
+        context.font(.caption).foregroundStyle(.secondary)
       }
       chart
     }
@@ -44,6 +46,14 @@ struct MetricCard: View {
     .frame(minWidth: Self.minimumWidth, maxWidth: .infinity, alignment: .leading)
     .background(Tokens.card, in: RoundedRectangle(cornerRadius: 10))
     .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Tokens.cardBorder))
+  }
+
+  /// `this week so far · Mon–Thu`.
+  private var context: Text {
+    guard let start = screen.weekStart else { return Text("this week so far") }
+    let days = LineDetailFormat.daysSoFar(
+      from: start, to: screen.today, timeZone: screen.timeZone, locale: locale)
+    return Text("this week so far · \(days)")
   }
 
   private var chart: some View {
@@ -82,7 +92,7 @@ struct MetricCard: View {
       }
       .overlay(alignment: .bottom) { Rectangle().fill(.tertiary).frame(height: 0.5) }
       HStack(spacing: 8) {
-        ForEach(weeks, id: \.self) { week in
+        ForEach(screen.weeks, id: \.self) { week in
           Text("W\(week)").font(.caption2).foregroundStyle(.secondary)
             .frame(maxWidth: .infinity)
         }

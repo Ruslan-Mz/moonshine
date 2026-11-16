@@ -275,11 +275,20 @@ private struct StateLabel: View {
 /// `design/components.md` § BudgetCell (draft-5).
 struct BudgetText: View {
   let budget: LinesFormat.Budget
+  /// Line detail's meta line: the floor after the budget, `4 h / week · floor 20 min/day`.
+  var oneLine = false
 
   var body: some View {
     switch budget {
     case .weekly(let hours): Self.weekly(hours).monospacedDigit()
     case .floor(let floor): Self.floor(floor).monospacedDigit()
+    case .weeklyOverFloor(let hours, let floor) where oneLine:
+      HStack(spacing: 6) {
+        Self.weekly(hours)
+        Text(verbatim: "·")
+        Self.floor(floor)
+      }
+      .monospacedDigit()
     case .weeklyOverFloor(let hours, let floor):
       VStack(alignment: .leading, spacing: 1) {
         Self.weekly(hours)

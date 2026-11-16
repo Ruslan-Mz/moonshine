@@ -57,8 +57,8 @@ struct LineDetailView: View {
       VStack(alignment: .leading, spacing: 20) {
         header
         HStack(alignment: .top, spacing: LineDetailColumns.cardSpacing) {
-          MetricCard(kind: .rhythm, metric: screen.rhythm, weeks: screen.weeks)
-          MetricCard(kind: .progress, metric: screen.progress, weeks: screen.weeks)
+          MetricCard(kind: .rhythm, metric: screen.rhythm, screen: screen)
+          MetricCard(kind: .progress, metric: screen.progress, screen: screen)
         }
         projects
         nextActions
@@ -96,11 +96,10 @@ struct LineDetailView: View {
         StateText(state: screen.state, isFoundation: screen.isFoundation)
         if screen.budget != .none {
           Text(verbatim: "·")
-          BudgetText(budget: screen.budget)
+          BudgetText(budget: screen.budget, oneLine: true)
         }
         Text(verbatim: "·")
-        Text("last activity")
-        LastActivityText(last: screen.last, today: screen.today, timeZone: screen.timeZone)
+        LineDetailLastText(screen: screen, prefixed: true)
       }
       .foregroundStyle(.secondary)
     }
@@ -165,7 +164,7 @@ struct LineDetailView: View {
               Text(verbatim: row.title).lineLimit(1)
               Text(verbatim: row.project ?? "").foregroundStyle(.secondary).lineLimit(1)
               EstimateText(minutes: row.estimateMinutes)
-              LineDetailWhenText(when: row.when, timeZone: screen.timeZone)
+              LineDetailWhenText(when: row.when, today: screen.today, timeZone: screen.timeZone)
             }
           }
         }
@@ -201,16 +200,51 @@ struct StateText: View {
   }
 }
 
-/// `today` / `Fri` / `12 Oct` / `no date`, or the due badge of Today (`WhenText`).
+/// The line's last activity in one phrase (owner, 2026-11-10: one rule everywhere): a paused
+/// line reads `no completions since 14 July`, as the rail does, never `last activity last …`.
+private struct LineDetailLastText: View {
+  let screen: LineDetailScreen
+  /// `last activity today` in the header; the bare words in the inspector.
+  let prefixed: Bool
+  @Environment(\.locale) private var locale
+
+  var body: some View {
+    switch screen.last {
+    case .paused(let last?):
+      let date = TodayFormat.lastDate(
+        last, today: screen.today, timeZone: screen.timeZone, locale: locale)
+      Text("no completions since \(date)")
+    case .paused(nil): Text(verbatim: "—")
+    case .noCompletions: words
+    case .today, .yesterday, .daysAgo, .quiet:
+      if prefixed {
+        HStack(spacing: 6) {
+          Text("last activity")
+          words
+        }
+      } else {
+        words
+      }
+    }
+  }
+
+  private var words: LastActivityText {
+    LastActivityText(last: screen.last, today: screen.today, timeZone: screen.timeZone)
+  }
+}
+
+/// `today` / `Fri` / `12 Oct` / `no date`, or the due badge of Today (`WhenText`); a date of
+/// another year shows its year.
 private struct LineDetailWhenText: View {
   let when: LineDetailFormat.When
+  let today: Date
   let timeZone: TimeZone
   @Environment(\.locale) private var locale
 
   var body: some View {
     switch when {
     case .due(let due, let urgent):
-      let date = TodayFormat.dueDate(due, timeZone: timeZone, locale: locale)
+      let date = TodayFormat.dueDate(due, today: today, timeZone: timeZone, locale: locale)
       switch TodayFormat.dueStyle(isUrgent: urgent) {
       case .deadline:
         Text("Due \(date)")
@@ -225,7 +259,7 @@ private struct LineDetailWhenText: View {
     case .weekday(let date):
       Text(verbatim: LineDetailFormat.weekday(date, timeZone: timeZone, locale: locale))
     case .date(let date):
-      Text(verbatim: TodayFormat.dueDate(date, timeZone: timeZone, locale: locale))
+      Text(verbatim: TodayFormat.dueDate(date, today: today, timeZone: timeZone, locale: locale))
     case .none: Text("no date").foregroundStyle(.secondary)
     }
   }
@@ -243,8 +277,7 @@ private struct LineDetailInspector: View {
         Text("Last 10 completions").font(.headline)
         if screen.completions.isEmpty {
           // The line's own last-activity words: `no completions since 6 July`, or `—`.
-          LastActivityText(last: screen.last, today: screen.today, timeZone: screen.timeZone)
-            .foregroundStyle(.secondary)
+          LineDetailLastText(screen: screen, prefixed: false).foregroundStyle(.secondary)
         } else {
           Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 6) {
             ForEach(screen.completions) { row in
@@ -273,17 +306,6 @@ private struct LineDetailInspector: View {
           .font(.caption).foregroundStyle(.secondary)
         Text(verbatim: parent.title).font(.system(size: 17, weight: .bold))
         Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 4) {
-          if let status = parent.status {
-            GridRow {
-              Text("Status").foregroundStyle(.secondary)
-              switch status {
-              case .planned: Text("planned")
-              case .inProgress: Text("in progress")
-              case .done: Text("done")
-              case .dropped: Text("dropped")
-              }
-            }
-          }
           if let horizon = parent.horizon {
             GridRow {
               Text("Horizon").foregroundStyle(.secondary)

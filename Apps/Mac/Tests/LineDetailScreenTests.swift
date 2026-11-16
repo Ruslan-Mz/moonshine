@@ -49,6 +49,9 @@ import Testing
     #expect(when(try Self.item(planned: Self.date(9, 29))) == .today)
     let friday = Self.date(10, 2)
     #expect(when(try Self.item(defer: friday)) == .weekday(friday))
+    // A day of this week that has passed is a date, not a weekday.
+    let monday = Self.date(9, 28)
+    #expect(when(try Self.item(defer: monday)) == .date(monday))
     let tuesday = Self.date(10, 6)
     #expect(when(try Self.item(planned: tuesday)) == .date(tuesday))
     // An old defer date is not today's work (Today's rule): its date, not `today`.
@@ -77,6 +80,27 @@ import Testing
     #expect(friday == "Fri")
   }
 
+  /// `TodayFormat.lastDate`'s rule: the year only when it is not this year's.
+  @Test func aDateOfAnotherYearShowsItsYear() {
+    let english = Locale(identifier: "en_GB")
+    func text(_ date: Date) -> String {
+      TodayFormat.dueDate(date, today: Self.now, timeZone: Self.zone, locale: english)
+    }
+    #expect(text(Self.date(10, 12)) == "12 Oct")
+    let january = Self.calendar.date(from: DateComponents(year: 2027, month: 1, day: 5))!
+    #expect(text(january) == "5 Jan 2027")
+  }
+
+  @Test func theDaysSoFarRunFromMondayToToday() {
+    let english = Locale(identifier: "en_GB")
+    func days(_ today: Date) -> String {
+      LineDetailFormat.daysSoFar(
+        from: Self.date(9, 28, 0), to: today, timeZone: Self.zone, locale: english)
+    }
+    #expect(days(Self.now) == "Mon–Wed")
+    #expect(days(Self.date(9, 28, 9)) == "Mon")
+  }
+
   // MARK: Screen
 
   @Test func aLineNotInTheOverviewHasNoScreen() {
@@ -92,6 +116,44 @@ import Testing
     #expect(screen.title == "🎻 Violin")
     #expect(screen.parent == nil)
     #expect(screen.weeks.count == Overview.sparklineWeeks)
+  }
+
+  /// The artifact's card takes its year note's horizon and path; a parent note its own.
+  @Test func theParentCardIsTheArtifactOrTheParentNote() throws {
+    let year = try #require(Horizon.containing(Self.now, scale: .year, calendar: Self.calendar))
+    let quarter = try #require(
+      Horizon.containing(Self.now, scale: .quarter, calendar: Self.calendar))
+    let yearNote = NoteRef(
+      id: .generate(), refs: [], path: "Years/Artifacts_2026.md", title: "Artifacts 2026",
+      type: "year_artifacts", scale: .year, period: year, parentLink: nil, lineKey: nil,
+      status: nil)
+    let quarterNote = NoteRef(
+      id: .generate(), refs: [], path: "Years/Q3_2026.md", title: "Q3 2026", type: nil,
+      scale: .quarter, period: quarter, parentLink: nil, lineKey: nil, status: nil)
+    let sketching = Line(
+      id: .generate(), refs: [], key: "sketching", name: "Sketching", emoji: nil,
+      block: "Creative", state: .active, budgetHoursPerWeek: nil, parentLink: "[[Q3_2026]]",
+      taskRules: LineTaskRules())
+    let artifact = Artifact(
+      id: .generate(), refs: [], key: "recital", title: "Spring recital",
+      lineIDs: [Self.violin.id], status: .planned, priority: false, noteID: yearNote.id)
+    let overview = Overview(
+      workspace: Workspace(
+        timeZone: Self.zone, lines: [Self.violin, sketching], artifacts: [artifact],
+        notes: [yearNote, quarterNote]),
+      now: Self.now)
+    let violin = try #require(LineDetailScreen(overview, line: Self.violin.id))
+    #expect(
+      violin.parent
+        == .init(
+          isArtifact: true, title: "Spring recital", horizon: .year(2026),
+          path: "Years/Artifacts_2026.md"))
+    let note = try #require(LineDetailScreen(overview, line: sketching.id))
+    #expect(
+      note.parent
+        == .init(
+          isArtifact: false, title: "Q3 2026", horizon: .quarter(3, year: 2026),
+          path: "Years/Q3_2026.md"))
   }
 
   // MARK: Columns

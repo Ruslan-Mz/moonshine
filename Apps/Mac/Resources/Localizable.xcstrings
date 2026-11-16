@@ -1989,22 +1989,6 @@
         }
       }
     },
-    "Status": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Status"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Статус"
-          }
-        }
-      }
-    },
     "Suggested next step": {
       "localizations": {
         "en": {
@@ -2493,38 +2477,6 @@
         }
       }
     },
-    "done": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "done"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "готов"
-          }
-        }
-      }
-    },
-    "dropped": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "dropped"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "отменён"
-          }
-        }
-      }
-    },
     "due %@": {
       "localizations": {
         "en": {
@@ -2601,22 +2553,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "найдено групп: %lld из %lld"
-          }
-        }
-      }
-    },
-    "in progress": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "in progress"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "в работе"
           }
         }
       }
@@ -2877,22 +2813,6 @@
         }
       }
     },
-    "planned": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "planned"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "запланирован"
-          }
-        }
-      }
-    },
     "planned %lld days ago": {
       "localizations": {
         "en": {
@@ -3089,6 +3009,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "на этой неделе пока"
+          }
+        }
+      }
+    },
+    "this week so far · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "this week so far · %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "на этой неделе пока · %@"
           }
         }
       }

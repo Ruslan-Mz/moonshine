@@ -34,11 +34,11 @@ struct LineDetailScreen: Equatable {
     var thisWeek: Int { values.last ?? 0 }
   }
 
-  /// The inspector's card: the artifact the line's thread ends at, or its parent note.
+  /// The inspector's card: the artifact the line's thread ends at, or its parent note. No
+  /// status row: `line-detail.md` has none.
   struct Parent: Hashable {
     let isArtifact: Bool
     let title: String
-    let status: ArtifactStatus?
     let horizon: LineDetailFormat.HorizonLabel?
     let path: String?
   }
@@ -67,6 +67,8 @@ struct LineDetailScreen: Equatable {
   let completions: [CompletionRow]
   /// Nil when the thread ends at the line.
   let parent: Parent?
+  /// The first day of the current week, for the cards' `Mon–Thu`.
+  let weekStart: Date?
   let today: Date
   let timeZone: TimeZone
 
@@ -112,14 +114,13 @@ struct LineDetailScreen: Equatable {
     switch detail.target {
     case .artifact(let artifact):
       parent = Parent(
-        isArtifact: true, title: artifact.title, status: artifact.status, horizon: horizon,
-        path: detail.targetNote?.path)
+        isArtifact: true, title: artifact.title, horizon: horizon, path: detail.targetNote?.path)
     case .note(let note):
-      parent = Parent(
-        isArtifact: false, title: note.title, status: nil, horizon: horizon, path: note.path)
+      parent = Parent(isArtifact: false, title: note.title, horizon: horizon, path: note.path)
     case nil:
       parent = nil
     }
+    weekStart = week?.start
     today = overview.now
     timeZone = overview.workspace.timeZone
   }
@@ -177,6 +178,15 @@ enum LineDetailFormat {
   /// `Fri`.
   static func weekday(_ date: Date, timeZone: TimeZone, locale: Locale) -> String {
     date.formatted(style(timeZone, locale).weekday(.abbreviated))
+  }
+
+  /// `Mon–Thu`, the days of the current week so far; `Mon` on a Monday.
+  static func daysSoFar(from start: Date, to today: Date, timeZone: TimeZone, locale: Locale)
+    -> String
+  {
+    let first = weekday(start, timeZone: timeZone, locale: locale)
+    if TodayFormat.calendar(timeZone).isDate(start, inSameDayAs: today) { return first }
+    return "\(first)–\(weekday(today, timeZone: timeZone, locale: locale))"
   }
 
   /// `Wed 30 Sep`: a completion's day.

@@ -132,6 +132,23 @@ import Testing
     #expect(pianoDetail.nextActions.first?.project == recital)
   }
 
+  /// A task with an open child of another line is a parent, not a leaf: its estimate is not
+  /// this line's remaining work.
+  @Test func aParentOfAnotherLinesOpenTaskIsNotALeaf() throws {
+    var world = W()
+    let violin = world.line("violin")
+    let piano = world.line("piano")
+    let recital = world.project("Recital", line: .line(violin.id))
+    let programme = world.task(
+      "Programme", line: .line(violin.id), project: recital.id, estimate: 60)
+    world.task(
+      "Accompaniment", line: .line(piano.id), project: recital.id, parent: programme.id,
+      estimate: 30)
+    world.task("Bow", line: .line(violin.id), project: recital.id, estimate: 20)
+    let row = try #require(try detail(violin, world).projects.first)
+    #expect(row.remainingMinutes == 20)
+  }
+
   // MARK: Next actions
 
   @Test func nextActionsAreTheLinesAvailableLeavesInSourceOrder() throws {
