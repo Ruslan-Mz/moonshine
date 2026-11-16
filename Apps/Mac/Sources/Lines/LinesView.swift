@@ -44,17 +44,26 @@ enum LinesColumns {
   }
 }
 
-/// Lines in the detail column, from the store's overview.
+/// Lines in the detail column, from the store's overview; ↵ pushes Line detail.
 struct LinesDetail: View {
   let overview: Overview
+  @State private var path: [LineID] = []
 
-  var body: some View { LinesView(screen: LinesScreen(overview)) }
+  var body: some View {
+    NavigationStack(path: $path) {
+      LinesView(screen: LinesScreen(overview), path: $path)
+        .navigationDestination(for: LineID.self) { id in
+          LineDetailDestination(overview: overview, id: id, path: $path)
+        }
+    }
+  }
 }
 
-/// `design/screens/lines.md`, draft-5 for S4-2a: tiers, the eight-week sparkline and the
-/// week's facts. Line detail and ↵ come with S4-2b.
+/// `design/screens/lines.md`, draft-5: tiers, the eight-week sparkline and the week's facts;
+/// ↵ or a double-click opens a line's detail (S4-2b).
 struct LinesView: View {
   let screen: LinesScreen
+  @Binding var path: [LineID]
   @SceneStorage("lines.pausedExpanded") private var pausedExpanded = false
   @State private var selection: LinesTableRow.ID?
   @FocusState private var listFocused: Bool
@@ -123,15 +132,22 @@ struct LinesView: View {
       .width(min: LinesColumns.nextMinimum, ideal: LinesColumns.nextIdeal)
       TableColumn("Estimated this week") { row in
         if case .line(let line) = row {
-          Group {
-            if let estimate = TodayFormat.estimate(line.estimateMinutes) {
-              EstimateText.text(estimate, total: true)
-            } else {
-              Text(verbatim: "—")
+          HStack {
+            Group {
+              if let estimate = TodayFormat.estimate(line.estimateMinutes) {
+                EstimateText.text(estimate, total: true)
+              } else {
+                Text(verbatim: "—")
+              }
+            }
+            .foregroundStyle(.secondary)
+            .monospacedDigit()
+            Spacer(minLength: 4)
+            // The selected row's chevron: ↵ opens Line detail (`lines.md` § Layout).
+            if selection == row.id {
+              Image(systemName: "chevron.right").foregroundStyle(.secondary)
             }
           }
-          .foregroundStyle(.secondary)
-          .monospacedDigit()
         }
       }
       .width(min: LinesColumns.estimatedMinimum)
@@ -154,8 +170,18 @@ struct LinesView: View {
     }
     .tableStyle(.inset)
     .alternatingRowBackgrounds(.disabled)
+    .contextMenu(forSelectionType: LinesTableRow.ID.self) { _ in
+    } primaryAction: { ids in
+      switch ids.first {
+      case .line(let id): path.append(id)
+      case .paused: pausedExpanded.toggle()
+      case nil: break
+      }
+    }
     .focused($listFocused)
     .defaultFocus($listFocused, true)
+    // Back from Line detail, the list has the keyboard again.
+    .onAppear { listFocused = true }
     .onChange(of: selection) { _, selected in
       if selected != nil { listFocused = true }
     }
@@ -190,7 +216,7 @@ struct LinesView: View {
   }
 
   /// The parts with ` · ` between them, in the catalog's `%@ · %@`.
-  private static func joined(_ parts: [Text]) -> Text {
+  static func joined(_ parts: [Text]) -> Text {
     guard let first = parts.first else { return Text(verbatim: "") }
     return parts.dropFirst().reduce(first) { Text("\($0) · \($1)") }
   }
@@ -278,8 +304,8 @@ struct BudgetText: View {
 }
 
 /// `today`, `yesterday`, `N days ago`, moon + `quiet for N days`, `no completions since 6 July`,
-/// a paused line's `last 14 July` (Q1.1, owner 2026-10-30).
-private struct LastActivityText: View {
+/// a paused line's `last 14 July` (Q1.1, owner 2026-10-30); Line detail shows it too.
+struct LastActivityText: View {
   let last: LastActivity
   let today: Date
   let timeZone: TimeZone

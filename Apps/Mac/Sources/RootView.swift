@@ -40,6 +40,8 @@ struct RootView: View {
       }
       .environment(\.timeZone, zone)
       .environment(\.calendar, TodayFormat.calendar(zone))
+      // Another source is another workspace: an open Line detail goes back to Lines.
+      .id(model.source)
     } else {
       switch TodayPlaceholder(model) {
       case .importing, nil:
