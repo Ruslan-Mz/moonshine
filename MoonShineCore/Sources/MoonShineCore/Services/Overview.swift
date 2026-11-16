@@ -645,13 +645,12 @@ public struct Overview: Sendable {
         continue
       }
       let root = Stats.sessionRoot(of: task, in: byID)
+      let row = LineCompletion(task: byID[root] ?? task, completedAt: done, kind: .session)
       if let index = sessions[root] {
-        if done < rows[index].completedAt {
-          rows[index] = LineCompletion(task: rows[index].task, completedAt: done, kind: .session)
-        }
+        if done < rows[index].completedAt { rows[index] = row }
       } else {
         sessions[root] = rows.count
-        rows.append(LineCompletion(task: byID[root] ?? task, completedAt: done, kind: .session))
+        rows.append(row)
       }
     }
     let recent = rows.enumerated().sorted {
