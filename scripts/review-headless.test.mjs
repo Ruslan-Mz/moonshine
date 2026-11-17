@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { commit, denyListFile, install, installed, ok, repository, secret, slug } from "./guard-fixture.mjs";
@@ -14,23 +14,34 @@ import { commit, denyListFile, install, installed, ok, repository, secret, slug 
 const repo = "repos/{owner}/{repo}";
 const login = "owner-login";
 const tools = ["Task", "Bash", "Edit", "Read", "Write", "mcp__context7__query-docs", "mcp__context7__resolve-library-id"];
-// ps is denied inside a session's sandbox; CI has it. Tests that read process trees need it.
+// ps is denied inside a session's sandbox; CI has it. The lock needs it (a run without a start time
+// refuses), so every test that gets as far as the lock skips without it.
 const psWorks = spawnSync("/bin/ps", ["-o", "pid=", "-p", String(process.pid)]).status === 0;
+const needsPs = { skip: !psWorks && "ps is not available (a session's sandbox)" };
 
 const fakeGh = `#!${process.execPath}
 const { readFileSync } = require("node:fs");
 const args = process.argv.slice(2);
-const fake = JSON.parse(readFileSync(process.env.FAKE_GH, "utf8"));
+// Under the wrapper's environment (gh-post in the fake claude) FAKE_GH is gone: the file next to bin/.
+const fakePath = process.env.FAKE_GH ?? require("node:path").join(__dirname, "..", "fake.json");
+const fake = JSON.parse(readFileSync(fakePath, "utf8"));
 if (args.length === 4 && args[0] === "api" && args[2] === "GET" && Object.hasOwn(fake, args[3])) {
   process.stdout.write(JSON.stringify(fake[args[3]]));
+  process.exit(0);
+}
+// gh-post review: the posted review gets the id the fake's review 555 has.
+if (args.length === 6 && args[0] === "api" && args[2] === "POST" && args[3].endsWith("/pulls/7/reviews")) {
+  require("node:fs").appendFileSync(fakePath + ".posted", readFileSync(0, "utf8") + "\\n");
+  process.stdout.write(JSON.stringify({ id: 555 }));
   process.exit(0);
 }
 process.stderr.write("gh: Not Found (HTTP 404)\\n");
 process.exit(1);
 `;
 
-/// The fake claude: what it was started with goes to started.json; it prints the events (with
-/// {{session}} replaced), and can record a review, add a worktree in its scratchpad, start a
+/// The fake claude: what it was started with, and the lock as it finds it, go to started.json; it
+/// prints the events (with {{session}} replaced), and can post its review through the installed
+/// gh-post (or record one from another session), add a review worktree in its scratchpad, start a
 /// grandchild, dirty the checkout, hang, or exit with a status.
 function fakeClaude(paths) {
   return `#!${process.execPath}
@@ -40,10 +51,20 @@ const args = process.argv.slice(2);
 if (args[0] === "--version") { console.log("9.9.9 (Claude Code)"); process.exit(0); }
 const b = JSON.parse(fs.readFileSync(${JSON.stringify(paths.behaviour)}, "utf8"));
 const session = args[args.indexOf("--session-id") + 1];
-fs.writeFileSync(${JSON.stringify(paths.started)}, JSON.stringify({ args, env: process.env, cwd: process.cwd(), pid: process.pid }));
+const locks = fs.readdirSync(${JSON.stringify(paths.state)}).filter((name) => name.startsWith("review-"));
+const lock = locks.length === 1 ? JSON.parse(fs.readFileSync(${JSON.stringify(paths.state)} + "/" + locks[0], "utf8")) : null;
+fs.writeFileSync(${JSON.stringify(paths.started)}, JSON.stringify({ args, env: process.env, cwd: process.cwd(), pid: process.pid, lock }));
 for (const event of b.events) process.stdout.write(JSON.stringify(event).replaceAll("{{session}}", session) + "\\n");
-if (b.record) fs.appendFileSync(${JSON.stringify(paths.posts)}, JSON.stringify({ kind: "review", pr: 7, id: 555, session: b.record === "other" ? "another-session" : session, time: "t" }) + "\\n");
-if (b.worktree) spawnSync("git", ["worktree", "add", "-q", "--detach", ${JSON.stringify(paths.scratch)} + "/" + session + "/scratchpad/wt", "HEAD"]);
+const pad = (b.scratch ?? ${JSON.stringify(paths.scratch)}) + "/" + session + "/scratchpad";
+if (b.record === "other") fs.appendFileSync(${JSON.stringify(paths.posts)}, JSON.stringify({ kind: "review", pr: 7, id: 555, session: "another-session", time: "t" }) + "\\n");
+else if (b.record) {
+  fs.mkdirSync(pad, { recursive: true });
+  const head = spawnSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).stdout.trim();
+  fs.writeFileSync(pad + "/review.json", JSON.stringify({ event: "COMMENT", commit_id: head, body: "a review" }));
+  const post = spawnSync(${JSON.stringify(paths.ghPost)}, ["review", "7", pad + "/review.json"], { encoding: "utf8" });
+  fs.writeFileSync(${JSON.stringify(paths.ghPostLog)}, JSON.stringify({ status: post.status, stderr: post.stderr }));
+}
+if (b.worktree) spawnSync("git", ["worktree", "add", "-q", "--detach", pad + "/review/pr-7", "HEAD"]);
 if (b.grandchild) {
   const g = spawn(process.execPath, ["-e", "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000)"], { detached: true, stdio: "ignore" });
   fs.writeFileSync(${JSON.stringify(paths.grandchild)}, String(g.pid));
@@ -75,11 +96,16 @@ function setUp() {
   const bin = join(work.root, "bin");
   mkdirSync(bin);
   writeFileSync(join(bin, "gh"), fakeGh, { mode: 0o755 });
+  // The installed gh-post runs `node` from PATH, as the wrapper's PATH names node's folder.
+  symlinkSync(process.execPath, join(bin, "node"));
   const paths = {
     behaviour: join(work.root, "behaviour.json"),
     started: join(work.root, "started.json"),
     grandchild: join(work.root, "grandchild.pid"),
     posts: installed(work, "state", "posts.jsonl"),
+    state: installed(work, "state"),
+    ghPost: installed(work, "bin", "gh-post"),
+    ghPostLog: join(work.root, "gh-post.json"),
     scratch: join(scratch, slug(work.cwd)),
   };
   writeFileSync(join(work.root, "claude"), fakeClaude(paths), { mode: 0o755 });
@@ -154,8 +180,11 @@ function setUp() {
 }
 
 function exits(context, run, code, expected) {
-  assert.equal(run.status, code, `${run.stdout}\n${run.stderr}`);
+  assert.equal(run.status, code, `${run.stdout}\n${run.stderr}\n${existsSync(context.paths.ghPostLog) ? readFileSync(context.paths.ghPostLog, "utf8") : ""}`);
   if (expected) assert.ok(run.stderr.includes(expected), `missing "${expected}" in:\n${run.stderr}`);
+  // Owner, 2026-11-17 (PR #63 round 1): a refusal may be fixed and run again; a started run never.
+  if (code === 1) assert.ok(run.stderr.includes("Nothing started and nothing was posted: fix what this names and run review again."), run.stderr);
+  if ([5, 6, 7].includes(code)) assert.ok(run.stderr.includes("Do not run review again: tell the owner"), run.stderr);
   assert.ok(!run.stderr.toLowerCase().includes("quolltail"), "no deny-list text");
   assert.deepEqual(context.locks(), [], "the lock is released");
 }
@@ -165,7 +194,7 @@ function refused(context, expected, args) {
   assert.equal(context.started(), null, "claude must not start");
 }
 
-test("a clean run starts claude as probed, and exits 0 with the lock and the run folder removed", () => {
+test("a clean run starts claude as probed, and exits 0 with the lock and the run folder removed", needsPs, () => {
   const context = setUp();
   exits(context, context.run(["7", "deep"]), 0, "reviewed and posted");
   const { args, env, cwd } = context.started();
@@ -184,9 +213,30 @@ test("a clean run starts claude as probed, and exits 0 with the lock and the run
     "HOME", "LANG", "LOGNAME", "MOONSHINE_HEADLESS", "MOONSHINE_HEADLESS_PR", "PATH", "TMPDIR", "USER",
   ]);
   assert.deepEqual(context.runs(), [], "the run folder is removed after exit 0");
+  // The real posting path: the installed gh-post, under MOONSHINE_HEADLESS and the live lock.
+  assert.equal(env.MOONSHINE_HEADLESS, "1");
+  assert.equal(JSON.parse(readFileSync(context.paths.ghPostLog, "utf8")).status, 0);
+  assert.match(readFileSync(join(context.work.root, "fake.json.posted"), "utf8"), /"event":"COMMENT"/);
+  // The lock recorded this run's session and claude's pid.
+  const { lock, pid } = context.started();
+  assert.deepEqual([lock.session, lock.child?.pid, lock.pr, lock.head], [session, pid, "7", context.head]);
 });
 
-test("the run's settings allow writes to its own scratchpad only, and its MCP config names context7 only", () => {
+test("a run from a linked worktree passes the git folder check and posts", needsPs, () => {
+  const context = setUp();
+  const tree = join(context.work.root, "linked");
+  ok(context.work, "worktree", "add", "-q", tree, "HEAD");
+  assert.equal(install(context.work, [denyListFile(context.work, `${secret}\n`)]).status, 0);
+  const configPath = installed(context.work, "guard", "config.json");
+  writeFileSync(configPath, JSON.stringify({ ...JSON.parse(readFileSync(configPath, "utf8")), claude: join(context.work.root, "claude") }));
+  context.behaviour.scratch = join(context.work.root, "scratch", slug(tree));
+  context.prepare();
+  const run = spawnSync(process.execPath, [installed(context.work, "guard", "review.mjs"), "7", "standard"], { cwd: tree, env: context.env(), encoding: "utf8" });
+  exits(context, run, 0, "reviewed and posted");
+  assert.equal(context.started().cwd, realpathSync(tree));
+});
+
+test("the run's settings allow writes to its own scratchpad only, and its MCP config names context7 only", needsPs, () => {
   const context = setUp();
   context.behaviour.exit = 1; // keep the run folder
   exits(context, context.run(), 6);
@@ -226,7 +276,7 @@ for (const [name, change, expected] of [
   });
 }
 
-test("round 2 after a round with a High runs", () => {
+test("round 2 after a round with a High runs", needsPs, () => {
   const context = setUp();
   context.fake[`${repo}/pulls/7/reviews?per_page=100&page=1`] = [{ user: { login }, body: marker(1, context.main, 1) }];
   exits(context, context.run(), 0);
@@ -269,7 +319,7 @@ for (const [name, change, expected] of [
   });
 }
 
-test("ignored files that are not instructions pass", () => {
+test("ignored files that are not instructions pass", needsPs, () => {
   const context = setUp();
   mkdirSync(join(context.work.cwd, "node_modules", "p"), { recursive: true });
   writeFileSync(join(context.work.cwd, "node_modules", "p", "index.js"), "x");
@@ -285,7 +335,7 @@ test("a config without claude refuses", () => {
   refused(context, "claude was not found");
 });
 
-test("a live lock refuses a second review; a malformed one names the file", () => {
+test("a live lock refuses a second review; a malformed one names the file", needsPs, () => {
   const context = setUp();
   context.behaviour = { events: [init()], hang: true };
   context.prepare();
@@ -315,7 +365,7 @@ for (const [name, events, expected] of [
   ["no start event in the first lines", [...Array(20).fill({ type: "assistant" }), init(), result()], "no start event"],
   ["no start event at all", [result()], "no start event"],
 ]) {
-  test(`a start gate stops ${name} with exit 7`, () => {
+  test(`a start gate stops ${name} with exit 7`, needsPs, () => {
     const context = setUp();
     context.behaviour = { events, record: true, hang: name === "no start event at all" };
     context.times = "1000,30000,500";
@@ -323,7 +373,7 @@ for (const [name, events, expected] of [
   });
 }
 
-test("a plugin listed in review-plugins.txt passes the gate", () => {
+test("a plugin listed in review-plugins.txt passes the gate", needsPs, () => {
   const context = setUp();
   writeFileSync(installed(context.work, "review-plugins.txt"), "p@builtin\r\nq@builtin\n");
   context.behaviour.events = [init({ plugins: [{ name: "p", path: "/x", source: "p@builtin" }] }), result()];
@@ -339,20 +389,41 @@ for (const [name, behaviour, code, expected] of [
   ["a review recorded from another session", { events: [init(), result()], record: "other" }, 6, "recorded from this run's session"],
   ["a checkout changed during the run", { events: [init(), result()], record: true, dirty: true }, 6, "changed during the run"],
 ]) {
-  test(`${name}: exit ${code}`, () => {
+  test(`${name}: exit ${code}`, needsPs, () => {
     const context = setUp();
     context.behaviour = behaviour;
     exits(context, context.run(), code, expected);
   });
 }
 
-test("a recorded review that is not a marker review of this head fails the run", () => {
+// PR #63 round 1: each field of the final check, alone.
+for (const [name, change, expected] of [
+  ["by another account", (review) => (review.user.login = "someone-else"), "by another account"],
+  ["on another commit", (review, c) => (review.commit_id = c.main), "on another commit"],
+  ["with no marker", (review) => (review.body = "ok\n"), "no counted marker"],
+  ["whose marker names another head", (review, c) => (review.body = `ok\n\n${marker(1, c.main)}\n`), "marker names another head"],
+  ["dated before the run", (review) => (review.submitted_at = new Date(Date.now() - 3_600_000).toISOString()), "older than the run"],
+]) {
+  test(`a recorded review ${name} fails the run`, needsPs, () => {
+    const context = setUp();
+    change(context.fake[`${repo}/pulls/7/reviews/555`], context);
+    exits(context, context.run(), 6, expected);
+  });
+}
+
+// PR #63 round 1: the wrapper exited in the tick that ended the log, so the events read in that
+// tick, the ones that explain the stop, were lost. Here a gate stops the run in the same burst.
+test("a stopped run's kept log holds every event up to the stop", needsPs, () => {
   const context = setUp();
-  context.fake[`${repo}/pulls/7/reviews/555`].commit_id = context.main;
-  exits(context, context.run(), 6, "not a marker review of this head");
+  const events = [init(), ...Array.from({ length: 3000 }, (_, index) => ({ type: "assistant", index, text: "x".repeat(200) })), init({ tools: [...tools, "Workflow"] })];
+  context.behaviour = { events, hang: true };
+  exits(context, context.run(), 7, "expected set");
+  const [folder] = context.runs();
+  const kept = readFileSync(join(context.work.home, "Library", "Caches", "moonshine-review", folder, "stream.jsonl"), "utf8").trim().split("\n");
+  assert.equal(kept.length, events.length);
 });
 
-test("after a budget stop the run's worktrees are removed by path; another worktree stays", () => {
+test("after a budget stop the run's worktrees are removed by path; another worktree stays", needsPs, () => {
   const context = setUp();
   const other = join(context.work.root, "other-wt");
   ok(context.work, "worktree", "add", "-q", "--detach", other, "main");
@@ -361,10 +432,10 @@ test("after a budget stop the run's worktrees are removed by path; another workt
   exits(context, run, 6, "1 worktree(s) removed");
   const listed = ok(context.work, "worktree", "list", "--porcelain");
   assert.ok(listed.includes(other));
-  assert.ok(!listed.includes("/scratchpad/wt"));
+  assert.ok(!listed.includes("/review/pr-7"));
 });
 
-test("failed runs keep the newest three run folders", () => {
+test("failed runs keep the newest three run folders", needsPs, () => {
   const context = setUp();
   context.behaviour = { events: [init(), result()], exit: 1 };
   for (let index = 0; index < 5; index += 1) {
@@ -374,9 +445,9 @@ test("failed runs keep the newest three run folders", () => {
   assert.equal(context.runs().length, 3);
 });
 
-test("the time limit ends claude, even when it ignores SIGTERM, with exit 5", () => {
+test("the time limit ends claude, even when it ignores SIGTERM, with exit 5", needsPs, () => {
   const context = setUp();
-  context.behaviour = { events: [init()], hang: true, grandchild: psWorks };
+  context.behaviour = { events: [init()], hang: true, grandchild: true };
   context.times = "5000,1500,300";
   exits(context, context.run(), 5, "time limit");
   const gone = (pid) => {
@@ -388,7 +459,7 @@ test("the time limit ends claude, even when it ignores SIGTERM, with exit 5", ()
     }
   };
   assert.ok(gone(context.started().pid), "claude is gone");
-  if (psWorks) assert.ok(gone(Number(readFileSync(context.paths.grandchild, "utf8"))), "its detached grandchild is gone");
+  assert.ok(gone(Number(readFileSync(context.paths.grandchild, "utf8"))), "its detached grandchild is gone");
 });
 
 test("a deny-list entry never reaches the output", () => {

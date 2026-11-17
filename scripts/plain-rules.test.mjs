@@ -117,7 +117,12 @@ for (const [path, text] of [
   ["docs/method/log/2026-11.md", "| row |\n"],
   ["docs/method/forecast.md", "The factor is 1.57.\n"],
   ["docs/specs/phase-3-x.md", "# Phase 3\n"],
-  ["docs/specs/notes/deep/a.txt", "a note\n"],
+  ["docs/specs/notes/deep/a.md", "a note\n"],
+  ["fixtures/omnifocus.snapshot.json", "{}\n"],
+  ["fixtures/a/b.yaml", "a: 1\n"],
+  ["fixtures/a/b.yml", "a: 1\n"],
+  ["fixtures/a/b.txt", "a\n"],
+  ["fixtures/.gitkeep", ""],
   ["design/copy.md", "Words.\n"],
   ["design/screens/x.md", "A screen.\n"],
 ]) {
@@ -159,6 +164,36 @@ for (const path of [
   "scripts/guard/merge.mjs",
   "project.yml",
   "MoonShineCore/Tests/MoonShineCoreTests/Data.json",
+  // PR #63 round 1 (owner, 2026-11-17): only Markdown under docs/specs/, only data in fixtures/.
+  "docs/specs/notes/a.txt",
+  "docs/specs/.prettierrc.mjs",
+  "docs/specs/prettier.config.js",
+  "docs/specs/node_modules/x/index.js",
+  "fixtures/run.sh",
+  "fixtures/a/b.js",
+  "fixtures/a/.gitkeep.sh",
+  // A tool's config is risky wherever it sits, though its extension is data or Markdown.
+  "fixtures/.prettierrc",
+  "fixtures/.prettierrc.json",
+  "fixtures/a/.prettierignore",
+  "fixtures/prettier.config.json",
+  "fixtures/.eslintrc.yml",
+  "fixtures/eslint.config.json",
+  "fixtures/package.json",
+  "fixtures/a/package-lock.json",
+  "fixtures/.npmrc",
+  "fixtures/.nvmrc",
+  "fixtures/tsconfig.json",
+  "fixtures/a/tsconfig.base.json",
+  "fixtures/jsconfig.json",
+  "fixtures/.editorconfig",
+  "fixtures/a/.gitattributes",
+  "fixtures/.gitignore",
+  "fixtures/node_modules/x/a.json",
+  "fixtures/Package.JSON",
+  "docs/specs/node_modules/a.md",
+  "docs/specs/.prettierrc.md",
+  "design/x/.eslintrc.md",
 ]) {
   test(`a risky path is risky: ${path}`, () => risky({}, { [path]: "x\n" }, "a path outside the plain list"));
 }
@@ -177,7 +212,7 @@ test("deleting a plain file passes; deleting a risky one does not", () => {
 });
 
 test("an executable mode is risky", () => {
-  risky({}, { "fixtures/run.sh": "echo\n" }, "a mode", (work) => chmodSync(join(work.cwd, "fixtures", "run.sh"), 0o755));
+  risky({}, { "fixtures/run.md": "echo\n" }, "a mode", (work) => chmodSync(join(work.cwd, "fixtures", "run.md"), 0o755));
 });
 
 test("a symbolic link is risky", () => {
@@ -188,7 +223,12 @@ test("a symbolic link is risky", () => {
 });
 
 test("a binary file is risky", () => {
-  risky({}, { "fixtures/data.bin": Buffer.from([0, 1, 2, 0, 3]) }, "binary");
+  risky({}, { "fixtures/data.json": Buffer.from([0, 1, 2, 0, 3]) }, "binary");
+});
+
+test("a Prettier config next to a spec file is risky; the spec file alone is plain", () => {
+  plain({}, { "docs/specs/x.md": "# X\n" });
+  risky({}, { "docs/specs/x.md": "# X\n", "docs/specs/.prettierrc.mjs": "export default {};\n" }, '"docs/specs/.prettierrc.mjs"');
 });
 
 // P-HR (owner, 2026-11-16): a spec change of any kind is plain, so a plain PR can record an owner
@@ -205,7 +245,7 @@ test("a tick plus a word, an unticked box, a new and a removed line in the spec 
 });
 
 test("a link or an executable under docs/specs is risky", () => {
-  risky({}, { "docs/specs/run.sh": "echo\n" }, "a mode", (work) => chmodSync(join(work.cwd, "docs", "specs", "run.sh"), 0o755));
+  risky({}, { "docs/specs/run.md": "echo\n" }, "a mode", (work) => chmodSync(join(work.cwd, "docs", "specs", "run.md"), 0o755));
   risky({}, {}, "a mode", (work) => symlinkSync("../../README.md", join(work.cwd, "docs", "specs", "link.md")));
 });
 

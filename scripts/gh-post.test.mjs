@@ -332,7 +332,8 @@ const runSession = "0a1b2c3d-0000-4000-8000-000000000002";
 function lockFor(context, extra = {}) {
   const top = realpathSync(context.work.cwd);
   const ps = spawnSync("/bin/ps", ["-o", "lstart=", "-p", String(process.pid)], { env: { PATH: "/usr/bin:/bin", LC_ALL: "C", LANG: "C", TZ: "UTC0" }, encoding: "utf8" });
-  const start = ps.status === 0 && ps.stdout.trim() !== "" ? ps.stdout.trim() : null;
+  // Without ps (a session's sandbox) a stand-in start time, which counts as live.
+  const start = ps.status === 0 && ps.stdout.trim() !== "" ? ps.stdout.trim() : "unknown";
   const head = context.git("rev-parse", "HEAD").trim();
   const lock = { pr: "27", head, session: runSession, top, sessionDir: join(context.scratchRoot, runSession), wrapper: { pid: process.pid, start }, ...extra };
   const path = installed(context.work, "state", `review-${createHash("sha256").update(top).digest("hex").slice(0, 16)}.json`);
@@ -350,6 +351,16 @@ test("under a live lock the run's own COMMENT review is sent", () => {
   const context = setUp();
   const { head, folder } = lockFor(context);
   const result = context.postWith(unset, "review", "27", context.file("review.json", reviewJSON(head), folder));
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(context.sent().includes("pulls/27/reviews"));
+});
+
+// PR #63 round 1: how every real headless review posts, with the variable that claude's environment
+// carries.
+test("under a live lock and MOONSHINE_HEADLESS the run's own COMMENT review is sent", () => {
+  const context = setUp();
+  const { head, folder } = lockFor(context);
+  const result = context.postWith({ MOONSHINE_HEADLESS: "1" }, "review", "27", context.file("review.json", reviewJSON(head), folder));
   assert.equal(result.status, 0, result.stderr);
   assert.ok(context.sent().includes("pulls/27/reviews"));
 });

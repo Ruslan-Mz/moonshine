@@ -10,7 +10,8 @@
 import { printable } from "./matcher.mjs";
 
 /// Paths a plain pull request may change (old and new name alike). Specs and design notes are text
-/// nothing runs (owner, 2026-11-16, P-HR): a plain PR may record an owner decision in them.
+/// nothing runs (owner, 2026-11-16, P-HR): a plain PR may record an owner decision in them. Only
+/// Markdown there, and only data in fixtures/ (owner, 2026-11-17, PR #63 round 1).
 const plainPaths = [
   /^Apps\/Mac\/Sources\/(?:Today|Lines|Week|Palette)\/[^/]+\.swift$/,
   /^Apps\/Mac\/Sources\/(?:RootView|Tokens|ViewCommands)\.swift$/,
@@ -19,14 +20,18 @@ const plainPaths = [
   /^MoonShineCore\/Tests\/(?:[^/]+\/)*[^/]+\.swift$/,
   /^MoonShineCore\/Sources\/MoonShineCore\/Services\/(?:Overview|Stats|Trace|DayLoad)\.swift$/,
   /^MoonShineCore\/Sources\/MoonShineFixtures\/[^/]+\.swift$/,
-  /^fixtures\/.+$/,
+  /^fixtures\/(?:[^/]+\/)*(?:[^/]+\.(?:md|json|ya?ml|txt)|\.gitkeep)$/,
   /^docs\/method\/log\/\d{4}-\d{2}\.md$/,
   /^docs\/method\/forecast\.md$/,
-  /^docs\/specs\/(?:[^/]+\/)*[^/]+$/,
+  /^docs\/specs\/(?:[^/]+\/)*[^/]+\.md$/,
   /^design\/(?:[^/]+\/)*[^/]+\.md$/,
 ];
 // Claude Code's own instructions, at any depth, are never plain: it loads a nested CLAUDE.md too.
 export const instructions = /(?:^|\/)(?:claude\.md|claude\.local\.md|\.claude|\.mcp\.json)(?:\/|$)/i;
+// A tool's config is never plain, wherever it sits: Prettier, ESLint, npm and git read it and may
+// load code it names (owner, 2026-11-17, PR #63 round 1).
+const toolConfig =
+  /(?:^|\/)(?:\.prettierrc[^/]*|\.prettierignore|prettier\.config\.[^/]*|\.eslintrc[^/]*|eslint\.config\.[^/]*|package(?:-lock)?\.json|\.npmrc|\.nvmrc|[jt]sconfig[^/]*\.json|\.editorconfig|\.gitattributes|\.gitignore|node_modules)(?:\/|$)/i;
 
 const testPath = /^(?:Apps\/Mac\/Tests|MoonShineCore\/Tests)\//;
 
@@ -229,7 +234,8 @@ export function classify(changes, entries) {
   const reasons = [];
   for (const change of changes) {
     const where = printable(change.path, entries);
-    if (instructions.test(change.path.normalize("NFC")) || !plainPaths.some((pattern) => pattern.test(change.path))) {
+    const name = change.path.normalize("NFC");
+    if (instructions.test(name) || toolConfig.test(name) || !plainPaths.some((pattern) => pattern.test(change.path))) {
       reasons.push(`a path outside the plain list: ${where}`);
       continue;
     }

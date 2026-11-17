@@ -5,7 +5,9 @@
 // tool set and Context7 as the only MCP server, checks every start event, and decides from the last
 // result and the recorded review. It prints the exit reason and the log folder, never review text.
 // Exits: 0 reviewed and posted · 1 refused · 2 usage · 5 time limit · 6 the run failed · 7 a start
-// gate. Nothing is retried. Tests: node --test scripts/review-headless.test.mjs
+// gate. A refusal (1) started nothing: the author may fix what it names and run review again; after
+// a start (5, 6, 7) it is never retried (owner, 2026-11-17, PR #63 round 1).
+// Tests: node --test scripts/review-headless.test.mjs
 import { spawn, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { createWriteStream, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -27,9 +29,12 @@ const tools = ["Read", "Write", "Edit", "Bash", "Task"];
 const expectedTools = new Set(["Task", "Bash", "Edit", "Read", "Write", "mcp__context7__query-docs", "mcp__context7__resolve-library-id"]);
 const keptRuns = 3;
 const startLines = 20;
+// A review GitHub dates up to this long before the start still counts: the two clocks may differ.
+const clockSkewMs = 300_000;
+const flushMs = 2_000;
 
 function refuse(message, code = 1) {
-  process.stderr.write(`review: refused. ${message}\n`);
+  process.stderr.write(`review: refused. ${message} Nothing started and nothing was posted: fix what this names and run review again.\n`);
   process.exit(code);
 }
 
@@ -101,7 +106,7 @@ if (!root) refuse("This worktree has no scratchpad root; reinstall the guard (CL
 const session = randomUUID();
 const sessionDir = join(root, session);
 const scratchpad = join(sessionDir, "scratchpad");
-const lock = takeLock({ pr, head, session, top, sessionDir }, refuse);
+const lock = takeLock({ pr, head, session, top, sessionDir }, refuse, settings.claude);
 
 // 7. The private folder: settings for this run, the MCP config, the logs.
 const runs = join(process.env.HOME, "Library", "Caches", "moonshine-review");
@@ -146,9 +151,9 @@ const child = spawn(
   { cwd: top, env, detached: true, stdio: ["ignore", "pipe", "pipe"] },
 );
 child.on("error", () => finish(6, "claude could not be started"));
-if (child.pid) lock.setChild(child.pid);
 process.stdout.write(`review: round ${round}, ${mode}, claude ${version}; log ${runDir}\n`);
-child.stderr.pipe(createWriteStream(join(runDir, "stderr.log")));
+const errors = createWriteStream(join(runDir, "stderr.log"));
+child.stderr.pipe(errors);
 const stream = createWriteStream(join(runDir, "stream.jsonl"));
 
 // 9. The stream: the gates on every start event, the last result, the limits, the signals.
@@ -157,10 +162,12 @@ const timers = [
   setTimeout(() => finish(5, `the time limit of ${minutes[mode]} minutes`), runMs),
 ];
 for (const name of ["SIGTERM", "SIGINT", "SIGHUP"]) process.on(name, () => finish(6, "stopped by a signal"));
+if (child.pid && !lock.setChild(child.pid)) finish(6, "the lock could not record claude (ps failed, or another run took the lock)");
 let lines = 0;
 let starts = 0;
 let result = null;
 createInterface({ input: child.stdout, crlfDelay: Infinity }).on("line", (line) => {
+  if (finish.done) return;
   stream.write(line + "\n");
   lines += 1;
   let event = null;
@@ -206,9 +213,12 @@ function verdict(code) {
     const recorded = readPosts(fail).filter((post) => post.kind === "review" && post.pr === Number(pr) && post.session === session);
     if (recorded.length !== 1) fail("no review, or more than one, is recorded from this run's session");
     const review = api(`${repo}/pulls/${pr}/reviews/${recorded[0].id}`);
-    const marker = reviewMarker(review?.body, fail);
-    if (review?.user?.login !== login || review.commit_id !== head || marker?.head !== head) fail("the recorded review is not a marker review of this head");
-    if (!(Date.parse(review.submitted_at) >= started - 300_000)) fail("the recorded review is older than the run");
+    if (review?.user?.login !== login) fail("the recorded review is by another account");
+    if (review.commit_id !== head) fail("the recorded review is on another commit");
+    const marker = reviewMarker(review.body, fail);
+    if (marker === null) fail("the recorded review has no counted marker");
+    if (marker.head !== head) fail("the recorded review's marker names another head");
+    if (!(Date.parse(review.submitted_at) >= started - clockSkewMs)) fail("the recorded review is older than the run");
   } catch {
     return [6, failed ?? "the review could not be checked"];
   }
@@ -216,25 +226,34 @@ function verdict(code) {
   return after ? [6, `the checkout changed during the run: ${after}`] : [0, "reviewed and posted"];
 }
 
-/// Ends the run once: the child's process tree, this session's worktrees, the lock, the folder.
+/// Ends the run once: the child's process tree, this session's worktrees, the lock; then, once
+/// the logs are written (at most `flushMs`), the folder.
 function finish(code, reason) {
   if (finish.done) return;
   finish.done = true;
   timers.forEach(clearTimeout);
   killTree([child.pid], graceMs);
-  const removed = removeWorktrees(top, sessionDir);
+  const removed = removeWorktrees(top, sessionDir, pr);
   lock.release();
+  const written = [stream, errors].map((log) => new Promise((resolve) => {
+    if (log.closed) resolve();
+    log.on("close", resolve).on("error", resolve);
+  }));
   stream.end();
-  if (code === 0) {
-    rmSync(runDir, { recursive: true, force: true });
-  } else {
-    const old = readdirSync(runs)
-      .filter((name) => name.startsWith("run-"))
-      .map((name) => ({ path: join(runs, name), time: statSync(join(runs, name)).mtimeMs }))
-      .sort((a, b) => b.time - a.time);
-    for (const { path } of old.slice(keptRuns)) rmSync(path, { recursive: true, force: true });
-  }
-  const where = code === 0 ? "" : `; log ${runDir}`;
-  process.stderr.write(`review: exit ${code}: ${reason}; ${removed} worktree(s) removed${where}\n`);
-  process.exit(code);
+  const exit = () => {
+    if (code === 0) {
+      rmSync(runDir, { recursive: true, force: true });
+    } else {
+      const old = readdirSync(runs)
+        .filter((name) => name.startsWith("run-"))
+        .map((name) => ({ path: join(runs, name), time: statSync(join(runs, name)).mtimeMs }))
+        .sort((a, b) => b.time - a.time);
+      for (const { path } of old.slice(keptRuns)) rmSync(path, { recursive: true, force: true });
+    }
+    const where = code === 0 ? "" : `; log ${runDir}. Do not run review again: tell the owner`;
+    process.stderr.write(`review: exit ${code}: ${reason}; ${removed} worktree(s) removed${where}\n`);
+    process.exit(code);
+  };
+  Promise.all(written).then(exit);
+  setTimeout(exit, flushMs);
 }

@@ -4,12 +4,12 @@
 // need ps, which a session's sandbox denies; CI has it.
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { ok, repository } from "./guard-fixture.mjs";
+import { commit, ok, repository } from "./guard-fixture.mjs";
 
 const scripts = dirname(fileURLToPath(import.meta.url));
 const psWorks = spawnSync("/bin/ps", ["-o", "pid=", "-p", String(process.pid)]).status === 0;
@@ -24,10 +24,13 @@ async function guardCopy() {
 }
 
 const session = "0a1b2c3d-0000-4000-8000-000000000001";
+const staleSession = "0a1b2c3d-0000-4000-8000-000000000003";
 const head = "a".repeat(40);
 
+/// A lock held by this test process. Without ps its start time is a stand-in, which counts as live.
 function record(lock, top, extra = {}) {
-  return { pr: "7", head, session, top, sessionDir: join(top, "..", "scratch", session), wrapper: { pid: process.pid, start: lock.startTime(process.pid) }, ...extra };
+  const start = lock.startTime(process.pid) ?? "unknown";
+  return { pr: "7", head, session, top, sessionDir: join(top, "..", "scratch", session), wrapper: { pid: process.pid, start }, ...extra };
 }
 
 function write(state, lock, top, value) {
@@ -99,6 +102,17 @@ test("a malformed lock counts as live and names its file", async () => {
   assert.throws(() => lock.takeLock({ pr: "7", head, session, top, sessionDir: top }, stop), /cannot be read/);
 });
 
+// PR #63 round 1: a start time that ps could not read was stored as null, and the lock stopped
+// covering a live run once ps worked again.
+test("a lock without a start time counts as live (malformed), for the wrapper and the child", async () => {
+  const { lock, state } = await guardCopy();
+  const top = realpathSync(mkdtempSync(join(tmpdir(), "top-")));
+  write(state, lock, top, record(lock, top, { wrapper: { pid: process.pid, start: null } }));
+  assert.equal(lock.liveLockFor(top)?.malformed, true);
+  write(state, lock, top, record(lock, top, { child: { pid: process.pid, start: "" } }));
+  assert.equal(lock.liveLockFor(top)?.malformed, true);
+});
+
 test("a live wrapper refuses a second lock", async () => {
   const { lock, state } = await guardCopy();
   const top = realpathSync(mkdtempSync(join(tmpdir(), "top-")));
@@ -106,27 +120,90 @@ test("a live wrapper refuses a second lock", async () => {
   assert.throws(() => lock.takeLock({ pr: "7", head, session, top, sessionDir: top }, stop), /already runs/);
 });
 
-test("replacing a stale lock kills its recorded child and removes its session's worktrees only", async () => {
-  const { lock, state } = await guardCopy();
+/// A repository with a stale lock (its wrapper gone) of session `staleSession` for PR 7, review
+/// worktrees of that session, a worktree of its own in that session's scratchpad, and another one.
+function staleSetUp(lock, state, extra = {}) {
   const work = repository();
-  const old = join(work.root, "scratch", "old-session");
-  ok(work, "worktree", "add", "-q", "--detach", join(old, "scratchpad", "wt"), "HEAD");
+  const old = join(work.root, "scratch", staleSession);
+  const review = join(old, "scratchpad", "review");
+  for (const name of ["pr-7", "pr-7-probe-tests"]) ok(work, "worktree", "add", "-q", "--detach", join(review, name), "HEAD");
+  ok(work, "worktree", "add", "-q", "--detach", join(review, "pr-70"), "HEAD");
+  ok(work, "worktree", "add", "-q", "--detach", join(old, "scratchpad", "author"), "HEAD");
   ok(work, "worktree", "add", "-q", "--detach", join(work.root, "kept"), "HEAD");
+  write(state, lock, work.cwd, record(lock, work.cwd, { session: staleSession, sessionDir: old, wrapper: { pid: deadPid(), start: "x" }, ...extra }));
+  const fields = { pr: "8", head, session, top: work.cwd, sessionDir: join(work.root, "scratch", session) };
+  const listed = () => ok(work, "worktree", "list", "--porcelain");
+  return { work, old, fields, listed };
+}
+
+/// Asserts that `child` was not signalled, then ends it.
+async function lives(child) {
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  assert.deepEqual([child.exitCode, child.signalCode], [null, null], "the process lives");
+  child.kill("SIGKILL");
+}
+
+async function liveChild() {
   const child = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { detached: true, stdio: "ignore" });
   await new Promise((resolve) => child.once("spawn", resolve));
-  write(state, lock, work.cwd, record(lock, work.cwd, { sessionDir: old, wrapper: { pid: deadPid(), start: "x" }, child: { pid: child.pid, start: lock.startTime(child.pid) } }));
+  return child;
+}
+
+test("replacing a stale lock kills its recorded claude and removes its review worktrees of its PR only", { skip: noPs }, async () => {
+  const { lock, state } = await guardCopy();
+  const child = await liveChild();
+  const { work, fields, listed } = staleSetUp(lock, state, { child: { pid: child.pid, start: lock.startTime(child.pid) } });
   const exited = new Promise((resolve) => child.once("exit", resolve));
-  const taken = lock.takeLock({ pr: "8", head, session, top: work.cwd, sessionDir: join(work.root, "scratch", session) }, stop);
+  const taken = lock.takeLock(fields, stop, process.execPath);
   await exited;
-  const listed = ok(work, "worktree", "list", "--porcelain");
-  assert.ok(!listed.includes("old-session"), "the stale session's worktree is removed");
-  assert.ok(listed.includes(join(work.root, "kept")), "another worktree stays");
+  const after = listed();
+  assert.ok(!after.includes("/review/pr-7\n") && !after.includes("pr-7-probe-tests"), "the stale session's review worktrees of PR 7 are removed");
+  for (const kept of ["/review/pr-70", "/scratchpad/author", join(work.root, "kept")]) assert.ok(after.includes(kept), kept);
   assert.equal(JSON.parse(readFileSync(taken.path, "utf8")).pr, "8");
   taken.release();
   assert.ok(!existsSync(taken.path));
 });
 
-test("two wrappers taking the lock at once: one wins", async () => {
+// PR #63 round 1: a forged stale lock made the next review kill any process and remove any worktree.
+for (const [name, extra, expected] of [
+  ["a session folder outside this scratch root", (work) => ({ sessionDir: join(work.root, "elsewhere", staleSession) }), "another checkout or session folder"],
+  ["a session folder of another session", (work) => ({ sessionDir: join(work.root, "scratch", session) }), "another checkout or session folder"],
+  ["another checkout", (work) => ({ top: join(work.root, "kept") }), "another checkout or session folder"],
+]) {
+  test(`a stale lock naming ${name} is refused and touches nothing`, async () => {
+    const { lock, state } = await guardCopy();
+    const child = await liveChild();
+    const { work, fields, listed } = staleSetUp(lock, state);
+    const before = listed();
+    write(state, lock, work.cwd, { ...JSON.parse(readFileSync(lock.lockPath(work.cwd), "utf8")), child: { pid: child.pid, start: lock.startTime(child.pid) ?? "unknown" }, ...extra(work) });
+    assert.throws(() => lock.takeLock(fields, stop, process.execPath), (error) => error.message.includes(expected) && error.message.includes(lock.lockPath(work.cwd)));
+    assert.equal(listed(), before, "no worktree is removed");
+    await lives(child);
+  });
+}
+
+test("a stale lock whose live child is not claude is refused and touches nothing", async () => {
+  const { lock, state } = await guardCopy();
+  const child = await liveChild();
+  const { fields, listed } = staleSetUp(lock, state, { child: { pid: child.pid, start: lock.startTime(child.pid) ?? "unknown" } });
+  const before = listed();
+  assert.throws(() => lock.takeLock(fields, stop, "/nowhere/claude"), /names a live process that is not claude/);
+  assert.equal(listed(), before);
+  await lives(child);
+});
+
+test("setChild records the child only while the lock is this run's", { skip: noPs }, async () => {
+  const { lock } = await guardCopy();
+  const top = realpathSync(mkdtempSync(join(tmpdir(), "top-")));
+  const taken = lock.takeLock({ pr: "7", head, session, top, sessionDir: join(top, "s", session) }, stop, process.execPath);
+  assert.equal(taken.setChild(process.pid), true);
+  assert.equal(JSON.parse(readFileSync(taken.path, "utf8")).child.pid, process.pid);
+  writeFileSync(taken.path, JSON.stringify({ ...JSON.parse(readFileSync(taken.path, "utf8")), session: staleSession }));
+  assert.equal(taken.setChild(process.pid), false);
+  assert.equal(JSON.parse(readFileSync(taken.path, "utf8")).session, staleSession, "another run's lock is not replaced");
+});
+
+test("two wrappers taking the lock at once: one wins", { skip: noPs }, async () => {
   const { root } = await guardCopy();
   const top = realpathSync(mkdtempSync(join(tmpdir(), "top-")));
   const url = JSON.stringify(pathToFileURL(join(root, "guard", "review-lock.mjs")).href);
@@ -134,14 +211,72 @@ test("two wrappers taking the lock at once: one wins", async () => {
 takeLock({ pr: "7", head: "${head}", session: "${session}", top: ${JSON.stringify(top)}, sessionDir: ${JSON.stringify(top)} }, (m) => { console.log("refused"); process.exit(0); });
 console.log("taken"); setTimeout(() => {}, 1500);`;
   const runs = [0, 1].map(() => spawn(process.execPath, ["--input-type=module", "-e", code], { encoding: "utf8" }));
-  const outputs = await Promise.all(
+  assert.deepEqual((await outputs(runs)).sort(), ["refused", "taken"]);
+});
+
+function outputs(runs) {
+  return Promise.all(
     runs.map((run) => new Promise((resolve) => {
       let out = "";
       run.stdout.on("data", (chunk) => (out += chunk));
       run.on("close", () => resolve(out.trim()));
     })),
   );
-  assert.deepEqual(outputs.sort(), ["refused", "taken"]);
+}
+
+// PR #63 round 1: wrapper B read a stale lock, spent a second in git, and then took over the lock
+// wrapper A had written meanwhile, so both ran. A git that sleeps slows B; A waits until B has read.
+test("two wrappers replacing one stale lock: one wins", { skip: noPs }, async () => {
+  const { root, lock, state } = await guardCopy();
+  const top = realpathSync(mkdtempSync(join(tmpdir(), "top-")));
+  const scratch = join(top, "..", "scratch");
+  write(state, lock, top, record(lock, top, { session: staleSession, sessionDir: join(scratch, staleSession), wrapper: { pid: deadPid(), start: "x" } }));
+  const slow = join(root, "slow");
+  mkdirSync(slow);
+  const realGit = spawnSync("/bin/sh", ["-c", "command -v git"], { encoding: "utf8" }).stdout.trim();
+  writeFileSync(join(slow, "git"), `#!/bin/sh\n/bin/sleep 1\nexec '${realGit}' "$@"\n`);
+  chmodSync(join(slow, "git"), 0o755);
+  const url = JSON.stringify(pathToFileURL(join(root, "guard", "review-lock.mjs")).href);
+  const code = (id, wait) => `import { takeLock } from ${url};
+Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ${wait});
+takeLock({ pr: "7", head: "${head}", session: "${id}", top: ${JSON.stringify(top)}, sessionDir: ${JSON.stringify(join(scratch, id))} }, (m) => { console.log("refused"); process.exit(0); }, "/nowhere/claude");
+console.log("taken"); setTimeout(() => {}, 2500);`;
+  const runs = [
+    spawn(process.execPath, ["--input-type=module", "-e", code(session, 0)], { env: { ...process.env, PATH: `${slow}:${process.env.PATH}` } }),
+    spawn(process.execPath, ["--input-type=module", "-e", code("0a1b2c3d-0000-4000-8000-000000000004", 300)]),
+  ];
+  assert.deepEqual((await outputs(runs)).sort(), ["refused", "taken"]);
+});
+
+// PR #63 round 1: git lists an ignored nested repository (a package checkout) as one folder entry.
+function cleanSetUp() {
+  const work = repository();
+  commit(work, ".gitignore", ".build/\n.claude/settings.local.json\n.claude/.cc-writes/\n", "ignore");
+  const dep = join(work.cwd, ".build", "checkouts", "Dep");
+  mkdirSync(join(dep, "Sources", "Dep"), { recursive: true });
+  ok({ ...work, cwd: dep }, "init", "-q");
+  writeFileSync(join(dep, "Sources", "Dep", "Dep.swift"), "let dep = 1\n");
+  return { work, dep, clean: (lock) => lock.checkoutClean(work.cwd, ok(work, "rev-parse", "HEAD").trim()) };
+}
+
+for (const path of ["CLAUDE.md", "Sources/claude.local.md", "Sources/Dep/.claude/settings.json", ".claude/agents/x.md", ".mcp.json"]) {
+  test(`an ignored nested repository with ${path} refuses`, async () => {
+    const { lock } = await guardCopy();
+    const { dep, clean } = cleanSetUp();
+    mkdirSync(dirname(join(dep, path)), { recursive: true });
+    writeFileSync(join(dep, path), "x\n");
+    assert.match(clean(lock), /ignored nested repository/);
+  });
+}
+
+test("the allowed ignored files pass: the local settings and write logs, also inside a nested repository", async () => {
+  const { lock } = await guardCopy();
+  const { work, dep, clean } = cleanSetUp();
+  for (const path of [join(work.cwd, ".claude", "settings.local.json"), join(work.cwd, ".claude", ".cc-writes", "a"), join(dep, ".claude", ".cc-writes", "a"), join(dep, "Sources", "Dep", ".claude", ".cc-writes", "b")]) {
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, "x\n");
+  }
+  assert.equal(clean(lock), null);
 });
 
 test("killTree ends a grandchild whose parent exited first, and one in its own session", { skip: noPs }, async () => {

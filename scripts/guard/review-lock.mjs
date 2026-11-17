@@ -1,20 +1,23 @@
 // The headless review's lock (P-HR): one file per checkout in the guard's state folder, which a
 // sandboxed session cannot write. While it is live, gh-post allows only the run's own review and
 // pre-push refuses (CLAUDE.md → Commands → Guard). Shared by review.mjs, gh-post.mjs and pre-push.mjs.
-// A forged lock only narrows gh-post (docs/setup/headless-review.md, "The lock").
+// What a forged lock can do: docs/setup/headless-review.md, "The lock".
 // Tests: node --test scripts/review-lock.test.mjs
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { closeSync, fstatSync, openSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, join, relative, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { instructions } from "./plain-rules.mjs";
 
 const stateFolder = join(dirname(fileURLToPath(import.meta.url)), "..", "state");
 // ps prints the start time in the C locale and UTC, whatever the caller's LANG and TZ.
 const psEnv = { PATH: "/usr/bin:/bin", LC_ALL: "C", LANG: "C", TZ: "UTC0" };
-// Ignored paths Claude Code itself writes, allowed in a checkout that is reviewed.
+// Ignored paths Claude Code itself writes, allowed in a checkout that is reviewed; inside an ignored
+// nested repository (a package checkout) only its write log (owner, 2026-11-17, PR #63 round 1).
 const allowedIgnored = /^(?:\.claude\/settings\.local\.json|\.claude\/\.cc-writes(?:\/.*)?|(?:.*\/)?\.DS_Store)$/;
+const allowedNested = /(?:^|\/)\.claude\/\.cc-writes\//;
+const maxWalked = 500_000;
 
 const real = (path) => {
   try {
@@ -53,11 +56,21 @@ function alive(record) {
   return now === null || now === record.start;
 }
 
-/// { lock } for a well-formed file, { malformed: true } otherwise, null when there is none.
+const processRecord = (value) => Number.isSafeInteger(value?.pid) && typeof value.start === "string" && value.start !== "";
+
+/// { lock, ino } for a well-formed file, { malformed: true } otherwise, null when there is none.
+/// The inode is the one the content was read from.
 function readLock(path) {
   let text;
+  let ino;
   try {
-    text = readFileSync(path, "utf8");
+    const fd = openSync(path, "r");
+    try {
+      ino = fstatSync(fd).ino;
+      text = readFileSync(fd, "utf8");
+    } finally {
+      closeSync(fd);
+    }
   } catch (error) {
     return error.code === "ENOENT" ? null : { malformed: true };
   }
@@ -65,8 +78,9 @@ function readLock(path) {
     const lock = JSON.parse(text);
     const ok =
       /^[1-9][0-9]{0,6}$/.test(lock.pr) && /^[0-9a-f]{40}$/.test(lock.head) && /^[0-9a-f-]{36}$/.test(lock.session) &&
-      typeof lock.top === "string" && typeof lock.sessionDir === "string" && Number.isSafeInteger(lock.wrapper?.pid);
-    return ok ? { lock } : { malformed: true };
+      typeof lock.top === "string" && typeof lock.sessionDir === "string" && processRecord(lock.wrapper) &&
+      (lock.child === undefined || processRecord(lock.child));
+    return ok ? { lock, ino } : { malformed: true };
   } catch {
     return { malformed: true };
   }
@@ -120,8 +134,31 @@ export function checkoutClean(top, head) {
   if (tags === null || tags.split("\0").some((entry) => entry !== "" && !entry.startsWith("H "))) return "a file has an index flag";
   const ignored = git("ls-files", "-z", "--others", "--ignored", "--exclude-standard");
   if (ignored === null) return "the ignored files cannot be listed";
-  const bad = ignored.split("\0").some((path) => instructions.test(path.normalize("NFC")) && !allowedIgnored.test(path));
-  return bad ? "an ignored instruction file (CLAUDE.md, .claude/, .mcp.json)" : null;
+  const bad = (path, allowed) => instructions.test(path.normalize("NFC")) && !allowed.test(path);
+  // git lists an ignored nested repository as one folder entry: walk it, following no link.
+  const nested = [];
+  for (const path of ignored.split("\0")) {
+    if (path.endsWith("/")) nested.push(path);
+    else if (path !== "" && bad(path, allowedIgnored)) return "an ignored instruction file (CLAUDE.md, .claude/, .mcp.json)";
+  }
+  let walked = 0;
+  while (nested.length > 0) {
+    const folder = nested.pop();
+    let entries;
+    try {
+      entries = readdirSync(join(top, folder), { withFileTypes: true });
+    } catch {
+      return "an ignored nested repository cannot be read";
+    }
+    walked += entries.length;
+    if (walked > maxWalked) return "the ignored nested repositories hold too many files to check";
+    for (const entry of entries) {
+      const path = folder + entry.name;
+      if (entry.isDirectory()) nested.push(`${path}/`);
+      else if (bad(path, allowedNested)) return "an instruction file in an ignored nested repository (CLAUDE.md, .claude/, .mcp.json)";
+    }
+  }
+  return null;
 }
 
 const exists = (pid) => {
@@ -174,40 +211,60 @@ export function killTree(roots, graceMs = 10_000) {
   signal(collect(), "SIGKILL");
 }
 
-/// Removes the worktrees of the checkout at `top` that lie under `folder`, by path; never prunes.
-export function removeWorktrees(top, folder) {
+/// Removes the review worktrees of PR `pr` that the checkout at `top` lists in the session folder
+/// `folder` (`scratchpad/review/pr-<pr>` and `pr-<pr>-*`, as /review-pr names them), by path; never
+/// prunes.
+export function removeWorktrees(top, folder, pr) {
   const off = ["-c", "core.fsmonitor=false", "-c", "core.hooksPath=/dev/null"];
   const list = spawnSync("git", [...off, "worktree", "list", "--porcelain", "-z"], { cwd: top, encoding: "utf8" });
-  const base = real(folder);
+  const base = real(join(folder, "scratchpad", "review"));
+  const name = new RegExp(`^pr-${pr}(?:-.*)?$`);
   let removed = 0;
   for (const line of list.status === 0 ? list.stdout.split("\0") : []) {
     if (!line.startsWith("worktree ")) continue;
     const path = line.slice("worktree ".length);
-    if (!inside(real(path), base)) continue;
+    const resolved = real(path);
+    if (base === null || resolved === null || dirname(resolved) !== base || !name.test(basename(resolved))) continue;
     if (spawnSync("git", [...off, "worktree", "remove", "--force", "--force", path], { cwd: top }).status === 0) removed += 1;
   }
   return removed;
 }
 
-/// Takes the lock for `fields.top` or stops: created exclusively; a stale lock is set aside first
-/// (a recorded child still alive is killed, and its session's worktrees are removed).
-export function takeLock(fields, stop) {
+/// Whether the process `pid` was started as `claude` (the path itself, or a script run by an
+/// interpreter); false when ps fails.
+function runsClaude(pid, claude) {
+  const result = spawnSync("/bin/ps", ["-o", "args=", "-p", String(pid)], { env: psEnv, encoding: "utf8" });
+  const args = result.status === 0 ? result.stdout.trim() : "";
+  const command = /^\S+ /.test(args) ? args.replace(/^\S+ /, "") : "";
+  return args === claude || args.startsWith(`${claude} `) || command === claude || command.startsWith(`${claude} `);
+}
+
+/// Takes the lock for `fields.top` or stops: created exclusively. A stale lock is acted on only
+/// when it names this checkout and a session folder under this run's scratch root (owner,
+/// 2026-11-17, PR #63 round 1): a recorded child still alive is killed only when it runs `claude`,
+/// and only its session's review worktrees of its PR are removed. Then it is set aside, and only
+/// the file read is.
+export function takeLock(fields, stop, claude) {
   const path = lockPath(fields.top);
   const found = readLock(path);
   if (found?.malformed) stop(`The review lock ${path} cannot be read; the owner removes it when no review runs.`);
   if (found) {
-    if (alive(found.lock.wrapper)) stop("A review already runs in this checkout.");
-    if (found.lock.child !== undefined && alive(found.lock.child)) killTree([found.lock.child.pid]);
-    removeWorktrees(fields.top, found.lock.sessionDir);
+    const stale = found.lock;
+    if (alive(stale.wrapper)) stop("A review already runs in this checkout.");
+    if (real(stale.top) !== real(fields.top) || stale.sessionDir !== join(dirname(fields.sessionDir), stale.session)) {
+      stop(`The stale review lock ${path} names another checkout or session folder; the owner checks it and removes it.`);
+    }
+    if (stale.child !== undefined && alive(stale.child)) {
+      if (!runsClaude(stale.child.pid, claude)) stop(`The stale review lock ${path} names a live process that is not claude; the owner checks it and removes it.`);
+      killTree([stale.child.pid]);
+    }
+    removeWorktrees(fields.top, stale.sessionDir, stale.pr);
     // Set aside by rename; if what was renamed is not the file read above, another run took it.
     const aside = `${path}.stale-${process.pid}`;
     let same;
     try {
-      const fd = openSync(path, "r");
-      const before = fstatSync(fd).ino;
-      closeSync(fd);
       renameSync(path, aside);
-      same = statSync(aside).ino === before;
+      same = statSync(aside).ino === found.ino;
     } catch {
       stop("Another review took the lock first.");
     }
@@ -217,7 +274,9 @@ export function takeLock(fields, stop) {
     }
     rmSync(aside, { force: true });
   }
-  const lock = { ...fields, wrapper: { pid: process.pid, start: startTime(process.pid) } };
+  const start = startTime(process.pid);
+  if (start === null) stop("ps cannot read this run's start time, so the lock could not cover it.");
+  const lock = { ...fields, wrapper: { pid: process.pid, start } };
   try {
     writeFileSync(path, JSON.stringify(lock), { flag: "wx", mode: 0o600 });
   } catch {
@@ -226,10 +285,14 @@ export function takeLock(fields, stop) {
   return {
     path,
     lock,
+    /// Records the child; false when its start time cannot be read or the lock is no longer this run's.
     setChild(pid) {
-      lock.child = { pid, start: startTime(pid) };
+      const child = { pid, start: startTime(pid) };
+      if (child.start === null || readLock(path)?.lock?.session !== lock.session) return false;
+      lock.child = child;
       writeFileSync(`${path}.new`, JSON.stringify(lock), { mode: 0o600 });
       renameSync(`${path}.new`, path);
+      return true;
     },
     release() {
       const now = readLock(path);
