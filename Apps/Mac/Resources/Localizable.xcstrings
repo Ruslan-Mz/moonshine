@@ -177,6 +177,22 @@
         }
       }
     },
+    "%@: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: %@"
+          }
+        }
+      }
+    },
     "%lld active": {
       "localizations": {
         "en": {
@@ -409,6 +425,58 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$lld ч %2$lld мин"
+          }
+        }
+      }
+    },
+    "%lld items": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld item"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld items"
+                }
+              }
+            }
+          }
+        },
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld элемент"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld элемента"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld элементов"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld элемента"
+                }
+              }
+            }
           }
         }
       }
@@ -3161,18 +3229,18 @@
         }
       }
     },
-    "now %@": {
+    "now": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "now %@"
+            "value": "now"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "сейчас %@"
+            "value": "сейчас"
           }
         }
       }
