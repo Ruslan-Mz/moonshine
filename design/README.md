@@ -362,3 +362,7 @@ The canvas mockups are generated files and are not edited by hand; draft-5's wer
 5. **Draft-3 items**: the day rail on iPad and iPhone (open question 14 above); free time on Today as the rest of the window (`≈ 2 h 25 min free until 22:00` at 16:20); the deadline rule (`screens/settings.md` § Deadlines: the setting, and plain `due 20:35` text and neutral day-rail marks for due dates that are not deadlines); read-only checkboxes on the day rail.
 6. **iPad home screen widget** (ADR-0017): reminders now and the next tasks.
 7. **iPhone capture, draft-5 leftovers:** the Dynamic Island with two and three timers, StandBy, RTL of the capture app.
+
+## Day rail · dense day (exploration, 2026-11-17)
+
+Three directions for Today's Day section on a dense day: compressed timeline, agenda with a mini scale, hybrid. Canvas page "Day rail · dense day"; spec, comparison, components and tokens in `screens/day-rail-dense.md`. **Recommendation: direction 1, compressed timeline, on every day.** Not decided; `screens/today.md` § Calendar stays the spec until the owner picks.
