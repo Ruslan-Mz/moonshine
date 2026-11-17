@@ -42,6 +42,11 @@ test("it runs on pull_request_target and on pushes to main only", () => {
     under("on", "push").map(({ line }) => line),
     ["branches: [main]"],
   );
+  // The events the repository's Actions event policy allows for this file (docs/setup/github.md, step 7; P-HR).
+  assert.deepEqual(
+    under("on", "pull_request_target").map(({ line }) => line),
+    ["types: [opened, synchronize, reopened, edited]"],
+  );
 });
 
 test("the only permission is reading contents, for the whole workflow", () => {

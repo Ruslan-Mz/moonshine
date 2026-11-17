@@ -2,7 +2,9 @@
 // Each test installs the guard with the repository's copy of scripts/install-guard.sh into its own
 // temporary HOME (scripts/guard-fixture.mjs). Every deny-list entry here is invented.
 import assert from "node:assert/strict";
-import { appendFileSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { appendFileSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { commit, denyListFile, install, installed, ok, git, repository, secret, vault } from "./guard-fixture.mjs";
@@ -383,4 +385,37 @@ test("a block with nothing missing locally has no fetch hint", () => {
   const work = setUp();
   commit(work, "a.md", `${secret}\n`, "add");
   assert.doesNotMatch(push(work).stderr, /git fetch origin/);
+});
+
+// P-HR (owner's addition 3): nothing is pushed while a headless review's lock is live for the
+// checkout, whatever the environment says, nor under MOONSHINE_HEADLESS.
+
+function lock(work, wrapper) {
+  const top = realpathSync(work.cwd);
+  const ps = spawnSync("/bin/ps", ["-o", "lstart=", "-p", String(process.pid)], { env: { PATH: "/usr/bin:/bin", LC_ALL: "C", LANG: "C", TZ: "UTC0" }, encoding: "utf8" });
+  const start = ps.status === 0 && ps.stdout.trim() !== "" ? ps.stdout.trim() : null;
+  const value = { pr: "7", head: "a".repeat(40), session: "0a1b2c3d-0000-4000-8000-000000000003", top, sessionDir: join(work.root, "s"), wrapper: wrapper ?? { pid: process.pid, start } };
+  writeFileSync(installed(work, "state", `review-${createHash("sha256").update(top).digest("hex").slice(0, 16)}.json`), JSON.stringify(value));
+}
+
+test("a live review lock blocks a push, with the variable unset", () => {
+  const work = setUp();
+  commit(work, "docs/a.md", "clean\n", "clean");
+  lock(work);
+  blocked(push(work), "headless review");
+});
+
+test("a stale review lock does not block a push", () => {
+  const work = setUp();
+  commit(work, "docs/a.md", "clean\n", "clean");
+  const dead = Number(spawnSync(process.execPath, ["-e", "console.log(process.pid)"], { encoding: "utf8" }).stdout.trim());
+  lock(work, { pid: dead, start: "x" });
+  passes(push(work));
+});
+
+test("MOONSHINE_HEADLESS blocks a push, even when empty", () => {
+  const work = setUp();
+  commit(work, "docs/a.md", "clean\n", "clean");
+  work.env = { ...work.env, MOONSHINE_HEADLESS: "" };
+  blocked(push(work), "headless review");
 });

@@ -463,7 +463,8 @@ test("the PR's own lines after the review count, though main was merged in too",
   refused(context, "after the last review");
 });
 
-test("a replace ref does not change the commit that is judged", () => {
+// P-HR (AM decision, owner 2026-11-16): a replace ref refuses outright, before anything is judged.
+test("a checkout with a replace ref is refused", () => {
   const context = setUp();
   const before = context.head();
   const risky = context.commit("Adapters/Sources/X.swift", "let a = 1\n");
@@ -471,7 +472,29 @@ test("a replace ref does not change the commit that is judged", () => {
   const benign = ok(context.work, "commit-tree", tree, "-p", before, "-m", "benign").trim();
   ok(context.work, "replace", risky, benign);
   context.setReviews([context.review(901, marker(1, risky))]);
-  refused(context, "computed: risky", "Adapters/Sources/X.swift");
+  refused(context, "replace refs");
+});
+
+test("a checkout whose git folder is not the installed one is refused", () => {
+  const context = setUp();
+  const other = join(context.work.root, "other");
+  ok({ ...context.work, cwd: context.work.root }, "clone", "-q", context.work.cwd, other);
+  const result = spawnSync(installed(context.work, "bin", "gh-post"), ["merge", "7"], {
+    cwd: other,
+    env: environment(context.work.home, { PATH: `${context.bin}:${process.env.PATH}`, FAKE_GH: context.fakePath }),
+    encoding: "utf8",
+  });
+  context.run = () => result;
+  refused(context, "not the one the guard was installed for");
+});
+
+test("a config.json without the main git folder fails closed", () => {
+  const context = setUp();
+  const path = installed(context.work, "guard", "config.json");
+  const { mainGitDir, ...rest } = JSON.parse(readFileSync(path, "utf8"));
+  assert.ok(mainGitDir);
+  writeFileSync(path, JSON.stringify(rest));
+  refused(context, "no main git folder");
 });
 
 test("a checkout with grafts is refused", () => {

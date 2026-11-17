@@ -116,6 +116,10 @@ for (const [path, text] of [
   ["fixtures/vault/Lines/Health.md", "---\nstatus: active\n---\n"],
   ["docs/method/log/2026-11.md", "| row |\n"],
   ["docs/method/forecast.md", "The factor is 1.57.\n"],
+  ["docs/specs/phase-3-x.md", "# Phase 3\n"],
+  ["docs/specs/notes/deep/a.txt", "a note\n"],
+  ["design/copy.md", "Words.\n"],
+  ["design/screens/x.md", "A screen.\n"],
 ]) {
   test(`a plain non-Swift file passes: ${path}`, () => plain({}, { [path]: text }));
 }
@@ -130,7 +134,24 @@ for (const path of [
   "MoonShineCore/Sources/MoonShineCore/Services/New.swift",
   "MoonShineCore/Sources/MoonShineCore/Domain/Line.swift",
   "Apps/Mac/Resources/InfoPlist.xcstrings",
-  "design/screens/today.md",
+  "design/mockups/today.html",
+  "design/tokens.json",
+  "design/screens/today.html",
+  "docs/VISION.md",
+  "docs/setup/github.md",
+  "docs/spec.md",
+  ".claude/agents/x.md",
+  ".claude/skills/review-pr/SKILL.md",
+  ".mcp.json",
+  "CLAUDE.local.md",
+  // P-HR: Claude Code's instructions under a plain folder stay risky, at any depth and in any case.
+  "docs/specs/CLAUDE.md",
+  "docs/specs/x/claude.local.md",
+  "docs/specs/.claude/settings.json",
+  "docs/specs/.Claude/x.md",
+  "docs/specs/.mcp.json",
+  "design/screens/CLAUDE.md",
+  "design/.claude/agents/x.md",
   "docs/method/log.md",
   "docs/method/log/notes.md",
   ".github/workflows/ci.yml",
@@ -170,20 +191,30 @@ test("a binary file is risky", () => {
   risky({}, { "fixtures/data.bin": Buffer.from([0, 1, 2, 0, 3]) }, "binary");
 });
 
+// P-HR (owner, 2026-11-16): a spec change of any kind is plain, so a plain PR can record an owner
+// decision; a link, an executable, a binary file or a risky path beside it still is not.
 test("ticking a spec box passes", () => {
   plain({}, { [spec]: specText.replace("- [ ] **S4-2", "- [x] **S4-2").replace("  - [ ] the live", "  - [x] the live") });
 });
 
-test("a tick plus a word in the spec is risky", () => {
-  risky({}, { [spec]: specText.replace("- [ ] **S4-2 — Lines**", "- [x] **S4-2 — Lines, done**") }, "spec");
+test("a tick plus a word, an unticked box, a new and a removed line in the spec pass", () => {
+  plain({}, { [spec]: specText.replace("- [ ] **S4-2 — Lines**", "- [x] **S4-2 — Lines, done**") });
+  plain({ [spec]: specText.replace("- [ ] **S5**", "- [x] **S5**") }, { [spec]: specText });
+  plain({}, { [spec]: specText + "\nOwner, 2026-11-16: a decision.\n" });
+  plain({}, { [spec]: specText.replace("- [ ] **S5**\n", "") });
 });
 
-test("unticking a spec box is risky", () => {
-  risky({ [spec]: specText.replace("- [ ] **S5**", "- [x] **S5**") }, { [spec]: specText }, "spec");
+test("a link or an executable under docs/specs is risky", () => {
+  risky({}, { "docs/specs/run.sh": "echo\n" }, "a mode", (work) => chmodSync(join(work.cwd, "docs", "specs", "run.sh"), 0o755));
+  risky({}, {}, "a mode", (work) => symlinkSync("../../README.md", join(work.cwd, "docs", "specs", "link.md")));
 });
 
-test("a new line in the spec is risky", () => {
-  risky({}, { [spec]: specText + "- [x] **S6**\n" }, "spec");
+test("a binary file under design is risky", () => {
+  risky({}, { "design/x.md": Buffer.from([0, 1, 2, 0, 3]) }, "binary");
+});
+
+test("a spec change next to a risky path is risky", () => {
+  risky({}, { [spec]: specText + "More.\n", "scripts/x.mjs": "x\n" }, '"scripts/x.mjs"');
 });
 
 test("Task followed by a brace, added, is risky", () => {
@@ -315,16 +346,6 @@ test("file lists that do not agree stop", () => {
     return args.includes("--numstat") ? out.split("\0").slice(1).join("\0") : out;
   };
   assert.throws(() => readChanges(short, from, to), /do not agree/);
-});
-
-test("a spec run whose added line comes before its removed one is not a tick", () => {
-  const change = (hunk) => ({ path: spec, status: "M", oldMode: "100644", newMode: "100644", binary: false, hunks: [hunk] });
-  const tick = [
-    { kind: "-", text: "- [ ] **S5**" },
-    { kind: "+", text: "- [x] **S5**" },
-  ];
-  assert.equal(classify([change(tick)], []).plain, true);
-  assert.equal(classify([change([...tick].reverse())], []).plain, false);
 });
 
 test("classify needs the deny-list, and names a matching path by kind only", () => {
@@ -843,11 +864,20 @@ test("S4-2a: its Core and test files compute plain; the rest stays risky for its
     "Apps/Mac/Resources/Localizable.xcstrings",
     "docs/method/forecast.md",
     "docs/method/log/2026-11.md",
+    // P-HR: specs and design notes are plain.
+    spec,
+    "design/README.md",
+    "design/components.md",
+    "design/copy.md",
+    "design/demo-data.md",
+    "design/principles.md",
+    "design/screens/line-detail.md",
+    "design/screens/lines.md",
+    "design/screens/week.md",
   ]) {
     assert.deepEqual(judged[path], [], `${path}: ${judged[path]?.join("; ")}`);
   }
   assert.deepEqual(judged["Apps/Mac/Tests/LinesScreenTests.swift"], ["a risky token (line removal) in or next to a change: \"Apps/Mac/Tests/LinesScreenTests.swift\""]);
-  assert.ok(judged[spec][0].startsWith("a spec change beyond ticking boxes"), judged[spec].join("; "));
   const byPath = Object.entries(judged).filter(([, reasons]) => reasons.some((reason) => reason.startsWith("a path outside the plain list")));
   assert.deepEqual(
     byPath.map(([path]) => path).sort(),
@@ -855,14 +885,6 @@ test("S4-2a: its Core and test files compute plain; the rest stays risky for its
       "Adapters/Tests/OmniFocusAdapterTests/DemoDataGoldenTests.swift",
       "Adapters/Tests/OmniFocusAdapterTests/OverviewSmokeTests.swift",
       "Apps/Mac/Sources/LineRemoval.swift",
-      "design/README.md",
-      "design/components.md",
-      "design/copy.md",
-      "design/demo-data.md",
-      "design/principles.md",
-      "design/screens/line-detail.md",
-      "design/screens/lines.md",
-      "design/screens/week.md",
       "scripts/plain-rules.test.mjs",
     ],
   );

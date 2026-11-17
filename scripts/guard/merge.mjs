@@ -20,32 +20,26 @@
 //      review's.
 // Then `gh pr merge <n> --merge --match-head-commit <head>`, once. A refusal names the check, never
 // PR text. git runs with replace refs off, in a full clone without grafts, so it reads the commits
-// GitHub merges. The state file records each sent comment, review and PR (kind, PR, id, session, time).
+// GitHub merges (github.mjs: the git folder the guard was installed for, no replace refs). The state
+// file records each sent comment, review and PR (kind, PR, id, session, time).
 // It and the session id guard against mistakes, not against a session set on getting around them:
 // test code runs outside the sandbox and can write the state file.
 // Tests: node --test scripts/gh-merge.test.mjs
 import { spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { appendFileSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { binaryAllowlist, scan } from "./commit-scan.mjs";
-import { denyList, match, printable } from "./matcher.mjs";
+import { ciGreen, gitHub, repo, reviewMarker, safeGit } from "./github.mjs";
+import { denyList, match } from "./matcher.mjs";
 import { changedLines, classify, readChanges } from "./plain-rules.mjs";
 
 const guardFolder = dirname(fileURLToPath(import.meta.url));
 const postsFile = join(guardFolder, "..", "state", "posts.jsonl");
-const repo = "repos/{owner}/{repo}";
 const kinds = new Set(["pr-create", "review", "comment"]);
-/// The conclusions each required check may have.
-const required = { docs: ["success"], guard: ["success"], swift: ["success", "skipped"], "core-linux": ["success", "skipped"] };
-const otherConclusions = ["success", "skipped", "neutral"];
-const maxPages = 10;
 const maxCommits = 2000;
 const maxUnreviewed = 100;
 const reportLimit = 10;
-const anyMarker = /<!--\s*moonshine-review\b/g;
-const countedMarker =
-  /<!-- moonshine-review round=([1-9][0-9]{0,3}) head=([0-9a-f]{40}) high=([0-9]{1,4}) medium=([0-9]{1,4}) low=([0-9]{1,4}) owner=([0-9]{1,4}) -->/;
 
 /// Appends one line for a sent post; false when it cannot be written.
 export function recordPost(kind, pr, id, session) {
@@ -58,7 +52,7 @@ export function recordPost(kind, pr, id, session) {
 }
 
 /// The recorded posts; none when the file does not exist yet. A line that cannot be read stops.
-function readPosts(stop) {
+export function readPosts(stop) {
   let text;
   try {
     text = readFileSync(postsFile, "utf8");
@@ -84,53 +78,11 @@ function readPosts(stop) {
     });
 }
 
-/// The review's counted marker: { round, head, high, medium, low, owner }; null when the body has no
-/// marker. More than one marker, or one without counts, stops.
-function reviewMarker(body, stop) {
-  const found = (body ?? "").match(anyMarker) ?? [];
-  if (found.length === 0) return null;
-  if (found.length > 1) stop("A review by this account holds more than one marker.");
-  const counted = countedMarker.exec(body);
-  if (!counted) stop("A review's marker carries no counts (round, head, high, medium, low, owner); the owner merges.");
-  const [, round, head, high, medium, low, owner] = counted;
-  return { round: Number(round), head, high: Number(high), medium: Number(medium), low: Number(low), owner: Number(owner) };
-}
-
 /// Merges PR `pr` (a checked number, as text) or calls `stop`, which must not return. Returns gh's
 /// exit status.
 export function merge(pr, stop) {
-  const env = { ...process.env, GIT_NO_REPLACE_OBJECTS: "1" };
-  const where = spawnSync("git", ["rev-parse", "--show-toplevel"], { env, encoding: "utf8" });
-  if (where.status !== 0) stop("Run it inside a checkout of this repository.");
-  const top = where.stdout.trim();
-  const run = (args, options = {}) => spawnSync("git", args, { cwd: top, env, encoding: "utf8", maxBuffer: 1 << 30, ...options });
-  const git = (args, options = {}) => {
-    const result = run(args, options);
-    if (result.status !== 0) stop(`git ${args[0]} failed (exit ${result.status}).`);
-    return result.stdout;
-  };
-  const isAncestor = (older, newer) =>
-    run(["cat-file", "-e", `${older}^{commit}`]).status === 0 && run(["merge-base", "--is-ancestor", older, newer]).status === 0;
-  const api = (path) => {
-    const result = spawnSync("gh", ["api", "--method", "GET", path], { cwd: top, encoding: "utf8", maxBuffer: 1 << 28 });
-    if (result.error) stop(`gh could not be started (${result.error.code ?? "unknown error"}).`);
-    if (result.status !== 0) stop(`gh api could not read ${path.replace(/\?.*$/, "")}.`);
-    try {
-      return JSON.parse(result.stdout);
-    } catch {
-      stop(`gh api returned no JSON for ${path.replace(/\?.*$/, "")}.`);
-    }
-  };
-  const pages = (path) => {
-    const items = [];
-    for (let page = 1; page <= maxPages; page += 1) {
-      const batch = api(`${path}?per_page=100&page=${page}`);
-      if (!Array.isArray(batch)) stop(`gh api returned no list for ${path}.`);
-      items.push(...batch);
-      if (batch.length < 100) return items;
-    }
-    stop(`${path} has more than ${maxPages * 100} items; the owner merges.`);
-  };
+  const { top, run, git, isAncestor } = safeGit(stop);
+  const { api, pages } = gitHub(top, stop);
 
   // 1. The PR.
   const login = api("user")?.login;
@@ -152,8 +104,6 @@ export function merge(pr, stop) {
   const body = (info.body ?? "").replace(/\r/g, "");
 
   // 2. The commits.
-  if (git(["rev-parse", "--is-shallow-repository"]).trim() !== "false") stop("The checkout is shallow; the owner merges.");
-  if (existsSync(resolve(top, git(["rev-parse", "--git-path", "info/grafts"]).trim()))) stop("The checkout has grafts; the owner merges.");
   if (run(["rev-parse", "--verify", "--quiet", `refs/remotes/origin/pr/${pr}^{commit}`]).stdout?.trim() !== head) {
     stop(`origin/pr/${pr} is not the PR's head; run git fetch origin, then gh-post merge again.`);
   }
@@ -180,33 +130,7 @@ export function merge(pr, stop) {
   }
 
   // 4. CI.
-  const checks = api(`${repo}/commits/${head}/check-runs?filter=latest&per_page=100`);
-  if (!Array.isArray(checks?.check_runs) || !Number.isSafeInteger(checks.total_count)) stop("GitHub returned no check runs.");
-  if (checks.total_count > checks.check_runs.length) stop("The head has more check runs than one page; the owner merges.");
-  // A workflow run again on the same head (guard on an edited body) is another check suite, which
-  // filter=latest does not fold: the newest run of each name counts, by its id. Runs belong to a
-  // commit, not a PR: only runs on this head for this PR count, so another PR on the same commit
-  // cannot hide a failure.
-  const newest = new Map();
-  for (const check of checks.check_runs) {
-    if (!Number.isSafeInteger(check?.id)) stop("A check run has no id.");
-    if (typeof check.name !== "string" || check.name === "") stop("A check run has no name.");
-    const forThisPR = Array.isArray(check.pull_requests) && check.pull_requests.some((item) => item?.number === Number(pr));
-    if (check.head_sha !== head || !forThisPR) continue;
-    if (!newest.has(check.name) || check.id > newest.get(check.name).id) newest.set(check.name, check);
-  }
-  const runs = [...newest.values()];
-  for (const name of Object.keys(required)) {
-    if (!runs.some((check) => check?.name === name)) stop(`The required check ${name} has not run on the head.`);
-  }
-  for (const check of runs) {
-    const name = printable(check.name, entries);
-    if (check?.status !== "completed") stop(`The check ${name} is still running; run gh-post merge again when it has finished.`);
-    const allowed = required[check.name] ?? otherConclusions;
-    if (!allowed.includes(check.conclusion)) stop(`The check ${name} did not pass.`);
-  }
-  const status = api(`${repo}/commits/${head}/status`);
-  if (!(status?.total_count === 0 || status?.state === "success")) stop("The head's commit status is not success.");
+  ciGreen(api, pr, head, entries, stop);
 
   // 5. The guard, again.
   const commits = git(["rev-list", head, `^${main}`]).split("\n").filter((sha) => sha !== "");

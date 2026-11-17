@@ -1,0 +1,76 @@
+# The headless review
+
+P-HR (owner, 2026-11-16; `docs/specs/phase-1-see.md` → P-HR). After the author pushes and CI is green, the author session starts `/review-pr` itself as a separate headless `claude -p` process, through the installed wrapper `~/.config/moonshine/bin/review <pr> standard|deep` (`scripts/guard/review.mjs`). The review posts through `gh-post review`, as one started by hand does. This page records what the probes showed, what the wrapper checks, and what stays open. Probe results are counts and structure only (CLAUDE.md rule 5): the repository's own skills and agents by name, account-level ones as counts, nothing pasted from a log.
+
+## Probes (build 2.1.285, owner, 2026-11-16)
+
+The owner ran five probes with the wrapper's argv and environment; every stderr log was empty. Probes are not re-run on an update of `claude`: the start gates below run on every start instead.
+
+| Probe | What                                                                          | Result                                                                                                                                                                                                                                                                                               |
+| ----- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | a deep local review of merged #60                                             | exit 0, about 10 min, $12.43; 8 reviewers, 2 verifiers, a verdict; 13 refusals (below); the read-boundary hook runs under `--settings`; `/review-pr` runs as a slash command; the start event's `session_id` names the scratchpad's session folder; 10 start and 10 result events, one pair per turn |
+| 1b    | the posting path and the environment                                          | a Write into the scratchpad refused (nobody to ask); the session folder exists under `--no-session-persistence`; one variable of the environment did not reach Bash (cause unknown), so nothing trusts that a variable arrives; `gh` found on the wrapper's `PATH`                                   |
+| 1c    | `--max-budget-usd 0.01`                                                       | the budget acts: `error_max_budget_usd`, exit 1, about one turn past the limit                                                                                                                                                                                                                       |
+| 2     | a deny rule and an ask rule in `-p`                                           | the deny held; the ask became a refusal with no prompt; the run went on and ended `success`                                                                                                                                                                                                          |
+| 3     | `--session-id`, the per-run Write allow, `MOONSHINE_HEADLESS`                 | the start event carries the id passed; a Write into the run's own scratchpad works, into another session's is refused; the variable reaches Bash and a subagent's Bash                                                                                                                               |
+| 4     | probe 1 again with the run's settings and `--tools Read Write Edit Bash Task` | exit 0, about 13 min, $16.27; 8 reviewers, 4 verifiers, a verdict, the last of 13 result events `success`; mutation probes ran (an Edit in a probe worktree, a probe package, `swift test`); 6 refusals, all deliberate (below); the skill removed its worktrees by path                             |
+
+The owner counted probe 4 as a pass (2026-11-16). The agents' prompt lines (W7, below) are checked on the first live run after the merge.
+
+Account level, per run: 12 agents (3 of them the repository's: `pr-reviewer`, `review-verifier`, `plan-critic`), 33–34 skills, 2–3 plugins. The build offers no Grep or Glob tool, so reviewers use Bash `grep`.
+
+### Probe 1's 13 refusals
+
+| #    | Who             | Form                                                           | Mark                                                                                       |
+| ---- | --------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| 1    | orchestrator    | a Write of a context file in the scratchpad                    | fixed by the run's scratchpad allow                                                        |
+| 2–6  | privacy, docs   | `git -C <path> grep -c …`, `git -C <path> show … \| grep -c …` | deliberate: `git -C * -c *` guards against config overrides and cannot tell grep's `-c`    |
+| 7    | docs            | a `grep -r -c` form the read-only check rejected               | deliberate: the reworded read ran next                                                     |
+| 8    | tests           | `sed -i` on a probe copy                                       | fixed: the Edit or Write tool does it; `sed -i` stays refused (a Bash write has no folder) |
+| 9–10 | contract, tests | a Write of a probe test in the scratchpad                      | fixed                                                                                      |
+| 11   | platform        | `awk` on an SDK interface file                                 | deliberate: the Read tool covers SDK reads                                                 |
+| 12   | platform        | a Write of a measuring snippet in the scratchpad               | fixed                                                                                      |
+| 13   | verifier        | a `grep -o -E` form with `{{` the read-only check rejected     | deliberate, as 7                                                                           |
+
+Every deliberate one recovered in the agent's next call. Probe 4 had 6: 5 by `git -C * -c *` and one `sed -i` by a reviewer; W7 tells the agents to count with `--count` and to change a probe copy with the Write or Edit tool.
+
+## What the wrapper does
+
+In order; any refusal exits 1 and starts nothing.
+
+1. Refuses inside a headless run (`MOONSHINE_HEADLESS` set, even empty), in `bin/review` before the environment is cleared and again in `review.mjs`; arguments are `<pr> standard|deep`.
+2. The repository (`scripts/guard/github.mjs`, shared with `gh-post merge`): the git folder must be the one the guard was installed for (`mainGitDir` in `config.json`, so a `.git` file or `commondir` pointing elsewhere refuses), not shallow, no grafts, no replace refs; git runs with fsmonitor and hooks off.
+3. GitHub, every read fatal: the PR open, not a draft, into `main`, from this repository (no fork, no `fork/` branch); CI as `gh-post merge` requires it; no review of this head yet; round 1, or round 2 after a round 1 with a High; round 3 is the owner's, started by hand.
+4. `main` is an ancestor of the head, and the PR changes no `CLAUDE.md`, `CLAUDE.local.md`, `.claude/` or `.mcp.json` at any depth (tree to tree, no rename detection, case-folded): such a PR is reviewed by hand.
+5. The checkout is exactly the head: HEAD, no change, no untracked file, no submodule, no index flag, and no ignored instruction file at any depth, ignored folders included (beyond the local settings file, `settings.local.json` next to `settings.json`, the `.cc-writes` folder Claude Code keeps beside it, and `.DS_Store`); `git fsck` on the head and `main`.
+6. The lock (below) and a session id.
+7. A private folder `~/Library/Caches/moonshine-review/run-*` with this run's settings (the denies of the run, `Write` and `Edit` on this run's scratchpad only, auto memory off; hooks kept), its MCP config (Context7 only) and the logs.
+8. `claude` by the link the installer found, in an environment built from scratch: `HOME`, `USER`, `LOGNAME`, `TMPDIR`, `LANG`, the wrapper's `PATH`, `MOONSHINE_HEADLESS=1`, `MOONSHINE_HEADLESS_PR`, `ENABLE_CLAUDEAI_MCP_SERVERS=false`, `GIT_NO_REPLACE_OBJECTS=1` and `core.fsmonitor=false`; flags `--session-id`, `--tools Read Write Edit Bash Task`, `--permission-mode default --permission-prompts none`, `--settings`, `--strict-mcp-config --mcp-config`, `--disallowedTools` the wrapper, `--no-session-persistence`, `--max-budget-usd 15|40`, `--output-format stream-json --verbose`. `--bare` (it needs an API key) and `--safe-mode` (it drops the read-boundary hook) are not used. The build number goes to the output.
+9. The start gates, on **every** start event (one per turn of the main agent), exit 7: the session id is the wrapper's; `apiKeySource` is `none`; Context7 is the only MCP server; the tools are exactly `Task`, `Bash`, `Edit`, `Read`, `Write` and Context7's two (probe 4), so a tool a later build adds stops the run; every plugin's `source` is a line of the owner's `~/.config/moonshine/review-plugins.txt`; and a start event within the first 20 lines and 120 seconds.
+10. Limits: 60 minutes for `standard`, 120 for `deep` (exit 5); SIGTERM, SIGINT and SIGHUP end the run (exit 6). The child's process tree (its descendants and their process groups, walked until no new process appears) gets TERM, 10 seconds, then KILL.
+11. On every exit, this run's worktrees (those under its session folder) are removed by path; `git worktree prune` never runs.
+12. Exit 0 only when `claude` exited 0, the last result event is `success`, `posts.jsonl` records exactly one review from this run's session, GitHub shows it as a marker review of this head by the signed-in account, posted after the start, and the checkout is still exactly the head. Otherwise exit 6, never retried. The run folder is removed on exit 0; on any other exit it is kept, the newest three only. The output names the exit, the reason and the folder, never review text.
+
+`@builtin` plugins cannot be switched off through `enabledPlugins` in the run's settings (probe 4), so they are allowed by name in the owner's local file, outside the repository; the installer never creates, changes or removes it. A missing or empty file means that no plugin is expected.
+
+## The lock
+
+`~/.config/moonshine/state/review-<16 hex of the checkout path's sha256>.json` (`scripts/guard/review-lock.mjs`): the PR, the head, the session id, the checkout and its session folder, the wrapper's and the child's pid with their start times (`ps -o lstart=` in the C locale and UTC). It is created exclusively; a lock whose wrapper and child are gone, or alive with another start time, is stale and replaced (a recorded child still alive is killed first, and its session's worktrees are removed). A lock that cannot be read counts as live in `gh-post` and the hook, and refuses the wrapper, naming the file for the owner to remove.
+
+While a live lock covers a checkout (its own, or a review worktree inside its session folder):
+
+- `gh-post` sends only `review <the lock's PR>` with `event` `COMMENT` and `commit_id` the lock's head, from a file in the lock's session scratchpad, while that checkout is still exactly the head, and only once per session; everything else is refused, whatever the environment says;
+- the pre-push hook refuses every push.
+
+Under `MOONSHINE_HEADLESS` with no live lock, both refuse everything. The variable is the second layer, not the first: one variable of probe 1b never arrived.
+
+**What a forged lock allows.** A sandboxed session cannot write the state folder (its writes are limited to the checkout, its scratchpad and `$TMPDIR`; `~` is read-denied), so it can neither forge, move nor remove the lock. Unsandboxed test code, which a review runs through `swift test` or `xcbuild test`, can write both the state folder and `~/Library/Caches/` (`scripts/guard/merge.mjs`; CLAUDE.md § Git), so moving the lock would close nothing. A forged lock only narrows `gh-post`: one `COMMENT` review on the PR and head it names, which `gh-post review` already sends today. The lock stays in `state/` (owner's addition 4, 2026-11-16).
+
+## What stays open
+
+- The run's objects can change between the wrapper's checks and the reviewers' reads; accepted.
+- An index entry's stat data can be forged so that `git status` reports a changed file as clean; accepted.
+- A session set on it can write the state file through test code that runs outside the sandbox (`scripts/guard/merge.mjs`).
+- A process that left both the child's tree and its process groups (re-parented after its parent exited, in a session of its own) survives the kill.
+- The stream shows no hook events: whether an allowed plugin's hook ran cannot be seen.
+- `ps` is denied inside a session's sandbox: there the lock tests that read start times and process trees are skipped, and they run in CI. The installed tools run outside the sandbox.

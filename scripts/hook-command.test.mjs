@@ -32,7 +32,8 @@ test("/review-pr reads a fork PR's diff only, before any worktree is created (PU
   assert.match(skill, /nothing from the PR is built, tested or run/);
   assert.match(skill, /\*\*Read-only review: the head is a fork's code; nothing from this PR was built, tested or run\.\*\*/);
   const cleanUp = skill.slice(skill.indexOf("## 6. Clean up"));
-  assert.match(cleanUp, /^A read-only review \(§1, step 1\) created no worktree and no probe worktree: run only `git worktree prune`\./m);
+  // P-HR: the owner's SKILL.md patch, applied after the merge, drops the prune; until then the old line stands.
+  assert.match(cleanUp, /^A read-only review \(§1, step 1\) created no worktree and no probe worktree: (?:run only `git worktree prune`|remove nothing)\./m);
 });
 
 for (const [agent, rule] of [
@@ -249,5 +250,20 @@ test("the template allows read-only gh api on this repository and keeps every wr
     "Bash(gh api graphql*)",
   ]) {
     assert.ok(deny.has(rule), rule);
+  }
+});
+
+// P-HR (owner, 2026-11-16): the headless review starts only through the installed wrapper, by its
+// absolute path and outside the sandbox; nobody prunes worktrees (a sibling author worktree is live);
+// a session never starts claude itself; and the main checkout's commondir is write-denied.
+test("the template starts a headless review only through the installed wrapper and denies prune and claude", () => {
+  const review = "/Users/<you>/.config/moonshine/bin/review";
+  assert.ok(template.permissions.allow.includes(`Bash(${review} *)`));
+  assert.ok(template.sandbox.excludedCommands.includes(`${review} *`));
+  assert.ok(!template.permissions.allow.some((rule) => /worktree prune/.test(rule)), "no allow for git worktree prune");
+  for (const rule of ["Bash(git worktree prune*)", "Bash(claude *)", "Bash(*/claude *)"]) assert.ok(template.permissions.deny.includes(rule), rule);
+  assert.ok(template.sandbox.filesystem.denyWrite.includes("./.git/commondir"));
+  for (const note of [`Bash(${review} *)`, "Bash(git worktree prune*)", "Bash(claude *), Bash(*/claude *)", "sandbox.filesystem.denyWrite ./.git/commondir"]) {
+    assert.ok(Object.hasOwn(template._notes, note), note);
   }
 });
