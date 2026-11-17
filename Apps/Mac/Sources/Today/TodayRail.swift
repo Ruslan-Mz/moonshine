@@ -1,17 +1,25 @@
 import MoonShineCore
 import SwiftUI
 
-/// `design/screens/today.md` § Right rail: Quarter focus, Touched today, Quiet lines, Paused on
-/// purpose. The Day rail comes with S4-3b; "Open in OmniFocus" and "Open quarter note" come with
-/// the link opener (S4-5).
+/// `design/screens/today.md` § Right rail: Day, Quarter focus, Touched today, Quiet lines,
+/// Paused on purpose. "Open in OmniFocus" and "Open quarter note" come with the link opener
+/// (S4-5).
 struct TodayRail: View {
   let screen: TodayScreen
+  let rail: DayRail
+  let now: Date
+  let calendars: [CalendarInfo]
+  let reveal: (TaskItemID) -> Void
 
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 22) {
-        if screen.railIsEmpty {
+        if screen.railIsEmpty && !rail.isShown {
           Text("Nothing on the rail today").foregroundStyle(.secondary)
+        }
+        if rail.isShown {
+          DayRailView(
+            rail: rail, now: now, screen: screen, calendars: calendars, reveal: reveal)
         }
         if let focus = screen.quarterFocus { QuarterFocusCard(focus: focus) }
         if !screen.touched.isEmpty { touched }

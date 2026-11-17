@@ -313,7 +313,8 @@ struct BudgetText: View {
 }
 
 /// `today`, `yesterday`, `N days ago`, moon + `quiet for N days`, `no completions since 6 July`,
-/// a paused line's `last 14 July` (Q1.1, owner 2026-10-30); Line detail shows it too.
+/// a paused line's last completion as the date alone, `14 July` (owner, 2026-11-16); Line
+/// detail shows it too.
 struct LastActivityText: View {
   let last: LastActivity
   let today: Date
@@ -330,7 +331,7 @@ struct LastActivityText: View {
     case .noCompletions(let since?):
       Text("no completions since \(date(since))").foregroundStyle(.secondary)
     case .noCompletions(nil): Text("no activity yet").foregroundStyle(.secondary)
-    case .paused(let last?): Text("last \(date(last))")
+    case .paused(let last?): Text(verbatim: date(last))
     case .paused(nil): Text(verbatim: "—")
     }
   }

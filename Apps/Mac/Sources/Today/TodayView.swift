@@ -83,14 +83,22 @@ struct TodayContainer<Notice: View>: View {
   /// Above the table, with its own divider; the app's notices (`TodayDetail`).
   @ViewBuilder let notice: Notice
   @SceneStorage("today.showAllFlagged") private var showAllFlagged = false
+  @Environment(\.dayRailInput) private var railInput
 
   var body: some View {
-    let screen = TodayScreen(overview, showAllFlagged: showAllFlagged)
-    TodayView(screen: screen, notice: notice, showAllFlagged: $showAllFlagged)
+    // The Day rail's clock; the day itself stays the overview's.
+    TimelineView(.everyMinute) { context in
+      let screen = TodayScreen(overview, showAllFlagged: showAllFlagged)
+      let now = railInput.isFrozen ? overview.now : context.date
+      TodayView(
+        screen: screen, rail: screen.rail(now: now, input: railInput), now: now,
+        calendars: railInput.calendars, notice: notice, showAllFlagged: $showAllFlagged
+      )
       .focusedSceneValue(
         \.flaggedToggle,
         FlaggedToggle(isAvailable: screen.showsFlaggedCaption, showsAll: $showAllFlagged)
       )
+    }
   }
 }
 
@@ -98,6 +106,9 @@ struct TodayContainer<Notice: View>: View {
 /// OmniFocus comes with the link opener (S4-5).
 struct TodayView<Notice: View>: View {
   let screen: TodayScreen
+  let rail: DayRail
+  let now: Date
+  let calendars: [CalendarInfo]
   let notice: Notice
   @Binding var showAllFlagged: Bool
   @SceneStorage("today.fromEarlierExpanded") private var fromEarlierExpanded = true
@@ -124,7 +135,8 @@ struct TodayView<Notice: View>: View {
     .navigationTitle("Today")
     .navigationSubtitle(subtitle)
     .inspector(isPresented: $railShown) {
-      TodayRail(screen: screen).inspectorColumnWidth(300)
+      TodayRail(screen: screen, rail: rail, now: now, calendars: calendars, reveal: reveal)
+        .inspectorColumnWidth(300)
     }
     .toolbar {
       Button {
@@ -257,15 +269,34 @@ struct TodayView<Notice: View>: View {
     }
   }
 
+  /// A rail mark's task: its row is selected, and the disclosure that holds it opens. A task
+  /// shown only in the Anchors strip has no row. The list does not scroll to it.
+  private func reveal(_ id: TaskItemID) {
+    guard let (row, disclosure) = screen.row(id) else { return }
+    switch disclosure {
+    case .fromEarlier: fromEarlierExpanded = true
+    case .lifeOps: lifeOpsExpanded = true
+    case .moreDone: moreDoneExpanded = true
+    case nil: break
+    }
+    selection = TodayTableRow.task(row).id
+  }
+
   /// `Thursday 1 October · Week 40 · 23 open · 6 done · ≈ 11 h 15 min est.`; the estimate is
-  /// left out when no open task has one.
+  /// left out when no open task has one. Then, after a hairline, the day fact (`today.md`
+  /// § Calendar); with no term the hairline goes too.
   private var subtitle: Text {
     let day = TodayFormat.day(screen.day, timeZone: screen.timeZone, locale: locale)
     let open = Text("\(screen.totals.open) open")
     let done = Text("\(screen.totals.done) done")
-    let facts = Text("\(day) · Week \(screen.week) · \(open) · \(done)")
-    guard let estimate = TodayFormat.estimate(screen.totals.estimateMinutes) else { return facts }
-    return Text("\(facts) · \(EstimateText.text(estimate, total: true))")
+    var facts = Text("\(day) · Week \(screen.week) · \(open) · \(done)")
+    if let estimate = TodayFormat.estimate(screen.totals.estimateMinutes) {
+      facts = Text("\(facts) · \(EstimateText.text(estimate, total: true))")
+    }
+    let terms = TodayFormat.dayFact(rail.load)
+    guard let dayFact = DayFactText.joined(terms, timeZone: screen.timeZone, locale: locale)
+    else { return facts }
+    return Text("\(facts) │ \(dayFact)")
   }
 }
 
@@ -312,7 +343,8 @@ struct EstimateText: View {
   }
 }
 
-/// A due date (amber only when urgent) and, for a task from earlier, its planned age.
+/// A due date (amber only when urgent; today's with its time), else a planned time today, and
+/// for a task from earlier its planned age (`today.md` § Calendar).
 struct WhenText: View {
   let row: TodayScreen.Row
   let timeZone: TimeZone
@@ -323,8 +355,8 @@ struct WhenText: View {
       if let days = row.plannedDaysAgo {
         Text("planned \(days) days ago").foregroundStyle(.secondary)
       }
-      if let due = row.due {
-        let date = TodayFormat.dueDate(due, timeZone: timeZone, locale: locale)
+      switch TodayFormat.when(row, timeZone: timeZone, locale: locale) {
+      case .due(let date):
         switch TodayFormat.dueStyle(isUrgent: row.isUrgent) {
         case .deadline:
           Text("Due \(date)")
@@ -335,6 +367,9 @@ struct WhenText: View {
         case .plain:
           Text("due \(date)").foregroundStyle(.secondary)
         }
+      case .planned(let time):
+        Text(verbatim: time).foregroundStyle(.secondary).monospacedDigit()
+      case nil: EmptyView()
       }
     }
     .lineLimit(1)

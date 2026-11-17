@@ -10,11 +10,22 @@ struct TodayScreen: Equatable {
     /// project → line → artifact (or the line's parent note); a missing step is left out.
     let trace: [String]
     let estimateMinutes: Int?
-    /// The effective due date, shown as a date only until S4-3b shows due times (owner, 2026-10-28).
+    /// The effective due date.
     let due: Date?
+    /// The due date has a time: it is not OmniFocus' default due time.
+    let dueHasTime: Bool
+    /// The due date is on the screen's day; only then does the When column show its time.
+    let dueIsToday: Bool
     let isUrgent: Bool
     let plannedDaysAgo: Int?
+    /// The effective planned date when it has a time on the screen's day.
+    let plannedTime: Date?
     let isDone: Bool
+  }
+
+  /// The collapsed group a row may sit in (`TodayView`'s disclosure rows).
+  enum Disclosure: Hashable {
+    case fromEarlier, lifeOps, moreDone
   }
 
   /// One chip of the Anchors strip.
@@ -110,6 +121,14 @@ struct TodayScreen: Equatable {
   let noActivity: [NoActivity]
   let paused: [Paused]
   let quarterFocus: QuarterFocus?
+  /// The day's items as tasks, open and done today, in source order: the Day rail's tasks.
+  let railTasks: [TaskItem]
+  /// The tasks whose due mark is amber: Today's urgent items (CLAUDE.md rule 8).
+  let deadlines: Set<TaskItemID>
+  /// A task's line emoji on the rail; 🧺 for Life ops.
+  let emoji: [TaskItemID: String]
+  let defaultTimes: DefaultTimes
+  let calendar: Calendar
 
   /// With nothing to show, the rail holds one calm line (owner, 2026-10-27).
   var railIsEmpty: Bool {
@@ -135,20 +154,52 @@ struct TodayScreen: Equatable {
     }
   }
 
+  /// The Day rail at `now` over the day window (`DayWindow.standard` until Settings sets one).
+  func rail(now: Date, input: DayRailInput) -> DayRail {
+    DayRail.compute(
+      day: day, now: now, window: .standard, events: input.events,
+      visibility: input.visibility, tasks: railTasks, deadlines: deadlines,
+      defaultTimes: defaultTimes, calendar: calendar)
+  }
+
+  /// A rail mark's row in the table and the disclosure that holds it; nil for a task the
+  /// table does not list (an anchor shown only in the strip).
+  func row(_ id: TaskItemID) -> (row: Row, disclosure: Disclosure?)? {
+    let groups: [(rows: [Row], disclosure: Disclosure?)] = [
+      (top + sections.flatMap(\.rows) + doneVisible, nil), (fromEarlier, .fromEarlier),
+      (lifeOps, .lifeOps), (doneMore, .moreDone),
+    ]
+    for group in groups {
+      if let row = group.rows.first(where: { $0.id == id }) { return (row, group.disclosure) }
+    }
+    return nil
+  }
+
   init(_ overview: Overview, showAllFlagged: Bool = false) {
     let today = overview.today(showAllFlagged: showAllFlagged)
+    let defaultTimes = overview.workspace.defaultTimes
     day = overview.now
     week = ISOWeek(containing: overview.now, calendar: overview.calendar).week
     timeZone = overview.workspace.timeZone
+    calendar = overview.calendar
+    self.defaultTimes = defaultTimes
+    let ids = Set(today.items.map(\.task.id))
+    railTasks = overview.workspace.tasks.filter { ids.contains($0.id) }
+    deadlines = Set(today.items.filter(\.isUrgent).map(\.task.id))
+    emoji = Dictionary(
+      today.items.compactMap { item in
+        (item.task.line == .lifeOps ? "🧺" : item.trace.lineEntity?.emoji).map { (item.task.id, $0) }
+      }, uniquingKeysWith: { first, _ in first })
+    let row = { (item: TodayItem) in Self.row(item, day: today.day, defaultTimes: defaultTimes) }
     let lines = Dictionary(
       overview.workspace.lines.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
     sections = today.groups.compactMap { group in
       guard case .line(let id) = group.line, let line = lines[id] else { return nil }
       return Section(
-        id: id, emoji: line.emoji, name: line.name, rows: group.items.map(Self.row))
+        id: id, emoji: line.emoji, name: line.name, rows: group.items.map(row))
     }
-    fromEarlier = today.fromEarlier.map(Self.row)
-    lifeOps = today.groups.first { $0.line == .lifeOps }?.items.map(Self.row) ?? []
+    fromEarlier = today.fromEarlier.map(row)
+    lifeOps = today.groups.first { $0.line == .lifeOps }?.items.map(row) ?? []
     anchors = today.anchors.prefix(Overview.anchorsShown).map { item in
       Anchor(
         id: item.task.id, title: item.task.title,
@@ -157,9 +208,9 @@ struct TodayScreen: Equatable {
     }
     anchorsTotal = today.anchors.count
     anchorsDone = today.anchors.filter(\.isDone).count
-    top = today.top.map(Self.row)
+    top = today.top.map(row)
     flaggedCount = today.flaggedCount
-    doneToday = today.doneToday.map(Self.row)
+    doneToday = today.doneToday.map(row)
     totals = today.totals
     touched = today.touchedToday.compactMap { row in
       let (sessions, tasks) = (row.counts.rhythm, row.counts.progress)
@@ -206,11 +257,17 @@ struct TodayScreen: Equatable {
     }
   }
 
-  private static func row(_ item: TodayItem) -> Row {
-    Row(
+  private static func row(_ item: TodayItem, day: Horizon, defaultTimes: DefaultTimes) -> Row {
+    let due = item.task.effectiveDueAt
+    let planned = item.task.effectivePlannedAt.flatMap {
+      day.contains($0) && !defaultTimes.isDateOnly($0, kind: .planned) ? $0 : nil
+    }
+    return Row(
       id: item.task.id, title: item.task.title, trace: trace(item.trace),
-      estimateMinutes: item.task.estimateMinutes, due: item.task.effectiveDueAt,
-      isUrgent: item.isUrgent, plannedDaysAgo: item.plannedDaysAgo, isDone: item.isDone)
+      estimateMinutes: item.task.estimateMinutes, due: due,
+      dueHasTime: due.map { !defaultTimes.isDateOnly($0, kind: .due) } ?? false,
+      dueIsToday: due.map(day.contains) ?? false, isUrgent: item.isUrgent,
+      plannedDaysAgo: item.plannedDaysAgo, plannedTime: planned, isDone: item.isDone)
   }
 
   private static func trace(_ trace: Trace) -> [String] {

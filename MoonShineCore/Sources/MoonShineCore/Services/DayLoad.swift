@@ -180,14 +180,14 @@ public struct DayLoad: Hashable, Sendable {
       freeFromNowMinutes: freeFromNow)
   }
 
-  private static func floorMinute(_ date: Date) -> Date {
+  fileprivate static func floorMinute(_ date: Date) -> Date {
     Date(
       timeIntervalSinceReferenceDate: (date.timeIntervalSinceReferenceDate / 60).rounded(.down) * 60
     )
   }
 
   /// `[start, end)` cut to `span`; nil when nothing of it is inside.
-  private static func clip(_ start: Date, _ end: Date, _ span: DateInterval) -> DateInterval? {
+  fileprivate static func clip(_ start: Date, _ end: Date, _ span: DateInterval) -> DateInterval? {
     let from = max(start, span.start)
     let to = min(end, span.end)
     return from < to ? DateInterval(start: from, end: to) : nil
@@ -209,5 +209,152 @@ public struct DayLoad: Hashable, Sendable {
   /// Total length of disjoint intervals in whole minutes.
   private static func minutes(_ intervals: [DateInterval]) -> Int {
     Int((intervals.reduce(0) { $0 + $1.duration } / 60).rounded(.down))
+  }
+}
+
+/// The Day section of Today's rail (`design/screens/today.md` § Calendar): the day's events of
+/// Show-on calendars and its tasks with a time, each placed on the window's scale or pinned
+/// above or below it. Times are floored to the minute, as in `DayLoad`.
+public struct DayRail: Hashable, Sendable {
+  public struct Mark: Hashable, Sendable {
+    public enum Kind: Hashable, Sendable {
+      /// A timed event; a tentative one is drawn hatched.
+      case event(CalendarEvent)
+      /// A task with a planned time: `[planned, planned + estimate)`, no length without one.
+      case planned(TaskItem)
+      /// A task with a due time on the day: an instant.
+      case due(TaskItem, isDeadline: Bool)
+    }
+
+    public let kind: Kind
+    public let start: Date
+    public let end: Date
+    /// The mark's lane as fractions of the scale's width; pinned marks span it.
+    public let leading: Double
+    public let width: Double
+  }
+
+  public let load: DayLoad
+  /// All-day events of Show-on calendars, as one-line rows above the scale (owner, 2026-10-30).
+  public let allDay: [CalendarEvent]
+  /// Before the window's start; time order.
+  public let above: [Mark]
+  /// On the scale; an item that crosses an edge is here, and the view clips it.
+  public let marks: [Mark]
+  /// At or after the window's end; time order.
+  public let below: [Mark]
+
+  /// `tasks` as for `DayLoad.compute`; `deadlines` are the tasks whose due mark is amber.
+  public static func compute(
+    day: Date, now: Date, window: DayWindow, events: CalendarRead<[CalendarEvent]>,
+    visibility: CalendarVisibility, tasks: [TaskItem], deadlines: Set<TaskItemID>,
+    defaultTimes: DefaultTimes, calendar: Calendar
+  ) -> DayRail {
+    let load = DayLoad.compute(
+      day: day, now: now, window: window, events: events, visibility: visibility, tasks: tasks,
+      defaultTimes: defaultTimes, calendar: calendar)
+    let dayInterval =
+      calendar.dateInterval(of: .day, for: day)
+      ?? DateInterval(start: calendar.startOfDay(for: day), duration: 86_400)
+    let span = load.window
+    func onDay(_ date: Date) -> Bool { date >= dayInterval.start && date < dayInterval.end }
+
+    let shown = (events.value ?? []).filter {
+      $0.overlaps(dayInterval) && visibility.setting(for: $0.calendarID, kind: $0.calendarKind).show
+    }
+    var items: [(kind: Mark.Kind, start: Date, end: Date)] = shown.filter { !$0.isAllDay }.map {
+      (.event($0), DayLoad.floorMinute($0.start), DayLoad.floorMinute($0.end))
+    }
+    for item in tasks {
+      if let at = item.effectivePlannedAt, onDay(at), !defaultTimes.isDateOnly(at, kind: .planned) {
+        let start = DayLoad.floorMinute(at)
+        let minutes = min(max(item.estimateMinutes ?? 0, 0), 24 * 60)
+        items.append((.planned(item), start, start.addingTimeInterval(TimeInterval(minutes * 60))))
+      }
+      if let due = item.effectiveDueAt, onDay(due), !defaultTimes.isDateOnly(due, kind: .due) {
+        let at = DayLoad.floorMinute(due)
+        items.append((.due(item, isDeadline: deadlines.contains(item.id)), at, at))
+      }
+    }
+    // Time order; the same start keeps input order (events first).
+    let ordered = items.enumerated().sorted {
+      $0.element.start != $1.element.start
+        ? $0.element.start < $1.element.start : $0.offset < $1.offset
+    }.map(\.element)
+
+    func pinned(_ item: (kind: Mark.Kind, start: Date, end: Date)) -> Mark {
+      Mark(kind: item.kind, start: item.start, end: item.end, leading: 0, width: 1)
+    }
+    // Over before the window opens (an instant at its start is on the scale); from its end on.
+    let isAbove = { (item: (kind: Mark.Kind, start: Date, end: Date)) in
+      item.start < span.start && item.end <= span.start
+    }
+    let above = ordered.filter(isAbove)
+    let below = ordered.filter { !isAbove($0) && $0.start >= span.end }
+    let scale = ordered.filter { !isAbove($0) && $0.start < span.end }
+    return DayRail(
+      load: load, allDay: shown.filter(\.isAllDay), above: above.map(pinned),
+      marks: lanes(scale), below: below.map(pinned))
+  }
+
+  /// Per cluster of marks linked by overlap: events share the leading 55 % when a task is in
+  /// the cluster, else the whole width; tasks share the trailing 45 %, or the whole width
+  /// without events (`today.md` § Calendar). Each mark takes the first free column of its
+  /// kind, and the width is the part over the most marks of that kind at one moment, so marks
+  /// that only chain keep the whole part (the column rule, owner 2026-11-16). A due mark spans
+  /// the lane. A mark with no length counts as one minute here.
+  private static func lanes(_ items: [(kind: Mark.Kind, start: Date, end: Date)]) -> [Mark] {
+    var shares: [(leading: Double, width: Double)] = Array(
+      repeating: (0, 1), count: items.count)
+    let blocks = items.indices.filter {
+      if case .due = items[$0].kind { false } else { true }
+    }
+    func end(_ index: Int) -> Date {
+      max(items[index].end, items[index].start.addingTimeInterval(60))
+    }
+    /// The first free column of each mark, in time order, and the number of columns used.
+    func columns(_ marks: [Int]) -> (column: [Int: Int], count: Int) {
+      var ends: [Date] = []
+      var column: [Int: Int] = [:]
+      for index in marks {
+        if let free = ends.firstIndex(where: { $0 <= items[index].start }) {
+          column[index] = free
+          ends[free] = end(index)
+        } else {
+          column[index] = ends.count
+          ends.append(end(index))
+        }
+      }
+      return (column, ends.count)
+    }
+    var cluster: [Int] = []
+    var clusterEnd = Date.distantPast
+    func place() {
+      let events = cluster.filter { if case .event = items[$0].kind { true } else { false } }
+      let others = cluster.filter { !events.contains($0) }
+      let (eventPart, taskPart) =
+        events.isEmpty ? (0.0, 1.0) : others.isEmpty ? (1.0, 0.0) : (0.55, 0.45)
+      for (marks, base, part) in [(events, 0.0, eventPart), (others, eventPart, taskPart)] {
+        let (column, count) = columns(marks)
+        for index in marks {
+          let width = part / Double(max(count, 1))
+          shares[index] = (base + width * Double(column[index] ?? 0), width)
+        }
+      }
+    }
+    for index in blocks {
+      if !cluster.isEmpty && items[index].start >= clusterEnd {
+        place()
+        cluster = []
+      }
+      cluster.append(index)
+      clusterEnd = max(clusterEnd, end(index))
+    }
+    place()
+    return items.indices.map {
+      Mark(
+        kind: items[$0].kind, start: items[$0].start, end: items[$0].end,
+        leading: shares[$0].leading, width: shares[$0].width)
+    }
   }
 }

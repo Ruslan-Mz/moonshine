@@ -124,7 +124,7 @@ The rail spans the day window (Settings → Calendars), 26 pt per hour; marks si
 
 ### FreeTimeFact
 
-Plain text. Today: `4 events · 4 h in calendar · 1 h 15 min planned · ≈ 2 h 25 min free until 22:00` — `in calendar` and `planned` are whole-day totals, the free term is what remains of the day window from now (`screens/today.md` § Calendar). A future day (Week, iPad drag): the whole window, `2 events · 2 h in calendar · ≈ 12 h free`. The `planned` term appears only when tasks with a planned time and an estimate fall inside the day window. Compact form (iPhone Today): `4 h in calendar · ≈ 2 h 25 min free until 22:00`. Secondary colour, placed next to the task fact after a hairline. Never a comparison, a colour or a judgement word. Per-day form: `2 h 30 min in calendar`. Drag form (iPad): `≈ 11 h 30 min free`.
+Plain text. Today: `4 events · 4 h in calendar · 1 h 15 min planned · ≈ 2 h 25 min free until 22:00` — `in calendar` and `planned` are whole-day totals, the free term is what remains of the day window from now (`screens/today.md` § Calendar). A future day (Week, iPad drag): the whole window, `2 events · 2 h in calendar · ≈ 12 h free`. The `planned` term appears only when tasks with a planned time and an estimate fall inside the day window. The `in calendar` term is left out at 0 min, when every event is tentative, free or all-day (owner, 2026-11-16). Compact form (iPhone Today): `4 h in calendar · ≈ 2 h 25 min free until 22:00`. Secondary colour, placed next to the task fact after a hairline. Never a comparison, a colour or a judgement word. Per-day form: `2 h 30 min in calendar`. Drag form (iPad): `≈ 11 h 30 min free`.
 
 ### NextEventRow
 

@@ -40,6 +40,7 @@ struct RootView: View {
       }
       .environment(\.timeZone, zone)
       .environment(\.calendar, TodayFormat.calendar(zone))
+      .environment(\.dayRailInput, model.source == .demo ? .demo : .live)
       // Another source is another workspace: an open Line detail goes back to Lines.
       .id(model.source)
     } else {

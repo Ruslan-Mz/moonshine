@@ -1,4 +1,5 @@
 import Foundation
+import MoonShineCore
 
 /// Date text for Today, always in the given zone and locale (ADR-0009), never the Mac's zone.
 enum TodayFormat {
@@ -8,7 +9,7 @@ enum TodayFormat {
     date.formatted(style(timeZone, locale).weekday(.wide).day().month(.wide))
   }
 
-  /// `29 Sep`: a due date without its time, which is shown from S4-3b on (owner, 2026-10-28).
+  /// `29 Sep`: a due date without its time; a due time today reads `TodayFormat.time`.
   static func dueDate(_ date: Date, timeZone: TimeZone, locale: Locale) -> String {
     date.formatted(style(timeZone, locale).day().month(.abbreviated))
   }
@@ -32,6 +33,71 @@ enum TodayFormat {
     let calendar = calendar(timeZone)
     let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: today)
     return sameYear ? style : style.year()
+  }
+
+  /// `20:30`, on the 24-hour clock in every language: the rail's scale and labels need a fixed
+  /// width (`design/i18n.md` rule 3, owner 2026-11-16).
+  static func time(_ date: Date, timeZone: TimeZone, locale: Locale) -> String {
+    let hour = Date.FormatStyle.Symbol.VerbatimHour.twoDigits(
+      clock: .twentyFourHour, hourCycle: .zeroBased)
+    return date.formatted(
+      Date.VerbatimFormatStyle(
+        format: "\(hour: hour):\(minute: .twoDigits)", locale: locale, timeZone: timeZone,
+        calendar: calendar(timeZone)))
+  }
+
+  /// A mark's start on the Day rail: `23:00`, or `Wed 23:00` for an event that began on an
+  /// earlier day than `dayStart`'s (owner, 2026-11-16).
+  static func markTime(_ date: Date, dayStart: Date, timeZone: TimeZone, locale: Locale) -> String {
+    let time = time(date, timeZone: timeZone, locale: locale)
+    guard date < dayStart else { return time }
+    return "\(date.formatted(style(timeZone, locale).weekday(.abbreviated))) \(time)"
+  }
+
+  /// What the When column shows besides a planned age: a due date, else a planned time today.
+  enum When: Equatable {
+    /// `18:00` for a due time today, else the date, `1 Oct`; `Due` or `due` comes from the style.
+    case due(String)
+    /// `20:30`.
+    case planned(String)
+  }
+
+  static func when(_ row: TodayScreen.Row, timeZone: TimeZone, locale: Locale) -> When? {
+    if let due = row.due {
+      return .due(
+        row.dueIsToday && row.dueHasTime
+          ? time(due, timeZone: timeZone, locale: locale)
+          : dueDate(due, timeZone: timeZone, locale: locale))
+    }
+    return row.plannedTime.map { .planned(time($0, timeZone: timeZone, locale: locale)) }
+  }
+
+  /// `08`: the hour of a day window's edge, as `day window 08–22` reads it.
+  static func hour(_ date: Date, timeZone: TimeZone, locale: Locale) -> String {
+    String(time(date, timeZone: timeZone, locale: locale).prefix(2))
+  }
+
+  /// The day fact of the toolbar and the Day rail (`design/components.md` § FreeTimeFact).
+  static func dayFact(_ load: DayLoad) -> [DayFact] {
+    dayFact(
+      events: load.eventCount, inCalendar: load.inCalendarMinutes, planned: load.plannedMinutes,
+      free: load.freeFromNowMinutes, until: load.window.end)
+  }
+
+  static func dayFact(
+    events: Int?, inCalendar: Int?, planned: Int, free: Int?, until end: Date
+  ) -> [DayFact] {
+    var terms: [DayFact] = []
+    if let events { terms.append(events == 0 ? .noEvents : .events(events)) }
+    if let inCalendar, inCalendar > 0 { terms.append(.inCalendar(duration(inCalendar))) }
+    if planned > 0 { terms.append(.planned(duration(planned))) }
+    if let free { terms.append(.free(duration(free), until: end)) }
+    return terms
+  }
+
+  /// A length of time in the estimate's shapes; zero is `0 min`.
+  static func duration(_ minutes: Int) -> Estimate {
+    estimate(minutes) ?? .minutes(0)
   }
 
   /// An estimate as the catalog shows it: `≈ 45 min`, `≈ 2 h`, `≈ 1 h 15 min`.
@@ -76,5 +142,24 @@ enum TodayFormat {
 
   private static func style(_ timeZone: TimeZone, _ locale: Locale) -> Date.FormatStyle {
     Date.FormatStyle(locale: locale, calendar: calendar(timeZone), timeZone: timeZone)
+  }
+}
+
+/// One term of the day fact; `nil` terms are left out, never shown as zero.
+enum DayFact: Equatable {
+  case events(Int)
+  /// With calendar access and no event on the day.
+  case noEvents
+  case inCalendar(TodayFormat.Estimate)
+  case planned(TodayFormat.Estimate)
+  /// What remains of the day window from now, and the window's end.
+  case free(TodayFormat.Estimate, until: Date)
+
+  /// `4 events · 4 h in calendar`: the Day rail's header; the other terms are its footer.
+  var isCalendar: Bool {
+    switch self {
+    case .events, .noEvents, .inCalendar: true
+    case .planned, .free: false
+    }
   }
 }
