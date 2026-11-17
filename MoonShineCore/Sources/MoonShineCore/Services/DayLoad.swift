@@ -274,6 +274,11 @@ public struct DayRail: Hashable, Sendable {
     public let width: Double
     /// Time order.
     public let marks: [Mark]
+
+    /// A deadline's due mark is in it: the block keeps the amber (owner, 2026-11-17).
+    public var holdsDeadline: Bool {
+      marks.contains { if case .due(_, isDeadline: true) = $0.kind { true } else { false } }
+    }
   }
 
   /// A mark on the scale in its column, or a block.
@@ -366,7 +371,8 @@ public struct DayRail: Hashable, Sendable {
   /// length or its footprint, whichever is longer; a due mark's label hangs below its time.
   /// Marks whose drawn spans overlap form a cluster: events share the leading 55 % when a task
   /// is in it, else the whole width; tasks (due marks included) share the trailing 45 %, or
-  /// the whole width without events. In each part, as many columns fit as `minimumWidth`
+  /// the whole width without events. Each part collapses on its own, events as tasks do
+  /// (owner, 2026-11-17). In each part, as many columns fit as `minimumWidth`
   /// allows (at least one); a run, a stretch where more marks overlap than fit, becomes one
   /// block of the marks that meet it, and the step repeats until every stretch fits. Then each
   /// mark or block takes the first free column, and the width is the part over the columns
@@ -384,7 +390,9 @@ public struct DayRail: Hashable, Sendable {
       (group.map(top).min() ?? .distantPast, group.map(bottom).max() ?? .distantPast)
     }
     func fit(_ part: Double) -> Int {
-      minimum == 0 ? .max : max(1, Int((part / minimum + 1e-9).rounded(.down)))
+      guard minimum > 0 else { return .max }
+      // No more columns than marks, so a tiny minimum cannot overflow `Int`.
+      return max(1, Int(min(part / minimum + 1e-9, Double(marks.count)).rounded(.down)))
     }
     /// The groups of `members` (one mark, or a block's marks) so that no stretch holds more
     /// than `fit` at once.

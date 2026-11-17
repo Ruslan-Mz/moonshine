@@ -46,10 +46,10 @@ struct DayRailView: View {
   let reveal: (TaskItemID) -> Void
   @Environment(\.locale) private var locale
 
-  static let hourHeight: CGFloat = 26
+  nonisolated static let hourHeight: CGFloat = 26
   static let labelWidth: CGFloat = 40
   /// Between marks side by side.
-  static let gap: CGFloat = 2
+  nonisolated static let gap: CGFloat = 2
   /// Half the height of the two-line now label.
   static let nowHalf: CGFloat = 12
 
@@ -61,16 +61,16 @@ struct DayRailView: View {
   }
 
   /// The heights as time on the scale, which the column rule reserves (owner, 2026-11-17).
-  static let footprint = DayRail.Footprint(
+  nonisolated static let footprint = DayRail.Footprint(
     event: seconds(Height.event), planned: seconds(Height.planned), due: seconds(Height.due))
 
-  private static func seconds(_ height: CGFloat) -> TimeInterval {
+  private nonisolated static func seconds(_ height: CGFloat) -> TimeInterval {
     TimeInterval(height / hourHeight) * 3600
   }
 
   /// The narrowest readable column as a fraction of `lane`: the token and the gap; 0 (nothing
   /// collapses) before the lane has a width.
-  static func minimumWidth(lane: CGFloat) -> Double {
+  nonisolated static func minimumWidth(lane: CGFloat) -> Double {
     lane > 0 ? Double((Tokens.railReadableWidth + gap) / lane) : 0
   }
 
@@ -227,7 +227,11 @@ struct DayRailView: View {
     let top = y(max(block.start, window.start))
     let bottom = y(min(block.end, window.end))
     return ClusterBlock(
-      block: block, now: now, dayStart: dayStart, zone: zone, emoji: screen.emoji, reveal: reveal
+      block: block, now: now, dayStart: dayStart, zone: zone, emoji: screen.emoji,
+      calendarColor: block.marks.first.flatMap {
+        if case .event(let event) = $0.kind { color(event) } else { nil }
+      },
+      reveal: reveal
     )
     .frame(
       width: max(lane * block.width - Self.gap, 0), height: max(bottom - top, Height.planned),
@@ -294,12 +298,13 @@ private struct MarkLabel: View {
       .padding(.trailing, 4)
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
       .background(Tokens.chipFill)
-      .background(.background)
       .overlay {
         if event.display == .tentative { Hatch().stroke(Tokens.cardBorder, lineWidth: 1) }
       }
-      .clipShape(RoundedRectangle(cornerRadius: 3))
+      // Past at 50 % over an opaque base, so the now line behind never shows through.
       .opacity(mark.end <= now ? 0.5 : 1)
+      .background(.background)
+      .clipShape(RoundedRectangle(cornerRadius: 3))
       .accessibilityElement(children: .ignore)
       .accessibilityLabel(reading)
     case .planned(let item):
@@ -423,13 +428,17 @@ enum DayFactText {
 }
 
 /// A run of marks that does not fit its columns (owner, 2026-11-17): the first mark's time and
-/// title, then `+N`; a click lists every mark, and a task row selects its row in the list.
+/// title, then `+N`; a click lists every mark, and a task row selects its row in the list. An
+/// event block is drawn as an event, with the first event's calendar bar; a task block that
+/// holds a deadline keeps its amber bar.
 private struct ClusterBlock: View {
   let block: DayRail.Block
   let now: Date
   let dayStart: Date
   let zone: TimeZone
   let emoji: [TaskItemID: String]
+  /// The first event's calendar colour, for an event block.
+  let calendarColor: Color?
   let reveal: (TaskItemID) -> Void
   @Environment(\.locale) private var locale
   @State private var isOpen = false
@@ -441,8 +450,14 @@ private struct ClusterBlock: View {
       isOpen = true
     } label: {
       HStack(alignment: .top, spacing: 4) {
+        if let calendarColor {
+          Rectangle().fill(calendarColor).frame(width: 3)
+        } else if block.holdsDeadline {
+          Rectangle().fill(Tokens.dueText).frame(width: 3)
+        }
         if let first = rows.first {
           Text(verbatim: first.when).monospacedDigit().fixedSize().layoutPriority(1)
+            .foregroundStyle(calendarColor == nil ? Color.primary : Color.secondary)
           Text(verbatim: first.title)
         }
         Text(verbatim: "+\(block.marks.count - 1)")
@@ -453,12 +468,16 @@ private struct ClusterBlock: View {
         Spacer(minLength: 0)
       }
       .lineLimit(1)
-      .padding(.horizontal, 3)
+      .padding(hasBar ? .trailing : .horizontal, hasBar ? 4 : 3)
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+      .background(calendarColor == nil ? Color.clear : Tokens.chipFill)
       .background(.background, in: RoundedRectangle(cornerRadius: 3))
       .overlay {
-        RoundedRectangle(cornerRadius: 3).strokeBorder(Tokens.checkboxStroke, lineWidth: 1)
+        if calendarColor == nil {
+          RoundedRectangle(cornerRadius: 3).strokeBorder(Tokens.checkboxStroke, lineWidth: 1)
+        }
       }
+      .clipShape(RoundedRectangle(cornerRadius: 3))
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
@@ -482,17 +501,18 @@ private struct ClusterBlock: View {
       .padding(10)
       .frame(minWidth: 220, alignment: .leading)
     }
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel(
-      RailReading.block(block, now: now, dayStart: dayStart, zone: zone, locale: locale)
-    )
-    .accessibilityAddTraits(.isButton)
+    .modifier(
+      BlockAccessibility(
+        reading: RailReading.block(block, now: now, dayStart: dayStart, zone: zone, locale: locale),
+        isOpen: $isOpen))
   }
+
+  private var hasBar: Bool { calendarColor != nil || block.holdsDeadline }
 
   private func label(_ row: ClusterRows.Row) -> some View {
     HStack(spacing: 4) {
       if row.item != nil { Checkbox(isDone: row.isDone).imageScale(.small) }
-      Text(verbatim: row.when).monospacedDigit().fixedSize().layoutPriority(1)
+      when(row).monospacedDigit().fixedSize().layoutPriority(1)
       Text(verbatim: row.title).strikethrough(row.isDone)
       Spacer(minLength: 0)
       if let emoji = row.emoji { Text(verbatim: emoji).fixedSize() }
@@ -501,6 +521,30 @@ private struct ClusterBlock: View {
     .foregroundStyle(row.isDone ? Tokens.doneText : Color.primary)
     .contentShape(Rectangle())
   }
+
+  /// A deadline's `Due 18:00` in amber, as on the scale.
+  private func when(_ row: ClusterRows.Row) -> Text {
+    row.isDeadline
+      ? Text(verbatim: row.when).fontWeight(.semibold).foregroundStyle(Tokens.dueText)
+      : Text(verbatim: row.when)
+  }
+}
+
+/// A block as one VoiceOver element: its reading, a button, and the default action, VO-Space,
+/// that opens its popover (owner, 2026-11-17).
+struct BlockAccessibility: ViewModifier {
+  let reading: String
+  @Binding var isOpen: Bool
+
+  func body(content: Content) -> some View {
+    content
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(reading)
+      .accessibilityAddTraits(.isButton)
+      .accessibilityAction { show() }
+  }
+
+  func show() { isOpen = true }
 }
 
 /// A block's marks as its popover lists them.
@@ -513,6 +557,8 @@ enum ClusterRows {
     let title: String
     let emoji: String?
     let isDone: Bool
+    /// A deadline's due mark: its time is amber.
+    let isDeadline: Bool
   }
 
   static func rows(
@@ -526,15 +572,17 @@ enum ClusterRows {
       case .event(let event):
         return Row(
           item: nil, when: time,
-          title: event.title ?? RailReading.localized("Busy", locale), emoji: nil, isDone: false)
+          title: event.title ?? RailReading.localized("Busy", locale), emoji: nil, isDone: false,
+          isDeadline: false)
       case .planned(let item):
         return Row(
           item: item.id, when: time, title: item.title, emoji: emoji[item.id],
-          isDone: item.status == .completed)
+          isDone: item.status == .completed, isDeadline: false)
       case .due(let item, let isDeadline):
         return Row(
           item: item.id, when: RailReading.due(time, isDeadline: isDeadline, locale),
-          title: item.title, emoji: emoji[item.id], isDone: item.status == .completed)
+          title: item.title, emoji: emoji[item.id], isDone: item.status == .completed,
+          isDeadline: isDeadline)
       }
     }
   }
@@ -556,9 +604,11 @@ enum RailReading {
       guard mark.start > now, minutes > 0 else { return reading }
       return localized("\(reading), \(localized("in \(minutes) minutes", locale))", locale)
     case .planned(let item):
-      return task(time, item, estimate: true, locale)
+      return task(time, item, estimate: true, deadline: false, locale)
     case .due(let item, let isDeadline):
-      return task(due(time, isDeadline: isDeadline, locale), item, estimate: false, locale)
+      return task(
+        due(time, isDeadline: isDeadline, locale), item, estimate: false, deadline: isDeadline,
+        locale)
     }
   }
 
@@ -584,10 +634,14 @@ enum RailReading {
     return String(localized: resource)
   }
 
+  /// A deadline reads `deadline` where any other task reads `task`: `Due` and `due` sound alike.
   private static func task(
-    _ when: String, _ item: TaskItem, estimate: Bool, _ locale: Locale
+    _ when: String, _ item: TaskItem, estimate: Bool, deadline: Bool, _ locale: Locale
   ) -> String {
-    var reading = localized("\(when), \(item.title), task", locale)
+    var reading =
+      deadline
+      ? localized("\(when), \(item.title), deadline", locale)
+      : localized("\(when), \(item.title), task", locale)
     if estimate, let minutes = item.estimateMinutes, minutes > 0 {
       reading = localized("\(reading), \(localized("estimate \(minutes) minutes", locale))", locale)
     }

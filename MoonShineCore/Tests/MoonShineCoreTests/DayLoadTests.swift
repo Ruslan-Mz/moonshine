@@ -594,6 +594,42 @@ extension RigaDay {
     #expect(Self.describe(one.layout(minimumWidth: minimum)) == ["09:00 0/550", "10:00 550/450"])
   }
 
+  @Test func eventsCollapseAsTasksDo() {
+    let minimum = 106.0 / 228
+    let three = (0..<3).map { _ in R.event(R.at(9), R.at(10)) }
+    #expect(
+      Self.describe(R.rail(three, footprint: R.drawn).layout(minimumWidth: minimum))
+        == ["block 09:00–10:00 0/1000 ×3"])
+    let two = R.rail(Array(three.prefix(2)), footprint: R.drawn)
+    #expect(Self.describe(two.layout(minimumWidth: minimum)) == ["09:00 0/500", "09:00 500/500"])
+    // Beside a task, the events' 55 % holds one column: the two become one event block.
+    let task = R.task(R.at(9, 10), estimate: 30)
+    let beside = R.rail(Array(three.prefix(2)), tasks: [task], footprint: R.drawn)
+    #expect(
+      Self.describe(beside.layout(minimumWidth: minimum))
+        == ["block 09:00–10:00 0/550 ×2", "09:10 550/450"])
+  }
+
+  @Test func aBlockKnowsItHoldsADeadline() throws {
+    let minimum = 106.0 / 228
+    let tasks = [
+      R.task(R.at(17, 25), estimate: nil), R.task(R.at(17, 30), estimate: nil),
+      R.task(R.at(17, 30), estimate: 15),
+    ]
+    let due = R.task(nil, estimate: nil, due: R.at(17, 30))
+    func block(_ deadlines: Set<TaskItemID>) throws -> DayRail.Block {
+      let layout = R.rail(tasks: tasks + [due], deadlines: deadlines, footprint: R.drawn)
+        .layout(minimumWidth: minimum)
+      #expect(Self.describe(layout) == ["block 17:25–18:02 0/1000 ×4"])
+      guard case .block(let block) = try #require(layout.first) else { throw Missing.block }
+      return block
+    }
+    #expect(try block([due.id]).holdsDeadline)
+    #expect(try !block([]).holdsDeadline)
+  }
+
+  enum Missing: Error { case block }
+
   @Test func aDueMarkTakesItsLabelsHeight() {
     let task = R.task(R.at(16), estimate: nil)
     let due = R.task(nil, estimate: nil, due: R.at(16))
@@ -624,7 +660,8 @@ extension RigaDay {
     #expect(DayRail.Footprint(event: 1e9, planned: 1e9, due: 1e9).due == 86_400)
     let rail = Self.rail()
     let all = rail.marks.map { DayRail.Placed.mark($0) }
-    for none: Double in [0, -1, .nan, -.infinity] {
+    // A tiny width is as many columns as marks: nothing collapses, nothing traps.
+    for none: Double in [0, -1, .nan, -.infinity, 1e-19, .leastNonzeroMagnitude] {
       #expect(rail.layout(minimumWidth: none) == all)
     }
     // Above the lane: every run of two collapses, a lone mark never does.

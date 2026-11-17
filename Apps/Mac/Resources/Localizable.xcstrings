@@ -145,6 +145,22 @@
         }
       }
     },
+    "%@, %@, deadline": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@, deadline"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@, %2$@, крайний срок"
+          }
+        }
+      }
+    },
     "%@, %@, event": {
       "localizations": {
         "en": {
