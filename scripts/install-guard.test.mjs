@@ -3,7 +3,7 @@
 // runs, into a temporary HOME (scripts/guard-fixture.mjs).
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -11,7 +11,20 @@ import { commit, denyListFile, environment, git, install, installed, ok, reposit
 
 const repo = join(dirname(fileURLToPath(import.meta.url)), "..");
 const github = "https://github.com/Ruslan-Mz/moonshine.git";
-const guardFiles = ["binary-allowlist.txt", "commit-scan.mjs", "gh-post.mjs", "matcher.mjs", "merge.mjs", "plain-rules.mjs", "pre-push.mjs"];
+const guardFiles = [
+  "binary-allowlist.txt",
+  "commit-scan.mjs",
+  "gh-post.mjs",
+  "github.mjs",
+  "matcher.mjs",
+  "merge.mjs",
+  "plain-rules.mjs",
+  "pre-push.mjs",
+  "review-lock.mjs",
+  "review.mjs",
+];
+// The claude the installer finds on this PATH, if any (P-HR).
+const claudeOnPath = spawnSync("/bin/sh", ["-c", "command -v claude"], { encoding: "utf8" }).stdout.trim();
 
 function setUp() {
   const work = repository();
@@ -37,16 +50,21 @@ test("a good install writes the guard, the config and the hook, and sets core.ho
     "commit-scan.mjs",
     "config.json",
     "gh-post.mjs",
+    "github.mjs",
     "matcher.mjs",
     "merge.mjs",
     "plain-rules.mjs",
     "pre-push.mjs",
+    "review-lock.mjs",
+    "review.mjs",
     "xcbuild.sh",
   ]);
-  assert.deepEqual(readdirSync(installed(work, "bin")).sort(), ["gh-post", "xcbuild"]);
+  assert.deepEqual(readdirSync(installed(work, "bin")).sort(), ["gh-post", "review", "xcbuild"]);
   assert.deepEqual(JSON.parse(readFileSync(installed(work, "guard", "config.json"), "utf8")), {
     denyList: work.denyList,
     scratchRoots: [join(work.root, "scratch", slug(work.cwd))],
+    mainGitDir: realpathSync(join(work.cwd, ".git")),
+    ...(claudeOnPath ? { claude: claudeOnPath } : {}),
   });
   assert.equal(ok(work, "config", "--get", "core.hooksPath").trim(), installed(work, "hooks"));
 });
@@ -291,4 +309,118 @@ test("running it from a subfolder of the checkout installs", () => {
   const work = setUp();
   assert.equal(install(work, [work.denyList], join(work.cwd, "scripts")).status, 0);
   assert.equal(ok(work, "config", "--get", "core.hooksPath").trim(), installed(work, "hooks"));
+});
+
+// P-HR: the review command, claude's link and the owner's plugin list.
+
+/// A folder holding a stand-in `claude` (a link, as the real one is) and links to node and git.
+function claudeFolder(work, name = "claude-bin") {
+  const folder = join(work.root, name);
+  mkdirSync(folder);
+  writeFileSync(join(work.root, "claude-target"), "#!/bin/sh\necho 9.9.9\n", { mode: 0o755 });
+  symlinkSync(join(work.root, "claude-target"), join(folder, "claude"));
+  const git = spawnSync("/bin/sh", ["-c", "command -v git"], { encoding: "utf8" }).stdout.trim();
+  symlinkSync(process.execPath, join(folder, "node"));
+  symlinkSync(git, join(folder, "git"));
+  return folder;
+}
+
+test("the installed gh-post and hook load all their modules", () => {
+  const work = setUp();
+  assert.equal(install(work, [work.denyList]).status, 0);
+  const usage = spawnSync(installed(work, "bin", "gh-post"), [], { cwd: work.cwd, env: environment(work.home), encoding: "utf8" });
+  assert.equal(usage.status, 2, usage.stderr);
+  const hook = spawnSync(installed(work, "hooks", "pre-push"), ["origin", work.remote], {
+    cwd: work.cwd,
+    env: environment(work.home),
+    input: "",
+    encoding: "utf8",
+  });
+  assert.equal(hook.status, 0, hook.stderr);
+});
+
+test("claude's link, not its target, goes into config.json and the review command's PATH", () => {
+  const work = setUp();
+  const folder = claudeFolder(work);
+  const result = install(work, [work.denyList], work.cwd, { PATH: `${folder}:/usr/bin:/bin` });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(readFileSync(installed(work, "guard", "config.json"), "utf8")).claude, join(folder, "claude"));
+  assert.equal(
+    readFileSync(installed(work, "bin", "review"), "utf8").split("\n")[3],
+    `exec /usr/bin/env -i HOME='${work.home}' PATH='/usr/bin:/bin:/usr/sbin:/sbin:${folder}:${folder}:/opt/homebrew/bin:/usr/local/bin' '${folder}/node' '${installed(work, "guard", "review.mjs")}' "$@"`,
+  );
+});
+
+test("the review command refuses inside a headless run, even with the variable empty", () => {
+  const work = setUp();
+  assert.equal(install(work, [work.denyList]).status, 0);
+  const out = join(work.root, "ran");
+  writeFileSync(installed(work, "guard", "review.mjs"), `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(out)}, "x");\n`);
+  const result = spawnSync(installed(work, "bin", "review"), ["7", "standard"], {
+    cwd: work.cwd,
+    env: { ...environment(work.home), MOONSHINE_HEADLESS: "" },
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /inside a headless review/);
+  assert.ok(!existsSync(out), "review.mjs must not run");
+});
+
+test("the review command runs review.mjs with HOME and a fixed PATH only", () => {
+  const work = setUp();
+  const folder = claudeFolder(work);
+  assert.equal(install(work, [work.denyList], work.cwd, { PATH: `${folder}:/usr/bin:/bin` }).status, 0);
+  const out = join(work.root, "env.json");
+  writeFileSync(
+    installed(work, "guard", "review.mjs"),
+    `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(out)}, JSON.stringify({ env: process.env, args: process.argv.slice(2) }));\n`,
+  );
+  const result = spawnSync(installed(work, "bin", "review"), ["7", "deep"], {
+    cwd: work.cwd,
+    env: { HOME: "/elsewhere", PATH: "/usr/bin:/bin", NODE_OPTIONS: "--require=/tmp/x.js", GH_TOKEN: "x" },
+    encoding: "utf8",
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const { env, args } = JSON.parse(readFileSync(out, "utf8"));
+  assert.deepEqual(args, ["7", "deep"]);
+  // macOS adds __CF_USER_TEXT_ENCODING to every process.
+  assert.deepEqual(Object.keys(env).filter((name) => name !== "__CF_USER_TEXT_ENCODING").sort(), ["HOME", "PATH"]);
+  assert.equal(env.HOME, work.home, "HOME is the installer's, not the caller's");
+});
+
+test("without claude on PATH the install succeeds and the review command refuses", () => {
+  const work = setUp();
+  const folder = join(work.root, "no-claude");
+  mkdirSync(folder);
+  symlinkSync(process.execPath, join(folder, "node"));
+  symlinkSync(spawnSync("/bin/sh", ["-c", "command -v git"], { encoding: "utf8" }).stdout.trim(), join(folder, "git"));
+  const result = install(work, [work.denyList], work.cwd, { PATH: `${folder}:/usr/bin:/bin` });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /claude was not found/);
+  assert.ok(!("claude" in JSON.parse(readFileSync(installed(work, "guard", "config.json"), "utf8"))));
+  const review = spawnSync(installed(work, "bin", "review"), ["7", "standard"], { cwd: work.cwd, env: { HOME: work.home }, encoding: "utf8" });
+  assert.equal(review.status, 1);
+  assert.match(review.stderr, /claude was not found at install time/);
+});
+
+test("a claude folder that would need quoting is refused", () => {
+  const work = setUp();
+  const folder = claudeFolder(work, "it's");
+  refused(work, install(work, [work.denyList], work.cwd, { PATH: `${folder}:/usr/bin:/bin` }), "a quote, a backslash or a control character");
+});
+
+test("a reinstall keeps the owner's review-plugins.txt byte for byte; a first install creates none", () => {
+  const work = setUp();
+  assert.equal(install(work, [work.denyList]).status, 0);
+  assert.ok(!existsSync(installed(work, "review-plugins.txt")), "the installer never creates it");
+  const path = installed(work, "review-plugins.txt");
+  const bytes = Buffer.concat([Buffer.from("alpha@builtin\r\nbeta@builtin\n"), Buffer.from([0xc3, 0xa9]), Buffer.from("gamma@builtin")]);
+  writeFileSync(path, bytes, { mode: 0o600 });
+  chmodSync(path, 0o600);
+  const before = statSync(path);
+  assert.equal(install(work, [work.denyList]).status, 0);
+  assert.equal(install(work, [work.denyList]).status, 0);
+  const after = statSync(path);
+  assert.ok(readFileSync(path).equals(bytes));
+  assert.deepEqual([after.ino, after.mode, after.mtimeMs], [before.ino, before.mode, before.mtimeMs]);
 });

@@ -40,8 +40,8 @@ function unescapeSlashes(text) {
   return text.replace(/\\\//g, "/").replace(/%2f/gi, "/");
 }
 
-/// The installed config.json next to this file: { denyList, scratchRoots }. `stop` is called with
-/// a message (no path) and must not return.
+/// The installed config.json next to this file: { denyList, scratchRoots, mainGitDir, claude? }.
+/// `stop` is called with a message (no path) and must not return.
 export function config(stop) {
   let value;
   try {
@@ -55,6 +55,7 @@ export function config(stop) {
   if (!Array.isArray(roots) || roots.length === 0 || !roots.every(absolute)) {
     stop("config.json names no absolute scratchpad roots; reinstall the guard (CLAUDE.md → Commands → Guard).");
   }
+  if (!absolute(value.mainGitDir)) stop("config.json names no main git folder; reinstall the guard (CLAUDE.md → Commands → Guard).");
   return value;
 }
 

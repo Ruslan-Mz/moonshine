@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -32,7 +32,8 @@ test("/review-pr reads a fork PR's diff only, before any worktree is created (PU
   assert.match(skill, /nothing from the PR is built, tested or run/);
   assert.match(skill, /\*\*Read-only review: the head is a fork's code; nothing from this PR was built, tested or run\.\*\*/);
   const cleanUp = skill.slice(skill.indexOf("## 6. Clean up"));
-  assert.match(cleanUp, /^A read-only review \(§1, step 1\) created no worktree and no probe worktree: run only `git worktree prune`\./m);
+  // P-HR: the owner's SKILL.md patch, applied after the merge, drops the prune; until then the old line stands.
+  assert.match(cleanUp, /^A read-only review \(§1, step 1\) created no worktree and no probe worktree: (?:run only `git worktree prune`|remove nothing)\./m);
 });
 
 for (const [agent, rule] of [
@@ -250,4 +251,52 @@ test("the template allows read-only gh api on this repository and keeps every wr
   ]) {
     assert.ok(deny.has(rule), rule);
   }
+});
+
+// P-HR (owner, 2026-11-16): the headless review starts only through the installed wrapper, by its
+// absolute path and outside the sandbox; nobody prunes worktrees (a sibling author worktree is live);
+// a session never starts claude itself; and the main checkout's commondir is write-denied.
+test("the template starts a headless review only through the installed wrapper and denies prune and claude", () => {
+  const review = "/Users/<you>/.config/moonshine/bin/review";
+  assert.ok(template.permissions.allow.includes(`Bash(${review} *)`));
+  assert.ok(template.sandbox.excludedCommands.includes(`${review} *`));
+  assert.ok(!template.permissions.allow.some((rule) => /worktree prune/.test(rule)), "no allow for git worktree prune");
+  for (const rule of ["Bash(git worktree prune*)", "Bash(claude *)", "Bash(*/claude *)"]) assert.ok(template.permissions.deny.includes(rule), rule);
+  assert.ok(template.sandbox.filesystem.denyWrite.includes("./.git/commondir"));
+  for (const note of [`Bash(${review} *)`, "Bash(git worktree prune*)", "Bash(claude *), Bash(*/claude *)", "sandbox.filesystem.denyWrite ./.git/commondir"]) {
+    assert.ok(Object.hasOwn(template._notes, note), note);
+  }
+});
+
+// P-HR (owner, 2026-11-17): the hook tests write no bytecode. A .pyc beside the hook can be loaded in
+// place of its source, and the headless review refuses an ignored file under .claude/. The suite
+// runs as CI runs it, on a copy of the hooks folder. A python3 shim first on PATH clears a cache
+// prefix (Apple's python3 has one), so bytecode would land beside the source as on CI.
+const hookTests = /^\s*(python3 .*-m unittest discover -s \.claude\/hooks .*)$/m;
+
+/// The .pyc files and __pycache__ folders a hook-test command leaves under a copy's .claude/.
+function bytecodeAfter(command) {
+  const copy = realpathSync(mkdtempSync(join(tmpdir(), "hooks-")));
+  mkdirSync(join(copy, ".claude", "hooks"), { recursive: true });
+  for (const name of ["read-boundary.py", "test_read_boundary.py"]) {
+    copyFileSync(join(repository, ".claude", "hooks", name), join(copy, ".claude", "hooks", name));
+  }
+  const real = spawnSync("/bin/sh", ["-c", "command -v python3"], { encoding: "utf8" }).stdout.trim();
+  mkdirSync(join(copy, "bin"));
+  writeFileSync(join(copy, "bin", "python3"), `#!/bin/sh\nexec '${real}' -X pycache_prefix= "$@"\n`, { mode: 0o755 });
+  const { PYTHONDONTWRITEBYTECODE, PYTHONPYCACHEPREFIX, ...env } = process.env;
+  const run = spawnSync("/bin/sh", ["-c", command], { cwd: copy, env: { ...env, PATH: `${join(copy, "bin")}:${env.PATH}` }, encoding: "utf8" });
+  assert.equal(run.status, 0, run.stderr);
+  return readdirSync(join(copy, ".claude"), { recursive: true }).filter((path) => /(^|\/)__pycache__(\/|$)|\.pyc$/.test(path));
+}
+
+test("the hook tests run with python3 -B and leave no __pycache__ under .claude/", () => {
+  const command = hookTests.exec(readFileSync(join(repository, ".github/workflows/ci.yml"), "utf8"))?.[1];
+  assert.equal(command, "python3 -B -m unittest discover -s .claude/hooks -p 'test_*.py'");
+  assert.ok(readFileSync(join(repository, "CLAUDE.md"), "utf8").includes(`\`${command}\``), "CLAUDE.md documents the same command");
+  assert.deepEqual(bytecodeAfter(command), []);
+});
+
+test("without -B the same suite leaves a __pycache__ (the check above can fail)", () => {
+  assert.notDeepEqual(bytecodeAfter("python3 -m unittest discover -s .claude/hooks -p 'test_*.py'"), []);
 });

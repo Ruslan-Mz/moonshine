@@ -14,11 +14,15 @@
 // matcher; a match refuses the post and prints kinds and line numbers only. gh gets the bytes that
 // were scanned, on stdin, so the file cannot change in between. After a comment, a review or a PR
 // is sent, one line goes to the state file (merge.mjs): its kind, PR, id and session, no text.
+// While a headless review's lock is live for this checkout (review-lock.mjs), only that run's one
+// COMMENT review of its PR and head is sent, whatever the environment says; under
+// MOONSHINE_HEADLESS with no live lock, nothing is.
 import { spawnSync } from "node:child_process";
 import { closeSync, constants, fstatSync, openSync, readFileSync, realpathSync } from "node:fs";
 import { relative, sep } from "node:path";
 import { config, denyList, match, unreadable } from "./matcher.mjs";
-import { merge, recordPost } from "./merge.mjs";
+import { merge, readPosts, recordPost } from "./merge.mjs";
+import { checkoutClean, liveLockFor } from "./review-lock.mjs";
 
 const maxBytes = 1 << 20;
 const maxTitle = 256;
@@ -146,7 +150,35 @@ function currentBranch() {
   return branch;
 }
 
+/// The live review lock that covers this checkout, or null; a malformed one, or the variable with
+/// no lock, refuses.
+function headlessLock() {
+  const where = spawnSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" });
+  const found = liveLockFor(where.status === 0 ? where.stdout.trim() : null);
+  if (found?.malformed) refuse(`The review lock ${found.path} cannot be read; the owner removes it when no review runs.`);
+  if (found === null && "MOONSHINE_HEADLESS" in process.env) refuse("Inside a headless review only its own review is sent, and no review lock is live.");
+  return found?.lock ?? null;
+}
+
+/// Under a live lock: the run's one COMMENT review of its PR and head, from its session, with the
+/// checkout still at that head.
+function ownReview(lock, pr, text, session) {
+  if (pr !== lock.pr || session !== lock.session) refuse("A headless review runs here: only its own review of its PR is sent.");
+  let review;
+  try {
+    review = JSON.parse(text);
+  } catch {
+    refuse("The review file is not valid JSON.");
+  }
+  if (review?.event !== "COMMENT" || review.commit_id !== lock.head) refuse("A headless review posts only a COMMENT on the head it reviews.");
+  const unclean = checkoutClean(lock.top, lock.head);
+  if (unclean) refuse(`The checkout changed during the headless review: ${unclean}.`);
+  if (readPosts(refuse).some((post) => post.kind === "review" && post.session === lock.session)) refuse("This headless review has posted its review already.");
+}
+
 const [command, ...rest] = process.argv.slice(2);
+const headless = headlessLock();
+if (headless && command !== "review") refuse("A headless review runs here: only its own review is sent.");
 let args;
 let text;
 let session;
@@ -164,6 +196,7 @@ switch (command) {
     ({ text, session } = scratchpadText(rest[1]));
     args = ["api", "--method", "POST", `repos/{owner}/{repo}/pulls/${prNumber(rest[0])}/reviews`, "--input", "-"];
     checks.push("json");
+    if (headless) ownReview(headless, rest[0], text, session);
     recorded = { kind: "review", pr: rest[0], id: reviewId };
     break;
   case "pr-create": {

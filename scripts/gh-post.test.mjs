@@ -4,7 +4,8 @@
 // entry is invented.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, linkSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, linkSync, mkdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { denyListFile, environment, install, installed, ok, repository, secret, slug, vault } from "./guard-fixture.mjs";
@@ -319,4 +320,96 @@ test("a failed post records nothing", () => {
 test("the installer creates the state folder", () => {
   const context = setUp();
   assert.ok(existsSync(installed(context.work, "state")));
+});
+
+// P-HR (owner's addition 3): while a headless review's lock is live for the checkout, only that
+// run's one COMMENT review of its PR and head is sent, whatever the environment says. Every test
+// here runs with MOONSHINE_HEADLESS unset, except where it says so.
+
+const runSession = "0a1b2c3d-0000-4000-8000-000000000002";
+
+/// Writes a lock for the checkout, held by this test process (alive), as review-lock.mjs names it.
+function lockFor(context, extra = {}) {
+  const top = realpathSync(context.work.cwd);
+  const ps = spawnSync("/bin/ps", ["-o", "lstart=", "-p", String(process.pid)], { env: { PATH: "/usr/bin:/bin", LC_ALL: "C", LANG: "C", TZ: "UTC0" }, encoding: "utf8" });
+  // Without ps (a session's sandbox) a stand-in start time, which counts as live.
+  const start = ps.status === 0 && ps.stdout.trim() !== "" ? ps.stdout.trim() : "unknown";
+  const head = context.git("rev-parse", "HEAD").trim();
+  const lock = { pr: "27", head, session: runSession, top, sessionDir: join(context.scratchRoot, runSession), wrapper: { pid: process.pid, start }, ...extra };
+  const path = installed(context.work, "state", `review-${createHash("sha256").update(top).digest("hex").slice(0, 16)}.json`);
+  writeFileSync(path, typeof extra === "string" ? extra : JSON.stringify(lock));
+  return { head, path, folder: join(context.scratchRoot, runSession, "scratchpad") };
+}
+
+function reviewJSON(head, event = "COMMENT") {
+  return JSON.stringify({ event, commit_id: head, body: "a review" });
+}
+
+const unset = { MOONSHINE_HEADLESS: undefined };
+
+test("under a live lock the run's own COMMENT review is sent", () => {
+  const context = setUp();
+  const { head, folder } = lockFor(context);
+  const result = context.postWith(unset, "review", "27", context.file("review.json", reviewJSON(head), folder));
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(context.sent().includes("pulls/27/reviews"));
+});
+
+// PR #63 round 1: how every real headless review posts, with the variable that claude's environment
+// carries.
+test("under a live lock and MOONSHINE_HEADLESS the run's own COMMENT review is sent", () => {
+  const context = setUp();
+  const { head, folder } = lockFor(context);
+  const result = context.postWith({ MOONSHINE_HEADLESS: "1" }, "review", "27", context.file("review.json", reviewJSON(head), folder));
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(context.sent().includes("pulls/27/reviews"));
+});
+
+for (const [name, post] of [
+  ["a review of another PR", (c, l) => c.postWith(unset, "review", "28", c.file("r.json", reviewJSON(l.head), l.folder))],
+  ["an APPROVE", (c, l) => c.postWith(unset, "review", "27", c.file("r.json", reviewJSON(l.head, "APPROVE"), l.folder))],
+  ["a review of another head", (c, l) => c.postWith(unset, "review", "27", c.file("r.json", reviewJSON("b".repeat(40)), l.folder))],
+  ["a review file from another session", (c, l) => c.postWith(unset, "review", "27", c.file("r.json", reviewJSON(l.head)))],
+  ["a comment", (c, l) => c.postWith(unset, "comment", "27", c.file("b.md", "text\n", l.folder))],
+  ["a PR edit", (c, l) => c.postWith(unset, "pr-edit", "27", c.file("b.md", "text\n", l.folder))],
+  ["a merge", (c) => c.postWith(unset, "merge", "27")],
+]) {
+  test(`under a live lock ${name} is refused`, () => {
+    const context = setUp();
+    const lock = lockFor(context);
+    refused(context, post(context, lock), "headless review");
+  });
+}
+
+test("under a live lock a dirty checkout refuses the run's review", () => {
+  const context = setUp();
+  const { head, folder } = lockFor(context);
+  writeFileSync(join(context.work.cwd, "README.md"), "edited\n");
+  refused(context, context.postWith(unset, "review", "27", context.file("review.json", reviewJSON(head), folder)), "changed during the headless review");
+});
+
+test("under a live lock a second review from the run's session is refused", () => {
+  const context = setUp();
+  const { head, folder } = lockFor(context);
+  writeFileSync(installed(context.work, "state", "posts.jsonl"), JSON.stringify({ kind: "review", pr: 27, id: 5, session: runSession, time: "t" }) + "\n");
+  refused(context, context.postWith(unset, "review", "27", context.file("review.json", reviewJSON(head), folder)), "posted its review already");
+});
+
+test("a stale lock (its process gone) does not restrict", () => {
+  const context = setUp();
+  const dead = Number(spawnSync(process.execPath, ["-e", "console.log(process.pid)"], { encoding: "utf8" }).stdout.trim());
+  lockFor(context, { wrapper: { pid: dead, start: "x" } });
+  const result = context.postWith(unset, "comment", "27", context.file("body.md", "all fixed\n"));
+  assert.equal(result.status, 0, result.stderr);
+});
+
+test("a malformed lock refuses every post and names its file", () => {
+  const context = setUp();
+  lockFor(context, "{");
+  refused(context, context.postWith(unset, "comment", "27", context.file("body.md", "all fixed\n")), "cannot be read");
+});
+
+test("the variable with no live lock refuses every post, even when empty", () => {
+  const context = setUp();
+  refused(context, context.postWith({ MOONSHINE_HEADLESS: "" }, "comment", "27", context.file("body.md", "all fixed\n")), "headless review");
 });

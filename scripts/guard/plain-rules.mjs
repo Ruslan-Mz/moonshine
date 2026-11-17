@@ -9,9 +9,9 @@
 // failure (as for commit-scan.mjs); it runs from any folder of the checkout, with any config.
 import { printable } from "./matcher.mjs";
 
-const spec = "docs/specs/phase-1-see.md";
-
-/// Paths a plain pull request may change (old and new name alike).
+/// Paths a plain pull request may change (old and new name alike). Specs and design notes are text
+/// nothing runs (owner, 2026-11-16, P-HR): a plain PR may record an owner decision in them. Only
+/// Markdown there, and only data in fixtures/ (owner, 2026-11-17, PR #63 round 1).
 const plainPaths = [
   /^Apps\/Mac\/Sources\/(?:Today|Lines|Week|Palette)\/[^/]+\.swift$/,
   /^Apps\/Mac\/Sources\/(?:RootView|Tokens|ViewCommands)\.swift$/,
@@ -20,11 +20,18 @@ const plainPaths = [
   /^MoonShineCore\/Tests\/(?:[^/]+\/)*[^/]+\.swift$/,
   /^MoonShineCore\/Sources\/MoonShineCore\/Services\/(?:Overview|Stats|Trace|DayLoad)\.swift$/,
   /^MoonShineCore\/Sources\/MoonShineFixtures\/[^/]+\.swift$/,
-  /^fixtures\/.+$/,
+  /^fixtures\/(?:[^/]+\/)*(?:[^/]+\.(?:md|json|ya?ml|txt)|\.gitkeep)$/,
   /^docs\/method\/log\/\d{4}-\d{2}\.md$/,
   /^docs\/method\/forecast\.md$/,
-  new RegExp(`^${spec.replace(/[./-]/g, "\\$&")}$`),
+  /^docs\/specs\/(?:[^/]+\/)*[^/]+\.md$/,
+  /^design\/(?:[^/]+\/)*[^/]+\.md$/,
 ];
+// Claude Code's own instructions, at any depth, are never plain: it loads a nested CLAUDE.md too.
+export const instructions = /(?:^|\/)(?:claude\.md|claude\.local\.md|\.claude|\.mcp\.json)(?:\/|$)/i;
+// A tool's config is never plain, wherever it sits: Prettier, ESLint, npm and git read it and may
+// load code it names (owner, 2026-11-17, PR #63 round 1).
+const toolConfig =
+  /(?:^|\/)(?:\.prettierrc[^/]*|\.prettierignore|prettier\.config\.[^/]*|\.eslintrc[^/]*|eslint\.config\.[^/]*|package(?:-lock)?\.json|\.npmrc|\.nvmrc|[jt]sconfig[^/]*\.json|\.editorconfig|\.gitattributes|\.gitignore|node_modules)(?:\/|$)/i;
 
 const testPath = /^(?:Apps\/Mac\/Tests|MoonShineCore\/Tests)\//;
 
@@ -220,32 +227,6 @@ export function readChanges(git, base, head) {
   return result;
 }
 
-/// Whether each run of changed lines in the spec only ticks boxes: as many removed lines as added
-/// ones, in order, each `- [ ]` become `- [x]` with the rest unchanged.
-function onlyTicks(change) {
-  if (change.status !== "M") return false;
-  for (const hunk of change.hunks) {
-    const runs = [];
-    let current = null;
-    for (const line of hunk) {
-      if (line.kind === " ") current = null;
-      else {
-        if (!current) runs.push((current = { removed: [], added: [] }));
-        if (line.kind === "-" && current.added.length > 0) return false;
-        (line.kind === "-" ? current.removed : current.added).push(line.text);
-      }
-    }
-    for (const { removed, added } of runs) {
-      if (removed.length !== added.length) return false;
-      for (let index = 0; index < removed.length; index += 1) {
-        const box = /^(\s*)- \[ \](.*)$/.exec(removed[index]);
-        if (!box || added[index] !== `${box[1]}- [x]${box[2]}`) return false;
-      }
-    }
-  }
-  return true;
-}
-
 /// Plain, or risky with the reasons. `entries` is the deny-list: a path that matches it is named by
 /// kind only, so the caller must pass it.
 export function classify(changes, entries) {
@@ -253,7 +234,8 @@ export function classify(changes, entries) {
   const reasons = [];
   for (const change of changes) {
     const where = printable(change.path, entries);
-    if (!plainPaths.some((pattern) => pattern.test(change.path))) {
+    const name = change.path.normalize("NFC");
+    if (instructions.test(name) || toolConfig.test(name) || !plainPaths.some((pattern) => pattern.test(change.path))) {
       reasons.push(`a path outside the plain list: ${where}`);
       continue;
     }
@@ -264,10 +246,6 @@ export function classify(changes, entries) {
     }
     if (change.binary) {
       reasons.push(`a binary change: ${where}`);
-      continue;
-    }
-    if (change.path === spec && !onlyTicks(change)) {
-      reasons.push(`a spec change beyond ticking boxes: ${where}`);
       continue;
     }
     // A catalog's value is markdown to `Text`: a link in it opens the browser on a click.

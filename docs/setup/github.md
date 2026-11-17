@@ -39,6 +39,15 @@ A job skipped by its condition counts as passed: a docs-only pull request, whose
 
 From 2026-12-02 GitHub blocks `pull_request_target` for public repositories unless an Actions event policy allows it; brownouts before that date apply the block for a few hours (the second, 2026-11-16 16:00–18:00 UTC, stopped two Guard runs on #62 with `startup_failure`: no job and no message). The owner added an event policy that allows `pull_request_target` for `.github/workflows/guard.yml` only (owner, 2026-11-16). Reason: `guard.yml` never checks out or runs the pull request's code. It runs as `main` holds it, fetches the pull request's commits as data and scans them, and reads the title, body and branch name from the event file (CLAUDE.md → Commands → Guard, "The guard in CI"). No other workflow may use `pull_request_target`: one that checks out or runs a pull request's files would run them with the base repository's token and secrets.
 
+The policy as the owner set it (owner, 2026-11-16; P-HR):
+
+- name `enable pull_request_target`, state **Active**;
+- targeted to `.github/workflows/guard.yml` only;
+- allowed events `pull_request_target` and `push`;
+- created on 2026-11-16, ahead of GitHub's default block of 2026-12-02.
+
+What runs `guard.yml` (`guard.yml`'s `on:`, pinned by `scripts/guard-workflow.test.mjs`): `pull_request_target` with `opened`, `synchronize` and `reopened`, so every new head is scanned, and `edited`, so a changed title or body is scanned again; `push` to `main`. What never runs it: `pull_request` (its secrets and code would be the PR's own), `workflow_dispatch` and `schedule` (the scheduled scan of branches is the PUB follow-up, below), `labeled` and the other activity types (nothing new to scan). A change to these events is a reviewed edit of `guard.yml` and of the test, and, for an event the policy does not list, of the policy.
+
 Check after a change to the policy: a body edit of an open pull request (`gh-post pr-edit`) starts a Guard run that succeeds. A Guard run that ends in `startup_failure` with no job usually means the policy does not cover the run, not a fault in the branch.
 
 ## Live checks after step 6

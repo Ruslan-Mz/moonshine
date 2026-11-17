@@ -9,13 +9,15 @@
 // installed binary-allowlist.txt. Commits count as already on the remote only when `git ls-remote`
 // on the push URL reports them. A finding names the commit and the file and line, never the
 // matched text. A missing config, allowlist or deny-list, an empty deny-list, or a git error
-// blocks the push. The commit scan itself is commit-scan.mjs, shared with the CI guard.
+// blocks the push. The commit scan itself is commit-scan.mjs, shared with the CI guard. Nothing is
+// pushed under MOONSHINE_HEADLESS or while a headless review's lock is live for this checkout.
 import { spawnSync } from "node:child_process";
 import { readFileSync, realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { binaryAllowlist, scan } from "./commit-scan.mjs";
 import { denyList, match } from "./matcher.mjs";
+import { liveLockFor } from "./review-lock.mjs";
 
 const zero = /^0+$/;
 const mainRef = "refs/heads/main";
@@ -27,6 +29,9 @@ const guardFiles = [
   "gh-post.mjs",
   "merge.mjs",
   "plain-rules.mjs",
+  "github.mjs",
+  "review.mjs",
+  "review-lock.mjs",
   "binary-allowlist.txt",
 ];
 
@@ -111,6 +116,10 @@ function commits(localSha, onRemote) {
 }
 
 warnIfStale();
+if ("MOONSHINE_HEADLESS" in process.env) block("Nothing is pushed inside a headless review.");
+if (liveLockFor(run(["rev-parse", "--show-toplevel"]).stdout?.trim() || null)) {
+  block("A headless review runs in this checkout (or its review lock cannot be read); push when it has finished.");
+}
 
 const refs = readFileSync(0, "utf8")
   .split("\n")
