@@ -2,7 +2,17 @@
 title: Day rail — dense day (exploration)
 status: exploration, not decided
 date: 2026-11-17
-artboards: [mockups/Rail-Compare.dc.html, mockups/Rail1-Compressed.dc.html, mockups/Rail1-Compressed-RU.dc.html, mockups/Rail2-Agenda.dc.html, mockups/Rail2-Agenda-RU.dc.html, mockups/Rail3-Hybrid.dc.html, mockups/Rail3-Hybrid-RU.dc.html, "+ -Dark variants"]
+artboards:
+  [
+    mockups/Rail-Compare.dc.html,
+    mockups/Rail1-Compressed.dc.html,
+    mockups/Rail1-Compressed-RU.dc.html,
+    mockups/Rail2-Agenda.dc.html,
+    mockups/Rail2-Agenda-RU.dc.html,
+    mockups/Rail3-Hybrid.dc.html,
+    mockups/Rail3-Hybrid-RU.dc.html,
+    "+ -Dark variants",
+  ]
 related: ["[[today]]", "[[components]]"]
 ---
 
@@ -43,13 +53,13 @@ Proportional (today's build) while the day fits; direction 1 above the threshold
 
 ## Why direction 1
 
-| | 1 · compressed | 2 · agenda + bar | 3 · hybrid |
-| --- | --- | --- | --- |
-| Dense day, 300 pt | full titles | full titles | = 1 |
-| 213 pt, Russian | 12–19 characters | 3–9 characters | = 1 (dense), proportional labels otherwise |
-| Shape of the day | in place (scale + labelled gaps) | separate bar, needs hover | in place |
-| Same look every day | yes | yes | no: flips when one task is added |
-| Build and test cost | one layout pass in Core | list + bar | two layouts + threshold |
+|                     | 1 · compressed                   | 2 · agenda + bar          | 3 · hybrid                                 |
+| ------------------- | -------------------------------- | ------------------------- | ------------------------------------------ |
+| Dense day, 300 pt   | full titles                      | full titles               | = 1                                        |
+| 213 pt, Russian     | 12–19 characters                 | 3–9 characters            | = 1 (dense), proportional labels otherwise |
+| Shape of the day    | in place (scale + labelled gaps) | separate bar, needs hover | in place                                   |
+| Same look every day | yes                              | yes                       | no: flips when one task is added           |
+| Build and test cost | one layout pass in Core          | list + bar                | two layouts + threshold                    |
 
 Cost of direction 1: a pure layout function in Core (items → rows, gaps, duration lines), testable without UI; absolute position is exact only within a stretch, and the gap label carries the range across a break.
 
@@ -57,18 +67,18 @@ Cost of direction 1: a pure layout function in Core (items → rows, gaps, durat
 
 No new colours. Mockup-only tokens: `canvas`, `scroller`, `scrollTrack`.
 
-| Name | Direction | New / changed | Spec |
-| --- | --- | --- | --- |
-| `DayRailRow` | 1, 3 | new (replaces the label layout of `EventBlock`, `TimedTaskBlock`, `DueMark` in the compressed layout) | full width, min 22; event: `chipFill` + 3 pt calendar bar, past 50 %; task: 1 pt `badgeBorder` outline, 10 pt checkbox, emoji at the trailing edge, done = `doneText` + strike; due: 3 pt bar `dueText` (deadline) or `checkboxStroke` (other), `Due 18:00` semibold amber or `due 18:00` tertiary; title 11.5 (was 10.5) |
-| `RailTimeGutter` | 1, 3 | new | 40 pt (300) / 36 pt (213); start 11 `secondary`, end 10 `tertiary` |
-| `RailGap` | 1, 3 | new | 18 pt, dotted 1.5 `badgeBorder` stub, range 10.5 `tertiary`; 34 pt with the now line |
-| `DurationLine` | 1, 3 | new | 2 pt, calendar colour (event) or `secondary` (task), 70 % |
-| `MiniDayScale` | 2 | new | track 10 × list height, radius 5, `track`; event bar 6; task tick 8 × 1.5 `secondary`; task span 2; deadline tick `dueText` 2.5; now 1.5 accent + 5 pt triangle; hour labels 9 pt |
-| `AgendaRow` | 2 | new | 22 pt, time column 34, event end time 10.5 `tertiary`; hover `navSel` |
-| `RailModeTag` | 3 | new | `compact` / `сжато`, 11 `tertiary`, 1 pt `badgeBorder`, radius 4 |
-| `MarkPopover` | 3 | new | 206 wide, `card` + `shadow`, title 12.5 semibold, meta 11.5 `secondary` |
-| Sizes | 1, 3 | changed | scale 30 pt/h between rows (was 26), row min 22 (was 14), max ungapped stretch 60 min |
-| Strings | all | new | gap range `HH:mm–HH:mm`; `compact` / `сжато`; the caption above; VoiceOver strings above |
+| Name             | Direction | New / changed                                                                                         | Spec                                                                                                                                                                                                                                                                                                                      |
+| ---------------- | --------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DayRailRow`     | 1, 3      | new (replaces the label layout of `EventBlock`, `TimedTaskBlock`, `DueMark` in the compressed layout) | full width, min 22; event: `chipFill` + 3 pt calendar bar, past 50 %; task: 1 pt `badgeBorder` outline, 10 pt checkbox, emoji at the trailing edge, done = `doneText` + strike; due: 3 pt bar `dueText` (deadline) or `checkboxStroke` (other), `Due 18:00` semibold amber or `due 18:00` tertiary; title 11.5 (was 10.5) |
+| `RailTimeGutter` | 1, 3      | new                                                                                                   | 40 pt (300) / 36 pt (213); start 11 `secondary`, end 10 `tertiary`                                                                                                                                                                                                                                                        |
+| `RailGap`        | 1, 3      | new                                                                                                   | 18 pt, dotted 1.5 `badgeBorder` stub, range 10.5 `tertiary`; 34 pt with the now line                                                                                                                                                                                                                                      |
+| `DurationLine`   | 1, 3      | new                                                                                                   | 2 pt, calendar colour (event) or `secondary` (task), 70 %                                                                                                                                                                                                                                                                 |
+| `MiniDayScale`   | 2         | new                                                                                                   | track 10 × list height, radius 5, `track`; event bar 6; task tick 8 × 1.5 `secondary`; task span 2; deadline tick `dueText` 2.5; now 1.5 accent + 5 pt triangle; hour labels 9 pt                                                                                                                                         |
+| `AgendaRow`      | 2         | new                                                                                                   | 22 pt, time column 34, event end time 10.5 `tertiary`; hover `navSel`                                                                                                                                                                                                                                                     |
+| `RailModeTag`    | 3         | new                                                                                                   | `compact` / `сжато`, 11 `tertiary`, 1 pt `badgeBorder`, radius 4                                                                                                                                                                                                                                                          |
+| `MarkPopover`    | 3         | new                                                                                                   | 206 wide, `card` + `shadow`, title 12.5 semibold, meta 11.5 `secondary`                                                                                                                                                                                                                                                   |
+| Sizes            | 1, 3      | changed                                                                                               | scale 30 pt/h between rows (was 26), row min 22 (was 14), max ungapped stretch 60 min                                                                                                                                                                                                                                     |
+| Strings          | all       | new                                                                                                   | gap range `HH:mm–HH:mm`; `compact` / `сжато`; the caption above; VoiceOver strings above                                                                                                                                                                                                                                  |
 
 ## Notes on the data
 
