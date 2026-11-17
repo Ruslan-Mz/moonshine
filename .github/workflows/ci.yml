@@ -56,7 +56,7 @@ jobs:
 
       - name: Read-boundary hook (Read, Grep, Glob), its command and the template's deny rules
         run: |
-          python3 -m unittest discover -s .claude/hooks -p 'test_*.py'
+          python3 -B -m unittest discover -s .claude/hooks -p 'test_*.py'
           node --test scripts/hook-command.test.mjs
 
       - name: Core imports (ADR-0001)
