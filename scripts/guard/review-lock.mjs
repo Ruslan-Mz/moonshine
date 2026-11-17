@@ -58,8 +58,8 @@ function alive(record) {
 
 const processRecord = (value) => Number.isSafeInteger(value?.pid) && typeof value.start === "string" && value.start !== "";
 
-/// { lock, ino } for a well-formed file, { malformed: true } otherwise, null when there is none.
-/// The inode is the one the content was read from.
+/// { lock, ino, text } for a well-formed file, { malformed: true } otherwise, null when there is
+/// none. The inode is the one the text was read from.
 function readLock(path) {
   let text;
   let ino;
@@ -80,7 +80,7 @@ function readLock(path) {
       /^[1-9][0-9]{0,6}$/.test(lock.pr) && /^[0-9a-f]{40}$/.test(lock.head) && /^[0-9a-f-]{36}$/.test(lock.session) &&
       typeof lock.top === "string" && typeof lock.sessionDir === "string" && processRecord(lock.wrapper) &&
       (lock.child === undefined || processRecord(lock.child));
-    return ok ? { lock, ino } : { malformed: true };
+    return ok ? { lock, ino, text } : { malformed: true };
   } catch {
     return { malformed: true };
   }
@@ -260,11 +260,12 @@ export function takeLock(fields, stop, claude) {
     }
     removeWorktrees(fields.top, stale.sessionDir, stale.pr);
     // Set aside by rename; if what was renamed is not the file read above, another run took it.
+    // The inode alone does not tell: Linux gives a new lock the inode a removed one freed.
     const aside = `${path}.stale-${process.pid}`;
     let same;
     try {
       renameSync(path, aside);
-      same = statSync(aside).ino === found.ino;
+      same = statSync(aside).ino === found.ino && readFileSync(aside, "utf8") === found.text;
     } catch {
       stop("Another review took the lock first.");
     }
