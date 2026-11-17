@@ -159,7 +159,7 @@ struct TodayScreen: Equatable {
     DayRail.compute(
       day: day, now: now, window: .standard, events: input.events,
       visibility: input.visibility, tasks: railTasks, deadlines: deadlines,
-      defaultTimes: defaultTimes, calendar: calendar)
+      defaultTimes: defaultTimes, footprint: DayRailView.footprint, calendar: calendar)
   }
 
   /// A rail mark's row in the table and the disclosure that holds it; nil for a task the

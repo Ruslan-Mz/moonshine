@@ -305,14 +305,18 @@ extension RigaDay {
   static func rail(
     _ events: [CalendarEvent] = [], tasks: [TaskItem] = [], deadlines: Set<TaskItemID> = [],
     window: DayWindow = .standard, visibility: CalendarVisibility = CalendarVisibility(),
-    read: CalendarRead<[CalendarEvent]>? = nil
+    read: CalendarRead<[CalendarEvent]>? = nil, footprint: DayRail.Footprint = .oneMinute
   ) -> DayRail {
     DayRail.compute(
       day: at(12), now: at(7), window: window, events: read ?? .read(events, skipped: 0),
       visibility: visibility, tasks: tasks, deadlines: deadlines,
       defaultTimes: DefaultTimes(timeZone: zone, planned: TimeOfDay(hour: 9, minute: 0)),
-      calendar: calendar)
+      footprint: footprint, calendar: calendar)
   }
+
+  /// The heights the app draws at 26 pt per hour: event 12, planned 14, due 13 pt.
+  static let drawn = DayRail.Footprint(
+    event: 12 * 3600 / 26, planned: 14 * 3600 / 26, due: 13 * 3600 / 26)
 
   /// `event 13:00–14:00`, `planned 13:45–14:15`, `due 18:00`, `Due 18:00` for a deadline.
   static func describe(_ mark: DayRail.Mark, calendar: Calendar = calendar) -> String {
@@ -336,7 +340,7 @@ extension RigaDay {
       day: DemoCalendar.now, now: DemoCalendar.now, window: .standard,
       events: .read(DemoCalendar.events, skipped: 0), visibility: DemoCalendar.visibility,
       tasks: DemoDay.tasks, deadlines: Set(open.map(\.id)), defaultTimes: DemoDay.defaultTimes,
-      calendar: DemoCalendar.calendar)
+      footprint: RigaDay.drawn, calendar: DemoCalendar.calendar)
     let describe = { RigaDay.describe($0, calendar: DemoCalendar.calendar) }
     #expect(
       rail.marks.map(describe) == [
@@ -353,15 +357,16 @@ extension RigaDay {
           events: .read(DemoCalendar.events, skipped: 0), visibility: DemoCalendar.visibility,
           tasks: DemoDay.tasks, defaultTimes: DemoDay.defaultTimes,
           calendar: DemoCalendar.calendar))
-    // No overlap on the demo day: every mark spans the lane.
+    // No overlap on the demo day, also by drawn height: every mark spans the lane, none collapses.
     #expect(rail.marks.allSatisfy { $0.leading == 0 && $0.width == 1 })
+    #expect(rail.layout(minimumWidth: 0.5) == rail.marks.map { .mark($0) })
   }
 
   @Test func theWeekendsAllDayEventIsARowNotAMark() {
     let rail = DayRail.compute(
       day: DemoCalendar.at(10, 3, 12, 0), now: DemoCalendar.at(10, 3, 7, 0), window: .standard,
       events: .read(DemoCalendar.events, skipped: 0), visibility: DemoCalendar.visibility,
-      tasks: [], deadlines: [], defaultTimes: DemoDay.defaultTimes,
+      tasks: [], deadlines: [], defaultTimes: DemoDay.defaultTimes, footprint: RigaDay.drawn,
       calendar: DemoCalendar.calendar)
     #expect(rail.allDay.count == 1)
     #expect(
@@ -451,7 +456,7 @@ extension RigaDay {
       DayRail.compute(
         day: R.at(12), now: R.at(7), window: .standard, events: .read([], skipped: 0),
         visibility: CalendarVisibility(), tasks: tasks, deadlines: [], defaultTimes: defaults,
-        calendar: R.calendar)
+        footprint: .oneMinute, calendar: R.calendar)
     }
     let dated = [R.task(R.at(9), estimate: 30), R.task(nil, estimate: nil, due: R.at(17))]
     #expect(rail(defaults, dated).marks.isEmpty)
@@ -489,5 +494,183 @@ extension RigaDay {
     let other = R.task(nil, estimate: nil, due: R.at(18))
     let rail = R.rail(tasks: [both, other], deadlines: [both.id])
     #expect(rail.marks.map { R.describe($0) } == ["planned 14:00–14:30", "Due 16:00", "due 18:00"])
+  }
+}
+
+/// A dense day of the owner's shape, invented (S4-3b-2, owner 2026-11-17): about fifteen tasks
+/// with a time, clusters a few minutes apart, several with no estimate, a due mark at a
+/// planned task's minute, no events.
+@Suite struct DenseDayRailTests {
+  typealias R = RigaDay
+
+  static let planned: [(Int, Int, Int?)] = [
+    (7, 40, 10), (7, 55, nil), (8, 30, 30), (9, 15, nil), (10, 30, nil), (10, 30, 15),
+    (11, 0, 30), (12, 10, nil), (12, 20, 10), (14, 0, 20), (15, 30, 45), (17, 25, nil),
+    (17, 30, nil), (17, 30, 15), (17, 45, 10), (19, 0, nil), (20, 30, 30),
+  ]
+
+  static func rail(footprint: DayRail.Footprint = R.drawn) -> DayRail {
+    let tasks = planned.map { R.task(R.at($0.0, $0.1), estimate: $0.2) }
+    return R.rail(
+      tasks: tasks + [R.task(nil, estimate: nil, due: R.at(14))], footprint: footprint)
+  }
+
+  static func hhmm(_ date: Date) -> String {
+    let parts = R.calendar.dateComponents([.hour, .minute], from: date)
+    return String(format: "%02d:%02d", parts.hour ?? 0, parts.minute ?? 0)
+  }
+
+  static func thousandths(_ value: Double) -> Int { Int((value * 1000).rounded()) }
+
+  /// `10:30 0/333` for a mark, `block 10:30–11:32 0/1000 ×3` for a block.
+  static func describe(_ placed: [DayRail.Placed]) -> [String] {
+    placed.map {
+      switch $0 {
+      case .mark(let mark):
+        "\(hhmm(mark.start)) \(thousandths(mark.leading))/\(thousandths(mark.width))"
+      case .block(let block):
+        "block \(hhmm(block.start))–\(hhmm(block.end)) "
+          + "\(thousandths(block.leading))/\(thousandths(block.width)) ×\(block.marks.count)"
+      }
+    }
+  }
+
+  @Test func columnsFollowTheDrawnHeight() {
+    let rail = Self.rail()
+    #expect(rail.above.map { Self.hhmm($0.start) } == ["07:40", "07:55"])
+    #expect(
+      Self.describe(rail.marks.map { .mark($0) }) == [
+        "08:30 0/1000", "09:15 0/1000",
+        "10:30 0/333", "10:30 333/333", "11:00 667/333",
+        "12:10 0/500", "12:20 500/500",
+        "14:00 0/500", "14:00 500/500",
+        "15:30 0/1000",
+        "17:25 0/250", "17:30 250/250", "17:30 500/250", "17:45 750/250",
+        "19:00 0/1000", "20:30 0/1000",
+      ])
+    // On time alone, 12:10 with no estimate and 12:20 never meet: both span the lane.
+    let byTime = Self.rail(footprint: .oneMinute)
+    #expect(
+      Self.describe(byTime.marks.map { .mark($0) })[5...6] == ["12:10 0/1000", "12:20 0/1000"])
+  }
+
+  @Test func onlyTheRunsThatDoNotFitCollapse() {
+    // Two columns fit (0.4 of the lane): three or four at once are a run.
+    #expect(
+      Self.describe(Self.rail().layout(minimumWidth: 0.4)) == [
+        "08:30 0/1000", "09:15 0/1000",
+        "block 10:30–11:32 0/1000 ×3",
+        "12:10 0/500", "12:20 500/500",
+        "14:00 0/500", "14:00 500/500",
+        "15:30 0/1000",
+        "block 17:25–18:17 0/1000 ×4",
+        "19:00 0/1000", "20:30 0/1000",
+      ])
+  }
+
+  @Test func aChainKeepsTheMarksThatFit() {
+    // The critic's chain: three at once only in 10:30–10:47 (10:15, 10:30, 10:30).
+    let times = [(9, 0), (9, 25), (9, 50), (10, 15), (10, 30), (10, 30)]
+    // No default planned time, so 09:00 is a time.
+    let rail = DayRail.compute(
+      day: R.at(12), now: R.at(7), window: .standard, events: .read([], skipped: 0),
+      visibility: CalendarVisibility(),
+      tasks: times.map { R.task(R.at($0.0, $0.1), estimate: nil) }, deadlines: [],
+      defaultTimes: DefaultTimes(timeZone: R.zone), footprint: R.drawn, calendar: R.calendar)
+    #expect(
+      Self.describe(rail.layout(minimumWidth: 0.4)) == [
+        "09:00 0/500", "09:25 500/500", "09:50 0/500", "block 10:15–11:02 500/500 ×3",
+      ])
+  }
+
+  @Test func eventsKeepTheirPartAndOnlyTheTasksCollapse() {
+    let event = R.event(R.at(9), R.at(12))
+    let three = (0..<3).map { _ in R.task(R.at(10), estimate: 30) }
+    let minimum = 106.0 / 228
+    #expect(
+      Self.describe(R.rail([event], tasks: three, footprint: R.drawn).layout(minimumWidth: minimum))
+        == ["09:00 0/550", "block 10:00–10:32 550/450 ×3"])
+    let one = R.rail([event], tasks: [three[0]], footprint: R.drawn)
+    #expect(Self.describe(one.layout(minimumWidth: minimum)) == ["09:00 0/550", "10:00 550/450"])
+  }
+
+  @Test func eventsCollapseAsTasksDo() {
+    let minimum = 106.0 / 228
+    let three = (0..<3).map { _ in R.event(R.at(9), R.at(10)) }
+    #expect(
+      Self.describe(R.rail(three, footprint: R.drawn).layout(minimumWidth: minimum))
+        == ["block 09:00–10:00 0/1000 ×3"])
+    let two = R.rail(Array(three.prefix(2)), footprint: R.drawn)
+    #expect(Self.describe(two.layout(minimumWidth: minimum)) == ["09:00 0/500", "09:00 500/500"])
+    // Beside a task, the events' 55 % holds one column: the two become one event block.
+    let task = R.task(R.at(9, 10), estimate: 30)
+    let beside = R.rail(Array(three.prefix(2)), tasks: [task], footprint: R.drawn)
+    #expect(
+      Self.describe(beside.layout(minimumWidth: minimum))
+        == ["block 09:00–10:00 0/550 ×2", "09:10 550/450"])
+  }
+
+  @Test func aBlockKnowsItHoldsADeadline() throws {
+    let minimum = 106.0 / 228
+    let tasks = [
+      R.task(R.at(17, 25), estimate: nil), R.task(R.at(17, 30), estimate: nil),
+      R.task(R.at(17, 30), estimate: 15),
+    ]
+    let due = R.task(nil, estimate: nil, due: R.at(17, 30))
+    func block(_ deadlines: Set<TaskItemID>) throws -> DayRail.Block {
+      let layout = R.rail(tasks: tasks + [due], deadlines: deadlines, footprint: R.drawn)
+        .layout(minimumWidth: minimum)
+      #expect(Self.describe(layout) == ["block 17:25–18:02 0/1000 ×4"])
+      guard case .block(let block) = try #require(layout.first) else { throw Missing.block }
+      return block
+    }
+    #expect(try block([due.id]).holdsDeadline)
+    #expect(try !block([]).holdsDeadline)
+  }
+
+  enum Missing: Error { case block }
+
+  @Test func aDueMarkTakesItsLabelsHeight() {
+    let task = R.task(R.at(16), estimate: nil)
+    let due = R.task(nil, estimate: nil, due: R.at(16))
+    #expect(
+      Self.describe(R.rail(tasks: [task, due], footprint: R.drawn).marks.map { .mark($0) })
+        == ["16:00 0/500", "16:00 500/500"])
+    // A due label below its time meets an event ending there edge to edge: no cluster.
+    let before = R.event(R.at(15), R.at(16))
+    #expect(
+      Self.describe(R.rail([before], tasks: [due], footprint: R.drawn).marks.map { .mark($0) })
+        == ["15:00 0/1000", "16:00 0/1000"])
+  }
+
+  @Test func aMarkCrossingTheWindowsStartIsDrawnFromIt() {
+    // Drawn 08:00–08:28, the event meets the task at 08:15.
+    let rail = R.rail(
+      [R.event(R.at(7, 30), R.at(8, 10))], tasks: [R.task(R.at(8, 15), estimate: nil)],
+      footprint: R.drawn)
+    #expect(Self.describe(rail.marks.map { .mark($0) }) == ["07:30 0/550", "08:15 550/450"])
+  }
+
+  @Test func boundsOfTheFootprintAndTheMinimumWidth() {
+    for value: Double in [0, -1, .nan, .infinity, -.infinity] {
+      let footprint = DayRail.Footprint(event: value, planned: value, due: value)
+      #expect(footprint.event >= 60 && footprint.event <= 86_400)
+      #expect(footprint.planned >= 60 && footprint.due >= 60)
+    }
+    #expect(DayRail.Footprint(event: 1e9, planned: 1e9, due: 1e9).due == 86_400)
+    let rail = Self.rail()
+    let all = rail.marks.map { DayRail.Placed.mark($0) }
+    // A tiny width is as many columns as marks: nothing collapses, nothing traps.
+    for none: Double in [0, -1, .nan, -.infinity, 1e-19, .leastNonzeroMagnitude] {
+      #expect(rail.layout(minimumWidth: none) == all)
+    }
+    // Above the lane: every run of two collapses, a lone mark never does.
+    #expect(
+      Self.describe(rail.layout(minimumWidth: 2)) == [
+        "08:30 0/1000", "09:15 0/1000", "block 10:30–11:32 0/1000 ×3",
+        "block 12:10–12:52 0/1000 ×2",
+        "block 14:00–14:32 0/1000 ×2", "15:30 0/1000", "block 17:25–18:17 0/1000 ×4",
+        "19:00 0/1000", "20:30 0/1000",
+      ])
   }
 }
