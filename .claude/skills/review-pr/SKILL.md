@@ -2,7 +2,7 @@
 name: review-pr
 description: Independent multi-lens review of a MoonShine pull request by Opus reviewers in fresh contexts, followed by an adversarial verification pass and inline PR comments. Use when the owner asks to review a pull request, for example "/review-pr 7" or "review PR 7". Never run it in the session that wrote the PR's code.
 disable-model-invocation: true
-argument-hint: "<pr-number> [standard|deep] [local] [since <sha>] [at <sha>]"
+argument-hint: "<pr-number> [standard|deep] [local] [since <sha>] [at <sha>] [headless]"
 model: opus
 ---
 
@@ -17,13 +17,14 @@ The author of a change cannot review it well: it reads what it meant, not what i
 - **Read hook on.** Then call the Read tool on `~/.CFUserTextEncoding`. The read-boundary hook (`.claude/hooks/read-boundary.py`) must deny it. If the read is allowed, the hook is not running: stop and tell the owner. Never print or quote what the read returned.
 - Arguments: `$ARGUMENTS`. The PR number comes first. If none is given, use the PR of the current branch (`gh pr view --json number`).
 - The owner may add: `standard` or `deep` (the mode, see §2; default `standard`), `local` (do not post to GitHub, report here only), `since <sha>` (review only what changed after that commit) or `at <sha>` (review the PR as it was at that commit: the worktree is created from that commit and diffed against the base; always `local`).
+- `headless` (P-HR, owner 2026-11-16): the run was started by `~/.config/moonshine/bin/review` (`scripts/guard/review.mjs`) as a separate `claude -p` process, and nobody can answer. The mode argument is final; nothing waits for the owner; `local`, `since <sha>` and `at <sha>` are refused (stop and say so). The preconditions above still run. Post as in §5; the wrapper checks the posted review and removes this run's worktrees itself.
 - You orchestrate. You do not review the code yourself and you do not fix anything.
 
 ## 1. Prepare
 
 `gh`, the fetch and SwiftPM run outside the Claude sandbox through `sandbox.excludedCommands` in the local settings (`.claude/settings.local.example.json`), and the allow rules there cover every command this skill sends: no prompt, and no `dangerouslyDisableSandbox`. `gh` and the fetch need the network; SwiftPM cannot build or test inside the sandbox at all (its build service cannot write `.build`, with or without `--disable-sandbox`). Code outside the sandbox can read and write beyond it, so reviewers and verifiers never build or run the PR's code when it changes the package's external dependencies (a package added or changed in `Package.swift` or `Package.resolved`), a build plugin or a build script. A target that gains a dependency on a local target of the same package does not count: then they run the tests as usual (PR #14's reviewers skipped `swift test` for exactly that one line).
 
-**Commands.** One command per Bash call: no `;`, `&&` or `||` chains, no heredocs, no inline `python` or `node -e`, no `cd` (use `git -C <path>` and an absolute `--package-path`). A pipe into `tail`, `head` or `grep` is fine, except after `swift`, `gh`, `gh-post`, the fetch or the push: those run alone, because a piped line matches no `sandbox.excludedCommands` entry and runs, and fails, inside the sandbox. A permission rule matches each part of a chain separately, so a chain prompts where its parts would not. Files you need (the review JSON, probe files) are written with the Write or Edit tool, in the session scratchpad. Every subagent you start follows the same rule (`pr-reviewer.md`, `review-verifier.md`).
+**Commands.** One command per Bash call: no `;`, `&&` or `||` chains, no heredocs, no inline `python` or `node -e`, no `cd` (use `git -C <path>` and an absolute `--package-path`), no `$` expansion (write every path literally). A pipe into `tail`, `head` or `grep` is fine, except after `swift`, `gh`, `gh-post`, the fetch or the push: those run alone, because a piped line matches no `sandbox.excludedCommands` entry and runs, and fails, inside the sandbox. A permission rule matches each part of a chain separately, so a chain prompts where its parts would not. Files you need (the review JSON, probe files) are written with the Write or Edit tool, in the session scratchpad. Every subagent you start follows the same rule (`pr-reviewer.md`, `review-verifier.md`).
 
 **Writes stay in a worktree or the scratchpad** (owner, 2026-11-06, PR #47 round 1: a reviewer created and removed folders in the main checkout). Reviewers and verifiers write only inside their own worktree or the session scratchpad, and plant fixtures there; nothing is created, changed or removed in the main checkout, not even for a moment. Say so to every subagent you start; `pr-reviewer.md` and `review-verifier.md` state it too.
 
@@ -57,7 +58,7 @@ Lens files are `${CLAUDE_SKILL_DIR}/lenses/<name>.md`.
 
   A group runs only if at least one of its lenses is selected by the table above; within a group, lenses the table does not select are left out.
 
-- **`deep`**: one `pr-reviewer` per selected lens. Use it when the owner asks for it. Propose it (and wait for the owner's answer) when the PR exceeds the size guide in `CLAUDE.md` or touches process execution, concurrency, sync or the assistant.
+- **`deep`**: one `pr-reviewer` per selected lens. Use it when the owner asks for it. Propose it (and wait for the owner's answer) when the PR exceeds the size guide in `CLAUDE.md` or touches process execution, concurrency, sync or the assistant. In a `headless` run, never wait: keep the mode given, and say in the review body that `deep` was indicated, and why.
 
 ## 3. Review
 
@@ -98,9 +99,9 @@ Write the request with the Write tool as a JSON file at the fixed path `<scratch
 
 ## 6. Clean up
 
-A read-only review (§1, step 1) created no worktree and no probe worktree: run only `git worktree prune`. Otherwise, in the sandbox (see "Reports" in §3 for when), each as its own call: `git worktree remove --force <scratchpad>/review/pr-<n>` (`--force` because reviewers may leave untracked files, such as test caches), the same for every verifier probe worktree `<scratchpad>/review/pr-<n>-probe-<lens>` that `git worktree list` shows, then `git worktree prune`. Run the prune yourself, never hand it to the owner: the local settings allow it (`.claude/settings.local.example.json`). After PR #15 the owner had to run it by hand, and the next review could not create its worktree. No refs are deleted: `origin/pr/<n>` and `origin/main` belong to `origin` and the next `git fetch origin` updates them (owner, 2026-10-19). Leave nothing else behind.
+A read-only review (§1, step 1) created no worktree and no probe worktree: remove nothing. Otherwise, in the sandbox (see "Reports" in §3 for when), each as its own call: `git worktree remove --force <scratchpad>/review/pr-<n>` (`--force` because reviewers may leave untracked files, such as test caches), and the same for every verifier probe worktree `<scratchpad>/review/pr-<n>-probe-<lens>` that `git worktree list` shows. Remove only this run's worktrees, by path. Never run `git worktree prune` (P-HR, owner 2026-11-16): it also drops the metadata of a live sibling author worktree whose folder the sandbox cannot see, and the local settings deny it. No refs are deleted: `origin/pr/<n>` and `origin/main` belong to `origin` and the next `git fetch origin` updates them (owner, 2026-10-19). Leave nothing else behind.
 
-Never delete anything unsandboxed (no `rm -rf`, no unsandboxed `git worktree remove`). If a sandboxed step fails, stop cleaning up and end the report with the exact command for the owner to run, for example `git worktree remove --force <absolute path>` followed by `git worktree prune`. Files inside this session's scratchpad (the review JSON, caches) are not leftovers: never ask the owner to delete them. List a leftover file only when it lies outside the scratchpad.
+Never delete anything unsandboxed (no `rm -rf`, no unsandboxed `git worktree remove`). If a sandboxed step fails, stop cleaning up and end the report with the exact command for the owner to run, for example `git worktree remove --force <absolute path>`. Files inside this session's scratchpad (the review JSON, caches) are not leftovers: never ask the owner to delete them. List a leftover file only when it lies outside the scratchpad.
 
 ## Rounds
 

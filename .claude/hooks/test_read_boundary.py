@@ -1,4 +1,4 @@
-"""Tests for read-boundary.py: python3 -m unittest discover -s .claude/hooks -p 'test_*.py'"""
+"""Tests for read-boundary.py: python3 -B -m unittest discover -s .claude/hooks -p 'test_*.py' (-B: no __pycache__ under .claude/; CLAUDE.md, Commands)"""
 
 import json
 import os
