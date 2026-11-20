@@ -111,6 +111,8 @@ Same grid and height (28) as `TaskRow`: `CalendarDot` in the checkbox column · 
 
 ### Day rail marks (Today on the Mac)
 
+**Superseded** (owner, 2026-11-17): `design/screens/day-rail-dense.md` (direction 1, the compressed timeline, for every day) supersedes the proportional rules below; its components table lists the new and changed components (`DayRailRow`, `DueMark`, `PinnedRow`, `RailTimeGutter`, `RailGap`, `DurationLine`, `NowMarker`). The full rewrite comes with S4-3b-3 (owner, 2026-11-20).
+
 The rail spans the day window (Settings → Calendars), 26 pt per hour; marks sit in one lane to the right of the hour labels.
 
 - **EventBlock** — neutral fill (`chipFill`) + 3 pt calendar bar; height = duration, minimum 12; label `17:00 Violin lesson 🎻` (10.5). Past = 50 % opacity. No checkbox.
