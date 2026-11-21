@@ -35,46 +35,27 @@ extension DayRail {
 }
 
 /// The Day section at the top of Today's rail: `design/screens/today.md` § Calendar,
-/// `design/components.md` § Day rail marks. Read only: a task mark selects its row in the list;
-/// opening a task in OmniFocus comes with the link opener (S4-5).
+/// `design/screens/day-rail-dense.md` (direction 1, the compressed timeline) and
+/// `design/components.md` § Day rail. Read only: a task row selects its row in the list; opening
+/// a task in OmniFocus comes with the link opener (S4-5).
 struct DayRailView: View {
   let rail: DayRail
   let now: Date
   let screen: TodayScreen
   let calendars: [CalendarInfo]
-  /// A click on a task mark: the list selects its row.
+  /// The task selected in the list: its rows take the selection fill.
+  let selected: TaskItemID?
+  /// A click on a task row: the list selects its row.
   let reveal: (TaskItemID) -> Void
   @Environment(\.locale) private var locale
 
-  nonisolated static let hourHeight: CGFloat = 26
-  static let labelWidth: CGFloat = 40
-  /// Between marks side by side.
-  nonisolated static let gap: CGFloat = 2
-  /// Half the height of the two-line now label.
-  static let nowHalf: CGFloat = 12
-
-  /// The least heights of the marks (`design/components.md` § Day rail marks).
-  enum Height {
-    static let event: CGFloat = 12
-    static let planned: CGFloat = 14
-    static let due: CGFloat = 13
-  }
-
-  /// The heights as time on the scale, which the column rule reserves (owner, 2026-11-17).
-  nonisolated static let footprint = DayRail.Footprint(
-    event: seconds(Height.event), planned: seconds(Height.planned), due: seconds(Height.due))
-
-  private nonisolated static func seconds(_ height: CGFloat) -> TimeInterval {
-    TimeInterval(height / hourHeight) * 3600
-  }
-
-  /// The narrowest readable column as a fraction of `lane`: the token and the gap; 0 (nothing
-  /// collapses) before the lane has a width.
-  nonisolated static func minimumWidth(lane: CGFloat) -> Double {
-    lane > 0 ? Double((Tokens.railReadableWidth + gap) / lane) : 0
-  }
+  /// The time gutter left of the rows (`RailTimeGutter`).
+  static let gutter: CGFloat = 40
+  /// The duration line and the now dot, at the gutter's trailing edge.
+  static let lineX: CGFloat = gutter - 5
 
   var body: some View {
+    let timeline = DayTimeline.layout(rail, now: now)
     VStack(alignment: .leading, spacing: 6) {
       HStack(alignment: .firstTextBaseline, spacing: 8) {
         Text("Day").font(.system(size: 12, weight: .semibold))
@@ -84,6 +65,8 @@ struct DayRailView: View {
           facts.foregroundStyle(.secondary)
         }
       }
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(reading.section(rail, timeline))
       ForEach(rail.allDay) { event in
         HStack(spacing: 6) {
           CalendarBar(color: color(event))
@@ -94,7 +77,7 @@ struct DayRailView: View {
         .lineLimit(1)
       }
       ForEach(Array(rail.above.enumerated()), id: \.offset) { pinned($0.element) }
-      scale
+      scale(timeline)
       ForEach(Array(rail.below.enumerated()), id: \.offset) { pinned($0.element) }
       VStack(alignment: .leading, spacing: 2) {
         if let facts = DayFactText.joined(
@@ -102,12 +85,12 @@ struct DayRailView: View {
         {
           facts
         }
-        Text("day window \(hour(rail.load.window.start))–\(hour(rail.load.window.end))")
+        Text("day window \(hour(window.start))–\(hour(window.end))")
       }
       .font(.system(size: 11))
       .foregroundStyle(.secondary)
     }
-    .font(.system(size: 10.5))
+    .font(.system(size: 11.5))
     .accessibilityElement(children: .contain)
   }
 
@@ -115,138 +98,175 @@ struct DayRailView: View {
   private var dayStart: Date { screen.calendar.startOfDay(for: screen.day) }
   private var facts: [DayFact] { TodayFormat.dayFact(rail.load) }
   private var window: DateInterval { rail.load.window }
+  private var reading: RailReading {
+    RailReading(
+      now: now, dayStart: dayStart, zone: zone, locale: locale, lines: screen.lineNames,
+      selected: selected)
+  }
 
-  private var scale: some View {
-    let height = y(window.end)
-    return GeometryReader { geometry in
-      let lane = max(geometry.size.width - Self.labelWidth, 0)
-      ZStack(alignment: .topLeading) {
-        ForEach(ticks, id: \.self) { tick in
-          if !hidesTick(tick, height: height) {
-            Text(verbatim: TodayFormat.time(tick, timeZone: zone, locale: locale))
-              .font(.system(size: 10))
-              .monospacedDigit()
-              .foregroundStyle(.tertiary)
-              .offset(y: y(tick) - 6)
-          }
-          Rectangle()
-            .fill(Tokens.cardBorder)
-            .frame(width: lane, height: 1)
-            .offset(x: Self.labelWidth, y: y(tick))
-        }
-        // Behind the marks, its label in the gutter (owner, 2026-11-17).
-        if showsNow { nowRule(lane: lane, height: height) }
-        let layout = rail.layout(minimumWidth: Self.minimumWidth(lane: lane))
-        ForEach(Array(layout.enumerated()), id: \.offset) { _, item in
-          switch item {
-          case .mark(let mark): placed(mark, lane: lane)
-          case .block(let block): placed(block, lane: lane)
-          }
+  private func scale(_ timeline: DayTimeline) -> some View {
+    ZStack(alignment: .topLeading) {
+      edge(window.start, y: 0)
+      edge(window.end, y: timeline.height)
+      ForEach(Array(timeline.items.enumerated()), id: \.offset) { _, item in
+        switch item {
+        case .gap(let gap): gapRow(gap, holdsNow: holdsNow(gap, timeline.now))
+        case .row(let row): timelineRow(row)
         }
       }
+      if let mark = timeline.now { nowMarker(mark) }
     }
-    // Room for a mark that hangs past the window's end.
-    .frame(height: height + Height.planned, alignment: .top)
-    .accessibilityElement(children: .contain)
+    // Room for the end line's label.
+    .frame(maxWidth: .infinity, minHeight: timeline.height + 7, alignment: .topLeading)
   }
 
-  private var showsNow: Bool { window.contains(now) && now < window.end }
-
-  /// The now label's centre, kept inside the scale.
-  private func nowCentre(height: CGFloat) -> CGFloat {
-    min(max(y(now), Self.nowHalf), max(height - Self.nowHalf, Self.nowHalf))
+  /// The window's start or end line, its time in the gutter.
+  private func edge(_ date: Date, y: CGFloat) -> some View {
+    ZStack(alignment: .topLeading) {
+      Text(verbatim: time(date))
+        .font(.system(size: 10))
+        .monospacedDigit()
+        .foregroundStyle(.tertiary)
+        .offset(y: y - 6)
+      Rectangle()
+        .fill(Tokens.cardBorder)
+        .frame(height: 1)
+        .padding(.leading, Self.gutter)
+        .offset(y: y)
+    }
+    .accessibilityHidden(true)
   }
 
-  /// A tick label the now label would cover is not drawn.
-  private func hidesTick(_ tick: Date, height: CGFloat) -> Bool {
-    showsNow && abs(y(tick) - nowCentre(height: height)) < Self.nowHalf + 6
+  private func holdsNow(_ gap: DayTimeline.Gap, _ now: DayTimeline.Now?) -> Bool {
+    guard let now, now.place == .gap else { return false }
+    return now.y >= gap.top && now.y <= gap.top + gap.height
   }
 
-  private func nowRule(lane: CGFloat, height: CGFloat) -> some View {
+  /// `RailGap`: a dotted stub and the stretch it shortens, `11:55–14:15`.
+  private func gapRow(_ gap: DayTimeline.Gap, holdsNow: Bool) -> some View {
+    HStack(spacing: 6) {
+      Rectangle()
+        .stroke(Tokens.checkboxStroke, style: StrokeStyle(lineWidth: 1.5, dash: [1.5, 2.5]))
+        .frame(width: 1.5, height: 12)
+      Text(verbatim: "\(time(gap.from))–\(time(gap.to))")
+        .font(.system(size: 10.5))
+        .monospacedDigit()
+        .foregroundStyle(.tertiary)
+    }
+    .frame(height: 18)
+    .padding(.leading, Self.gutter + 4)
+    .offset(y: gap.top)
+    .accessibilityHidden(true)
+  }
+
+  private func timelineRow(_ row: DayTimeline.Row) -> some View {
+    ZStack(alignment: .topLeading) {
+      if row.showsStart {
+        gutterTime(row.mark.start, size: 11, style: .secondary).offset(y: row.top + 4)
+      }
+      if row.showsEnd {
+        gutterTime(row.mark.end, size: 10, style: .tertiary).offset(y: row.top + 18)
+      }
+      if let line = row.line {
+        Rectangle()
+          .fill(lineColor(row.mark))
+          .opacity(0.7)
+          .frame(width: 2, height: max(line.end - row.top, 0))
+          .offset(x: Self.lineX, y: row.top)
+          .accessibilityHidden(true)
+        if let end = line.endTime {
+          gutterTime(end, size: 10, style: .tertiary).offset(y: line.end - 6)
+        }
+      }
+      DayRailRow(
+        mark: row.mark, now: now, dayStart: dayStart,
+        zone: zone, emoji: emoji(row.mark), color: eventColor(row.mark),
+        range: row.showsRange ? range(row.mark) : nil, isSelected: isSelected(row.mark),
+        reading: reading.row(row.mark, inside: row.inside), reveal: reveal
+      )
+      .frame(height: row.height)
+      .padding(.leading, Self.gutter)
+      .offset(y: row.top)
+    }
+  }
+
+  private func gutterTime(_ date: Date, size: CGFloat, style: HierarchicalShapeStyle)
+    -> some View
+  {
+    Text(verbatim: time(date))
+      .font(.system(size: size))
+      .monospacedDigit()
+      .foregroundStyle(style)
+      .fixedSize()
+      .accessibilityHidden(true)
+  }
+
+  /// `NowMarker`: the label in the gutter, `now` over the time; a line across the rows only in
+  /// a gap or a slot, else a dot on the span's line or the block's edge (owner, 2026-11-20).
+  private func nowMarker(_ mark: DayTimeline.Now) -> some View {
     ZStack(alignment: .topLeading) {
       VStack(alignment: .leading, spacing: 0) {
-        Text("now")
-        Text(verbatim: TodayFormat.time(now, timeZone: zone, locale: locale)).monospacedDigit()
+        Text("now").font(.system(size: 9.5))
+        Text(verbatim: time(now)).font(.system(size: 10.5, weight: .semibold)).monospacedDigit()
       }
-      .font(.system(size: 10, weight: .semibold))
       .fixedSize()
-      .frame(width: Self.labelWidth, height: Self.nowHalf * 2, alignment: .leading)
-      .offset(y: nowCentre(height: height) - Self.nowHalf)
-      Rectangle()
-        .frame(width: lane, height: 1)
-        .offset(x: Self.labelWidth, y: y(now))
+      .frame(width: Self.lineX - 4, height: 24, alignment: .leading)
+      .background(.background)
+      .offset(y: mark.y - 12)
+      switch mark.place {
+      case .gap, .slot:
+        Rectangle()
+          .frame(height: 1.5)
+          .padding(.leading, Self.gutter)
+          .offset(y: mark.y - 0.75)
+      case .line, .block:
+        Circle()
+          .frame(width: 7, height: 7)
+          .offset(x: Self.lineX - 2.5, y: mark.y - 3.5)
+      }
     }
     .foregroundStyle(Color.accentColor)
     .accessibilityHidden(true)
   }
 
-  /// Every two hours from the window's start, its end included.
-  private var ticks: [Date] {
-    stride(from: 0, through: Int(window.duration / 3600), by: 2).compactMap {
-      screen.calendar.date(byAdding: .hour, value: $0, to: window.start)
-    }.filter { $0 <= window.end }
-  }
-
-  private func y(_ date: Date) -> CGFloat {
-    CGFloat(date.timeIntervalSince(window.start) / 3600) * Self.hourHeight
-  }
-
-  @ViewBuilder private func placed(_ mark: DayRail.Mark, lane: CGFloat) -> some View {
-    let x = Self.labelWidth + lane * mark.leading
-    let width = max(lane * mark.width - Self.gap, 0)
-    let top = y(max(mark.start, window.start))
-    let bottom = y(min(mark.end, window.end))
-    switch mark.kind {
-    case .event(let event):
-      MarkLabel(
-        mark: mark, now: now, dayStart: dayStart, zone: zone, emoji: nil, color: color(event),
-        reveal: reveal
-      )
-      .frame(width: width, height: max(bottom - top, Height.event), alignment: .topLeading)
-      .offset(x: x, y: top)
-    case .planned:
-      MarkLabel(
-        mark: mark, now: now, dayStart: dayStart, zone: zone, emoji: emoji(mark), color: nil,
-        reveal: reveal
-      )
-      .frame(width: width, height: max(bottom - top, Height.planned), alignment: .topLeading)
-      .offset(x: x, y: top)
-    case .due:
-      MarkLabel(
-        mark: mark, now: now, dayStart: dayStart, zone: zone, emoji: emoji(mark), color: nil,
-        reveal: reveal
-      )
-      // The label hangs below the due time (owner, 2026-11-17).
-      .frame(width: width, height: Height.due, alignment: .leading)
-      .offset(x: x, y: top)
-    }
-  }
-
-  /// A run that does not fit its columns: one block, its marks in a popover.
-  private func placed(_ block: DayRail.Block, lane: CGFloat) -> some View {
-    let top = y(max(block.start, window.start))
-    let bottom = y(min(block.end, window.end))
-    return ClusterBlock(
-      block: block, now: now, dayStart: dayStart, zone: zone, emoji: screen.emoji,
-      calendarColor: block.marks.first.flatMap {
-        if case .event(let event) = $0.kind { color(event) } else { nil }
-      },
-      reveal: reveal
-    )
-    .frame(
-      width: max(lane * block.width - Self.gap, 0), height: max(bottom - top, Height.planned),
-      alignment: .topLeading
-    )
-    .offset(x: Self.labelWidth + lane * block.leading, y: top)
-  }
-
+  /// `PinnedRow`: before or after the window, its time in the gutter; one from an earlier day
+  /// keeps `Wed 23:00` in the row (owner, 2026-11-21).
   private func pinned(_ mark: DayRail.Mark) -> some View {
-    let color: Color? = if case .event(let event) = mark.kind { color(event) } else { nil }
-    return MarkLabel(
-      mark: mark, now: now, dayStart: dayStart, zone: zone, emoji: emoji(mark), color: color,
-      reveal: reveal
-    )
-    .frame(maxWidth: .infinity, minHeight: 16, maxHeight: 16, alignment: .leading)
+    let earlier = mark.start < dayStart
+    return HStack(spacing: 0) {
+      Group {
+        if Self.showsGutterTime(pinned: mark, dayStart: dayStart) {
+          Text(verbatim: time(mark.start)).monospacedDigit().foregroundStyle(.secondary)
+        }
+      }
+      .font(.system(size: 11))
+      .frame(width: Self.gutter, alignment: .leading)
+      .accessibilityHidden(true)
+      DayRailRow(
+        mark: mark, now: now, dayStart: dayStart, zone: zone, emoji: emoji(mark),
+        color: eventColor(mark), range: earlier ? range(mark) : nil,
+        isSelected: isSelected(mark), reading: reading.row(mark), reveal: reveal)
+    }
+    .frame(height: 22)
+  }
+
+  /// A pinned row's time is in the gutter, except a due row's and one from an earlier day.
+  static func showsGutterTime(pinned mark: DayRail.Mark, dayStart: Date) -> Bool {
+    if case .due = mark.kind { return false }
+    return mark.start >= dayStart
+  }
+
+  /// `17:45–18:15`, or `Wed 23:00–09:00` from an earlier day.
+  private func range(_ mark: DayRail.Mark) -> String {
+    let start = TodayFormat.markTime(mark.start, dayStart: dayStart, timeZone: zone, locale: locale)
+    return mark.isSpan ? "\(start)–\(time(mark.end))" : start
+  }
+
+  private func isSelected(_ mark: DayRail.Mark) -> Bool {
+    switch mark.kind {
+    case .event: false
+    case .planned(let item), .due(let item, _): item.id == selected
+    }
   }
 
   private func emoji(_ mark: DayRail.Mark) -> String? {
@@ -254,6 +274,15 @@ struct DayRailView: View {
     case .event: nil
     case .planned(let item), .due(let item, _): screen.emoji[item.id]
     }
+  }
+
+  private func eventColor(_ mark: DayRail.Mark) -> Color? {
+    if case .event(let event) = mark.kind { color(event) } else { nil }
+  }
+
+  /// The calendar's colour for an event, else secondary (`DurationLine`).
+  private func lineColor(_ mark: DayRail.Mark) -> AnyShapeStyle {
+    eventColor(mark).map { AnyShapeStyle($0) } ?? AnyShapeStyle(.secondary)
   }
 
   private func color(_ event: CalendarEvent) -> Color {
@@ -264,44 +293,49 @@ struct DayRailView: View {
     event.title.map { Text(verbatim: $0) } ?? Text("Busy")
   }
 
+  private func time(_ date: Date) -> String {
+    TodayFormat.time(date, timeZone: zone, locale: locale)
+  }
+
   private func hour(_ date: Date) -> String {
     TodayFormat.hour(date, timeZone: zone, locale: locale)
   }
 }
 
-/// One mark, on the scale or pinned: an event block, a timed task block or a due mark.
-private struct MarkLabel: View {
+/// `DayRailRow`: one event, timed task or due task, full width (`design/components.md` § Day
+/// rail). Its time is in the gutter, except a due row's `Due 18:00` and a range the row shows.
+private struct DayRailRow: View {
   let mark: DayRail.Mark
   let now: Date
-  /// An event that began before it shows its weekday.
   let dayStart: Date
   let zone: TimeZone
   let emoji: String?
   /// The calendar's colour, for an event.
   let color: Color?
+  /// `17:45–18:15` for a span inside another or a row from before the window.
+  let range: String?
+  let isSelected: Bool
+  let reading: String
   let reveal: (TaskItemID) -> Void
   @Environment(\.locale) private var locale
 
   var body: some View {
     switch mark.kind {
     case .event(let event):
-      HStack(alignment: .top, spacing: 4) {
+      HStack(alignment: .top, spacing: 6) {
         CalendarBar(color: color ?? Tokens.paused)
-        Text(verbatim: time)
-          .monospacedDigit()
-          .foregroundStyle(.secondary)
-          .fixedSize()
-          .layoutPriority(1)
-        title(event)
+        title(event).padding(.top, 3)
+        Spacer(minLength: 0)
+        rangeText.padding(.top, 4)
       }
       .lineLimit(1)
-      .padding(.trailing, 4)
+      .padding(.trailing, 6)
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
       .background(Tokens.chipFill)
       .overlay {
         if event.display == .tentative { Hatch().stroke(Tokens.cardBorder, lineWidth: 1) }
       }
-      // Past at 50 % over an opaque base, so the now line behind never shows through.
+      // Past at 50 % over an opaque base.
       .opacity(mark.end <= now ? 0.5 : 1)
       .background(.background)
       .clipShape(RoundedRectangle(cornerRadius: 3))
@@ -311,21 +345,20 @@ private struct MarkLabel: View {
       Button {
         reveal(item.id)
       } label: {
-        HStack(alignment: .top, spacing: 4) {
+        HStack(alignment: .firstTextBaseline, spacing: 5) {
           Checkbox(isDone: item.status == .completed).imageScale(.small)
-          Text(verbatim: time).monospacedDigit().fixedSize().layoutPriority(1)
           Text(verbatim: item.title).strikethrough(item.status == .completed)
           Spacer(minLength: 0)
+          rangeText
           if let emoji { Text(verbatim: emoji).fixedSize() }
         }
         .lineLimit(1)
-        .padding(.horizontal, 3)
+        .padding(.horizontal, 6)
+        .padding(.top, 3)
         .foregroundStyle(item.status == .completed ? Tokens.doneText : Color.primary)
-        .frame(maxHeight: .infinity, alignment: .top)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(.background, in: RoundedRectangle(cornerRadius: 3))
-        .overlay {
-          RoundedRectangle(cornerRadius: 3).strokeBorder(Tokens.checkboxStroke, lineWidth: 1)
-        }
+        .modifier(Selection(isSelected: isSelected, outline: true))
         .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
@@ -334,9 +367,9 @@ private struct MarkLabel: View {
       Button {
         reveal(item.id)
       } label: {
-        HStack(spacing: 4) {
+        HStack(spacing: 5) {
           Rectangle()
-            .fill(isDeadline ? AnyShapeStyle(Tokens.dueText) : AnyShapeStyle(.tertiary))
+            .fill(isDeadline ? AnyShapeStyle(Tokens.dueText) : AnyShapeStyle(Tokens.checkboxStroke))
             .frame(width: 3)
           Checkbox(isDone: item.status == .completed).imageScale(.small)
           due(isDeadline).fixedSize().layoutPriority(1)
@@ -347,7 +380,10 @@ private struct MarkLabel: View {
           if let emoji { Text(verbatim: emoji).fixedSize() }
         }
         .lineLimit(1)
+        .padding(.trailing, 6)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .background(.background)
+        .modifier(Selection(isSelected: isSelected, outline: false))
         .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
@@ -355,22 +391,46 @@ private struct MarkLabel: View {
     }
   }
 
-  private var time: String {
-    TodayFormat.markTime(mark.start, dayStart: dayStart, timeZone: zone, locale: locale)
+  @ViewBuilder private var rangeText: some View {
+    if let range {
+      Text(verbatim: range)
+        .font(.system(size: 10.5))
+        .monospacedDigit()
+        .foregroundStyle(.secondary)
+        .fixedSize()
+        .layoutPriority(1)
+    }
   }
 
   private func due(_ isDeadline: Bool) -> Text {
-    isDeadline
+    let time = TodayFormat.markTime(mark.start, dayStart: dayStart, timeZone: zone, locale: locale)
+    return isDeadline
       ? Text("Due \(time)").fontWeight(.semibold).foregroundStyle(Tokens.dueText)
-      : Text("due \(time)").foregroundStyle(.secondary)
+      : Text("due \(time)").foregroundStyle(.tertiary)
   }
 
   private func title(_ event: CalendarEvent) -> Text {
     event.title.map { Text(verbatim: $0) } ?? Text("Busy")
   }
+}
 
-  private var reading: String {
-    RailReading.mark(mark, now: now, dayStart: dayStart, zone: zone, locale: locale)
+/// A task row's outline, or the `selection` fill and a 1.5-pt accent ring when its task is
+/// selected in the list (`day-rail-dense.md` § Selected).
+private struct Selection: ViewModifier {
+  let isSelected: Bool
+  /// A timed task's 1-pt outline when not selected.
+  let outline: Bool
+
+  func body(content: Content) -> some View {
+    content
+      .background(isSelected ? Tokens.selection : Color.clear)
+      .overlay {
+        if isSelected {
+          RoundedRectangle(cornerRadius: 3).strokeBorder(Color.accentColor, lineWidth: 1.5)
+        } else if outline {
+          RoundedRectangle(cornerRadius: 3).strokeBorder(Tokens.checkboxStroke, lineWidth: 1)
+        }
+      }
   }
 }
 
@@ -427,200 +487,68 @@ enum DayFactText {
   }
 }
 
-/// A run of marks that does not fit its columns (owner, 2026-11-17): the first mark's time and
-/// title, then `+N`; a click lists every mark, and a task row selects its row in the list. An
-/// event block is drawn as an event, with the first event's calendar bar; a task block that
-/// holds a deadline keeps its amber bar.
-private struct ClusterBlock: View {
-  let block: DayRail.Block
+/// What VoiceOver reads on the Day rail, in the catalog's words (`day-rail-dense.md` §
+/// VoiceOver): `10:20, Call a supplier, task, no estimate, not completed, Life ops, selected`.
+struct RailReading {
   let now: Date
   let dayStart: Date
   let zone: TimeZone
-  let emoji: [TaskItemID: String]
-  /// The first event's calendar colour, for an event block.
-  let calendarColor: Color?
-  let reveal: (TaskItemID) -> Void
-  @Environment(\.locale) private var locale
-  @State private var isOpen = false
+  let locale: Locale
+  /// A task's line; a task with no line found has no line term.
+  let lines: [TaskItemID: TodayScreen.LineName]
+  let selected: TaskItemID?
 
-  var body: some View {
-    let rows = ClusterRows.rows(
-      block, emoji: emoji, dayStart: dayStart, zone: zone, locale: locale)
-    Button {
-      isOpen = true
-    } label: {
-      HStack(alignment: .top, spacing: 4) {
-        if let calendarColor {
-          Rectangle().fill(calendarColor).frame(width: 3)
-        } else if block.holdsDeadline {
-          Rectangle().fill(Tokens.dueText).frame(width: 3)
-        }
-        if let first = rows.first {
-          Text(verbatim: first.when).monospacedDigit().fixedSize().layoutPriority(1)
-            .foregroundStyle(calendarColor == nil ? Color.primary : Color.secondary)
-          Text(verbatim: first.title)
-        }
-        Text(verbatim: "+\(block.marks.count - 1)")
-          .monospacedDigit()
-          .foregroundStyle(.secondary)
-          .fixedSize()
-          .layoutPriority(1)
-        Spacer(minLength: 0)
-      }
-      .lineLimit(1)
-      .padding(hasBar ? .trailing : .horizontal, hasBar ? 4 : 3)
-      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-      .background(calendarColor == nil ? Color.clear : Tokens.chipFill)
-      .background(.background, in: RoundedRectangle(cornerRadius: 3))
-      .overlay {
-        if calendarColor == nil {
-          RoundedRectangle(cornerRadius: 3).strokeBorder(Tokens.checkboxStroke, lineWidth: 1)
-        }
-      }
-      .clipShape(RoundedRectangle(cornerRadius: 3))
-      .contentShape(Rectangle())
+  /// `Day, 15 items with a time, 1 before 08:00. Shortened: 08:30 to 10:05, 10:35 to 11:40.
+  /// Now 14:40, during Draft the summary.`
+  func section(_ rail: DayRail, _ timeline: DayTimeline) -> String {
+    let window = rail.load.window
+    var counts = [
+      localized("Day, \(rail.above.count + rail.marks.count + rail.below.count) items with a time")
+    ]
+    if !rail.above.isEmpty {
+      counts.append(localized("\(rail.above.count) before \(time(window.start))"))
     }
-    .buttonStyle(.plain)
-    .popover(isPresented: $isOpen, arrowEdge: .trailing) {
-      VStack(alignment: .leading, spacing: 6) {
-        ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-          if let item = row.item {
-            Button {
-              isOpen = false
-              reveal(item)
-            } label: {
-              label(row)
-            }
-            .buttonStyle(.plain)
-          } else {
-            label(row)
-          }
-        }
-      }
-      .font(.system(size: 11))
-      .padding(10)
-      .frame(minWidth: 220, alignment: .leading)
+    if !rail.below.isEmpty {
+      counts.append(localized("\(rail.below.count) after \(time(window.end))"))
     }
-    .modifier(
-      BlockAccessibility(
-        reading: RailReading.block(block, now: now, dayStart: dayStart, zone: zone, locale: locale),
-        isOpen: $isOpen))
-  }
-
-  private var hasBar: Bool { calendarColor != nil || block.holdsDeadline }
-
-  private func label(_ row: ClusterRows.Row) -> some View {
-    HStack(spacing: 4) {
-      if row.item != nil { Checkbox(isDone: row.isDone).imageScale(.small) }
-      when(row).monospacedDigit().fixedSize().layoutPriority(1)
-      Text(verbatim: row.title).strikethrough(row.isDone)
-      Spacer(minLength: 0)
-      if let emoji = row.emoji { Text(verbatim: emoji).fixedSize() }
+    var sentences = [counts.joined(separator: ", ")]
+    let gaps = timeline.gaps.map { range($0.from, $0.to) }
+    if !gaps.isEmpty { sentences.append(localized("Shortened: \(gaps.joined(separator: ", "))")) }
+    if let mark = timeline.now {
+      sentences.append(
+        mark.during.map { localized("Now \(time(now)), during \(title($0))") }
+          ?? localized("Now \(time(now))"))
     }
-    .lineLimit(1)
-    .foregroundStyle(row.isDone ? Tokens.doneText : Color.primary)
-    .contentShape(Rectangle())
+    return sentences.map { "\($0)." }.joined(separator: " ")
   }
 
-  /// A deadline's `Due 18:00` in amber, as on the scale.
-  private func when(_ row: ClusterRows.Row) -> Text {
-    row.isDeadline
-      ? Text(verbatim: row.when).fontWeight(.semibold).foregroundStyle(Tokens.dueText)
-      : Text(verbatim: row.when)
-  }
-}
-
-/// A block as one VoiceOver element: its reading, a button, and the default action, VO-Space,
-/// that opens its popover (owner, 2026-11-17).
-struct BlockAccessibility: ViewModifier {
-  let reading: String
-  @Binding var isOpen: Bool
-
-  func body(content: Content) -> some View {
-    content
-      .accessibilityElement(children: .ignore)
-      .accessibilityLabel(reading)
-      .accessibilityAddTraits(.isButton)
-      .accessibilityAction { show() }
-  }
-
-  func show() { isOpen = true }
-}
-
-/// A block's marks as its popover lists them.
-enum ClusterRows {
-  struct Row: Hashable {
-    /// Nil for an event.
-    let item: TaskItemID?
-    /// The time, `Due 18:00` or `due 20:35` for a due mark.
-    let when: String
-    let title: String
-    let emoji: String?
-    let isDone: Bool
-    /// A deadline's due mark: its time is amber.
-    let isDeadline: Bool
-  }
-
-  static func rows(
-    _ block: DayRail.Block, emoji: [TaskItemID: String], dayStart: Date, zone: TimeZone,
-    locale: Locale
-  ) -> [Row] {
-    block.marks.map { mark in
-      let time = TodayFormat.markTime(
-        mark.start, dayStart: dayStart, timeZone: zone, locale: locale)
-      switch mark.kind {
-      case .event(let event):
-        return Row(
-          item: nil, when: time,
-          title: event.title ?? RailReading.localized("Busy", locale), emoji: nil, isDone: false,
-          isDeadline: false)
-      case .planned(let item):
-        return Row(
-          item: item.id, when: time, title: item.title, emoji: emoji[item.id],
-          isDone: item.status == .completed, isDeadline: false)
-      case .due(let item, let isDeadline):
-        return Row(
-          item: item.id, when: RailReading.due(time, isDeadline: isDeadline, locale),
-          title: item.title, emoji: emoji[item.id], isDone: item.status == .completed,
-          isDeadline: isDeadline)
-      }
+  /// A row's reading; an outer span adds the rows inside it: `… . Contains Review the notes,
+  /// 17:45 to 18:15, and Send an invoice.`
+  func row(_ mark: DayRail.Mark, inside: [DayRail.Mark] = []) -> String {
+    let reading = self.mark(mark)
+    guard !inside.isEmpty else { return reading }
+    let names = inside.map {
+      $0.isSpan ? localized("\(title($0)), \(range($0.start, $0.end))") : title($0)
     }
+    return localized("\(reading). Contains \(names.formatted(.list(type: .and).locale(locale))).")
   }
-}
 
-/// What VoiceOver reads for a mark or a block, in the catalog's words (`today.md` § Calendar,
-/// SwiftUI): `17:00, Violin lesson, event, in 40 minutes`, `20:30, Allemande…, task, estimate
-/// 45 minutes, Not completed`.
-enum RailReading {
-  static func mark(
-    _ mark: DayRail.Mark, now: Date, dayStart: Date, zone: TimeZone, locale: Locale
-  ) -> String {
-    let time = TodayFormat.markTime(mark.start, dayStart: dayStart, timeZone: zone, locale: locale)
+  private func mark(_ mark: DayRail.Mark) -> String {
+    let start = TodayFormat.markTime(mark.start, dayStart: dayStart, timeZone: zone, locale: locale)
+    let when = mark.isSpan ? range(mark.start, mark.end) : start
     switch mark.kind {
-    case .event(let event):
-      let title = event.title ?? localized("Busy", locale)
-      let reading = localized("\(time), \(title), event", locale)
+    case .event:
+      let reading = localized("\(when), \(title(mark)), event")
       let minutes = Int(mark.start.timeIntervalSince(now) / 60)
       guard mark.start > now, minutes > 0 else { return reading }
-      return localized("\(reading), \(localized("in \(minutes) minutes", locale))", locale)
+      return localized("\(reading), \(localized("in \(minutes) minutes"))")
     case .planned(let item):
-      return task(time, item, estimate: true, deadline: false, locale)
+      return task(when, item, estimate: true, deadline: false)
     case .due(let item, let isDeadline):
       return task(
-        due(time, isDeadline: isDeadline, locale), item, estimate: false, deadline: isDeadline,
-        locale)
+        Self.due(start, isDeadline: isDeadline, locale), item, estimate: false, deadline: isDeadline
+      )
     }
-  }
-
-  /// `4 items: ` and every mark's reading, joined by `; `.
-  static func block(
-    _ block: DayRail.Block, now: Date, dayStart: Date, zone: TimeZone, locale: Locale
-  ) -> String {
-    let readings = block.marks.map {
-      mark($0, now: now, dayStart: dayStart, zone: zone, locale: locale)
-    }
-    let count = localized("\(block.marks.count) items", locale)
-    return localized("\(count): \(readings.joined(separator: "; "))", locale)
   }
 
   static func due(_ time: String, isDeadline: Bool, _ locale: Locale) -> String {
@@ -634,20 +562,51 @@ enum RailReading {
     return String(localized: resource)
   }
 
+  private func localized(_ value: String.LocalizationValue) -> String {
+    Self.localized(value, locale)
+  }
+
+  /// `17:45 to 18:15`, or `Wed 23:00 to 09:00` from an earlier day.
+  private func range(_ from: Date, _ to: Date) -> String {
+    let start = TodayFormat.markTime(from, dayStart: dayStart, timeZone: zone, locale: locale)
+    return localized("\(start) to \(time(to))")
+  }
+
+  private func time(_ date: Date) -> String {
+    TodayFormat.time(date, timeZone: zone, locale: locale)
+  }
+
+  private func title(_ mark: DayRail.Mark) -> String {
+    switch mark.kind {
+    case .event(let event): event.title ?? localized("Busy")
+    case .planned(let item), .due(let item, _): item.title
+    }
+  }
+
   /// A deadline reads `deadline` where any other task reads `task`: `Due` and `due` sound alike.
-  private static func task(
-    _ when: String, _ item: TaskItem, estimate: Bool, deadline: Bool, _ locale: Locale
-  ) -> String {
+  private func task(_ when: String, _ item: TaskItem, estimate: Bool, deadline: Bool) -> String {
     var reading =
       deadline
-      ? localized("\(when), \(item.title), deadline", locale)
-      : localized("\(when), \(item.title), task", locale)
-    if estimate, let minutes = item.estimateMinutes, minutes > 0 {
-      reading = localized("\(reading), \(localized("estimate \(minutes) minutes", locale))", locale)
+      ? localized("\(when), \(item.title), deadline") : localized("\(when), \(item.title), task")
+    var terms: [String] = []
+    if estimate {
+      if let minutes = item.estimateMinutes, minutes > 0 {
+        terms.append(
+          minutes.isMultiple(of: 60)
+            ? localized("estimate \(minutes / 60) hours") : localized("estimate \(minutes) minutes")
+        )
+      } else {
+        terms.append(localized("no estimate"))
+      }
     }
-    let state =
-      item.status == .completed
-      ? localized("Completed", locale) : localized("Not completed", locale)
-    return localized("\(reading), \(state)", locale)
+    terms.append(item.status == .completed ? localized("completed") : localized("not completed"))
+    switch lines[item.id] {
+    case .lifeOps: terms.append(localized("Life ops"))
+    case .named(let name): terms.append(name)
+    case nil: break
+    }
+    if item.id == selected { terms.append(localized("selected")) }
+    for term in terms { reading = localized("\(reading), \(term)") }
+    return reading
   }
 }

@@ -36,15 +36,20 @@ Proportional at 26 pt/h: marks closer than ~30 min share columns; a run that doe
 - **Time gutter.** `HH:mm` of every row in a 40-pt gutter, 11 secondary, tabular; under a block ≥ 34 pt its end time in 10 tertiary. A due row leaves the gutter empty: its label keeps `Due 10:20`. `08:00` and `22:00` mark the window's ends.
 - **Durations.** A span (an event or a task with an estimate) with no other row inside it is a block of its duration (min 22). A span that contains other rows is a one-line row plus a 2-pt `DurationLine` in the gutter edge down to its end time (`Read a paper` 10:05–10:35 holds `Submit the form` and `Call a supplier`). The end time is left out where the line ends at a gap, whose range already says it.
 - **Nested spans** (owner, 2026-11-20): only the outer span draws a duration line. The span nested in it shows its own range in its row as secondary text: `Review the notes … 17:45–18:15` inside `Write the report` 17:30–18:30.
+- **Overlapping spans** (owner, 2026-11-21): the outer span's line runs to the latest end of every span that starts inside it, and a row that starts before that end is inside it. An event 14:00–15:00 with a task 14:30–16:00 draws one line to 16:00; at the same start the event comes first and is the outer span (an event 10:00–10:30 with a task 10:00–12:00 draws one line to 12:00).
+- **Rows inside a span stack 2 pt apart** (owner, 2026-11-21), as `Read a paper`, `Due 10:20` and `Call a supplier` do.
+- **A row from before the window** sits at the start line with its range in the row and no gutter time; a pinned row from an earlier day does the same, `Wed 23:00–07:00` (owner, 2026-11-21).
 - **The now line** (owner, 2026-11-20); its label is always in the gutter, `now` over the time, so it never covers a title:
   - **in a gap:** by proportion; the gap row grows to 40 pt, its range on top, the line in the lower band (Thursday 16:20 in `15:20–17:00`);
   - **between rows:** in a 24-pt slot at the boundary after the last row that started at or before now, never across a row; a 1.5-pt accent line across the rows;
   - **inside an ongoing span** (an event or an estimated task running now): a dot on its duration line at now's place, no line across the rows (Monday 14:40 inside `Draft the summary` 14:15–15:15, after `Reply to two emails`). For a block with no rows inside, the dot sits on the block's gutter edge by proportion and the end time gives way to the label.
   - **before the first row** (owner, 2026-11-20): in a 24-pt slot under the 08:00 line, above the first row, with the label in the gutter (Monday 08:05, first row 08:10).
   - **inside a nested span** (owner, 2026-11-20): the dot goes on the outer span's duration line, the only line drawn (Monday 17:50 inside `Review the notes`, on the line of `Write the report`).
+  - **the gutter time it covers gives way** (owner, 2026-11-21), as a block's end time does: Monday at 14:40, the label covers `14:30` of `Reply to two emails`, which is left out.
+  - **`during`** (owner, 2026-11-21) names the span still running at now, the outer one when several are: Monday 17:50 is `during Write the report`; with an event 14:00–15:00 and a task 14:30–16:00, 15:30 is during the task.
   - Drawn on `Rail1-Compressed` (column "Now") with generic tasks for each case.
 - **Two lanes (phase 2)** (owner, 2026-11-20): when the rail has Plan and Tracked lanes, both share one compressed axis. A gap collapses only where both lanes are empty, and rows stay aligned across the lanes. Phase 2 inherits this rule; its drawing waits for phase 2's design round.
-- **Due rows on one line.** A due row takes two lines (label, then title) only when its row is narrower than 175 pt. That never happens in Today: direction 1's rows are 212 pt (no scroller) and 197 pt (visible scroller).
+- **Due rows on one line.** A due row takes two lines (label, then title) only when its row is narrower than 175 pt. That never happens in Today: direction 1's rows are 212 pt (no scroller) and 197 pt (visible scroller). Confirmed (owner, 2026-11-21): the gutter is 40 pt at both widths, a due row is one line in Today, and pinned rows are 22 pt with the gutter.
 
 ### Measured (on the artboards, 300-pt rail)
 
@@ -54,15 +59,17 @@ Proportional at 26 pt/h: marks closer than ~30 min share columns; a run that doe
 | Thursday | 17–28 characters on the four long titles (`Submit workshop abstract` 17 of 24 … `Allemande, bars 1–16 at ♩ = 60` 28 of 30) | 13–26 characters                                                                  |
 | Gutter   | 40 pt holds `HH:mm` at 11 and the two-line `now` label                                                                     | the same; `сейчас` fits                                                           |
 
-Height from the 08:00 line to the 22:00 line: Thursday 395 pt (the proportional rail: 364 pt), Monday 525 pt.
+Height from the 08:00 line to the 22:00 line: Thursday 395 pt (the proportional rail: 364 pt), Monday 497 pt (owner, 2026-11-21). The Monday column of `Rail1-Compressed` measures 525 pt because it still draws a 24-pt now slot after `Reply to two emails`, from before the decision of 2026-11-20 that now inside an ongoing span is a dot; the decided rule gives 497.
 
 ### VoiceOver
 
 Section: "Day, 15 items with a time, 1 before 08:00. Shortened: 08:30 to 10:05, 10:35 to 11:40, 11:55 to 14:15, 15:15 to 17:30. Now 14:40, during Draft the summary." Selected task: "10:20, Call a supplier, task, no estimate, not completed, Life ops, selected." Span: "17:30 to 18:30, Write the report, task, estimate 1 hour. Contains Review the notes, 17:45 to 18:15, and Send an invoice." RU: «10:20, Call a supplier, задача, без оценки, не выполнена, Быт и система, выбрана».
 
+As built (owner, 2026-11-21): the section adds `1 after 22:00` when rows are pinned below; whole hours read `estimate 1 hour`, other estimates `estimate 100 minutes`; a span's reading keeps its status and line terms before `Contains`, and the list follows the language's list format (`… 17:45 to 18:15 and Send an invoice` in British English); RU `не выполнена` / `выполнена` agree with `задача`, also on a deadline row; both rows of a task with a planned and a due time today say `selected`.
+
 ### Selected
 
-A click on a task selects its row in Today's list; the rail row takes the `selection` fill and a 1.5-pt accent ring.
+A click on a task selects its row in Today's list; the rail row takes the `selection` fill and a 1.5-pt accent ring. A task with both a planned and a due row today shows both as selected: it is one task (owner, 2026-11-21).
 
 ## Not chosen
 
@@ -92,4 +99,5 @@ No new colours. Mockup-only tokens: `canvas`, `scroller`, `scrollTrack`.
 ## Notes on the data
 
 - The dense day is invented: generic titles, times that belong to no real day, and only lines of the demo set (🎻 🎹 📐 🧺 🔬 🤖, and 💪 in the generic "Now" cases on `Rail1-Compressed`; 🎹 Piano is the demo's maintenance line). It keeps the shape the review asked for: 14 timed items in the window plus one before 08:00, clusters of two or three within 10–30 min (08:10/08:30, 10:05/10:20/10:20, 11:40/11:50, 14:15/14:30, 17:30/17:45/18:00), seven tasks with no estimate, the deadline `Due 10:20` at the same minute as `Call a supplier`, one long evening task (`Evening practice` 19:50–21:30), no events.
-- Footers follow `today.md`: Thursday `1 h 15 min planned · ≈ 2 h 25 min free until 22:00` / `day window 08–22`; Monday (no access) `4 h 25 min planned` (the union of the estimated tasks in the window: `Review the notes` lies inside `Write the report`) / `day window 08–22` and the quiet connect line.
+- Footers follow `today.md`: Thursday `1 h 15 min planned · ≈ 2 h 25 min free until 22:00` / `day window 08–22`; Monday (no access) `4 h 15 min planned` (owner, 2026-11-21; it read 4 h 25 min until then): the union of the estimated tasks in the window, 30 + 5 + 60 + 60 + 100 minutes, since `Review the notes` lies inside `Write the report` / `day window 08–22` and the quiet connect line.
+- The invented Monday, in order (estimates in minutes; — is none): `Warm-up routine` 06:45, 15 (before the window); `Review flash cards` 08:10, —; `Check the mailbox` 08:30, —; `Read a paper` 10:05, 30; `Submit the form` due 10:20, a deadline; `Call a supplier` 10:20, —; `Run the test suite` 11:40, —; `Order office supplies` 11:50, 5; `Draft the summary` 14:15, 60; `Reply to two emails` 14:30, —; `Write the report` 17:30, 60; `Review the notes` 17:45, 30; `Send an invoice` 18:00, —; `Plan tomorrow` 19:10, —; `Evening practice` 19:50, 100. In the window, seven tasks have no estimate and six have one.

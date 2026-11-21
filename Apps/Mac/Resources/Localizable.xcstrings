@@ -65,6 +65,22 @@
         }
       }
     },
+    "%@ to %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ to %2$@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "с %1$@ до %2$@"
+          }
+        }
+      }
+    },
     "%@ · %@": {
       "localizations": {
         "en": {
@@ -193,18 +209,18 @@
         }
       }
     },
-    "%@: %@": {
+    "%@. Contains %@.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@: %@"
+            "value": "%1$@. Contains %2$@."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@: %@"
+            "value": "%1$@. Внутри: %2$@."
           }
         }
       }
@@ -257,6 +273,38 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "%lld after %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld after %2$@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld после %2$@"
+          }
+        }
+      }
+    },
+    "%lld before %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld before %2$@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld до %2$@"
           }
         }
       }
@@ -441,58 +489,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$lld ч %2$lld мин"
-          }
-        }
-      }
-    },
-    "%lld items": {
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld item"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld items"
-                }
-              }
-            }
-          }
-        },
-        "ru": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld элемент"
-                }
-              },
-              "few": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld элемента"
-                }
-              },
-              "many": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld элементов"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld элемента"
-                }
-              }
-            }
           }
         }
       }
@@ -1077,6 +1073,58 @@
         }
       }
     },
+    "Day, %lld items with a time": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Day, %lld item with a time"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Day, %lld items with a time"
+                }
+              }
+            }
+          }
+        },
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "День, %lld элемент со временем"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "День, %lld элемента со временем"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "День, %lld элементов со временем"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "День, %lld элемента со временем"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Demo": {
       "localizations": {
         "en": {
@@ -1361,6 +1409,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Последнее: %1$@, %2$@"
+          }
+        }
+      }
+    },
+    "Life ops": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Life ops"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Быт и система"
           }
         }
       }
@@ -1765,6 +1829,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Сегодня на панели ничего нет"
+          }
+        }
+      }
+    },
+    "Now %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сейчас %@"
+          }
+        }
+      }
+    },
+    "Now %@, during %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now %1$@, during %2$@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сейчас %1$@, идёт %2$@"
           }
         }
       }
@@ -2201,6 +2297,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Правая панель"
+          }
+        }
+      }
+    },
+    "Shortened: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shortened: %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сокращено: %@"
           }
         }
       }
@@ -2821,6 +2933,22 @@
         }
       }
     },
+    "completed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "completed"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "выполнена"
+          }
+        }
+      }
+    },
     "current week, partial": {
       "localizations": {
         "en": {
@@ -2865,6 +2993,58 @@
           "stringUnit": {
             "state": "translated",
             "value": "срок %@"
+          }
+        }
+      }
+    },
+    "estimate %lld hours": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "estimate %lld hour"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "estimate %lld hours"
+                }
+              }
+            }
+          }
+        },
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "оценка %lld час"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "оценка %lld часа"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "оценка %lld часов"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "оценка %lld часа"
+                }
+              }
+            }
           }
         }
       }
@@ -3149,6 +3329,22 @@
         }
       }
     },
+    "no estimate": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "no estimate"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "без оценки"
+          }
+        }
+      }
+    },
     "no mapping file — no tag group is read as attributes. Add mapping.yaml to the data folder, then quit MoonShine (⌘Q) and open it again.": {
       "localizations": {
         "en": {
@@ -3177,6 +3373,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "нет следующего шага"
+          }
+        }
+      }
+    },
+    "not completed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "not completed"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "не выполнена"
           }
         }
       }
@@ -3409,6 +3621,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "повторяющиеся занятия"
+          }
+        }
+      }
+    },
+    "selected": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "selected"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "выбрана"
           }
         }
       }
