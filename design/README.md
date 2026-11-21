@@ -362,3 +362,7 @@ The canvas mockups are generated files and are not edited by hand; draft-5's wer
 5. **Draft-3 items**: the day rail on iPad and iPhone (open question 14 above); free time on Today as the rest of the window (`≈ 2 h 25 min free until 22:00` at 16:20); the deadline rule (`screens/settings.md` § Deadlines: the setting, and plain `due 20:35` text and neutral day-rail marks for due dates that are not deadlines); read-only checkboxes on the day rail.
 6. **iPad home screen widget** (ADR-0017): reminders now and the next tasks.
 7. **iPhone capture, draft-5 leftovers:** the Dynamic Island with two and three timers, StandBy, RTL of the capture app.
+
+## Day rail · dense day (decided, 2026-11-17)
+
+**Status: decided — direction 1, the compressed timeline, for every day (owner, 2026-11-17).** Three directions were drawn for Today's Day section on a dense day: compressed timeline, agenda with a mini scale, hybrid. Canvas page "Day rail · dense day"; layout, the now line, nested spans, the two-lane rule for phase 2, measurements, components and tokens in `screens/day-rail-dense.md`. Owner findings of 2026-11-20 (PR #66 round 1): one compressed axis for both lanes in phase 2; the now line in a gap, between rows and inside an ongoing span, its label always in the gutter; only the outer duration line of nested spans.
