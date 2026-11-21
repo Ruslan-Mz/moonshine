@@ -5,7 +5,7 @@
 // (scripts/guard-fixture.mjs). Every entry is invented.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { commit, denyListFile, environment, install, installed, ok, repository, secret } from "./guard-fixture.mjs";
@@ -305,7 +305,7 @@ for (const [name, body, expected] of [
   });
 }
 
-test("an owner finding in an earlier round is refused, though the last round is clean", () => {
+test("an owner finding in an earlier round is refused when the clean round is on the same head", () => {
   const context = setUp();
   const head = context.head();
   context.record("review", 7, 902, "session-c");
@@ -314,7 +314,7 @@ test("an owner finding in an earlier round is refused, though the last round is 
     context.review(901, marker(1, head, { low: 1, owner: 1 })),
     context.review(902, marker(2, head), { submitted_at: "2026-11-11T12:00:00Z" }),
   ]);
-  refused(context, "owner");
+  refused(context, "no later round on a newer head");
 });
 
 test("a review whose head is not the commit it was posted on is refused", () => {
@@ -593,7 +593,7 @@ test("an owner finding in an unrecorded earlier round is refused", () => {
     context.review(950, marker(1, head, { owner: 1 })),
     context.review(902, marker(2, head), { submitted_at: "2026-11-11T12:00:00Z" }),
   ]);
-  refused(context, "owner");
+  refused(context, "A round with owner findings is not recorded");
 });
 
 test("an earlier round with findings and no answer is refused, though the last round is clean", () => {
@@ -697,4 +697,187 @@ test("one answer between the rounds does not answer the last round", () => {
   const context = setUp();
   twoRoundsWithFindings(context, ["11:00"]);
   refused(context, "answer");
+});
+
+// P-AM2 (owner, 2026-11-17 and 2026-11-20): a round with owner findings merges through AM after its
+// answer carries the owner decisions block, the owner's decisions file exists, and a clean round 2
+// runs on a newer head.
+const decisions = (lines) => `Every finding and what was done.\n\nOwner decisions: Claude outputs/next/pr7-round1.md\n${lines.join("\n")}\n\nThe rest.\n`;
+
+/// Round 1 on head A with `first` counts (default one owner Low), recorded from session-b; the
+/// answer `comment` at 11:00 from session-a; the decisions file; head B one commit later; round 2 on
+/// B at 12:00 with `second` counts, recorded from session-c. `options` change one part each.
+function ownerRounds(context, options = {}) {
+  const { first = { low: 1, owner: 1 }, second = {}, answer = decisions(["- docs/a.md:3: keep as is"]), answerSession = "session-a", file = true } = options;
+  const a = context.head();
+  const round1 = context.review(901, marker(1, a, first));
+  if (file) {
+    mkdirSync(join(context.work.cwd, "Claude outputs", "next"), { recursive: true });
+    writeFileSync(join(context.work.cwd, "Claude outputs", "next", "pr7-round1.md"), "the owner's decisions\n");
+  }
+  const b = context.commit("docs/method/log/2026-11.md", "| a row |\n| the fix |\n", "the fixes");
+  const round2 = context.review(902, marker(options.round2 ?? 2, b, second), { commit_id: options.round2Commit ?? b, submitted_at: "2026-11-11T12:00:00Z" });
+  context.record("review", 7, 902, "session-c");
+  const comments = [];
+  if (answer !== null) {
+    comments.push({ id: 990, user: { login }, created_at: options.answerAt ?? "2026-11-11T11:00:00Z", body: answer });
+    if (answerSession) context.record("comment", 7, 990, answerSession);
+  }
+  for (const extra of options.comments ?? []) {
+    comments.push(extra.comment);
+    if (extra.session) context.record("comment", 7, extra.comment.id, extra.session);
+  }
+  context.fake.api[`${repo}/issues/7/comments?per_page=100&page=1`] = comments;
+  context.setReviews([round1, round2, ...(options.reviews ?? [])]);
+  if (options.inline) context.fake.api[`${repo}/pulls/7/reviews/901/comments?per_page=100&page=1`] = options.inline;
+  return { a, b };
+}
+
+test("owner findings answered with the decisions block, then a clean round 2 on a newer head, merge", () => {
+  const context = setUp();
+  ownerRounds(context);
+  merges(context);
+});
+
+test("a round 1 that is owner-only (no High, Medium or Low) and answered merges", () => {
+  const context = setUp();
+  ownerRounds(context, { first: { owner: 1 } });
+  merges(context);
+});
+
+test("owner findings with no later round are refused", () => {
+  const context = setUp();
+  const head = context.head();
+  context.record("comment", 7, 990, "session-a");
+  context.fake.api[`${repo}/issues/7/comments?per_page=100&page=1`] = [
+    { id: 990, user: { login }, created_at: "2026-11-11T11:00:00Z", body: decisions(["- a: keep"]) },
+  ];
+  context.setReviews([context.review(901, marker(1, head, { low: 1, owner: 1 }))]);
+  refused(context, "The last review round counts an owner finding");
+});
+
+test("a later round that counts owner findings again is refused", () => {
+  const context = setUp();
+  ownerRounds(context, { second: { low: 1, owner: 1 } });
+  refused(context, "The last review round counts an owner finding");
+});
+
+test("a later round with a High is refused", () => {
+  const context = setUp();
+  ownerRounds(context, { second: { high: 1 } });
+  refused(context, "counts a High");
+});
+
+test("a clean round 3 after an owner round is refused: the owner merges", () => {
+  const context = setUp();
+  ownerRounds(context, { round2: 3 });
+  refused(context, "round 3 or later");
+});
+
+test("a later round on a commit that does not descend from the owner round's is refused", () => {
+  const context = setUp();
+  ownerRounds(context, { round2Commit: context.main });
+  refused(context, "no later round on a newer head");
+});
+
+for (const [name, answer, expected] of [
+  ["no decisions block", "Every finding and what was done.\n", "owner decisions block"],
+  ["one item too few", decisions([]), "owner decisions block"],
+  ["one item too many", decisions(["- a: keep", "- b: keep"]), "owner decisions block"],
+  ["two header lines", `${decisions(["- a: keep"])}\nOwner decisions: Claude outputs/next/pr7-round1.md\n- a: keep\n`, "owner decisions block"],
+  ["another round's file", decisions(["- a: keep"]).replace("pr7-round1", "pr7-round2"), "owner decisions block"],
+  ["another PR's file", decisions(["- a: keep"]).replace("pr7-round1", "pr8-round1"), "owner decisions block"],
+  ["items followed by text without a blank line", "Owner decisions: Claude outputs/next/pr7-round1.md\n- a: keep\nmore text\n", "owner decisions block"],
+  ["a body that is not text", null, "owner decisions block"],
+]) {
+  test(`owner findings are refused with ${name}`, () => {
+    const context = setUp();
+    ownerRounds(context, answer === null ? { answer: "x", comments: [] } : { answer });
+    if (answer === null) context.fake.api[`${repo}/issues/7/comments?per_page=100&page=1`][0].body = { text: "x" };
+    refused(context, expected);
+  });
+}
+
+test("the decisions block in CRLF lines counts", () => {
+  const context = setUp();
+  ownerRounds(context, { answer: decisions(["- a: keep"]).replace(/\n/g, "\r\n") });
+  merges(context);
+});
+
+test("the decisions block only in an unrecorded comment, next to a recorded answer without it, is refused", () => {
+  const context = setUp();
+  ownerRounds(context, {
+    answer: "Every finding and what was done.\n",
+    comments: [{ comment: { id: 991, user: { login }, created_at: "2026-11-11T11:30:00Z", body: decisions(["- a: keep"]) } }],
+  });
+  refused(context, "owner decisions block");
+});
+
+test("the decisions block only in an answer from round 1's session, next to a recorded answer without it, is refused", () => {
+  const context = setUp();
+  ownerRounds(context, {
+    answer: "Every finding and what was done.\n",
+    comments: [{ comment: { id: 991, user: { login }, created_at: "2026-11-11T11:30:00Z", body: decisions(["- a: keep"]) }, session: "session-b" }],
+  });
+  refused(context, "owner decisions block");
+});
+
+test("the decisions block only after round 2 does not answer round 1", () => {
+  const context = setUp();
+  ownerRounds(context, { answerAt: "2026-11-11T13:00:00Z" });
+  refused(context, "answer");
+});
+
+test("the decisions file missing from the checkout is refused", () => {
+  const context = setUp();
+  ownerRounds(context, { file: false });
+  refused(context, "pr7-round1.md is not in the checkout");
+});
+
+test("a decisions file that is a link is refused", () => {
+  const context = setUp();
+  ownerRounds(context, { file: false });
+  mkdirSync(join(context.work.cwd, "Claude outputs", "next"), { recursive: true });
+  writeFileSync(join(context.work.root, "elsewhere.md"), "x\n");
+  symlinkSync(join(context.work.root, "elsewhere.md"), join(context.work.cwd, "Claude outputs", "next", "pr7-round1.md"));
+  refused(context, "is not in the checkout");
+});
+
+test("a marker review by another account before round 2 is refused after an owner round", () => {
+  const context = setUp();
+  ownerRounds(context, {
+    reviews: [{ id: 960, user: { login: "stranger" }, body: "<!-- MOONSHINE-REVIEW round=1 -->", state: "COMMENTED", submitted_at: "2026-11-11T11:30:00Z" }],
+  });
+  refused(context, "Another account posted a review marker");
+});
+
+test("a marker review by another account after round 2 does not stop the merge", () => {
+  const context = setUp();
+  ownerRounds(context, {
+    reviews: [{ id: 960, user: { login: "stranger" }, body: "<!-- moonshine-review round=1 -->", state: "COMMENTED", submitted_at: "2026-11-11T12:30:00Z" }],
+  });
+  merges(context);
+});
+
+test("an owner round whose inline owner decisions outnumber its marker's count is refused", () => {
+  const context = setUp();
+  ownerRounds(context, {
+    inline: [
+      { id: 1, body: "**Low · docs · decision: owner** — one" },
+      { id: 2, body: "**Low · docs · decision: owner** — two" },
+    ],
+  });
+  refused(context, "counts fewer owner findings than its inline comments");
+});
+
+test("an owner round with as many inline owner decisions as its count merges", () => {
+  const context = setUp();
+  ownerRounds(context, { inline: [{ id: 1, body: "**Low · docs · decision: owner** — one" }] });
+  merges(context);
+});
+
+test("a round 1 that is owner-only (no High, Medium or Low) with no answer is refused", () => {
+  const context = setUp();
+  ownerRounds(context, { first: { owner: 1 }, answer: null });
+  refused(context, "no recorded answer comment");
 });

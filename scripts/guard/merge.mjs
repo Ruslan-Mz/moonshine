@@ -12,12 +12,16 @@
 //   5. the guard, again: commit-scan.mjs over the new commits, the title, the body, the branch name;
 //   6. the review: the last round by the same account, recorded by gh-post review in a session other
 //      than the one that created the PR, with the counted marker of /review-pr and no High; no
-//      marker review by that account, recorded or not, with an owner finding; no unrecorded marker
-//      review at that round or later; no inline High or owner decision; nobody's changes requested;
-//      at most 100 lines changed since, counted from the reviewed commit merged with main;
+//      unrecorded marker review at that round or later; no inline High or owner decision; nobody's
+//      changes requested; at most 100 lines changed since, counted from the reviewed commit merged
+//      with main. A round with owner findings (P-AM2) is recorded, counts no fewer than its inline
+//      owner decisions, and is followed by a later round on a newer head descending from it; the
+//      last round then counts no owner finding, is round 2 at most, and no other account's marker
+//      precedes it;
 //   7. after every marker review with findings, its own answer comment: recorded, later than that
 //      review and earlier than the account's next marker review, from another session than that
-//      review's.
+//      review's; after a round with owner findings, one of them carries its owner decisions block,
+//      and the decisions file it names exists in the checkout (never read).
 // Then `gh pr merge <n> --merge --match-head-commit <head>`, once. A refusal names the check, never
 // PR text. git runs with replace refs off, in a full clone without grafts, so it reads the commits
 // GitHub merges (github.mjs: the git folder the guard was installed for, no replace refs). The state
@@ -30,7 +34,7 @@ import { appendFileSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { binaryAllowlist, scan } from "./commit-scan.mjs";
-import { ciGreen, gitHub, repo, reviewMarker, safeGit } from "./github.mjs";
+import { ciGreen, decisionsFile, decisionsFileExists, findingCount, gitHub, hasMarker, ownerDecisions, repo, reviewMarker, safeGit } from "./github.mjs";
 import { denyList, match } from "./matcher.mjs";
 import { changedLines, classify, readChanges } from "./plain-rules.mjs";
 
@@ -167,7 +171,6 @@ export function merge(pr, stop) {
     .filter(({ marker }) => marker !== null);
   const recorded = marked.filter(({ session }) => session !== undefined);
   if (recorded.length === 0) stop("There is no review recorded by gh-post review for this PR.");
-  if (marked.some(({ marker }) => marker.owner > 0)) stop("A review round counts an owner finding; the owner merges.");
   const time = (text) => {
     const value = Date.parse(text);
     if (Number.isNaN(value)) stop("A review or comment has no time.");
@@ -181,6 +184,27 @@ export function merge(pr, stop) {
   );
   if (marked.some(({ marker, session }) => session === undefined && marker.round >= last.marker.round)) {
     stop("A review by this account at the last round or later is not recorded in the state file; the owner merges.");
+  }
+  // A round with owner findings (P-AM2, owner 2026-11-17): recorded, followed by a later round on a
+  // newer head that descends from it; the last round counts none and is round 2 at most.
+  const ownerRounds = marked.filter(({ marker }) => marker.owner > 0);
+  if (ownerRounds.length > 0) {
+    if (ownerRounds.some(({ session }) => session === undefined)) stop("A round with owner findings is not recorded in the state file; the owner merges.");
+    if (last.marker.owner > 0) stop("The last review round counts an owner finding; the owner merges.");
+    if (last.marker.round > 2) stop("A round with owner findings was followed by round 3 or later, which is the owner's; the owner merges.");
+    for (const { marker, review } of ownerRounds) {
+      if (marker.round >= last.marker.round || review.commit_id === last.review.commit_id || !isAncestor(review.commit_id, last.review.commit_id)) {
+        stop("A round with owner findings has no later round on a newer head; push the fixes and run review again.");
+      }
+      const owned = pages(`${repo}/pulls/${pr}/reviews/${review.id}/comments`).filter((comment) => typeof comment?.body === "string" && comment.body.includes("decision: owner"));
+      if (owned.length > marker.owner) stop("A round's marker counts fewer owner findings than its inline comments; the owner merges.");
+    }
+    // A marker by another account before the last round could have narrowed its diff.
+    for (const review of reviews) {
+      if (review?.user?.login !== login && hasMarker(review?.body) && time(review.submitted_at) < time(last.review.submitted_at)) {
+        stop("Another account posted a review marker before the last round; the owner merges.");
+      }
+    }
   }
   if (last.marker.high > 0) stop("The last review round counts a High; fix it and run another round.");
   if (/Changes required/.test(last.review.body)) stop("The last review says Changes required.");
@@ -208,16 +232,24 @@ export function merge(pr, stop) {
   const rounds = marked
     .map((item) => ({ ...item, at: time(item.review.submitted_at) }))
     .sort((a, b) => a.at - b.at);
-  if (rounds.some(({ marker }) => marker.high + marker.medium + marker.low > 0)) {
+  // A round with owner findings needs the decisions block in one of them, and its file.
+  if (rounds.some(({ marker }) => findingCount(marker) > 0)) {
     const answers = pages(`${repo}/issues/${pr}/comments`)
       .filter((comment) => comment?.user?.login === login)
-      .map((comment) => ({ session: sessionOf("comment", comment.id), at: time(comment.created_at) }))
+      .map((comment) => ({ session: sessionOf("comment", comment.id), at: time(comment.created_at), body: comment.body }))
       .filter(({ session }) => session !== undefined);
     rounds.forEach(({ marker, session, at }, index) => {
-      if (marker.high + marker.medium + marker.low === 0) return;
+      if (!(findingCount(marker) > 0)) return;
       const until = index + 1 < rounds.length ? rounds[index + 1].at : Infinity;
-      if (!answers.some((answer) => answer.session !== session && answer.at > at && answer.at < until)) {
+      const own = answers.filter((answer) => answer.session !== session && answer.at > at && answer.at < until);
+      if (own.length === 0) {
         stop("A review round has findings and no recorded answer comment of its own, from another session, before the next round.");
+      }
+      if (marker.owner > 0) {
+        if (!own.some((answer) => ownerDecisions(answer.body, marker.owner, pr, marker.round))) {
+          stop(`A round with owner findings has no answer with its owner decisions block (Owner decisions: ${decisionsFile(pr, marker.round)}, one line per finding).`);
+        }
+        if (!decisionsFileExists(top, pr, marker.round)) stop(`The owner's decisions file ${decisionsFile(pr, marker.round)} is not in the checkout; the owner writes it.`);
       }
     });
   }

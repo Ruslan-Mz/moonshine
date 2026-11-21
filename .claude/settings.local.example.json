@@ -28,6 +28,7 @@
       "Edit(./.claude/hooks/**)",
       "Edit(./.claude/settings.json)",
       "Edit(**/Configs/*.local.*)",
+      "Edit(./Claude outputs/next/pr*-round*.md)",
       "Bash(git *fetch*--prune*)",
       "Bash(git *fetch* -p*)",
       "Bash(git *fetch*:refs/heads/*)",
@@ -113,7 +114,8 @@
       "Bash(xcrun xcodebuild*)",
       "Bash(git worktree prune*)",
       "Bash(claude *)",
-      "Bash(*/claude *)"
+      "Bash(*/claude *)",
+      "Bash(*review-allow-retry*)"
     ],
     "ask": [
       "Bash(dangerouslyDisableSandbox:true)",
@@ -156,7 +158,7 @@
         "~/.config/git/ignore",
         "~/.nvm/versions/node"
       ],
-      "denyWrite": ["./.git/commondir"]
+      "denyWrite": ["./.git/commondir", "./Claude outputs/next/pr*-round*.md"]
     }
   },
   "_notes": {
@@ -168,7 +170,9 @@
     "Bash(/Users/<you>/.config/moonshine/bin/review *)": "P-HR (owner, 2026-11-16): the author starts /review-pr as a separate headless claude process, alone and in the background, after the push with CI green. The guard installer writes the wrapper from main's scripts/guard/review.mjs, outside the checkout; it refuses inside a headless run, clears the environment, checks the PR, CI, the round and the checkout, takes the review lock, and starts claude with private settings, a fixed tool set and Context7 only. It runs outside the sandbox (excludedCommands), like gh-post: it reads gh's login and writes ~/Library/Caches/moonshine-review/. No allow rule names claude itself.",
     "Bash(git worktree prune*)": "P-HR (owner, 2026-11-16). Scenario closed: a prune from a session or a review drops the metadata of a live sibling author worktree (moonshine-dd) whose folder the sandbox cannot see. Sibling class: git worktree remove of another path, which /review-pr never runs (it removes its own worktrees by path). Normal steps that ran it: /review-pr's clean-up, which the owner's SKILL.md patch removes; commit, branch, fetch, push, git worktree add and remove, build, tests, npm and the installer do not. No prompt is added.",
     "Bash(claude *), Bash(*/claude *)": "P-HR (owner, 2026-11-16, rev. 4 A9). Scenario closed: a session starting claude itself, with flags or a prompt of its own, outside the wrapper's gates. Sibling class: another spelling (env claude, a copy of the binary), which runs inside the sandbox and cannot read claude's login there. Normal steps that run claude: none; the review starts through bin/review. No prompt is added.",
-    "sandbox.filesystem.denyWrite ./.git/commondir": "P-HR (S4, adopted, owner 2026-11-16). Scenario closed: a session writing the main checkout's .git/commondir, which redirects the git folder the unsandboxed fetch, push, gh-post and review read (CLAUDE.md § Git said it was denied; only the Edit rule was). Sibling class: a .git file in a worktree, denied in the _worktreeOnly block. Normal steps that write it: none (git worktree add writes .git/worktrees/*/commondir, not this file). No prompt is added."
+    "sandbox.filesystem.denyWrite ./.git/commondir": "P-HR (S4, adopted, owner 2026-11-16). Scenario closed: a session writing the main checkout's .git/commondir, which redirects the git folder the unsandboxed fetch, push, gh-post and review read (CLAUDE.md § Git said it was denied; only the Edit rule was). Sibling class: a .git file in a worktree, denied in the _worktreeOnly block. Normal steps that write it: none (git worktree add writes .git/worktrees/*/commondir, not this file). No prompt is added.",
+    "Edit(./Claude outputs/next/pr*-round*.md), sandbox.filesystem.denyWrite ./Claude outputs/next/pr*-round*.md": "P-AM2 (owner, 2026-11-20). Scenario closed: an author session writing the owner's decisions file for a round itself, which review and gh-post merge require to exist (never read) before round 2 and an AM merge after owner findings. Only the owner, or the architect on the owner's behalf, writes it; sessions keep writing other files in Claude outputs/next/ (plans, patches). The Edit rule stops the Edit and Write tools; the sandbox rule stops Bash writes. The docs say the wildcards work in the sandbox lists on macOS, and only a trailing /** on Linux; they do not say how a space in the path is matched, nor that an Edit deny stops Write creating a new file there: the post-settings probe tries both (a Write and a shell redirect to Claude outputs/next/pr0-round1.md must be refused, one to Claude outputs/next/probe.md must work). Sibling class: a link, a rename, or a session in another checkout; the checks refuse a link (lstat), and a rename needs a write to the denied name. Normal steps that write it: none; commit, branch, fetch, push, git worktree add or remove, build, tests, npm and the installer do not. No prompt is added.",
+    "Bash(*review-allow-retry*)": "P-AM2 (owner, 2026-11-20). Scenario closed: a session clearing a stopped run's record itself, so review would run again on a head whose run stopped after its start. The record is in the guard's state folder, which the sandbox cannot write, so a sandboxed run fails anyway; the deny refuses it at once and keeps it from being asked for unsandboxed. Only the owner runs it, from the owner's own terminal. Normal steps that run it: none. No prompt is added."
   },
   "_worktreeOnly": {
     "_note": "Only for a parallel author session's sibling worktree ../moonshine-<n>, which the owner creates (CLAUDE.md § Git). In that worktree's copy, merge these entries into permissions.deny and sandbox.filesystem, fill in the placeholders with the main checkout's path (except `<repo>` in env.npm_config_cache, which is the checkout this file lives in: the worktree may write only its own folder), and delete this key; in the main checkout's copy, just delete it. Never commit a real path: the owner's home path is on the deny-list.",

@@ -312,3 +312,24 @@ test("killTree ends a grandchild whose parent exited first, and one in its own s
   for (let tries = 0; tries < 40 && !sleepers.every(gone); tries += 1) spawnSync("/bin/sleep", ["0.05"]);
   for (const pid of sleepers) assert.ok(gone(pid), `sleeper ${pid}`);
 });
+
+// P-AM2 (owner, 2026-11-20): a stopped run names a sleep of the Mac.
+test("the sleep watch adds up the wall clock's steps beyond the monotonic clock's", async () => {
+  const { lock } = await guardCopy();
+  let [wall, mono] = [1_000_000, 50];
+  const watch = lock.sleepWatch(60_000, () => wall, () => mono);
+  [wall, mono] = [wall + 10_000, mono + 10_000];
+  assert.equal(watch.slept(), 0, "awake: both clocks step alike");
+  [wall, mono] = [wall + 600_000, mono + 1_000];
+  assert.equal(watch.slept(), 599_000, "asleep: the wall clock ran on");
+  [wall, mono] = [wall - 5_000, mono + 1_000];
+  assert.equal(watch.slept(), 599_000, "a clock set back adds nothing");
+  watch.stop();
+});
+
+test("a stopped run's record is not named like a lock", async () => {
+  const { lock, state } = await guardCopy();
+  const path = lock.stoppedPath("7", head);
+  assert.equal(dirname(path), state);
+  assert.ok(!/^review-/.test(path.slice(state.length + 1)));
+});

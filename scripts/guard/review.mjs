@@ -6,20 +6,24 @@
 // result and the recorded review. It prints the exit reason and the log folder, never review text.
 // Exits: 0 reviewed and posted · 1 refused · 2 usage · 5 time limit · 6 the run failed · 7 a start
 // gate. A refusal (1) started nothing: the author may fix what it names and run review again; after
-// a start (5, 6, 7) it is never retried (owner, 2026-11-17, PR #63 round 1).
+// a start (5, 6, 7) it is never retried (owner, 2026-11-17, PR #63 round 1): the head is recorded in
+// the state folder, and review refuses it until the owner runs bin/review-allow-retry (P-AM2, owner
+// 2026-11-20). Round 2 follows a round 1 with a High, or with owner findings on a plain PR whose
+// answer carries the owner decisions block and whose decisions file exists (P-AM2). On macOS claude
+// runs under caffeinate -i, and a stopped run's reason names a sleep.
 // Tests: node --test scripts/review-headless.test.mjs
 import { spawn, spawnSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { createWriteStream, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { createWriteStream, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir, userInfo } from "node:os";
 import { dirname, join } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
-import { ciGreen, gitHub, repo, reviewMarker, safeGit } from "./github.mjs";
+import { ciGreen, decisionsFile, decisionsFileExists, gitHub, hasMarker, ownerDecisions, repo, reviewMarker, safeGit } from "./github.mjs";
 import { config, denyList } from "./matcher.mjs";
 import { readPosts } from "./merge.mjs";
 import { instructions } from "./plain-rules.mjs";
-import { checkoutClean, killTree, removeWorktrees, takeLock } from "./review-lock.mjs";
+import { checkoutClean, killTree, removeWorktrees, sleepWatch, stoppedPath, takeLock } from "./review-lock.mjs";
 
 const home = join(dirname(fileURLToPath(import.meta.url)), "..");
 const budget = { standard: "15", deep: "40" };
@@ -32,6 +36,9 @@ const startLines = 20;
 // A review GitHub dates up to this long before the start still counts: the two clocks may differ.
 const clockSkewMs = 300_000;
 const flushMs = 2_000;
+const caffeinate = "/usr/bin/caffeinate";
+// A sleep longer than this is named in a stopped run's reason.
+const sleepNamedMs = 60_000;
 
 function refuse(message, code = 1) {
   process.stderr.write(`review: refused. ${message} Nothing started and nothing was posted: fix what this names and run review again.\n`);
@@ -74,16 +81,39 @@ if (typeof headRepo !== "string" || headRepo !== info.base?.repo?.full_name || S
 }
 const head = info.head?.sha;
 if (typeof head !== "string" || !/^[0-9a-f]{40}$/.test(head)) refuse("The PR has no head commit.");
+if (existsSync(stoppedPath(pr, head))) {
+  refuse(`A run on this head stopped after its start; the owner allows another with ${join(home, "bin", "review-allow-retry")} ${pr}.`);
+}
 ciGreen(api, pr, head, denyList(refuse), refuse);
-const marked = pages(`${repo}/pulls/${pr}/reviews`)
+const reviews = pages(`${repo}/pulls/${pr}/reviews`);
+// /review-pr reads the round and round 2's diff from the markers of all reviews (P-AM2).
+if (reviews.some((review) => review?.user?.login !== login && hasMarker(review?.body))) {
+  refuse("Another account posted a review marker on this PR; the owner reviews it by hand.");
+}
+const marked = reviews
   .filter((review) => review?.user?.login === login)
-  .map((review) => reviewMarker(review.body, refuse))
-  .filter((marker) => marker !== null);
-if (marked.some((marker) => marker.head === head)) refuse("This head has a review already.");
-const last = marked.reduce((best, marker) => (best === null || marker.round > best.round ? marker : best), null);
+  .map((review) => ({ review, marker: reviewMarker(review.body, refuse) }))
+  .filter(({ marker }) => marker !== null);
+if (marked.some(({ marker }) => marker.head === head)) refuse("This head has a review already.");
+const last = marked.reduce((best, item) => (best === null || item.marker.round > best.marker.round ? item : best), null)?.marker;
 const round = (last?.round ?? 0) + 1;
 if (round >= 3) refuse("Round 3 and later are the owner's; the owner starts them by hand.");
-if (round === 2 && last.high === 0) refuse("Round 1 counted no High, so there is no round 2.");
+if (round === 2) {
+  // After a High, or after owner findings on a plain PR, whose decisions are answered (P-AM2).
+  const plain = (typeof info.body === "string" ? info.body : "").replace(/\r/g, "").split("\n").filter((line) => /^\s*class\s*:/i.test(line));
+  if (!(last.high > 0 || (last.owner > 0 && plain.length === 1 && plain[0] === "Class: plain"))) {
+    refuse("Round 1 counted no High, and no owner finding on a plain PR, so there is no round 2.");
+  }
+  if (!isAncestor(last.head, head)) refuse("Round 1's head is not an ancestor of this head (the branch was rewritten, or it is not fetched: run git fetch origin).");
+  if (last.owner > 0) {
+    const submitted = Date.parse(marked.find(({ marker }) => marker === last).review.submitted_at);
+    const answered = pages(`${repo}/issues/${pr}/comments`).some(
+      (comment) => comment?.user?.login === login && Date.parse(comment.created_at) > submitted && ownerDecisions(comment.body, last.owner, pr, 1),
+    );
+    if (!answered) refuse(`Round 1's owner findings have no answer with the owner decisions block (Owner decisions: ${decisionsFile(pr, 1)}, one line per finding).`);
+    if (!decisionsFileExists(top, pr, 1)) refuse(`The owner's decisions file ${decisionsFile(pr, 1)} is not in the checkout; the owner writes it.`);
+  }
+}
 
 // 4. main's instructions: main is an ancestor, and the PR changes none of them.
 const main = api(`${repo}/branches/main`)?.commit?.sha;
@@ -140,16 +170,18 @@ const env = {
 };
 const version = spawnSync(settings.claude, ["--version"], { env, encoding: "utf8" }).stdout?.trim().split("\n")[0] ?? "unknown";
 const started = Date.now();
-const child = spawn(
-  settings.claude,
-  [
-    "-p", `/review-pr ${pr} ${mode} headless`, "--session-id", session, "--tools", ...tools,
-    "--permission-mode", "default", "--permission-prompts", "none", "--settings", join(runDir, "settings.json"),
-    "--strict-mcp-config", "--mcp-config", join(runDir, "mcp.json"), "--disallowedTools", `Bash(${join(home, "bin", "review")}:*)`,
-    "--no-session-persistence", "--max-budget-usd", budget[mode], "--output-format", "stream-json", "--verbose",
-  ],
-  { cwd: top, env, detached: true, stdio: ["ignore", "pipe", "pipe"] },
-);
+const args = [
+  "-p", `/review-pr ${pr} ${mode} headless`, "--session-id", session, "--tools", ...tools,
+  "--permission-mode", "default", "--permission-prompts", "none", "--settings", join(runDir, "settings.json"),
+  "--strict-mcp-config", "--mcp-config", join(runDir, "mcp.json"), "--disallowedTools", `Bash(${join(home, "bin", "review")}:*)`,
+  "--no-session-persistence", "--max-budget-usd", budget[mode], "--output-format", "stream-json", "--verbose",
+];
+// Idle sleep cannot cut the run on macOS (owner, 2026-11-20); a closed lid still does.
+const awake = existsSync(caffeinate);
+const child = spawn(awake ? caffeinate : settings.claude, awake ? ["-i", settings.claude, ...args] : args, {
+  cwd: top, env, detached: true, stdio: ["ignore", "pipe", "pipe"],
+});
+const sleep = sleepWatch();
 child.on("error", () => finish(6, "claude could not be started"));
 process.stdout.write(`review: round ${round}, ${mode}, claude ${version}; log ${runDir}\n`);
 const errors = createWriteStream(join(runDir, "stderr.log"));
@@ -232,8 +264,20 @@ function finish(code, reason) {
   if (finish.done) return;
   finish.done = true;
   timers.forEach(clearTimeout);
+  const slept = sleep.slept();
+  sleep.stop();
+  if (code !== 0 && slept > sleepNamedMs) reason += `; the Mac slept about ${Math.round(slept / 60_000)} min during the run`;
   killTree([child.pid], graceMs);
   const removed = removeWorktrees(top, sessionDir, pr);
+  // After a start, this head is not reviewed again until the owner allows it (owner, 2026-11-20).
+  let recorded = true;
+  if (code !== 0) {
+    try {
+      writeFileSync(stoppedPath(pr, head), JSON.stringify({ pr, head, code, time: new Date().toISOString() }), { mode: 0o600 });
+    } catch {
+      recorded = false;
+    }
+  }
   lock.release();
   const written = [stream, errors].map((log) => new Promise((resolve) => {
     if (log.closed) resolve();
@@ -250,7 +294,7 @@ function finish(code, reason) {
         .sort((a, b) => b.time - a.time);
       for (const { path } of old.slice(keptRuns)) rmSync(path, { recursive: true, force: true });
     }
-    const where = code === 0 ? "" : `; log ${runDir}. Do not run review again: tell the owner`;
+    const where = code === 0 ? "" : `; log ${runDir}. Do not run review again: tell the owner${recorded ? "" : " (the stop could not be recorded)"}`;
     process.stderr.write(`review: exit ${code}: ${reason}; ${removed} worktree(s) removed${where}\n`);
     process.exit(code);
   };
