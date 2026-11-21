@@ -2,8 +2,8 @@
 // same way: git in a checked repository, GitHub reads that stop on any failure, the CI rule and the
 // review markers. `stop` is called with a message and must not return; no message holds PR text.
 import { spawnSync } from "node:child_process";
-import { existsSync, realpathSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, lstatSync, realpathSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { config, printable } from "./matcher.mjs";
 
 export const repo = "repos/{owner}/{repo}";
@@ -102,6 +102,48 @@ export function ciGreen(api, pr, head, entries, stop) {
   }
   const status = api(`${repo}/commits/${head}/status`);
   if (!(status?.total_count === 0 || status?.state === "success")) stop("The head's commit status is not success.");
+}
+
+/// Whether a body holds a marker of any shape, in any case: a non-global test, so calls over several
+/// bodies share no `lastIndex` (P-AM2).
+export function hasMarker(body) {
+  return typeof body === "string" && /<!--\s*moonshine-review\b/i.test(body);
+}
+
+/// A marker's findings of every kind; a round counts as one with findings when this is above 0.
+export function findingCount(marker) {
+  return marker.high + marker.medium + marker.low + marker.owner;
+}
+
+/// The owner's decisions file for round `round` of PR `pr`, as the answer comment names it.
+export function decisionsFile(pr, round) {
+  return `Claude outputs/next/pr${pr}-round${round}.md`;
+}
+
+/// Whether the decisions file exists in the checkout at `top` as a regular file (no link). Only the
+/// owner writes it (CLAUDE.md → "Pull requests"); it is never read.
+export function decisionsFileExists(top, pr, round) {
+  try {
+    return lstatSync(join(top, decisionsFile(pr, round))).isFile();
+  } catch {
+    return false;
+  }
+}
+
+/// Whether an answer comment carries the owner decisions block of round `round` of PR `pr` (P-AM2,
+/// owner 2026-11-17 and 2026-11-20): exactly one line `Owner decisions: <decisionsFile>`, followed
+/// directly by exactly `count` lines starting `- `, then a blank line or the end. The file itself is
+/// never read here; the callers check that it exists.
+export function ownerDecisions(body, count, pr, round) {
+  if (typeof body !== "string") return false;
+  const lines = body.replace(/\r/g, "").split("\n");
+  const header = `Owner decisions: ${decisionsFile(pr, round)}`;
+  const at = lines.flatMap((line, index) => (/^Owner decisions:/.test(line) ? [index] : []));
+  if (at.length !== 1 || lines[at[0]] !== header) return false;
+  const items = lines.slice(at[0] + 1);
+  const end = items.findIndex((line) => !line.startsWith("- "));
+  const listed = end === -1 ? items.length : end;
+  return listed === count && (end === -1 || items[end].trim() === "");
 }
 
 /// The review's counted marker: { round, head, high, medium, low, owner }; null when the body has no
