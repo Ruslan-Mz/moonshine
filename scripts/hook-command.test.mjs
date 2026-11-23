@@ -32,9 +32,34 @@ test("/review-pr reads a fork PR's diff only, before any worktree is created (PU
   assert.match(skill, /nothing from the PR is built, tested or run/);
   assert.match(skill, /\*\*Read-only review: the head is a fork's code; nothing from this PR was built, tested or run\.\*\*/);
   const cleanUp = skill.slice(skill.indexOf("## 6. Clean up"));
-  // P-HR: the owner's SKILL.md patch, applied after the merge, drops the prune; until then the old line stands.
-  assert.match(cleanUp, /^A read-only review \(§1, step 1\) created no worktree and no probe worktree: (?:run only `git worktree prune`|remove nothing)\./m);
+  // P-HR's owner patch (#65) dropped the prune; P-AM2 (#65's deferred Low) stops accepting the old line.
+  assert.match(cleanUp, /^A read-only review \(§1, step 1\) created no worktree and no probe worktree: remove nothing\./m);
+  assert.doesNotMatch(skill, /run only `git worktree prune`/);
+  assert.match(cleanUp, /Never run `git worktree prune` \(P-HR, owner 2026-11-16\)/);
 });
+
+// P-HR's owner patch (#65): the headless run's rules in §0, pinned (P-AM2, #65's deferred Low).
+test("/review-pr states the headless run's rules", () => {
+  const skill = readFileSync(join(repository, ".claude/skills/review-pr/SKILL.md"), "utf8");
+  assert.match(skill, /^argument-hint: ".*\[headless\]"$/m);
+  assert.match(skill, /^- `headless` \(P-HR, owner 2026-11-16\): the run was started by `~\/\.config\/moonshine\/bin\/review`/m);
+  assert.match(skill, /The mode argument is final; nothing waits for the owner; `local`, `since <sha>` and `at <sha>` are refused/);
+  assert.match(skill, /no `\$` expansion \(write every path literally\)/);
+  assert.match(skill, /In a `headless` run, never wait: keep the mode given/);
+});
+
+// W7 of P-HR's owner patch (#65): how the agents change probe copies and count, pinned (P-AM2).
+for (const [agent, write] of [
+  ["pr-reviewer.md", /A changed copy of a file for a probe is written whole with the Write tool, never with `sed -i`/],
+  ["review-verifier.md", /Change a probe copy with the Edit tool, never with `sed -i`/],
+]) {
+  test(`${agent} states the W7 write and count rules`, () => {
+    const text = readFileSync(join(repository, ".claude/agents", agent), "utf8");
+    assert.match(text, write);
+    assert.match(text, /On a line that starts with `git`, use no `-c` anywhere, also after a pipe \(`grep -c`, `wc -c`\): use `--count` or `--bytes`/);
+    assert.match(text, /No `\$` expansion: write every path literally \(a headless run refuses it\)/);
+  });
+}
 
 for (const [agent, rule] of [
   ["pr-reviewer.md", /\*\*Read-only review \(a fork PR\)\.\*\* When the orchestrator says the review is read-only, or gives you no worktree/],
@@ -299,4 +324,32 @@ test("the hook tests run with python3 -B and leave no __pycache__ under .claude/
 
 test("without -B the same suite leaves a __pycache__ (the check above can fail)", () => {
   assert.notDeepEqual(bytecodeAfter("python3 -m unittest discover -s .claude/hooks -p 'test_*.py'"), []);
+});
+
+// P-AM2 (owner, 2026-11-20): only the owner writes a round's decisions file, and only the owner
+// clears a stopped run's record.
+test("the template denies writing the owner's decisions files and running review-allow-retry", () => {
+  const file = "./Claude outputs/next/pr*-round*.md";
+  assert.ok(template.permissions.deny.includes(`Edit(${file})`));
+  assert.ok(template.sandbox.filesystem.denyWrite.includes(file));
+  const calls = ["Bash(*/.config/moonshine/bin/review-allow-retry*)", "Bash(review-allow-retry*)"];
+  for (const rule of calls) assert.ok(template.permissions.deny.includes(rule), rule);
+  assert.ok(!template.permissions.allow.some((rule) => /review-allow-retry|Claude outputs/.test(rule)), "no allow undoes them");
+  assert.ok(!template.sandbox.excludedCommands.some((command) => /review-allow-retry/.test(command)), "it never runs outside the sandbox");
+  for (const note of [`Edit(${file}), sandbox.filesystem.denyWrite ${file}`, calls.join(", ")]) assert.ok(Object.hasOwn(template._notes, note), note);
+  assert.match(template._notes[calls.join(", ")], /Sibling class/);
+});
+
+// PR #67 round 1 (owner, 2026-11-21): the deny refuses the tool's calls, not every line naming it.
+test("the review-allow-retry deny refuses its calls only", () => {
+  const denies = template.permissions.deny
+    .filter((rule) => rule.startsWith("Bash(") && rule.endsWith(")"))
+    .map((rule) => new RegExp(`^${rule.slice(5, -1).replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`, "s"));
+  const denied = (command) => denies.some((pattern) => pattern.test(command));
+  for (const command of ["/Users/someone/.config/moonshine/bin/review-allow-retry 67", "~/.config/moonshine/bin/review-allow-retry 67", "review-allow-retry 67"]) {
+    assert.ok(denied(command), command);
+  }
+  for (const command of ["grep -n review-allow-retry CLAUDE.md", 'git commit -m "review-allow-retry: name its record"','node --test --test-name-pattern "review-allow-retry" scripts/review-headless.test.mjs']) {
+    assert.ok(!denied(command), command);
+  }
 });

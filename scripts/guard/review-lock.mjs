@@ -36,6 +36,35 @@ export function lockPath(top) {
   return join(stateFolder, `review-${createHash("sha256").update(realpathSync(top)).digest("hex").slice(0, 16)}.json`);
 }
 
+/// The record of a run on `head` of PR `pr` that stopped after its start (exit 5, 6 or 7): while it
+/// exists, review refuses that head; only the owner's review-allow-retry removes it (P-AM2, owner
+/// 2026-11-20). Not named `review-*`, so it is never taken for a lock.
+export function stoppedPath(pr, head) {
+  return join(stateFolder, `stopped-${pr}-${head}.json`);
+}
+
+/// Watches for the Mac sleeping during a run: every `everyMs`, the wall clock's step beyond the
+/// monotonic clock's (which on macOS does not advance in sleep) is added up. { slept(), stop() };
+/// the clocks can be given for tests.
+export function sleepWatch(everyMs = 10_000, wall = Date.now, mono = () => Number(process.hrtime.bigint() / 1_000_000n)) {
+  let [lastWall, lastMono] = [wall(), mono()];
+  let total = 0;
+  const tick = () => {
+    const [nowWall, nowMono] = [wall(), mono()];
+    total += Math.max(0, nowWall - lastWall - (nowMono - lastMono));
+    [lastWall, lastMono] = [nowWall, nowMono];
+  };
+  const timer = setInterval(tick, everyMs);
+  timer.unref();
+  return {
+    slept() {
+      tick();
+      return total;
+    },
+    stop: () => clearInterval(timer),
+  };
+}
+
 /// The process's start time as ps prints it, or null when ps fails or prints nothing.
 export function startTime(pid) {
   const result = spawnSync("/bin/ps", ["-o", "lstart=", "-p", String(pid)], { env: psEnv, encoding: "utf8" });
@@ -231,7 +260,8 @@ export function removeWorktrees(top, folder, pr) {
 }
 
 /// Whether the process `pid` was started as `claude` (the path itself, or a script run by an
-/// interpreter); false when ps fails.
+/// interpreter); false when ps fails. Under `caffeinate -i` claude keeps the pid review started, and
+/// a forked caffeinate holds the assertion (probe, 2026-11-21, P-AM2).
 function runsClaude(pid, claude) {
   const result = spawnSync("/bin/ps", ["-o", "args=", "-p", String(pid)], { env: psEnv, encoding: "utf8" });
   const args = result.status === 0 ? result.stdout.trim() : "";
