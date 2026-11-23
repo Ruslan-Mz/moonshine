@@ -340,6 +340,9 @@ struct RailReadingTests {
       selected: both.id)
     #expect(rail.marks.count == 2)
     #expect(rail.marks.allSatisfy { reading.row($0).hasSuffix(", selected") })
+    // The fill and the ring, on both rows; never on another task's row.
+    #expect(rail.marks.allSatisfy { DayRailView.isSelected($0, selected: both.id) })
+    #expect(rail.marks.allSatisfy { !DayRailView.isSelected($0, selected: .generate()) })
   }
 
   /// A pinned row from an earlier day keeps `Wed 23:00` in the row, not the 40-pt gutter.

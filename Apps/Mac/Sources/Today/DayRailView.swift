@@ -106,8 +106,8 @@ struct DayRailView: View {
 
   private func scale(_ timeline: DayTimeline) -> some View {
     ZStack(alignment: .topLeading) {
-      edge(window.start, y: 0)
-      edge(window.end, y: timeline.height)
+      edge(window.start, y: 0, showsTime: timeline.showsStartEdge)
+      edge(window.end, y: timeline.height, showsTime: timeline.showsEndEdge)
       ForEach(Array(timeline.items.enumerated()), id: \.offset) { _, item in
         switch item {
         case .gap(let gap): gapRow(gap, holdsNow: holdsNow(gap, timeline.now))
@@ -120,14 +120,16 @@ struct DayRailView: View {
     .frame(maxWidth: .infinity, minHeight: timeline.height + 7, alignment: .topLeading)
   }
 
-  /// The window's start or end line, its time in the gutter.
-  private func edge(_ date: Date, y: CGFloat) -> some View {
+  /// The window's start or end line, its time in the gutter unless the now label covers it.
+  private func edge(_ date: Date, y: CGFloat, showsTime: Bool) -> some View {
     ZStack(alignment: .topLeading) {
-      Text(verbatim: time(date))
-        .font(.system(size: 10))
-        .monospacedDigit()
-        .foregroundStyle(.tertiary)
-        .offset(y: y - 6)
+      if showsTime {
+        Text(verbatim: time(date))
+          .font(.system(size: 10))
+          .monospacedDigit()
+          .foregroundStyle(.tertiary)
+          .offset(y: y - 6)
+      }
       Rectangle()
         .fill(Tokens.cardBorder)
         .frame(height: 1)
@@ -263,6 +265,12 @@ struct DayRailView: View {
   }
 
   private func isSelected(_ mark: DayRail.Mark) -> Bool {
+    Self.isSelected(mark, selected: selected)
+  }
+
+  /// A task's rows take the selection when its task is selected in the list, its planned and
+  /// its due row alike (owner, 2026-11-21); an event never does.
+  static func isSelected(_ mark: DayRail.Mark, selected: TaskItemID?) -> Bool {
     switch mark.kind {
     case .event: false
     case .planned(let item), .due(let item, _): item.id == selected

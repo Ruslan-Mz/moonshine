@@ -117,7 +117,7 @@ The compressed timeline of `screens/day-rail-dense.md` (direction 1, for every d
 - **DueMark** — a 22 pt row: 3 pt bar (`dueText` for a deadline, `checkboxStroke` otherwise) · checkbox · `Due 18:00` 11.5 semibold `dueText`, or `due 20:35` tertiary · title · line emoji. The only amber on the rail. Its gutter stays empty. One line in Today; two lines only under a 175-pt row.
 - **PinnedRow** — any of the three outside the day window: a 22 pt row above or below the timeline, its time in the gutter; one from an earlier day keeps `Wed 23:00–07:00` in the row and leaves the gutter empty.
 - **RailTimeGutter** — 40 pt at both widths: a row's start `HH:mm` 11 secondary, tabular; an end time 10 tertiary (under a block of 34 pt or more; at a duration line's end unless it ends at a gap or the window's end); `08:00` and `22:00` at the window's lines. A time the now label covers gives way.
-- **RailGap** — 18 pt, a dotted 1.5 pt `checkboxStroke` stub and the range `11:55–14:15` 10.5 tertiary, 4 pt from its neighbours; 40 pt with now inside.
+- **RailGap** — 18 pt, a dotted 1.5 pt `checkboxStroke` stub and the range `11:55–14:15` 10.5 tertiary, 6 pt below the row above (its 2-pt spacing and 4) and 4 pt above the next; 40 pt with now inside.
 - **DurationLine** — 2 pt at the gutter's edge, calendar colour (event) or secondary (task), 70 %; outer span only, down to the latest end of every span that starts inside it.
 - **Nested span range** — `17:45–18:15`, 10.5 secondary, before the emoji.
 - **NowMarker** — label `now` 9.5 over the time 10.5 semibold, accent, in the gutter; a 1.5 pt accent line across the rows in a gap or a 24 pt slot; a 7 pt accent dot on a duration line or a block's edge.

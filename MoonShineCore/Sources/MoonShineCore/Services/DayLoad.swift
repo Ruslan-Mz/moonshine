@@ -312,13 +312,19 @@ public struct DayTimeline: Hashable, Sendable {
     public let longestDrawn: TimeInterval
     /// The least block height that shows its end time.
     public let blockEndLabel: Double
-    /// A gutter time's height, and half the two-line now label's.
+    /// Where the gutter's times are drawn, as the view draws them: a row's start from its top,
+    /// a block's end from its top, each `timeLabel` high; a line's end and the window's edges
+    /// centred on their place, `edgeLabelHalf` either way; the now label centred on now.
+    public let startLabelTop: Double
+    public let endLabelTop: Double
     public let timeLabel: Double
+    public let edgeLabelHalf: Double
     public let nowLabelHalf: Double
 
     public static let standard = Metrics(
       pointsPerHour: 30, row: 22, rowSpacing: 2, gap: 18, gapWithNow: 40, gapSpacing: 4,
-      nowSlot: 24, longestDrawn: 3600, blockEndLabel: 34, timeLabel: 13, nowLabelHalf: 12)
+      nowSlot: 24, longestDrawn: 3600, blockEndLabel: 34, startLabelTop: 4, endLabelTop: 18,
+      timeLabel: 13, edgeLabelHalf: 6, nowLabelHalf: 12)
   }
 
   public struct Row: Hashable, Sendable {
@@ -343,7 +349,8 @@ public struct DayTimeline: Hashable, Sendable {
   /// To the latest end of every span that starts inside the outer one (owner, 2026-11-21).
   public struct Line: Hashable, Sendable {
     public let end: Double
-    /// Its end time in the gutter; nil where the line ends at a gap or at the window's end.
+    /// Its end time in the gutter; nil where the line ends at a gap or at the window's end, or
+    /// where the now label covers it.
     public let endTime: Date?
   }
 
@@ -383,6 +390,9 @@ public struct DayTimeline: Hashable, Sendable {
   public let height: Double
   /// Nil outside the window.
   public let now: Now?
+  /// The window's start and end times at its lines; each gives way to the now label.
+  public let showsStartEdge: Bool
+  public let showsEndEdge: Bool
 
   public var gaps: [Gap] { items.compactMap { if case .gap(let gap) = $0 { gap } else { nil } } }
 
@@ -393,8 +403,10 @@ public struct DayTimeline: Hashable, Sendable {
   ///   (the latest end of it and of every span starting inside it) is inside it; an outer span
   ///   with no row inside is a block of its duration, at least 22; one with rows inside is a
   ///   one-line row with a duration line; a span inside another shows its range, with no line;
-  /// - a stretch no mark covers that is longer than an hour is a gap, 4 pt from its neighbours
-  ///   (none at the start line); an hour or less stays to scale.
+  /// - a stretch no mark covers that is longer than an hour is a gap, 6 pt below the row above
+  ///   (its 2-pt spacing and 4) and 4 pt above the next (none at the start line); an hour or
+  ///   less stays to scale;
+  /// - a gutter time the now label covers gives way (owner, 2026-11-21).
   public static func layout(_ rail: DayRail, now: Date, metrics m: Metrics = .standard)
     -> DayTimeline
   {
@@ -471,6 +483,8 @@ public struct DayTimeline: Hashable, Sendable {
     var anchor = (time: window.start, y: 0.0)
     var nowY: Double?
     var lineEnds: [Int: Double] = [:]
+    /// Now's slot after a row inside a span that has ended: it waits for the span's line.
+    var slotAfterLine = false
 
     func addGap(_ from: Date, _ to: Date) {
       let holdsNow: Bool = if case .gap(let start) = place { start == from } else { false }
@@ -495,6 +509,12 @@ public struct DayTimeline: Hashable, Sendable {
       let end = max(tops[last] + heights[last], tops[last] + rest * rate)
       lineEnds[span] = end
       cursor = max(cursor, end)
+      if slotAfterLine {
+        // Below the line and its end time.
+        cursor = max(cursor, end + m.edgeLabelHalf + m.rowSpacing)
+        addSlot()
+        slotAfterLine = false
+      }
     }
 
     if case .slot(after: nil) = place { addSlot() }
@@ -519,7 +539,9 @@ public struct DayTimeline: Hashable, Sendable {
       cursor = y + height + m.rowSpacing
       anchor = (top(index), y)
       if outer[index] == nil, !members(index).isEmpty { group = index }
-      if case .slot(after: index) = place { addSlot() }
+      if case .slot(after: index) = place {
+        if outer[index] == nil { addSlot() } else { slotAfterLine = true }
+      }
     }
     if let span = group { close(span) }
     let height: Double
@@ -535,10 +557,9 @@ public struct DayTimeline: Hashable, Sendable {
 
     if case .span(let span) = place {
       if isBlock[span] {
-        let share =
-          now.timeIntervalSince(marks[span].start)
-          / marks[span].end.timeIntervalSince(
-            marks[span].start)
+        // Over the part drawn: from the window's start to its end at most.
+        let drawn = min(marks[span].end, window.end).timeIntervalSince(top(span))
+        let share = drawn > 0 ? now.timeIntervalSince(top(span)) / drawn : 0
         nowY = tops[span] + share * heights[span]
       } else if let end = lineEnds[span], let until = reach[span] {
         // Along the line: its top, each row inside, its end.
@@ -554,24 +575,31 @@ public struct DayTimeline: Hashable, Sendable {
 
     // The rows, with what the gutter shows.
     let gapStarts = Set((gapBefore.compactMap { $0 } + [closing].compactMap { $0 }).map(\.from))
+    /// The now label covers a gutter time drawn from `from` to `to`.
+    func covered(_ from: Double, _ to: Double) -> Bool {
+      guard let y = nowY else { return false }
+      return from < y + m.nowLabelHalf && to > y - m.nowLabelHalf
+    }
     func row(_ index: Int) -> Row {
       let mark = marks[index]
       let isDue: Bool = if case .due = mark.kind { true } else { false }
-      let covered = nowY.map {
-        tops[index] < $0 + m.nowLabelHalf && tops[index] + m.timeLabel > $0 - m.nowLabelHalf
-      }
+      let startLabel = tops[index] + m.startLabelTop
+      let endLabel = tops[index] + m.endLabelTop
       let nowInBlock: Bool = if case .span(index) = place { true } else { false }
       let line = lineEnds[index].map { end in
         let until = reach[index] ?? mark.end
-        return Line(
-          end: end, endTime: until < window.end && !gapStarts.contains(until) ? until : nil)
+        let shown =
+          until < window.end && !gapStarts.contains(until)
+          && !covered(end - m.edgeLabelHalf, end + m.edgeLabelHalf)
+        return Line(end: end, endTime: shown ? until : nil)
       }
       return Row(
         mark: mark, top: tops[index], height: heights[index], isBlock: isBlock[index],
         showsRange: outer[index] != nil && mark.isSpan || mark.start < window.start,
-        showsStart: !isDue && mark.start >= window.start && covered != true,
+        showsStart: !isDue && mark.start >= window.start
+          && !covered(startLabel, startLabel + m.timeLabel),
         showsEnd: isBlock[index] && heights[index] >= m.blockEndLabel && mark.end <= window.end
-          && !nowInBlock,
+          && !nowInBlock && !covered(endLabel, endLabel + m.timeLabel),
         line: line, inside: members(index).map { marks[$0] })
     }
     let items: [Item] = placed.map {
@@ -590,6 +618,9 @@ public struct DayTimeline: Hashable, Sendable {
         }
       return Now(place: kind, y: y, during: during)
     }
-    return DayTimeline(items: items, height: height, now: nowMark)
+    return DayTimeline(
+      items: items, height: height, now: nowMark,
+      showsStartEdge: !covered(-m.edgeLabelHalf, m.edgeLabelHalf),
+      showsEndEdge: !covered(height - m.edgeLabelHalf, height + m.edgeLabelHalf))
   }
 }

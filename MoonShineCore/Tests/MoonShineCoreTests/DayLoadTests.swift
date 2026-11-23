@@ -499,7 +499,10 @@ extension RigaDay {
       }
     }
     let now = timeline.now.map { ["now \($0.place) \(points($0.y))"] } ?? []
-    return items + ["height \(points(timeline.height))"] + now
+    var height = "height \(points(timeline.height))"
+    if !timeline.showsStartEdge { height += " nostartedge" }
+    if !timeline.showsEndEdge { height += " noendedge" }
+    return items + [height] + now
   }
 
   static func title(_ mark: DayRail.Mark?) -> String? {
@@ -576,6 +579,10 @@ extension RigaDay {
     #expect(evening.now?.place == .line)
     #expect(evening.now?.y == 357)
     #expect(Self.title(evening.now?.during) == "Write the report")
+    // At 18:15 the label covers the line's 18:30 end time, which gives way.
+    let late = DayTimeline.layout(rail, now: R.at(18, 15))
+    #expect(late.now?.y == 384)
+    #expect(Self.describe(late).contains("row 17:30 @325 h22 line 395"))
   }
 
   @Test func anHourStaysToScaleAndLongerIsAGap() {
@@ -607,7 +614,8 @@ extension RigaDay {
     let first = Self.rail(tasks: [Self.item("t", R.at(8, 10))])
     #expect(
       Self.describe(DayTimeline.layout(first, now: R.at(8, 5))) == [
-        "row 08:10 @26 h22", "gap 08:10–22:00 @54 h18", "height 76", "now slot 12",
+        // The label covers the 08:00 edge time, which gives way.
+        "row 08:10 @26 h22", "gap 08:10–22:00 @54 h18", "height 76 nostartedge", "now slot 12",
       ])
     let block = Self.rail(tasks: [
       Self.item("Task A", R.at(9), estimate: 150), Self.item("Task B", R.at(11, 30)),
@@ -644,6 +652,33 @@ extension RigaDay {
       Self.describe(DayTimeline.layout(same, now: R.at(7))) == [
         "gap 08:00–10:00 @0 h18", "row 10:00 @22 h22 line 106", "row 10:00 @46 h22 range",
         "gap 12:00–22:00 @110 h18", "height 132",
+      ])
+  }
+
+  /// Review round 1: now after a span with rows inside sits below the span's line.
+  @Test func nowAfterAnEndedSpanIsBelowItsLine() {
+    let rail = Self.rail(tasks: [
+      Self.item("Long", R.at(9), estimate: 180), Self.item("Inside", R.at(9, 5)),
+      Self.item("After", R.at(12, 30)),
+    ])
+    #expect(
+      Self.describe(DayTimeline.layout(rail, now: R.at(12, 10))) == [
+        "row 09:00 @30 h22 line 141.5 12:00", "row 09:05 @54 h22", "row 12:30 @175.5 h22",
+        "gap 12:30–22:00 @203.5 h18", "height 225.5", "now slot 161.5",
+      ])
+  }
+
+  /// Review round 1: now in a block that crosses the window's edge, over the part drawn.
+  @Test func nowInABlockAcrossTheWindowsEdges() {
+    let early = Self.rail([R.event(R.at(7, 30), R.at(9))])
+    #expect(abs((DayTimeline.layout(early, now: R.at(8, 30)).now?.y ?? 0) - 15) < 1e-9)
+    let late = Self.rail([R.event(R.at(20, 30), R.at(23, 30))])
+    #expect(abs((DayTimeline.layout(late, now: R.at(21)).now?.y ?? 0) - 37) < 1e-9)
+    // The label near the end line covers its 22:00.
+    let two = Self.rail(tasks: [Self.item("a", R.at(21)), Self.item("b", R.at(21, 40))])
+    #expect(
+      Self.describe(DayTimeline.layout(two, now: R.at(21, 50))).suffix(2) == [
+        "height 94 noendedge", "now slot 82",
       ])
   }
 
