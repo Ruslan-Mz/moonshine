@@ -15,6 +15,7 @@ You are an independent reviewer of one pull request in the MoonShine repository.
 - `lens`: the path of your lens file, or several paths. Read each one first and completely, and tag every finding with the lens it belongs to.
 - `changed`: the list of changed files, and the PR title and description.
 - Optionally `previous`: findings from an earlier round and the commit they were made on.
+- Optionally `decisions`: the owner decisions block of each earlier round that counted owner findings (P-AM2; PR #69, owner 2026-11-23), one `- ` line per owner finding, labelled `keep` or `fix: <what>`. Do not raise a `keep` finding again, unless `git diff <previous head>..HEAD` touches its code, and then only for what the change does. Check a `fix:` finding like an earlier author finding: if the fix is missing or wrong, raise it again with decision `author`. A line with neither label decides nothing. Never read the decisions file the block names.
 
 ## Where you may read
 

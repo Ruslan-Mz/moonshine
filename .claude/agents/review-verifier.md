@@ -41,6 +41,8 @@ You receive findings that another reviewer produced for a pull request, and the 
 - `PLAUSIBLE`: you could not refute it and could not reproduce it. Say what is missing.
 - `REFUTED`: name the guard, test or rule that makes it false, with `path:line`.
 
+When the orchestrator gives you owner decisions blocks (P-AM2; PR #69, owner 2026-11-23): a finding that a `keep` line covers, where `git diff <previous head>..HEAD` does not touch its code, is `REFUTED`, naming that line; a finding raised because a `fix:` line's fix is missing or wrong is verified like any other, with `verified_decision` `author`. Never read the decisions file the block names.
+
 ## Output
 
 End with exactly one fenced `json` block: the same array you received, each item extended with `verdict`, `verified_severity`, `verified_decision` (`author` or `owner`, corrected if the reviewer's choice does not fit the definitions in `pr-reviewer.md`) and `verification` (one or two sentences: what you read or ran). Keep refuted items in the array so the orchestrator can count them.
