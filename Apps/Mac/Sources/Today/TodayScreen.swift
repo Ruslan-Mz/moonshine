@@ -28,6 +28,12 @@ struct TodayScreen: Equatable {
     case fromEarlier, lifeOps, moreDone
   }
 
+  /// A task's line as the Day rail reads it: Life ops in the UI language, else its name.
+  enum LineName: Hashable {
+    case lifeOps
+    case named(String)
+  }
+
   /// One chip of the Anchors strip.
   struct Anchor: Identifiable, Hashable {
     let id: TaskItemID
@@ -127,6 +133,8 @@ struct TodayScreen: Equatable {
   let deadlines: Set<TaskItemID>
   /// A task's line emoji on the rail; 🧺 for Life ops.
   let emoji: [TaskItemID: String]
+  /// A task's line for the rail's reading; absent when its line is not found.
+  let lineNames: [TaskItemID: LineName]
   let defaultTimes: DefaultTimes
   let calendar: Calendar
 
@@ -159,7 +167,7 @@ struct TodayScreen: Equatable {
     DayRail.compute(
       day: day, now: now, window: .standard, events: input.events,
       visibility: input.visibility, tasks: railTasks, deadlines: deadlines,
-      defaultTimes: defaultTimes, footprint: DayRailView.footprint, calendar: calendar)
+      defaultTimes: defaultTimes, calendar: calendar)
   }
 
   /// A rail mark's row in the table and the disclosure that holds it; nil for a task the
@@ -189,6 +197,11 @@ struct TodayScreen: Equatable {
     emoji = Dictionary(
       today.items.compactMap { item in
         (item.task.line == .lifeOps ? "🧺" : item.trace.lineEntity?.emoji).map { (item.task.id, $0) }
+      }, uniquingKeysWith: { first, _ in first })
+    lineNames = Dictionary(
+      today.items.compactMap { item -> (TaskItemID, LineName)? in
+        if item.task.line == .lifeOps { return (item.task.id, .lifeOps) }
+        return item.trace.lineEntity.map { (item.task.id, .named($0.name)) }
       }, uniquingKeysWith: { first, _ in first })
     let row = { (item: TodayItem) in Self.row(item, day: today.day, defaultTimes: defaultTimes) }
     let lines = Dictionary(

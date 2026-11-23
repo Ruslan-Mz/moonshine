@@ -135,8 +135,11 @@ struct TodayView<Notice: View>: View {
     .navigationTitle("Today")
     .navigationSubtitle(subtitle)
     .inspector(isPresented: $railShown) {
-      TodayRail(screen: screen, rail: rail, now: now, calendars: calendars, reveal: reveal)
-        .inspectorColumnWidth(300)
+      TodayRail(
+        screen: screen, rail: rail, now: now, calendars: calendars, selected: selectedTask,
+        reveal: reveal
+      )
+      .inspectorColumnWidth(300)
     }
     .toolbar {
       Button {
@@ -271,6 +274,11 @@ struct TodayView<Notice: View>: View {
 
   /// A rail mark's task: its row is selected, and the disclosure that holds it opens. A task
   /// shown only in the Anchors strip has no row. The list does not scroll to it.
+  /// The selected row's task, for the rail.
+  private var selectedTask: TaskItemID? {
+    if case .task(let id) = selection { id } else { nil }
+  }
+
   private func reveal(_ id: TaskItemID) {
     guard let (row, disclosure) = screen.row(id) else { return }
     switch disclosure {
