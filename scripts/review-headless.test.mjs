@@ -6,8 +6,8 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { test } from "node:test";
 import { commit, denyListFile, install, installed, ok, repository, secret, slug } from "./guard-fixture.mjs";
 
@@ -53,7 +53,7 @@ const b = JSON.parse(fs.readFileSync(${JSON.stringify(paths.behaviour)}, "utf8")
 const session = args[args.indexOf("--session-id") + 1];
 const locks = fs.readdirSync(${JSON.stringify(paths.state)}).filter((name) => name.startsWith("review-"));
 const lock = locks.length === 1 ? JSON.parse(fs.readFileSync(${JSON.stringify(paths.state)} + "/" + locks[0], "utf8")) : null;
-fs.writeFileSync(${JSON.stringify(paths.started)}, JSON.stringify({ args, env: process.env, cwd: process.cwd(), pid: process.pid, lock }));
+fs.writeFileSync(${JSON.stringify(paths.started)}, JSON.stringify({ args, env: process.env, cwd: process.cwd(), pid: process.pid, ppid: process.ppid, lock }));
 for (const event of b.events) process.stdout.write(JSON.stringify(event).replaceAll("{{session}}", session) + "\\n");
 const pad = (b.scratch ?? ${JSON.stringify(paths.scratch)}) + "/" + session + "/scratchpad";
 if (b.record === "other") fs.appendFileSync(${JSON.stringify(paths.posts)}, JSON.stringify({ kind: "review", pr: 7, id: 555, session: "another-session", time: "t" }) + "\\n");
@@ -74,8 +74,8 @@ if (b.hang) { process.on("SIGTERM", () => {}); setInterval(() => {}, 1000); } el
 `;
 }
 
-function marker(round, head, high = 0) {
-  return `<!-- moonshine-review round=${round} head=${head} high=${high} medium=0 low=0 owner=0 -->`;
+function marker(round, head, high = 0, owner = 0) {
+  return `<!-- moonshine-review round=${round} head=${head} high=${high} medium=0 low=${owner} owner=${owner} -->`;
 }
 
 const init = (extra = {}) => ({ type: "system", subtype: "init", session_id: "{{session}}", apiKeySource: "none", mcp_servers: [{ name: "context7", status: "connected" }], tools, plugins: [], ...extra });
@@ -172,6 +172,9 @@ function setUp() {
   };
   context.started = () => (existsSync(paths.started) ? JSON.parse(readFileSync(paths.started, "utf8")) : null);
   context.locks = () => readdirSync(installed(work, "state")).filter((name) => name.startsWith("review-"));
+  /// The owner's word for another run on PR `pr` (P-AM2): the installed review-allow-retry.
+  context.allowRetry = (args = ["7"], extra = {}) =>
+    spawnSync(installed(work, "bin", "review-allow-retry"), args, { env: { HOME: work.home, PATH: "/usr/bin:/bin", ...extra }, encoding: "utf8" });
   context.runs = () => {
     const folder = join(work.home, "Library", "Caches", "moonshine-review");
     return existsSync(folder) ? readdirSync(folder) : [];
@@ -182,16 +185,32 @@ function setUp() {
 function exits(context, run, code, expected) {
   assert.equal(run.status, code, `${run.stdout}\n${run.stderr}\n${existsSync(context.paths.ghPostLog) ? readFileSync(context.paths.ghPostLog, "utf8") : ""}`);
   if (expected) assert.ok(run.stderr.includes(expected), `missing "${expected}" in:\n${run.stderr}`);
-  // Owner, 2026-11-17 (PR #63 round 1): a refusal may be fixed and run again; a started run never.
-  if (code === 1) assert.ok(run.stderr.includes("Nothing started and nothing was posted: fix what this names and run review again."), run.stderr);
-  if ([5, 6, 7].includes(code)) assert.ok(run.stderr.includes("Do not run review again: tell the owner"), run.stderr);
+  // Owner, 2026-11-17 (PR #63 round 1): a refusal may be fixed and run again, except the two only
+  // the owner clears (PR #67 round 1); a started run never, and it records its head (P-AM2).
+  if (code === 1) assert.ok([fixAndRun, askTheOwner].some((ending) => run.stderr.includes(`Nothing started and nothing was posted: ${ending}`)), run.stderr);
+  if ([5, 6, 7].includes(code)) {
+    assert.ok(run.stderr.includes("Do not run review again: tell the owner"), run.stderr);
+    assert.ok(stopped(context).includes(`stopped-7-${context.head}.json`), "a started run records its head");
+  }
+  if (code === 0) assert.ok(!stopped(context).includes(`stopped-7-${context.head}.json`), "a posted review leaves no record");
   assert.ok(!run.stderr.toLowerCase().includes("quolltail"), "no deny-list text");
   assert.deepEqual(context.locks(), [], "the lock is released");
 }
 
-function refused(context, expected, args) {
-  exits(context, context.run(args), 1, expected);
+const fixAndRun = "fix what this names and run review again.";
+const askTheOwner = "only the owner can clear this; ask the owner.";
+
+/// The stopped runs' records in the state folder.
+const stopped = (context) => readdirSync(context.paths.state).filter((name) => name.startsWith("stopped-"));
+
+/// A refusal starts nothing and records nothing; `ending` is the one it must close with.
+function refused(context, expected, args, ending) {
+  const before = stopped(context);
+  const run = context.run(args);
+  exits(context, run, 1, expected);
   assert.equal(context.started(), null, "claude must not start");
+  assert.deepEqual(stopped(context), before, "a refusal records no head");
+  if (ending) assert.ok(run.stderr.trimEnd().endsWith(ending), run.stderr);
 }
 
 test("a clean run starts claude as probed, and exits 0 with the lock and the run folder removed", needsPs, () => {
@@ -217,9 +236,11 @@ test("a clean run starts claude as probed, and exits 0 with the lock and the run
   assert.equal(env.MOONSHINE_HEADLESS, "1");
   assert.equal(JSON.parse(readFileSync(context.paths.ghPostLog, "utf8")).status, 0);
   assert.match(readFileSync(join(context.work.root, "fake.json.posted"), "utf8"), /"event":"COMMENT"/);
-  // The lock recorded this run's session and claude's pid.
+  // The lock recorded this run's session and claude's pid; under caffeinate -i too, which runs
+  // claude in the process review started (probe, 2026-11-21, P-AM2).
   const { lock, pid } = context.started();
   assert.deepEqual([lock.session, lock.child?.pid, lock.pr, lock.head], [session, pid, "7", context.head]);
+  assert.deepEqual(stopped(context), [], "a reviewed head is not recorded as stopped");
 });
 
 test("a run from a linked worktree passes the git folder check and posts", needsPs, () => {
@@ -350,6 +371,10 @@ test("a live lock refuses a second review; a malformed one names the file", need
   assert.deepEqual(context.locks(), [], "the signalled run released its lock");
   const name = createHash("sha256").update(realpathSync(context.work.cwd)).digest("hex").slice(0, 16);
   writeFileSync(installed(context.work, "state", `review-${name}.json`), "{");
+  assert.deepEqual(stopped(context), [`stopped-7-${context.head}.json`], "the signalled run recorded its head");
+  assert.equal(JSON.parse(readFileSync(join(context.paths.state, stopped(context)[0]), "utf8")).code, 6);
+  assert.equal(context.allowRetry().status, 0, "the owner allows another");
+  assert.deepEqual(stopped(context), []);
   const third = context.run();
   assert.equal(third.status, 1);
   assert.match(third.stderr, /cannot be read/);
@@ -440,6 +465,7 @@ test("failed runs keep the newest three run folders", needsPs, () => {
   context.behaviour = { events: [init(), result()], exit: 1 };
   for (let index = 0; index < 5; index += 1) {
     exits(context, context.run(), 6);
+    assert.equal(context.allowRetry().status, 0);
     spawnSync("/bin/sleep", ["0.05"]);
   }
   assert.equal(context.runs().length, 3);
@@ -468,4 +494,162 @@ test("a deny-list entry never reaches the output", () => {
   checks.check_runs.push({ id: 9, name: secret, status: "queued", conclusion: null, head_sha: context.head, pull_requests: [{ number: 7 }] });
   checks.total_count = 5;
   refused(context, "still running");
+});
+
+// P-AM2 (owner, 2026-11-17 and 2026-11-20): round 2 after owner findings on a plain PR, once round 1
+// is answered with the owner decisions block and the owner's decisions file exists.
+const decisionsBlock = "Answer.\n\nOwner decisions: Claude outputs/next/pr7-round1.md\n- docs/a.md:1: keep as is\n";
+
+/// Round 1 on main with one owner finding, a plain body, the answer at 11:00 and the decisions file
+/// (git-ignored, as `Claude outputs/` is in the repository). `options` change one part each.
+function ownerRound1(context, options = {}) {
+  const { body = "Class: plain\n\nA change.\n", answer = decisionsBlock, by = login, file = true, high = 0 } = options;
+  context.fake[`${repo}/pulls/7`].body = body;
+  context.fake[`${repo}/pulls/7/reviews?per_page=100&page=1`] = [
+    { user: { login }, body: marker(1, options.head ?? context.main, high, 1), submitted_at: "2026-11-20T10:00:00Z" },
+    ...(options.reviews ?? []),
+  ];
+  const at = options.answerAt ?? "2026-11-20T11:00:00Z";
+  context.fake[`${repo}/issues/7/comments?per_page=100&page=1`] = answer === null ? [] : [{ id: 990, user: { login: by }, created_at: at, body: answer }];
+  const exclude = resolve(context.work.cwd, ok(context.work, "rev-parse", "--git-path", "info/exclude").trim());
+  mkdirSync(dirname(exclude), { recursive: true });
+  appendFileSync(exclude, "Claude outputs/\n");
+  if (file) {
+    mkdirSync(join(context.work.cwd, "Claude outputs", "next"), { recursive: true });
+    writeFileSync(join(context.work.cwd, "Claude outputs", "next", file === true ? "pr7-round1.md" : file), "the owner's decisions\n");
+  }
+}
+
+test("round 2 after owner findings on a plain PR, answered with the decisions block, runs", needsPs, () => {
+  const context = setUp();
+  ownerRound1(context);
+  exits(context, context.run(), 0, "reviewed and posted");
+});
+
+for (const [name, options, expected, ending] of [
+  ["a risky PR", { body: "Class: risky\n" }, "no round 2"],
+  ["a body with no class line", { body: "A change.\n" }, "no round 2"],
+  ["no answer", { answer: null }, "owner decisions block"],
+  ["an answer without the block", { answer: "Answer.\n" }, "owner decisions block"],
+  ["the block with no item", { answer: "Owner decisions: Claude outputs/next/pr7-round1.md\n" }, "owner decisions block"],
+  ["the block by another account", { by: "stranger" }, "owner decisions block"],
+  ["the block naming round 2's file", { answer: decisionsBlock.replace("round1", "round2") }, "owner decisions block"],
+  ["no decisions file", { file: false }, "is not in the checkout", askTheOwner],
+  ["the answer before round 1's review", { answerAt: "2026-11-20T09:00:00Z" }, "owner decisions block"],
+  ["a decisions item with no text", { answer: "Owner decisions: Claude outputs/next/pr7-round1.md\n- \n" }, "owner decisions block"],
+  ["a decisions file in another case", { file: "PR7-ROUND1.md" }, "is not in the checkout", askTheOwner],
+  ["another account's marker with a non-breaking hyphen", { reviews: [{ user: { login: "stranger" }, body: "<!-- moonshine\u2011review round=1 -->" }] }, "Another account posted a review marker"],
+  ["another account's marker with a zero-width space", { reviews: [{ user: { login: "stranger" }, body: "<!--\u200b moonshine-review round=1 -->" }] }, "Another account posted a review marker"],
+  ["a round 1 head that is not an ancestor", { head: "f".repeat(40) }, "not an ancestor"],
+  [
+    "another account's marker, second of two",
+    { reviews: [{ user: { login: "stranger" }, body: "a comment" }, { user: { login: "stranger" }, body: "<!-- moonshine-review round=1 -->" }] },
+    "Another account posted a review marker",
+  ],
+  ["another account's upper-case marker", { reviews: [{ user: { login: "stranger" }, body: "<!--MOONSHINE-REVIEW round=1-->" }] }, "Another account posted a review marker"],
+]) {
+  test(`round 2 after owner findings refuses with ${name}`, () => {
+    const context = setUp();
+    ownerRound1(context, options);
+    refused(context, expected, undefined, ending ?? fixAndRun);
+  });
+}
+
+test("round 2 after a High needs no decisions block, also on a risky PR", needsPs, () => {
+  const context = setUp();
+  ownerRound1(context, { body: "Class: risky\n", answer: null, file: false, high: 1 });
+  context.fake[`${repo}/pulls/7/reviews?per_page=100&page=1`][0].body = marker(1, context.main, 1);
+  exits(context, context.run(), 0, "reviewed and posted");
+});
+
+// P-AM2 (owner, 2026-11-20): after a start, the head is not reviewed again without the owner's word.
+test("a run stopped after its start records its head; the next run refuses until the owner allows it", needsPs, () => {
+  const context = setUp();
+  context.behaviour.exit = 1;
+  exits(context, context.run(), 6);
+  assert.deepEqual(stopped(context), [`stopped-7-${context.head}.json`]);
+  assert.deepEqual(Object.keys(JSON.parse(readFileSync(join(context.paths.state, stopped(context)[0]), "utf8"))).sort(), ["code", "head", "pr", "time"]);
+  rmSync(context.paths.started);
+  refused(context, "review-allow-retry 7", undefined, askTheOwner);
+  const allowed = context.allowRetry();
+  assert.equal(allowed.status, 0, allowed.stderr);
+  assert.deepEqual(stopped(context), []);
+  context.behaviour.exit = 0;
+  exits(context, context.run(), 0, "reviewed and posted");
+});
+
+test("a stopped record refuses its head only: another head of the PR runs", needsPs, () => {
+  const context = setUp();
+  writeFileSync(join(context.paths.state, `stopped-7-${"b".repeat(40)}.json`), "{}");
+  exits(context, context.run(), 0, "reviewed and posted");
+});
+
+test("a stopped record refuses before anything starts", needsPs, () => {
+  const context = setUp();
+  writeFileSync(join(context.paths.state, `stopped-7-${context.head}.json`), "{}");
+  refused(context, "started and posted no review", undefined, askTheOwner);
+});
+
+// PR #67 round 1: the record is written once claude has started, so a wrapper killed before it
+// could write the stop still leaves it, and the next call, under the lock, refuses.
+test("a wrapper killed while claude runs leaves its head recorded; the next call refuses", needsPs, async () => {
+  const context = setUp();
+  context.behaviour = { events: [init()], hang: true };
+  context.prepare();
+  const first = spawn(process.execPath, [installed(context.work, "guard", "review.mjs"), "7", "standard"], { cwd: context.work.cwd, env: context.env() });
+  for (let tries = 0; tries < 200 && context.started() === null; tries += 1) spawnSync("/bin/sleep", ["0.05"]);
+  const lockHasChild = () => context.locks().some((name) => readFileSync(installed(context.work, "state", name), "utf8").includes('"child"'));
+  for (let tries = 0; tries < 200 && !lockHasChild(); tries += 1) spawnSync("/bin/sleep", ["0.05"]);
+  assert.deepEqual(stopped(context), [`stopped-7-${context.head}.json`], "recorded from claude's start");
+  assert.equal(JSON.parse(readFileSync(join(context.paths.state, stopped(context)[0]), "utf8")).code, null);
+  // Awaited, so the killed wrapper is reaped and no longer counts as alive.
+  const ended = new Promise((resolve) => first.once("exit", resolve));
+  first.kill("SIGKILL");
+  await ended;
+  const claude = context.started().pid;
+  rmSync(context.paths.started);
+  const second = context.run();
+  exits(context, second, 1, "started and posted no review");
+  assert.equal(context.started(), null, "claude must not start again");
+  assert.throws(() => process.kill(claude, 0), "the stale lock's claude was ended");
+});
+
+test("a stopped run's reason names a sleep longer than a minute", needsPs, () => {
+  const context = setUp();
+  context.behaviour.exit = 1;
+  exits(context, context.run(undefined, { MOONSHINE_REVIEW_TEST_SLEPT_MS: "300000" }), 6, "the Mac slept about 5 min during the run");
+});
+
+test("a stopped run's reason names no sleep of a minute or less", needsPs, () => {
+  const context = setUp();
+  context.behaviour.exit = 1;
+  const run = context.run(undefined, { MOONSHINE_REVIEW_TEST_SLEPT_MS: "30000" });
+  exits(context, run, 6);
+  assert.ok(!run.stderr.includes("slept"), run.stderr);
+});
+
+test("review-allow-retry clears its PR's records only, and refuses inside a headless run and bad arguments", () => {
+  const context = setUp();
+  for (const name of [`stopped-7-${context.head}.json`, `stopped-70-${context.head}.json`]) writeFileSync(join(context.paths.state, name), "{}");
+  assert.equal(context.allowRetry(["7"], { MOONSHINE_HEADLESS: "" }).status, 1);
+  for (const args of [[], ["07"], ["7x"], ["7", "8"], ["12345678"], ["*"]]) assert.equal(context.allowRetry(args).status, 2, JSON.stringify(args));
+  assert.equal(stopped(context).length, 2, "nothing is removed by a refusal");
+  const allowed = context.allowRetry(["7"]);
+  assert.equal(allowed.status, 0, allowed.stderr);
+  assert.match(allowed.stdout, /PR 7 may be reviewed again/);
+  assert.deepEqual(stopped(context), [`stopped-70-${context.head}.json`]);
+});
+
+// The assertion is held by a forked caffeinate whose arguments name claude (probe, 2026-11-21).
+test("claude runs under caffeinate -i on macOS while the run lasts", { skip: (!existsSync("/usr/bin/caffeinate") && "not macOS") || needsPs.skip }, async () => {
+  const context = setUp();
+  context.behaviour = { events: [init()], hang: true };
+  context.times = "5000,3000,200";
+  context.prepare();
+  const run = spawn(process.execPath, [installed(context.work, "guard", "review.mjs"), "7", "standard"], { cwd: context.work.cwd, env: context.env() });
+  const ended = new Promise((resolve) => run.once("exit", resolve));
+  for (let tries = 0; tries < 200 && context.started() === null; tries += 1) spawnSync("/bin/sleep", ["0.05"]);
+  const listed = spawnSync("/bin/ps", ["-A", "-o", "args="], { encoding: "utf8" }).stdout;
+  assert.ok(listed.split("\n").some((line) => line.startsWith(`/usr/bin/caffeinate -i ${join(context.work.root, "claude")} -p`)), "a caffeinate names claude");
+  assert.equal(await ended, 5);
 });

@@ -59,7 +59,7 @@ test("a good install writes the guard, the config and the hook, and sets core.ho
     "review.mjs",
     "xcbuild.sh",
   ]);
-  assert.deepEqual(readdirSync(installed(work, "bin")).sort(), ["gh-post", "review", "xcbuild"]);
+  assert.deepEqual(readdirSync(installed(work, "bin")).sort(), ["gh-post", "review", "review-allow-retry", "xcbuild"]);
   assert.deepEqual(JSON.parse(readFileSync(installed(work, "guard", "config.json"), "utf8")), {
     denyList: work.denyList,
     scratchRoots: [join(work.root, "scratch", slug(work.cwd))],
