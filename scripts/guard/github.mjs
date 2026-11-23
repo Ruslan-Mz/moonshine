@@ -2,9 +2,9 @@
 // same way: git in a checked repository, GitHub reads that stop on any failure, the CI rule and the
 // review markers. `stop` is called with a message and must not return; no message holds PR text.
 import { spawnSync } from "node:child_process";
-import { existsSync, lstatSync, realpathSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync, realpathSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { config, printable } from "./matcher.mjs";
+import { config, fold, printable } from "./matcher.mjs";
 
 export const repo = "repos/{owner}/{repo}";
 const maxPages = 10;
@@ -104,10 +104,21 @@ export function ciGreen(api, pr, head, entries, stop) {
   if (!(status?.total_count === 0 || status?.state === "success")) stop("The head's commit status is not success.");
 }
 
-/// Whether a body holds a marker of any shape, in any case: a non-global test, so calls over several
-/// bodies share no `lastIndex` (P-AM2).
+/// A body as the marker checks read it (PR #67 round 1): folded like the guard's scan (NFKC, no
+/// zero-width characters or soft hyphens, lower case), then every hyphen-like character as `-`
+/// (NFKC leaves U+2010–U+2015 and U+2212 alone) and the small and full-width `-`, `<` and `>` as
+/// themselves, so a marker no one sees still counts.
+function markerText(body) {
+  return fold(body)
+    .replace(/[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]/g, "-")
+    .replace(/[\uFE64\uFF1C]/g, "<")
+    .replace(/[\uFE65\uFF1E]/g, ">");
+}
+
+/// Whether a body holds a marker of any shape, in any spelling: a non-global test, so calls over
+/// several bodies share no `lastIndex` (P-AM2).
 export function hasMarker(body) {
-  return typeof body === "string" && /<!--\s*moonshine-review\b/i.test(body);
+  return typeof body === "string" && /<!--\s*moonshine-review\b/.test(markerText(body));
 }
 
 /// A marker's findings of every kind; a round counts as one with findings when this is above 0.
@@ -120,11 +131,21 @@ export function decisionsFile(pr, round) {
   return `Claude outputs/next/pr${pr}-round${round}.md`;
 }
 
-/// Whether the decisions file exists in the checkout at `top` as a regular file (no link). Only the
-/// owner writes it (CLAUDE.md → "Pull requests"); it is never read.
+/// Whether the decisions file exists in the checkout at `top` as a regular file. Only the owner
+/// writes it (CLAUDE.md → "Pull requests"); it is never read. From the checkout's real folder down,
+/// each part of the path must be listed under that exact name (no other case) and be a folder, the
+/// last one a file, never a link (PR #67 round 1).
 export function decisionsFileExists(top, pr, round) {
+  const parts = decisionsFile(pr, round).split("/");
   try {
-    return lstatSync(join(top, decisionsFile(pr, round))).isFile();
+    let path = realpathSync(top);
+    for (const [index, part] of parts.entries()) {
+      if (!readdirSync(path).includes(part)) return false;
+      path = join(path, part);
+      const stat = lstatSync(path);
+      if (index < parts.length - 1 ? !stat.isDirectory() : !stat.isFile()) return false;
+    }
+    return true;
   } catch {
     return false;
   }
@@ -132,8 +153,8 @@ export function decisionsFileExists(top, pr, round) {
 
 /// Whether an answer comment carries the owner decisions block of round `round` of PR `pr` (P-AM2,
 /// owner 2026-11-17 and 2026-11-20): exactly one line `Owner decisions: <decisionsFile>`, followed
-/// directly by exactly `count` lines starting `- `, then a blank line or the end. The file itself is
-/// never read here; the callers check that it exists.
+/// directly by exactly `count` lines starting `- ` and some text (an empty item is no decision), then
+/// a blank line or the end. The file itself is never read here; the callers check that it exists.
 export function ownerDecisions(body, count, pr, round) {
   if (typeof body !== "string") return false;
   const lines = body.replace(/\r/g, "").split("\n");
@@ -141,7 +162,7 @@ export function ownerDecisions(body, count, pr, round) {
   const at = lines.flatMap((line, index) => (/^Owner decisions:/.test(line) ? [index] : []));
   if (at.length !== 1 || lines[at[0]] !== header) return false;
   const items = lines.slice(at[0] + 1);
-  const end = items.findIndex((line) => !line.startsWith("- "));
+  const end = items.findIndex((line) => !/^- \S/.test(line));
   const listed = end === -1 ? items.length : end;
   return listed === count && (end === -1 || items[end].trim() === "");
 }
@@ -149,7 +170,7 @@ export function ownerDecisions(body, count, pr, round) {
 /// The review's counted marker: { round, head, high, medium, low, owner }; null when the body has no
 /// marker. More than one marker, or one without counts, stops.
 export function reviewMarker(body, stop) {
-  const found = (body ?? "").match(anyMarker) ?? [];
+  const found = markerText(body ?? "").match(anyMarker) ?? [];
   if (found.length === 0) return null;
   if (found.length > 1) stop("A review by this account holds more than one marker.");
   const counted = countedMarker.exec(body);

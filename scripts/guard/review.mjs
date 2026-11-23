@@ -5,9 +5,10 @@
 // tool set and Context7 as the only MCP server, checks every start event, and decides from the last
 // result and the recorded review. It prints the exit reason and the log folder, never review text.
 // Exits: 0 reviewed and posted · 1 refused · 2 usage · 5 time limit · 6 the run failed · 7 a start
-// gate. A refusal (1) started nothing: the author may fix what it names and run review again; after
-// a start (5, 6, 7) it is never retried (owner, 2026-11-17, PR #63 round 1): the head is recorded in
-// the state folder, and review refuses it until the owner runs bin/review-allow-retry (P-AM2, owner
+// gate. A refusal (1) started nothing: the author may fix what it names and run review again, except
+// the two only the owner clears, which say so; after a start (5, 6, 7) it is never retried (owner,
+// 2026-11-17, PR #63 round 1): from claude's start until a posted review the head is recorded in the
+// state folder, and review refuses it until the owner runs bin/review-allow-retry (P-AM2, owner
 // 2026-11-20). Round 2 follows a round 1 with a High, or with owner findings on a plain PR whose
 // answer carries the owner decisions block and whose decisions file exists (P-AM2). On macOS claude
 // runs under caffeinate -i, and a stopped run's reason names a sleep.
@@ -43,6 +44,12 @@ const sleepNamedMs = 60_000;
 function refuse(message, code = 1) {
   process.stderr.write(`review: refused. ${message} Nothing started and nothing was posted: fix what this names and run review again.\n`);
   process.exit(code);
+}
+
+/// A refusal no fix of the author's clears (PR #67 round 1): a new head must not route around it.
+function refuseOwner(message) {
+  process.stderr.write(`review: refused. ${message} Nothing started and nothing was posted: only the owner can clear this; ask the owner.\n`);
+  process.exit(1);
 }
 
 // 1. Never inside a headless run; the arguments.
@@ -81,9 +88,6 @@ if (typeof headRepo !== "string" || headRepo !== info.base?.repo?.full_name || S
 }
 const head = info.head?.sha;
 if (typeof head !== "string" || !/^[0-9a-f]{40}$/.test(head)) refuse("The PR has no head commit.");
-if (existsSync(stoppedPath(pr, head))) {
-  refuse(`A run on this head stopped after its start; the owner allows another with ${join(home, "bin", "review-allow-retry")} ${pr}.`);
-}
 ciGreen(api, pr, head, denyList(refuse), refuse);
 const reviews = pages(`${repo}/pulls/${pr}/reviews`);
 // /review-pr reads the round and round 2's diff from the markers of all reviews (P-AM2).
@@ -111,7 +115,7 @@ if (round === 2) {
       (comment) => comment?.user?.login === login && Date.parse(comment.created_at) > submitted && ownerDecisions(comment.body, last.owner, pr, 1),
     );
     if (!answered) refuse(`Round 1's owner findings have no answer with the owner decisions block (Owner decisions: ${decisionsFile(pr, 1)}, one line per finding).`);
-    if (!decisionsFileExists(top, pr, 1)) refuse(`The owner's decisions file ${decisionsFile(pr, 1)} is not in the checkout; the owner writes it.`);
+    if (!decisionsFileExists(top, pr, 1)) refuseOwner(`The owner's decisions file ${decisionsFile(pr, 1)} is not in the checkout; the owner writes it.`);
   }
 }
 
@@ -137,6 +141,11 @@ const session = randomUUID();
 const sessionDir = join(root, session);
 const scratchpad = join(sessionDir, "scratchpad");
 const lock = takeLock({ pr, head, session, top, sessionDir }, refuse, settings.claude);
+// Under the lock (PR #67 round 1), so a run that stopped while this one waited for it counts.
+if (existsSync(stoppedPath(pr, head))) {
+  lock.release();
+  refuseOwner(`A run on this head started and posted no review; the owner allows another with ${join(home, "bin", "review-allow-retry")} ${pr}.`);
+}
 
 // 7. The private folder: settings for this run, the MCP config, the logs.
 const runs = join(process.env.HOME, "Library", "Caches", "moonshine-review");
@@ -181,7 +190,22 @@ const awake = existsSync(caffeinate);
 const child = spawn(awake ? caffeinate : settings.claude, awake ? ["-i", settings.claude, ...args] : args, {
   cwd: top, env, detached: true, stdio: ["ignore", "pipe", "pipe"],
 });
-const sleep = sleepWatch();
+// From claude's start the head is recorded, and only a posted review removes the record (owner,
+// 2026-11-20; PR #67 round 1): a failure before the spawn blocks nothing, and a wrapper killed
+// before finish() still leaves it.
+let recorded = false;
+if (child.pid) {
+  try {
+    writeFileSync(stoppedPath(pr, head), JSON.stringify({ pr, head, code: null, time: new Date().toISOString() }), { mode: 0o600 });
+    recorded = true;
+  } catch {
+    // finish(6) below
+  }
+}
+// Tests move the wall clock on by this many ms after the start, as a sleep would.
+const testSleptMs = Number(process.env.MOONSHINE_REVIEW_TEST_SLEPT_MS) || 0;
+let wallReads = 0;
+const sleep = sleepWatch(undefined, () => Date.now() + (wallReads++ === 0 ? 0 : testSleptMs));
 child.on("error", () => finish(6, "claude could not be started"));
 process.stdout.write(`review: round ${round}, ${mode}, claude ${version}; log ${runDir}\n`);
 const errors = createWriteStream(join(runDir, "stderr.log"));
@@ -194,6 +218,7 @@ const timers = [
   setTimeout(() => finish(5, `the time limit of ${minutes[mode]} minutes`), runMs),
 ];
 for (const name of ["SIGTERM", "SIGINT", "SIGHUP"]) process.on(name, () => finish(6, "stopped by a signal"));
+if (child.pid && !recorded) finish(6, "the run could not be recorded in the state folder");
 if (child.pid && !lock.setChild(child.pid)) finish(6, "the lock could not record claude (ps failed, or another run took the lock)");
 let lines = 0;
 let starts = 0;
@@ -269,14 +294,13 @@ function finish(code, reason) {
   if (code !== 0 && slept > sleepNamedMs) reason += `; the Mac slept about ${Math.round(slept / 60_000)} min during the run`;
   killTree([child.pid], graceMs);
   const removed = removeWorktrees(top, sessionDir, pr);
-  // After a start, this head is not reviewed again until the owner allows it (owner, 2026-11-20).
-  let recorded = true;
-  if (code !== 0) {
-    try {
-      writeFileSync(stoppedPath(pr, head), JSON.stringify({ pr, head, code, time: new Date().toISOString() }), { mode: 0o600 });
-    } catch {
-      recorded = false;
-    }
+  // A posted review clears the record; a stop adds its exit to it, and the record written at the
+  // start stays if that fails.
+  try {
+    if (code === 0) rmSync(stoppedPath(pr, head), { force: true });
+    else if (recorded) writeFileSync(stoppedPath(pr, head), JSON.stringify({ pr, head, code, time: new Date().toISOString() }), { mode: 0o600 });
+  } catch {
+    // the record written at the start stays
   }
   lock.release();
   const written = [stream, errors].map((log) => new Promise((resolve) => {
@@ -294,7 +318,7 @@ function finish(code, reason) {
         .sort((a, b) => b.time - a.time);
       for (const { path } of old.slice(keptRuns)) rmSync(path, { recursive: true, force: true });
     }
-    const where = code === 0 ? "" : `; log ${runDir}. Do not run review again: tell the owner${recorded ? "" : " (the stop could not be recorded)"}`;
+    const where = code === 0 ? "" : `; log ${runDir}. Do not run review again: tell the owner${child.pid && !recorded ? " (the stop could not be recorded)" : ""}`;
     process.stderr.write(`review: exit ${code}: ${reason}; ${removed} worktree(s) removed${where}\n`);
     process.exit(code);
   };

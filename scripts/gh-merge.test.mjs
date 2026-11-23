@@ -881,3 +881,82 @@ test("a round 1 that is owner-only (no High, Medium or Low) with no answer is re
   ownerRounds(context, { first: { owner: 1 }, answer: null });
   refused(context, "no recorded answer comment");
 });
+
+// PR #67 round 1 (owner, 2026-11-21): another account's marker before the last round refuses after
+// any round, here a round 1 that counted only a High.
+test("a marker review by another account before round 2 is refused after a round 1 with only a High", () => {
+  const context = setUp();
+  ownerRounds(context, {
+    first: { high: 1 },
+    answer: "Every finding and what was done.\n",
+    file: false,
+    reviews: [{ id: 960, user: { login: "stranger" }, body: "<!-- moonshine-review round=1 -->", state: "COMMENTED", submitted_at: "2026-11-11T11:30:00Z" }],
+  });
+  refused(context, "Another account posted a review marker");
+});
+
+test("a round 1 with only a High, answered, then a clean round 2 merges", () => {
+  const context = setUp();
+  ownerRounds(context, { first: { high: 1 }, answer: "Every finding and what was done.\n", file: false });
+  merges(context);
+});
+
+// PR #67 round 1: a marker no one sees still counts.
+for (const [name, body] of [
+  ["a zero-width space after <!--", "<!--\u200b moonshine-review round=1 -->"],
+  ["a zero-width space in the name", "<!-- moonshine\u200b-review round=1 -->"],
+  ["a soft hyphen", "<!-- moonshine\u00ad-review round=1 -->"],
+  ["a non-breaking hyphen (U+2011)", "<!-- moonshine\u2011review round=1 -->"],
+  ["a hyphen (U+2010)", "<!-- moonshine\u2010review round=1 -->"],
+  ["a figure dash (U+2012)", "<!-- moonshine\u2012review round=1 -->"],
+  ["an en dash (U+2013)", "<!-- moonshine\u2013review round=1 -->"],
+  ["a minus sign (U+2212)", "<!-- moonshine\u2212review round=1 -->"],
+  ["a full-width hyphen-minus", "<!-- moonshine\uff0dreview round=1 -->"],
+  ["full-width < and !", "\uff1c\uff01-- moonshine-review round=1 --\uff1e"],
+  ["a small <", "\ufe64!-- moonshine-review round=1 -->"],
+]) {
+  test(`another account's marker spelled with ${name} is refused`, () => {
+    const context = setUp();
+    ownerRounds(context, {
+      reviews: [{ id: 960, user: { login: "stranger" }, body: `ok\n\n${body}\n`, state: "COMMENTED", submitted_at: "2026-11-11T11:30:00Z" }],
+    });
+    refused(context, "Another account posted a review marker");
+  });
+}
+
+test("a later review at the same round number on a newer head does not follow an owner round", () => {
+  const context = setUp();
+  ownerRounds(context, { round2: 1 });
+  refused(context, "no later round on a newer head");
+});
+
+test("owner findings answered with an empty item are refused", () => {
+  const context = setUp();
+  ownerRounds(context, { answer: decisions(["- "]) });
+  refused(context, "owner decisions block");
+});
+
+for (const [name, place] of [
+  ["a linked next folder", (cwd, root) => {
+    mkdirSync(join(root, "elsewhere"), { recursive: true });
+    writeFileSync(join(root, "elsewhere", "pr7-round1.md"), "x\n");
+    mkdirSync(join(cwd, "Claude outputs"), { recursive: true });
+    symlinkSync(join(root, "elsewhere"), join(cwd, "Claude outputs", "next"));
+  }],
+  ["a linked Claude outputs folder", (cwd, root) => {
+    mkdirSync(join(root, "elsewhere", "next"), { recursive: true });
+    writeFileSync(join(root, "elsewhere", "next", "pr7-round1.md"), "x\n");
+    symlinkSync(join(root, "elsewhere"), join(cwd, "Claude outputs"));
+  }],
+  ["a name in another case", (cwd) => {
+    mkdirSync(join(cwd, "Claude outputs", "next"), { recursive: true });
+    writeFileSync(join(cwd, "Claude outputs", "next", "PR7-ROUND1.md"), "x\n");
+  }],
+]) {
+  test(`a decisions file reached through ${name} is refused`, () => {
+    const context = setUp();
+    ownerRounds(context, { file: false });
+    place(context.work.cwd, context.work.root);
+    refused(context, "is not in the checkout");
+  });
+}

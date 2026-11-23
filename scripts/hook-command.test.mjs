@@ -332,8 +332,24 @@ test("the template denies writing the owner's decisions files and running review
   const file = "./Claude outputs/next/pr*-round*.md";
   assert.ok(template.permissions.deny.includes(`Edit(${file})`));
   assert.ok(template.sandbox.filesystem.denyWrite.includes(file));
-  assert.ok(template.permissions.deny.includes("Bash(*review-allow-retry*)"));
+  const calls = ["Bash(*/.config/moonshine/bin/review-allow-retry*)", "Bash(review-allow-retry*)"];
+  for (const rule of calls) assert.ok(template.permissions.deny.includes(rule), rule);
   assert.ok(!template.permissions.allow.some((rule) => /review-allow-retry|Claude outputs/.test(rule)), "no allow undoes them");
   assert.ok(!template.sandbox.excludedCommands.some((command) => /review-allow-retry/.test(command)), "it never runs outside the sandbox");
-  for (const note of [`Edit(${file}), sandbox.filesystem.denyWrite ${file}`, "Bash(*review-allow-retry*)"]) assert.ok(Object.hasOwn(template._notes, note), note);
+  for (const note of [`Edit(${file}), sandbox.filesystem.denyWrite ${file}`, calls.join(", ")]) assert.ok(Object.hasOwn(template._notes, note), note);
+  assert.match(template._notes[calls.join(", ")], /Sibling class/);
+});
+
+// PR #67 round 1 (owner, 2026-11-21): the deny refuses the tool's calls, not every line naming it.
+test("the review-allow-retry deny refuses its calls only", () => {
+  const denies = template.permissions.deny
+    .filter((rule) => rule.startsWith("Bash(") && rule.endsWith(")"))
+    .map((rule) => new RegExp(`^${rule.slice(5, -1).replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, ".*")}$`, "s"));
+  const denied = (command) => denies.some((pattern) => pattern.test(command));
+  for (const command of ["/Users/someone/.config/moonshine/bin/review-allow-retry 67", "~/.config/moonshine/bin/review-allow-retry 67", "review-allow-retry 67"]) {
+    assert.ok(denied(command), command);
+  }
+  for (const command of ["grep -n review-allow-retry CLAUDE.md", 'git commit -m "review-allow-retry: name its record"','node --test --test-name-pattern "review-allow-retry" scripts/review-headless.test.mjs']) {
+    assert.ok(!denied(command), command);
+  }
 });

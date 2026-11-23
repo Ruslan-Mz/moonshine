@@ -185,19 +185,32 @@ function setUp() {
 function exits(context, run, code, expected) {
   assert.equal(run.status, code, `${run.stdout}\n${run.stderr}\n${existsSync(context.paths.ghPostLog) ? readFileSync(context.paths.ghPostLog, "utf8") : ""}`);
   if (expected) assert.ok(run.stderr.includes(expected), `missing "${expected}" in:\n${run.stderr}`);
-  // Owner, 2026-11-17 (PR #63 round 1): a refusal may be fixed and run again; a started run never.
-  if (code === 1) assert.ok(run.stderr.includes("Nothing started and nothing was posted: fix what this names and run review again."), run.stderr);
-  if ([5, 6, 7].includes(code)) assert.ok(run.stderr.includes("Do not run review again: tell the owner"), run.stderr);
+  // Owner, 2026-11-17 (PR #63 round 1): a refusal may be fixed and run again, except the two only
+  // the owner clears (PR #67 round 1); a started run never, and it records its head (P-AM2).
+  if (code === 1) assert.ok([fixAndRun, askTheOwner].some((ending) => run.stderr.includes(`Nothing started and nothing was posted: ${ending}`)), run.stderr);
+  if ([5, 6, 7].includes(code)) {
+    assert.ok(run.stderr.includes("Do not run review again: tell the owner"), run.stderr);
+    assert.ok(stopped(context).includes(`stopped-7-${context.head}.json`), "a started run records its head");
+  }
+  if (code === 0) assert.ok(!stopped(context).includes(`stopped-7-${context.head}.json`), "a posted review leaves no record");
   assert.ok(!run.stderr.toLowerCase().includes("quolltail"), "no deny-list text");
   assert.deepEqual(context.locks(), [], "the lock is released");
 }
 
+const fixAndRun = "fix what this names and run review again.";
+const askTheOwner = "only the owner can clear this; ask the owner.";
+
 /// The stopped runs' records in the state folder.
 const stopped = (context) => readdirSync(context.paths.state).filter((name) => name.startsWith("stopped-"));
 
-function refused(context, expected, args) {
-  exits(context, context.run(args), 1, expected);
+/// A refusal starts nothing and records nothing; `ending` is the one it must close with.
+function refused(context, expected, args, ending) {
+  const before = stopped(context);
+  const run = context.run(args);
+  exits(context, run, 1, expected);
   assert.equal(context.started(), null, "claude must not start");
+  assert.deepEqual(stopped(context), before, "a refusal records no head");
+  if (ending) assert.ok(run.stderr.trimEnd().endsWith(ending), run.stderr);
 }
 
 test("a clean run starts claude as probed, and exits 0 with the lock and the run folder removed", needsPs, () => {
@@ -358,7 +371,10 @@ test("a live lock refuses a second review; a malformed one names the file", need
   assert.deepEqual(context.locks(), [], "the signalled run released its lock");
   const name = createHash("sha256").update(realpathSync(context.work.cwd)).digest("hex").slice(0, 16);
   writeFileSync(installed(context.work, "state", `review-${name}.json`), "{");
-  assert.equal(context.allowRetry().status, 0, "the signalled run recorded its head; the owner allows another");
+  assert.deepEqual(stopped(context), [`stopped-7-${context.head}.json`], "the signalled run recorded its head");
+  assert.equal(JSON.parse(readFileSync(join(context.paths.state, stopped(context)[0]), "utf8")).code, 6);
+  assert.equal(context.allowRetry().status, 0, "the owner allows another");
+  assert.deepEqual(stopped(context), []);
   const third = context.run();
   assert.equal(third.status, 1);
   assert.match(third.stderr, /cannot be read/);
@@ -493,13 +509,14 @@ function ownerRound1(context, options = {}) {
     { user: { login }, body: marker(1, options.head ?? context.main, high, 1), submitted_at: "2026-11-20T10:00:00Z" },
     ...(options.reviews ?? []),
   ];
-  context.fake[`${repo}/issues/7/comments?per_page=100&page=1`] = answer === null ? [] : [{ id: 990, user: { login: by }, created_at: "2026-11-20T11:00:00Z", body: answer }];
+  const at = options.answerAt ?? "2026-11-20T11:00:00Z";
+  context.fake[`${repo}/issues/7/comments?per_page=100&page=1`] = answer === null ? [] : [{ id: 990, user: { login: by }, created_at: at, body: answer }];
   const exclude = resolve(context.work.cwd, ok(context.work, "rev-parse", "--git-path", "info/exclude").trim());
   mkdirSync(dirname(exclude), { recursive: true });
   appendFileSync(exclude, "Claude outputs/\n");
   if (file) {
     mkdirSync(join(context.work.cwd, "Claude outputs", "next"), { recursive: true });
-    writeFileSync(join(context.work.cwd, "Claude outputs", "next", "pr7-round1.md"), "the owner's decisions\n");
+    writeFileSync(join(context.work.cwd, "Claude outputs", "next", file === true ? "pr7-round1.md" : file), "the owner's decisions\n");
   }
 }
 
@@ -509,7 +526,7 @@ test("round 2 after owner findings on a plain PR, answered with the decisions bl
   exits(context, context.run(), 0, "reviewed and posted");
 });
 
-for (const [name, options, expected] of [
+for (const [name, options, expected, ending] of [
   ["a risky PR", { body: "Class: risky\n" }, "no round 2"],
   ["a body with no class line", { body: "A change.\n" }, "no round 2"],
   ["no answer", { answer: null }, "owner decisions block"],
@@ -517,7 +534,12 @@ for (const [name, options, expected] of [
   ["the block with no item", { answer: "Owner decisions: Claude outputs/next/pr7-round1.md\n" }, "owner decisions block"],
   ["the block by another account", { by: "stranger" }, "owner decisions block"],
   ["the block naming round 2's file", { answer: decisionsBlock.replace("round1", "round2") }, "owner decisions block"],
-  ["no decisions file", { file: false }, "is not in the checkout"],
+  ["no decisions file", { file: false }, "is not in the checkout", askTheOwner],
+  ["the answer before round 1's review", { answerAt: "2026-11-20T09:00:00Z" }, "owner decisions block"],
+  ["a decisions item with no text", { answer: "Owner decisions: Claude outputs/next/pr7-round1.md\n- \n" }, "owner decisions block"],
+  ["a decisions file in another case", { file: "PR7-ROUND1.md" }, "is not in the checkout", askTheOwner],
+  ["another account's marker with a non-breaking hyphen", { reviews: [{ user: { login: "stranger" }, body: "<!-- moonshine\u2011review round=1 -->" }] }, "Another account posted a review marker"],
+  ["another account's marker with a zero-width space", { reviews: [{ user: { login: "stranger" }, body: "<!--\u200b moonshine-review round=1 -->" }] }, "Another account posted a review marker"],
   ["a round 1 head that is not an ancestor", { head: "f".repeat(40) }, "not an ancestor"],
   [
     "another account's marker, second of two",
@@ -529,7 +551,7 @@ for (const [name, options, expected] of [
   test(`round 2 after owner findings refuses with ${name}`, () => {
     const context = setUp();
     ownerRound1(context, options);
-    refused(context, expected);
+    refused(context, expected, undefined, ending ?? fixAndRun);
   });
 }
 
@@ -548,7 +570,7 @@ test("a run stopped after its start records its head; the next run refuses until
   assert.deepEqual(stopped(context), [`stopped-7-${context.head}.json`]);
   assert.deepEqual(Object.keys(JSON.parse(readFileSync(join(context.paths.state, stopped(context)[0]), "utf8"))).sort(), ["code", "head", "pr", "time"]);
   rmSync(context.paths.started);
-  refused(context, "review-allow-retry 7");
+  refused(context, "review-allow-retry 7", undefined, askTheOwner);
   const allowed = context.allowRetry();
   assert.equal(allowed.status, 0, allowed.stderr);
   assert.deepEqual(stopped(context), []);
@@ -562,10 +584,48 @@ test("a stopped record refuses its head only: another head of the PR runs", need
   exits(context, context.run(), 0, "reviewed and posted");
 });
 
-test("a stopped record refuses before anything starts", () => {
+test("a stopped record refuses before anything starts", needsPs, () => {
   const context = setUp();
   writeFileSync(join(context.paths.state, `stopped-7-${context.head}.json`), "{}");
-  refused(context, "stopped after its start");
+  refused(context, "started and posted no review", undefined, askTheOwner);
+});
+
+// PR #67 round 1: the record is written once claude has started, so a wrapper killed before it
+// could write the stop still leaves it, and the next call, under the lock, refuses.
+test("a wrapper killed while claude runs leaves its head recorded; the next call refuses", needsPs, async () => {
+  const context = setUp();
+  context.behaviour = { events: [init()], hang: true };
+  context.prepare();
+  const first = spawn(process.execPath, [installed(context.work, "guard", "review.mjs"), "7", "standard"], { cwd: context.work.cwd, env: context.env() });
+  for (let tries = 0; tries < 200 && context.started() === null; tries += 1) spawnSync("/bin/sleep", ["0.05"]);
+  const lockHasChild = () => context.locks().some((name) => readFileSync(installed(context.work, "state", name), "utf8").includes('"child"'));
+  for (let tries = 0; tries < 200 && !lockHasChild(); tries += 1) spawnSync("/bin/sleep", ["0.05"]);
+  assert.deepEqual(stopped(context), [`stopped-7-${context.head}.json`], "recorded from claude's start");
+  assert.equal(JSON.parse(readFileSync(join(context.paths.state, stopped(context)[0]), "utf8")).code, null);
+  // Awaited, so the killed wrapper is reaped and no longer counts as alive.
+  const ended = new Promise((resolve) => first.once("exit", resolve));
+  first.kill("SIGKILL");
+  await ended;
+  const claude = context.started().pid;
+  rmSync(context.paths.started);
+  const second = context.run();
+  exits(context, second, 1, "started and posted no review");
+  assert.equal(context.started(), null, "claude must not start again");
+  assert.throws(() => process.kill(claude, 0), "the stale lock's claude was ended");
+});
+
+test("a stopped run's reason names a sleep longer than a minute", needsPs, () => {
+  const context = setUp();
+  context.behaviour.exit = 1;
+  exits(context, context.run(undefined, { MOONSHINE_REVIEW_TEST_SLEPT_MS: "300000" }), 6, "the Mac slept about 5 min during the run");
+});
+
+test("a stopped run's reason names no sleep of a minute or less", needsPs, () => {
+  const context = setUp();
+  context.behaviour.exit = 1;
+  const run = context.run(undefined, { MOONSHINE_REVIEW_TEST_SLEPT_MS: "30000" });
+  exits(context, run, 6);
+  assert.ok(!run.stderr.includes("slept"), run.stderr);
 });
 
 test("review-allow-retry clears its PR's records only, and refuses inside a headless run and bad arguments", () => {

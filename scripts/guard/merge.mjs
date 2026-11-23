@@ -14,10 +14,10 @@
 //      than the one that created the PR, with the counted marker of /review-pr and no High; no
 //      unrecorded marker review at that round or later; no inline High or owner decision; nobody's
 //      changes requested; at most 100 lines changed since, counted from the reviewed commit merged
-//      with main. A round with owner findings (P-AM2) is recorded, counts no fewer than its inline
-//      owner decisions, and is followed by a later round on a newer head descending from it; the
-//      last round then counts no owner finding, is round 2 at most, and no other account's marker
-//      precedes it;
+//      with main; no other account's marker precedes the last round. A round with owner findings
+//      (P-AM2) is recorded, counts no fewer than its inline owner decisions, and is followed by a
+//      later round on a newer head descending from it; the last round then counts no owner finding
+//      and is round 2 at most;
 //   7. after every marker review with findings, its own answer comment: recorded, later than that
 //      review and earlier than the account's next marker review, from another session than that
 //      review's; after a round with owner findings, one of them carries its owner decisions block,
@@ -199,11 +199,12 @@ export function merge(pr, stop) {
       const owned = pages(`${repo}/pulls/${pr}/reviews/${review.id}/comments`).filter((comment) => typeof comment?.body === "string" && comment.body.includes("decision: owner"));
       if (owned.length > marker.owner) stop("A round's marker counts fewer owner findings than its inline comments; the owner merges.");
     }
-    // A marker by another account before the last round could have narrowed its diff.
-    for (const review of reviews) {
-      if (review?.user?.login !== login && hasMarker(review?.body) && time(review.submitted_at) < time(last.review.submitted_at)) {
-        stop("Another account posted a review marker before the last round; the owner merges.");
-      }
+  }
+  // A marker by another account before the last round could have narrowed its diff, after any
+  // round (PR #67 round 1, owner 2026-11-21).
+  for (const review of reviews) {
+    if (review?.user?.login !== login && hasMarker(review?.body) && time(review.submitted_at) < time(last.review.submitted_at)) {
+      stop("Another account posted a review marker before the last round; the owner merges.");
     }
   }
   if (last.marker.high > 0) stop("The last review round counts a High; fix it and run another round.");
