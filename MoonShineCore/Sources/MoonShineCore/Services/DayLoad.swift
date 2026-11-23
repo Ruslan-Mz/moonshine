@@ -213,8 +213,8 @@ public struct DayLoad: Hashable, Sendable {
 }
 
 /// The Day section of Today's rail (`design/screens/today.md` § Calendar): the day's events of
-/// Show-on calendars and its tasks with a time, each placed on the window's scale or pinned
-/// above or below it. Times are floored to the minute, as in `DayLoad`.
+/// Show-on calendars and its tasks with a time, each on the window's timeline or pinned above or
+/// below it. Times are floored to the minute, as in `DayLoad`.
 public struct DayRail: Hashable, Sendable {
   public struct Mark: Hashable, Sendable {
     public enum Kind: Hashable, Sendable {
@@ -222,80 +222,24 @@ public struct DayRail: Hashable, Sendable {
       case event(CalendarEvent)
       /// A task with a planned time: `[planned, planned + estimate)`, no length without one.
       case planned(TaskItem)
-      /// A task with a due time on the day: an instant; its label hangs below the time.
+      /// A task with a due time on the day: an instant.
       case due(TaskItem, isDeadline: Bool)
     }
 
     public let kind: Kind
     public let start: Date
     public let end: Date
-    /// The mark's lane as fractions of the scale's width; pinned marks span it.
-    public let leading: Double
-    public let width: Double
 
-    var isEvent: Bool { if case .event = kind { true } else { false } }
-  }
-
-  /// The least time each kind of mark takes on the scale: the height the view draws it at, as
-  /// a duration on the scale. The column rule reserves it (owner, 2026-11-17).
-  public struct Footprint: Hashable, Sendable {
-    public let event: TimeInterval
-    public let planned: TimeInterval
-    public let due: TimeInterval
-
-    /// Each value within 60 s … 24 h; a value that is not finite counts as 60 s.
-    public init(event: TimeInterval, planned: TimeInterval, due: TimeInterval) {
-      func bounded(_ value: TimeInterval) -> TimeInterval {
-        value.isFinite ? min(max(value, 60), 86_400) : 60
-      }
-      self.event = bounded(event)
-      self.planned = bounded(planned)
-      self.due = bounded(due)
-    }
-
-    /// One minute for every kind: the column rule on time alone.
-    public static let oneMinute = Footprint(event: 60, planned: 60, due: 60)
-
-    func minimum(_ kind: Mark.Kind) -> TimeInterval {
-      switch kind {
-      case .event: event
-      case .planned: planned
-      case .due: due
-      }
-    }
-  }
-
-  /// Marks of one run that do not fit their columns, drawn as one block in one column.
-  public struct Block: Hashable, Sendable {
-    /// The first mark's drawn top and the latest drawn end.
-    public let start: Date
-    public let end: Date
-    public let leading: Double
-    public let width: Double
-    /// Time order.
-    public let marks: [Mark]
-
-    /// A deadline's due mark is in it: the block keeps the amber (owner, 2026-11-17).
-    public var holdsDeadline: Bool {
-      marks.contains { if case .due(_, isDeadline: true) = $0.kind { true } else { false } }
-    }
-  }
-
-  /// A mark on the scale in its column, or a block.
-  public enum Placed: Hashable, Sendable {
-    case mark(Mark)
-    case block(Block)
+    /// An event or an estimated task: it has a length.
+    public var isSpan: Bool { end > start }
   }
 
   public let load: DayLoad
-  /// The heights `marks` and `layout` reserve.
-  public let footprint: Footprint
-  /// All-day events of Show-on calendars, as one-line rows above the scale (owner, 2026-10-30).
+  /// All-day events of Show-on calendars, as one-line rows above the timeline (owner, 2026-10-30).
   public let allDay: [CalendarEvent]
   /// Before the window's start; time order.
   public let above: [Mark]
-  /// On the scale, in their columns with nothing collapsed; an item that crosses an edge is
-  /// here, and the view clips it. `layout(minimumWidth:)` collapses what does not fit.
+  /// On the timeline, in time order; an item that crosses an edge is here.
   public let marks: [Mark]
   /// At or after the window's end; time order.
   public let below: [Mark]
@@ -304,7 +248,7 @@ public struct DayRail: Hashable, Sendable {
   public static func compute(
     day: Date, now: Date, window: DayWindow, events: CalendarRead<[CalendarEvent]>,
     visibility: CalendarVisibility, tasks: [TaskItem], deadlines: Set<TaskItemID>,
-    defaultTimes: DefaultTimes, footprint: Footprint, calendar: Calendar
+    defaultTimes: DefaultTimes, calendar: Calendar
   ) -> DayRail {
     let load = DayLoad.compute(
       day: day, now: now, window: window, events: events, visibility: visibility, tasks: tasks,
@@ -318,18 +262,22 @@ public struct DayRail: Hashable, Sendable {
     let shown = (events.value ?? []).filter {
       $0.overlaps(dayInterval) && visibility.setting(for: $0.calendarID, kind: $0.calendarKind).show
     }
-    var items: [(kind: Mark.Kind, start: Date, end: Date)] = shown.filter { !$0.isAllDay }.map {
-      (.event($0), DayLoad.floorMinute($0.start), DayLoad.floorMinute($0.end))
+    var items: [Mark] = shown.filter { !$0.isAllDay }.map {
+      Mark(kind: .event($0), start: DayLoad.floorMinute($0.start), end: DayLoad.floorMinute($0.end))
     }
     for item in tasks {
       if let at = item.effectivePlannedAt, onDay(at), !defaultTimes.isDateOnly(at, kind: .planned) {
         let start = DayLoad.floorMinute(at)
         let minutes = min(max(item.estimateMinutes ?? 0, 0), 24 * 60)
-        items.append((.planned(item), start, start.addingTimeInterval(TimeInterval(minutes * 60))))
+        items.append(
+          Mark(
+            kind: .planned(item), start: start,
+            end: start.addingTimeInterval(TimeInterval(minutes * 60))))
       }
       if let due = item.effectiveDueAt, onDay(due), !defaultTimes.isDateOnly(due, kind: .due) {
         let at = DayLoad.floorMinute(due)
-        items.append((.due(item, isDeadline: deadlines.contains(item.id)), at, at))
+        items.append(
+          Mark(kind: .due(item, isDeadline: deadlines.contains(item.id)), start: at, end: at))
       }
     }
     // Time order; the same start keeps input order (events first).
@@ -338,150 +286,341 @@ public struct DayRail: Hashable, Sendable {
         ? $0.element.start < $1.element.start : $0.offset < $1.offset
     }.map(\.element)
 
-    func pinned(_ item: (kind: Mark.Kind, start: Date, end: Date)) -> Mark {
-      Mark(kind: item.kind, start: item.start, end: item.end, leading: 0, width: 1)
-    }
-    // Over before the window opens (an instant at its start is on the scale); from its end on.
-    let isAbove = { (item: (kind: Mark.Kind, start: Date, end: Date)) in
-      item.start < span.start && item.end <= span.start
-    }
-    let above = ordered.filter(isAbove)
-    let below = ordered.filter { !isAbove($0) && $0.start >= span.end }
-    let scale = ordered.filter { !isAbove($0) && $0.start < span.end }
-    let unplaced = scale.map {
-      Mark(kind: $0.kind, start: $0.start, end: $0.end, leading: 0, width: 1)
-    }
-    // Nothing collapses at a minimum width of 0.
-    let marks: [Mark] = place(unplaced, footprint: footprint, from: span.start, minimumWidth: 0)
-      .compactMap { if case .mark(let mark) = $0 { mark } else { nil } }
+    // Over before the window opens (an instant at its start is on the timeline); from its end on.
+    let isAbove = { (mark: Mark) in mark.start < span.start && mark.end <= span.start }
     return DayRail(
-      load: load, footprint: footprint, allDay: shown.filter(\.isAllDay),
-      above: above.map(pinned), marks: marks, below: below.map(pinned))
+      load: load, allDay: shown.filter(\.isAllDay), above: ordered.filter(isAbove),
+      marks: ordered.filter { !isAbove($0) && $0.start < span.end },
+      below: ordered.filter { !isAbove($0) && $0.start >= span.end })
+  }
+}
+
+/// The compressed timeline of the Day rail (`design/screens/day-rail-dense.md`, direction 1,
+/// owner 2026-11-17 and 2026-11-21): the rail's marks as full-width rows in time order; an empty
+/// stretch of more than an hour is one gap. Positions are points down from the window's start
+/// line.
+public struct DayTimeline: Hashable, Sendable {
+  /// The design's sizes, in points (`day-rail-dense.md` § Components and tokens).
+  public struct Metrics: Hashable, Sendable {
+    public let pointsPerHour: Double
+    public let row: Double
+    public let rowSpacing: Double
+    public let gap: Double
+    public let gapWithNow: Double
+    public let gapSpacing: Double
+    public let nowSlot: Double
+    public let longestDrawn: TimeInterval
+    /// The least block height that shows its end time.
+    public let blockEndLabel: Double
+    /// Where the gutter's times are drawn, as the view draws them: a row's start from its top,
+    /// a block's end from its top, each `timeLabel` high; a line's end and the window's edges
+    /// centred on their place, `edgeLabelHalf` either way; the now label centred on now.
+    public let startLabelTop: Double
+    public let endLabelTop: Double
+    public let timeLabel: Double
+    public let edgeLabelHalf: Double
+    public let nowLabelHalf: Double
+
+    public static let standard = Metrics(
+      pointsPerHour: 30, row: 22, rowSpacing: 2, gap: 18, gapWithNow: 40, gapSpacing: 4,
+      nowSlot: 24, longestDrawn: 3600, blockEndLabel: 34, startLabelTop: 4, endLabelTop: 18,
+      timeLabel: 13, edgeLabelHalf: 6, nowLabelHalf: 12)
   }
 
-  /// The scale's marks with the runs that do not fit collapsed: `minimumWidth` is the
-  /// narrowest readable column as a fraction of the lane, taken within 0…1 (not finite: 0,
-  /// nothing collapses).
-  public func layout(minimumWidth: Double) -> [Placed] {
-    Self.place(marks, footprint: footprint, from: load.window.start, minimumWidth: minimumWidth)
+  public struct Row: Hashable, Sendable {
+    public let mark: DayRail.Mark
+    public let top: Double
+    public let height: Double
+    /// An outer span with no row inside, drawn for its duration.
+    public let isBlock: Bool
+    /// Its range in the row: a span inside another, or a row that began before the window.
+    public let showsRange: Bool
+    /// Its start in the gutter: not for a due row, a row that began before the window, or a time
+    /// the now label covers (owner, 2026-11-21).
+    public let showsStart: Bool
+    /// A block's end time under its start.
+    public let showsEnd: Bool
+    /// An outer span's duration line, when rows are inside it.
+    public let line: Line?
+    /// The marks inside an outer span, in time order.
+    public let inside: [DayRail.Mark]
   }
 
-  /// The column rule by drawn extent (owner, 2026-11-16 and 2026-11-17; `today.md` § Calendar).
-  /// A mark is drawn from its start, or the window's start when it began before, for its
-  /// length or its footprint, whichever is longer; a due mark's label hangs below its time.
-  /// Marks whose drawn spans overlap form a cluster: events share the leading 55 % when a task
-  /// is in it, else the whole width; tasks (due marks included) share the trailing 45 %, or
-  /// the whole width without events. Each part collapses on its own, events as tasks do
-  /// (owner, 2026-11-17). In each part, as many columns fit as `minimumWidth`
-  /// allows (at least one); a run, a stretch where more marks overlap than fit, becomes one
-  /// block of the marks that meet it, and the step repeats until every stretch fits. Then each
-  /// mark or block takes the first free column, and the width is the part over the columns
-  /// used, so marks that only chain keep the whole part. Spans that meet edge to edge do not
-  /// overlap. `marks` are in time order.
-  fileprivate static func place(
-    _ marks: [Mark], footprint: Footprint, from windowStart: Date, minimumWidth: Double
-  ) -> [Placed] {
-    let minimum = minimumWidth.isFinite ? min(max(minimumWidth, 0), 1) : 0
-    func top(_ index: Int) -> Date { max(marks[index].start, windowStart) }
-    func bottom(_ index: Int) -> Date {
-      max(marks[index].end, top(index).addingTimeInterval(footprint.minimum(marks[index].kind)))
+  /// To the latest end of every span that starts inside the outer one (owner, 2026-11-21).
+  public struct Line: Hashable, Sendable {
+    public let end: Double
+    /// Its end time in the gutter; nil where the line ends at a gap or at the window's end, or
+    /// where the now label covers it.
+    public let endTime: Date?
+  }
+
+  public struct Gap: Hashable, Sendable {
+    public let from: Date
+    public let to: Date
+    public let top: Double
+    public let height: Double
+  }
+
+  public enum Item: Hashable, Sendable {
+    case row(Row)
+    case gap(Gap)
+  }
+
+  /// Where now is drawn (owner, 2026-11-20); its label is always in the gutter, centred on `y`.
+  public struct Now: Hashable, Sendable {
+    public enum Place: Hashable, Sendable {
+      /// In a gap, which grows to `gapWithNow`; a line across the rows.
+      case gap
+      /// In a slot of its own after a row, or under the start line; a line across the rows.
+      case slot
+      /// A dot on an ongoing span's duration line.
+      case line
+      /// A dot on an ongoing block's edge.
+      case block
     }
-    func span(_ group: [Int]) -> (top: Date, bottom: Date) {
-      (group.map(top).min() ?? .distantPast, group.map(bottom).max() ?? .distantPast)
-    }
-    func fit(_ part: Double) -> Int {
-      guard minimum > 0 else { return .max }
-      // No more columns than marks, so a tiny minimum cannot overflow `Int`.
-      return max(1, Int(min(part / minimum + 1e-9, Double(marks.count)).rounded(.down)))
-    }
-    /// The groups of `members` (one mark, or a block's marks) so that no stretch holds more
-    /// than `fit` at once.
-    func groups(_ members: [Int], fit: Int) -> [[Int]] {
-      var groups = members.map { [$0] }
-      while true {
-        let spans = groups.map(span)
-        // Ends before starts at one moment: spans that only meet do not overlap.
-        var edges: [(time: Date, step: Int)] = []
-        for span in spans { edges += [(span.top, 1), (span.bottom, -1)] }
-        edges.sort { $0.time != $1.time ? $0.time < $1.time : $0.step < $1.step }
-        var runs: [(from: Date, to: Date)] = []
-        var depth = 0
-        var from: Date?
-        for (time, step) in edges {
-          depth += step
-          if depth > fit, from == nil { from = time }
-          if depth <= fit, let start = from {
-            runs.append((start, time))
-            from = nil
-          }
-        }
-        if runs.isEmpty { return groups }
-        var merged: [[Int]] = []
-        var taken = Set<Int>()
-        for run in runs {
-          let meeting = groups.indices.filter {
-            !taken.contains($0) && spans[$0].top < run.to && spans[$0].bottom > run.from
-          }
-          taken.formUnion(meeting)
-          merged.append(meeting.flatMap { groups[$0] }.sorted())
-        }
-        merged += groups.indices.filter { !taken.contains($0) }.map { groups[$0] }
-        groups = merged.sorted { $0[0] < $1[0] }
-      }
-    }
-    var placed: [(order: Int, placed: Placed)] = []
-    func lay(_ cluster: [Int]) {
-      let events = cluster.filter { marks[$0].isEvent }
-      let tasks = cluster.filter { !marks[$0].isEvent }
-      let (eventPart, taskPart) =
-        events.isEmpty ? (0.0, 1.0) : tasks.isEmpty ? (1.0, 0.0) : (0.55, 0.45)
-      for (members, base, part) in [(events, 0.0, eventPart), (tasks, eventPart, taskPart)] {
-        let parts = groups(members, fit: fit(part))
-        // The first free column of each group, in time order.
-        var ends: [Date] = []
-        var column: [Int] = []
-        for group in parts {
-          let (from, to) = span(group)
-          if let free = ends.firstIndex(where: { $0 <= from }) {
-            column.append(free)
-            ends[free] = to
-          } else {
-            column.append(ends.count)
-            ends.append(to)
-          }
-        }
-        let width = part / Double(max(ends.count, 1))
-        for (group, column) in zip(parts, column) {
-          let leading = base + width * Double(column)
-          let laid = group.map {
-            Mark(
-              kind: marks[$0].kind, start: marks[$0].start, end: marks[$0].end,
-              leading: leading, width: width)
-          }
-          if group.count == 1 {
-            placed.append((group[0], .mark(laid[0])))
-          } else {
-            let (from, to) = span(group)
-            placed.append(
-              (
-                group[0],
-                .block(Block(start: from, end: to, leading: leading, width: width, marks: laid))
-              ))
-          }
-        }
-      }
-    }
-    var cluster: [Int] = []
-    var clusterEnd = Date.distantPast
+
+    public let place: Place
+    public let y: Double
+    /// The span still running at now; the outer one when several are (owner, 2026-11-21).
+    public let during: DayRail.Mark?
+  }
+
+  public let items: [Item]
+  /// From the window's start line to its end line.
+  public let height: Double
+  /// Nil outside the window.
+  public let now: Now?
+  /// The window's start and end times at its lines; each gives way to the now label.
+  public let showsStartEdge: Bool
+  public let showsEndEdge: Bool
+
+  public var gaps: [Gap] { items.compactMap { if case .gap(let gap) = $0 { gap } else { nil } } }
+
+  /// The rules of `day-rail-dense.md` § Layout:
+  /// - a row starts its top time (its start, or the window's start when it began before) after
+  ///   the previous row's at 30 pt/h, but never closer than 2 pt below the item above;
+  /// - a span is an event or an estimated task; a row that starts before an outer span's reach
+  ///   (the latest end of it and of every span starting inside it) is inside it; an outer span
+  ///   with no row inside is a block of its duration, at least 22; one with rows inside is a
+  ///   one-line row with a duration line; a span inside another shows its range, with no line;
+  /// - a stretch no mark covers that is longer than an hour is a gap, 6 pt below the row above
+  ///   (its 2-pt spacing and 4) and 4 pt above the next (none at the start line); an hour or
+  ///   less stays to scale;
+  /// - a gutter time the now label covers gives way (owner, 2026-11-21).
+  public static func layout(_ rail: DayRail, now: Date, metrics m: Metrics = .standard)
+    -> DayTimeline
+  {
+    let window = rail.load.window
+    let marks = rail.marks
+    let rate = m.pointsPerHour / 3600
+    func top(_ index: Int) -> Date { max(marks[index].start, window.start) }
+
+    // Who is inside whom, by time alone.
+    var outer: [Int?] = Array(repeating: nil, count: marks.count)
+    var reach: [Int: Date] = [:]
+    var open: Int?
     for index in marks.indices {
-      if !cluster.isEmpty && top(index) >= clusterEnd {
-        lay(cluster)
-        cluster = []
+      if let span = open, let until = reach[span], top(index) < until {
+        outer[index] = span
+        if marks[index].isSpan { reach[span] = max(until, marks[index].end) }
+      } else {
+        open = marks[index].isSpan ? index : nil
+        if marks[index].isSpan { reach[index] = marks[index].end }
       }
-      cluster.append(index)
-      clusterEnd = max(clusterEnd, bottom(index))
     }
-    if !cluster.isEmpty { lay(cluster) }
-    return placed.sorted { $0.order < $1.order }.map(\.placed)
+    func members(_ span: Int) -> [Int] { marks.indices.filter { outer[$0] == span } }
+    let isBlock = marks.indices.map { outer[$0] == nil && marks[$0].isSpan && members($0).isEmpty }
+
+    // The empty stretches over an hour, and the order of gaps and rows.
+    var gapBefore: [(from: Date, to: Date)?] = Array(repeating: nil, count: marks.count)
+    var latest = window.start
+    for index in marks.indices {
+      if top(index).timeIntervalSince(latest) > m.longestDrawn {
+        gapBefore[index] = (latest, top(index))
+      }
+      latest = max(latest, marks[index].end, top(index))
+    }
+    let closing: (from: Date, to: Date)? =
+      window.end.timeIntervalSince(latest) > m.longestDrawn ? (latest, window.end) : nil
+
+    // Where now falls, before any position is known.
+    enum Place {
+      case span(Int)
+      case gap(Date)
+      case slot(after: Int?)
+    }
+    var place: Place?
+    if window.start <= now && now < window.end {
+      if let span = marks.indices.first(where: {
+        outer[$0] == nil && marks[$0].isSpan && marks[$0].start <= now && now < (reach[$0] ?? now)
+      }) {
+        place = .span(span)
+      } else if let gap = (gapBefore.compactMap { $0 } + [closing].compactMap { $0 })
+        .first(where: { $0.from <= now && now < $0.to })
+      {
+        place = .gap(gap.from)
+      } else {
+        place = .slot(after: marks.indices.last { top($0) <= now })
+      }
+    }
+    let during: DayRail.Mark? = {
+      guard case .span(let span) = place else { return nil }
+      let running = ([span] + members(span)).filter {
+        marks[$0].isSpan && marks[$0].start <= now && now < marks[$0].end
+      }
+      return running.first.map { marks[$0] }
+    }()
+
+    // Positions, in the order the items are drawn.
+    enum Placed {
+      case gap(Gap)
+      case row(Int)
+    }
+    var placed: [Placed] = []
+    var tops: [Double] = Array(repeating: 0, count: marks.count)
+    var heights: [Double] = Array(repeating: 0, count: marks.count)
+    var cursor = 0.0
+    var anchor = (time: window.start, y: 0.0)
+    var nowY: Double?
+    var lineEnds: [Int: Double] = [:]
+    /// Now's slot after a row inside a span that has ended: it waits for the span's line.
+    var slotAfterLine = false
+
+    func addGap(_ from: Date, _ to: Date) {
+      let holdsNow: Bool = if case .gap(let start) = place { start == from } else { false }
+      let gapTop = placed.isEmpty && cursor == 0 ? 0 : cursor + m.gapSpacing
+      let height = holdsNow ? m.gapWithNow : m.gap
+      placed.append(.gap(Gap(from: from, to: to, top: gapTop, height: height)))
+      if holdsNow {
+        let share = now.timeIntervalSince(from) / to.timeIntervalSince(from)
+        nowY = gapTop + m.gap + share * (m.gapWithNow - m.gap)
+      }
+      cursor = gapTop + height + m.gapSpacing
+    }
+    func addSlot() {
+      let slotTop = cursor
+      nowY = slotTop + m.nowSlot / 2
+      cursor = slotTop + m.nowSlot + m.rowSpacing
+    }
+    /// The end of the outer span `span`'s line, once its last row is placed.
+    func close(_ span: Int) {
+      guard let last = members(span).last, let until = reach[span] else { return }
+      let rest = min(until, window.end).timeIntervalSince(top(last))
+      let end = max(tops[last] + heights[last], tops[last] + rest * rate)
+      lineEnds[span] = end
+      cursor = max(cursor, end)
+      if slotAfterLine {
+        // Below the line and its end time.
+        cursor = max(cursor, end + m.edgeLabelHalf + m.rowSpacing)
+        addSlot()
+        slotAfterLine = false
+      }
+    }
+
+    if case .slot(after: nil) = place { addSlot() }
+    var group: Int?
+    for index in marks.indices {
+      if outer[index] == nil, let span = group {
+        close(span)
+        group = nil
+      }
+      let y: Double
+      if let gap = gapBefore[index] {
+        addGap(gap.from, gap.to)
+        y = cursor
+      } else {
+        y = max(cursor, anchor.y + top(index).timeIntervalSince(anchor.time) * rate)
+      }
+      let length = min(marks[index].end, window.end).timeIntervalSince(top(index))
+      let height = isBlock[index] ? max(length * rate, m.row) : m.row
+      tops[index] = y
+      heights[index] = height
+      placed.append(.row(index))
+      cursor = y + height + m.rowSpacing
+      anchor = (top(index), y)
+      if outer[index] == nil, !members(index).isEmpty { group = index }
+      if case .slot(after: index) = place {
+        if outer[index] == nil { addSlot() } else { slotAfterLine = true }
+      }
+    }
+    if let span = group { close(span) }
+    let height: Double
+    if let closing {
+      addGap(closing.from, closing.to)
+      height = cursor
+    } else {
+      let lastBottom = marks.indices.last.map { tops[$0] + heights[$0] } ?? 0
+      height = max(
+        anchor.y + window.end.timeIntervalSince(anchor.time) * rate, lastBottom,
+        lineEnds.values.max() ?? 0, nowY.map { $0 + m.nowSlot / 2 } ?? 0)
+    }
+
+    if case .span(let span) = place {
+      if isBlock[span] {
+        // Over the part drawn: from the window's start to its end at most.
+        let drawn = min(marks[span].end, window.end).timeIntervalSince(top(span))
+        let share = drawn > 0 ? now.timeIntervalSince(top(span)) / drawn : 0
+        nowY = tops[span] + share * heights[span]
+      } else if let end = lineEnds[span], let until = reach[span] {
+        // Along the line: its top, each row inside, its end.
+        let points =
+          [(top(span), tops[span])] + members(span).map { (top($0), tops[$0]) }
+          + [(min(until, window.end), end)]
+        let after = points.lastIndex { $0.0 <= now } ?? 0
+        let (from, to) = (points[after], points[min(after + 1, points.count - 1)])
+        let length = to.0.timeIntervalSince(from.0)
+        nowY = from.1 + (length > 0 ? now.timeIntervalSince(from.0) / length : 0) * (to.1 - from.1)
+      }
+    }
+
+    // The rows, with what the gutter shows.
+    let gapStarts = Set((gapBefore.compactMap { $0 } + [closing].compactMap { $0 }).map(\.from))
+    /// The now label covers a gutter time drawn from `from` to `to`.
+    func covered(_ from: Double, _ to: Double) -> Bool {
+      guard let y = nowY else { return false }
+      return from < y + m.nowLabelHalf && to > y - m.nowLabelHalf
+    }
+    func row(_ index: Int) -> Row {
+      let mark = marks[index]
+      let isDue: Bool = if case .due = mark.kind { true } else { false }
+      let startLabel = tops[index] + m.startLabelTop
+      let endLabel = tops[index] + m.endLabelTop
+      let nowInBlock: Bool = if case .span(index) = place { true } else { false }
+      let line = lineEnds[index].map { end in
+        let until = reach[index] ?? mark.end
+        let shown =
+          until < window.end && !gapStarts.contains(until)
+          && !covered(end - m.edgeLabelHalf, end + m.edgeLabelHalf)
+        return Line(end: end, endTime: shown ? until : nil)
+      }
+      return Row(
+        mark: mark, top: tops[index], height: heights[index], isBlock: isBlock[index],
+        showsRange: outer[index] != nil && mark.isSpan || mark.start < window.start,
+        showsStart: !isDue && mark.start >= window.start
+          && !covered(startLabel, startLabel + m.timeLabel),
+        showsEnd: isBlock[index] && heights[index] >= m.blockEndLabel && mark.end <= window.end
+          && !nowInBlock && !covered(endLabel, endLabel + m.timeLabel),
+        line: line, inside: members(index).map { marks[$0] })
+    }
+    let items: [Item] = placed.map {
+      switch $0 {
+      case .gap(let gap): .gap(gap)
+      case .row(let index): .row(row(index))
+      }
+    }
+
+    let nowMark = nowY.map { y -> Now in
+      let kind: Now.Place =
+        switch place {
+        case .span(let span): isBlock[span] ? .block : .line
+        case .gap: .gap
+        case .slot, nil: .slot
+        }
+      return Now(place: kind, y: y, during: during)
+    }
+    return DayTimeline(
+      items: items, height: height, now: nowMark,
+      showsStartEdge: !covered(-m.edgeLabelHalf, m.edgeLabelHalf),
+      showsEndEdge: !covered(height - m.edgeLabelHalf, height + m.edgeLabelHalf))
   }
 }

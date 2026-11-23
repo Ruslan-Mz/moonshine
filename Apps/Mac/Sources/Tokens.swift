@@ -17,10 +17,8 @@ enum Tokens {
     light: 0x000000, dark: 0xFFFFFF, lightAlpha: 0.08, darkAlpha: 0.07)
   static let chipFill = dynamic(
     light: 0x000000, dark: 0xFFFFFF, lightAlpha: 0.045, darkAlpha: 0.075)
-
-  /// The narrowest readable Day rail column (owner, 2026-11-17): padding 6, checkbox 10, three
-  /// gaps of 4, `HH:mm` ≈ 28, about 7 characters ≈ 37 and the emoji ≈ 11, in 10.5 pt.
-  static let railReadableWidth: CGFloat = 104
+  static let selection = dynamic(
+    light: 0x0A64D8, dark: 0x5A9DFF, lightAlpha: 0.08, darkAlpha: 0.16)
 
   /// A calendar's colour toned toward the tokens (`design/components.md` § CalendarDot):
   /// saturation at most 35 %, lightness 50–60 % in light mode and 65–75 % in dark; `paused`

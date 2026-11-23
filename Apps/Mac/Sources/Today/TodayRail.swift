@@ -9,6 +9,7 @@ struct TodayRail: View {
   let rail: DayRail
   let now: Date
   let calendars: [CalendarInfo]
+  let selected: TaskItemID?
   let reveal: (TaskItemID) -> Void
 
   var body: some View {
@@ -19,7 +20,8 @@ struct TodayRail: View {
         }
         if rail.isShown {
           DayRailView(
-            rail: rail, now: now, screen: screen, calendars: calendars, reveal: reveal)
+            rail: rail, now: now, screen: screen, calendars: calendars, selected: selected,
+            reveal: reveal)
         }
         if let focus = screen.quarterFocus { QuarterFocusCard(focus: focus) }
         if !screen.touched.isEmpty { touched }
