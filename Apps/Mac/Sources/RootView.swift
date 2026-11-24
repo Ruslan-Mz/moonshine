@@ -121,68 +121,21 @@ enum OmniFocusWords {
 /// Live's sentences in the status bar, in order, beside its data.
 enum LiveNote: Hashable {
   case notRunning
-  /// The last run could not read OmniFocus; Settings says why (owner, 2026-11-24).
-  case omniFocusUnreadable
-  case importUnfinished
   /// Shown whatever OmniFocus' state: no import runs until a valid file and a relaunch (⌘Q,
   /// then open: reopening a running app keeps the file it read).
   case mappingInvalid
-  case vault(VaultReason)
-
-  /// Why the vault was not read for the workspace shown, in the words of the Settings row.
-  enum VaultReason: Hashable {
-    case notChosen
-    case unreadable
-    case tooLarge
-    case notReadYet
-  }
+  case vaultNotRead
 
   @MainActor static func notes(_ model: AppModel) -> [LiveNote] {
+    guard model.source == .live else { return [] }
+    var notes: [LiveNote] = []
+    if case .loaded = model.state, model.omniFocusNote == .notRunning { notes.append(.notRunning) }
+    if model.mapping == .invalid { notes.append(.mappingInvalid) }
+    // Only while the shown import did not read the vault; Settings says why (owner, 2026-11-10).
     var workspace: Workspace?
     if case .loaded(let overview) = model.state { workspace = overview.workspace }
-    return notes(
-      source: model.source, workspace: workspace, vault: VaultLine(model),
-      omniFocusNote: model.omniFocusNote, mapping: model.mapping)
-  }
-
-  /// `workspace` is the one shown, nil while none is.
-  static func notes(
-    source: AppModel.Source, workspace: Workspace?, vault: VaultLine,
-    omniFocusNote: SourceFeed.OmniFocusNote?, mapping: MappingState?
-  ) -> [LiveNote] {
-    guard source == .live else { return [] }
-    var notes: [LiveNote] = []
-    // With nothing shown, Today's placeholder says what OmniFocus did.
-    if workspace != nil, let omniFocusNote, let note = note(omniFocusNote) { notes.append(note) }
-    if mapping == .invalid { notes.append(.mappingInvalid) }
-    // Only while the vault was not read for the workspace shown (owner, 2026-11-10), in the
-    // Settings row's words (owner, 2026-11-24).
-    if VaultLine.vaultNotRead(workspace) { notes.append(.vault(VaultReason(vault))) }
+    if VaultLine.vaultNotRead(workspace) { notes.append(.vaultNotRead) }
     return notes
-  }
-
-  /// An invalid file has its own note, from the mapping.
-  private static func note(_ note: SourceFeed.OmniFocusNote) -> LiveNote? {
-    switch note {
-    case .notRunning, .failure(.providerNotRunning): .notRunning
-    case .failure(.permissionDenied), .failure(.timedOut), .failure(.invalidSnapshot),
-      .failure(.partialSnapshot):
-      .omniFocusUnreadable
-    case .failure(.other): .importUnfinished
-    case .failure(.mappingInvalid): nil
-    }
-  }
-}
-
-extension LiveNote.VaultReason {
-  /// Under `VaultLine.vaultNotRead` the row is one of the first three or not read yet.
-  init(_ line: VaultLine) {
-    switch line {
-    case .notChosen: self = .notChosen
-    case .unreadable: self = .unreadable
-    case .tooLarge: self = .tooLarge
-    case .notReadYet, .notReadInDemo, .folder: self = .notReadYet
-    }
   }
 }
 
@@ -209,12 +162,7 @@ struct StatusBar: View {
         case .notRunning: Text("OmniFocus is not running — showing the last import")
         // The one sentence for an invalid file, here and in Settings.
         case .mappingInvalid: OmniFocusWords.text(.failure(.mappingInvalid))
-        case .omniFocusUnreadable: Text("OmniFocus can't be read — see Settings")
-        case .importUnfinished: OmniFocusWords.text(.failure(.other))
-        case .vault(.notChosen): Text("Vault not chosen")
-        case .vault(.unreadable): Text("Vault can't be read")
-        case .vault(.tooLarge): Text("Vault too large to read")
-        case .vault(.notReadYet): Text("Vault not read yet")
+        case .vaultNotRead: Text("Vault not read yet")
         }
       }
       if model.isImporting {
