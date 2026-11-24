@@ -121,7 +121,7 @@ enum OmniFocusWords {
 /// Live's sentences in the status bar, in order, beside its data.
 enum LiveNote: Hashable {
   case notRunning
-  /// The last import could not read OmniFocus; Settings says why (owner, 2026-11-24).
+  /// The last run could not read OmniFocus; Settings says why (owner, 2026-11-24).
   case omniFocusUnreadable
   case importUnfinished
   /// Shown whatever OmniFocus' state: no import runs until a valid file and a relaunch (⌘Q,
@@ -129,7 +129,7 @@ enum LiveNote: Hashable {
   case mappingInvalid
   case vault(VaultReason)
 
-  /// Why the shown import did not read the vault, in the words of the Settings row.
+  /// Why the vault was not read for the workspace shown, in the words of the Settings row.
   enum VaultReason: Hashable {
     case notChosen
     case unreadable
@@ -155,8 +155,8 @@ enum LiveNote: Hashable {
     // With nothing shown, Today's placeholder says what OmniFocus did.
     if workspace != nil, let omniFocusNote, let note = note(omniFocusNote) { notes.append(note) }
     if mapping == .invalid { notes.append(.mappingInvalid) }
-    // Only while the shown import did not read the vault (owner, 2026-11-10), in the Settings
-    // row's words (owner, 2026-11-24).
+    // Only while the vault was not read for the workspace shown (owner, 2026-11-10), in the
+    // Settings row's words (owner, 2026-11-24).
     if VaultLine.vaultNotRead(workspace) { notes.append(.vault(VaultReason(vault))) }
     return notes
   }

@@ -20,7 +20,7 @@ struct StatusBarTests {
       mapping: mapping)
   }
 
-  /// The words of the Settings row, while the shown import did not read the vault.
+  /// The words of the Settings row, while the vault was not read for the workspace shown.
   @Test func theVaultNoteNamesTheReason() {
     #expect(
       Self.notes(workspace: Self.workspace(.vaultNotChosen), vault: .notChosen) == [
