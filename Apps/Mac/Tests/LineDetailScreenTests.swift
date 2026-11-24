@@ -40,12 +40,14 @@ import Testing
     let week = ISOWeek(containing: Self.now, calendar: Self.calendar)
       .horizon(calendar: Self.calendar)
     func when(_ item: LineDetailItem) -> LineDetailFormat.When {
-      LineDetailFormat.when(item, now: Self.now, week: week)
+      LineDetailFormat.when(
+        item, now: Self.now, week: week, calendar: Self.calendar,
+        defaultTimes: DefaultTimes(timeZone: Self.zone))
     }
     let tonight = Self.date(9, 30, 23)
-    #expect(when(try Self.item(due: tonight)) == .due(tonight, urgent: true))
+    #expect(when(try Self.item(due: tonight)) == .due(tonight, urgent: true, showsTime: true))
     let nextWeek = Self.date(10, 6)
-    #expect(when(try Self.item(due: nextWeek)) == .due(nextWeek, urgent: false))
+    #expect(when(try Self.item(due: nextWeek)) == .due(nextWeek, urgent: false, showsTime: false))
     #expect(when(try Self.item(planned: Self.date(9, 29))) == .today)
     let friday = Self.date(10, 2)
     #expect(when(try Self.item(defer: friday)) == .weekday(friday))
@@ -58,6 +60,27 @@ import Testing
     let longAgo = Self.date(9, 27)
     #expect(when(try Self.item(defer: longAgo)) == .date(longAgo))
     #expect(when(try Self.item()) == .none)
+  }
+
+  /// Today's rule (`TodayFormat.when`): the time only for a due time on today's date; a due
+  /// today at OmniFocus' default time, or none, shows the date (owner, 2026-11-16).
+  @Test func theDueBadgeShowsTheTimeOnlyForADueTimeToday() throws {
+    let week = ISOWeek(containing: Self.now, calendar: Self.calendar)
+      .horizon(calendar: Self.calendar)
+    let fiveOClock = TimeOfDay(hour: 17, minute: 0)
+    func when(_ due: Date, defaultDue: TimeOfDay? = nil) throws -> LineDetailFormat.When {
+      LineDetailFormat.when(
+        try Self.item(due: due), now: Self.now, week: week, calendar: Self.calendar,
+        defaultTimes: DefaultTimes(timeZone: Self.zone, due: defaultDue))
+    }
+    let six = Self.date(9, 30, 18)
+    #expect(try when(six) == .due(six, urgent: true, showsTime: true))
+    let midnight = Self.date(9, 30, 0)
+    #expect(try when(midnight) == .due(midnight, urgent: true, showsTime: false))
+    let five = Self.date(9, 30, 17)
+    #expect(try when(five, defaultDue: fiveOClock) == .due(five, urgent: true, showsTime: false))
+    let tomorrow = Self.date(10, 1, 18)
+    #expect(try when(tomorrow) == .due(tomorrow, urgent: false, showsTime: false))
   }
 
   @Test func horizonIsAYearOrAQuarter() {

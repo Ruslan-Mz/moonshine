@@ -1881,6 +1881,22 @@
         }
       }
     },
+    "OmniFocus can't be read — see Settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OmniFocus can't be read — see Settings"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OmniFocus не читается — см. Настройки"
+          }
+        }
+      }
+    },
     "OmniFocus did not answer in time. If macOS is asking for permission, answer it, then press ⌘R.": {
       "localizations": {
         "en": {
@@ -2297,6 +2313,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Правая панель"
+          }
+        }
+      }
+    },
+    "Settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки"
+          }
+        }
+      }
+    },
+    "Settings (⌘,)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings (⌘,)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки (⌘,)"
           }
         }
       }
@@ -2821,6 +2869,38 @@
         }
       }
     },
+    "Vault can't be read": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vault can't be read"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Хранилище не читается"
+          }
+        }
+      }
+    },
+    "Vault not chosen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vault not chosen"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Хранилище не выбрано"
+          }
+        }
+      }
+    },
     "Vault not read yet": {
       "localizations": {
         "en": {
@@ -2833,6 +2913,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Хранилище ещё не прочитано"
+          }
+        }
+      }
+    },
+    "Vault too large to read": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vault too large to read"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Хранилище слишком большое — не прочитано"
           }
         }
       }

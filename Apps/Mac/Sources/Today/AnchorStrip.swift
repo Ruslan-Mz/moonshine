@@ -24,6 +24,11 @@ struct AnchorStrip: View {
 private struct AnchorChip: View {
   let anchor: TodayScreen.Anchor
 
+  /// The full title and the line emoji; the done state is the value.
+  private var spoken: String {
+    [anchor.title, anchor.emoji].compactMap { $0 }.joined(separator: " ")
+  }
+
   var body: some View {
     HStack(spacing: 5) {
       Checkbox(isDone: anchor.isDone).font(.system(size: 14))
@@ -36,6 +41,10 @@ private struct AnchorChip: View {
     .padding(.vertical, 3)
     .padding(.horizontal, 8)
     .background(Tokens.chipFill, in: RoundedRectangle(cornerRadius: 6))
-    .accessibilityElement(children: .combine)
+    // The full title, where the chip shows it cut (owner, 2026-11-24); never a catalog key.
+    .help(Text(verbatim: anchor.title))
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(verbatim: spoken))
+    .accessibilityValue(anchor.isDone ? Text("Completed") : Text("Not completed"))
   }
 }

@@ -212,8 +212,9 @@ struct DayRailView: View {
         Text(verbatim: time(now)).font(.system(size: 10.5, weight: .semibold)).monospacedDigit()
       }
       .fixedSize()
+      // No plate (owner, 2026-11-24): the gutter's times give way to the label and the line
+      // runs to its right, so nothing shows through.
       .frame(width: Self.lineX - 4, height: 24, alignment: .leading)
-      .background(.background)
       .offset(y: mark.y - 12)
       switch mark.place {
       case .gap, .slot:
@@ -563,11 +564,8 @@ struct RailReading {
     isDeadline ? localized("Due \(time)", locale) : localized("due \(time)", locale)
   }
 
-  /// The catalog's string in `locale`'s language, as `Text` reads it from the environment.
   static func localized(_ value: String.LocalizationValue, _ locale: Locale) -> String {
-    var resource = LocalizedStringResource(value)
-    resource.locale = locale
-    return String(localized: resource)
+    TodayFormat.localized(value, locale)
   }
 
   private func localized(_ value: String.LocalizationValue) -> String {
