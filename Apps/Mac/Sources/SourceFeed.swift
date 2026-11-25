@@ -40,8 +40,22 @@ final class SourceFeed {
   private var control: Task<Void, Never>?
   private var observers: [any NSObjectProtocol] = []
 
-  init(environment: AppEnvironment?) {
+  /// Every overview this feed builds uses it; a change rebuilds the one shown from the workspace
+  /// it holds: no import and no store read or write (S4-3c-2).
+  var deadlineRule: DeadlineRule {
+    didSet {
+      guard deadlineRule != oldValue, case .loaded(let shown) = state else { return }
+      state = .loaded(overview(shown.workspace))
+    }
+  }
+
+  init(environment: AppEnvironment?, deadlineRule: DeadlineRule = .allDueDates) {
     self.environment = environment
+    self.deadlineRule = deadlineRule
+  }
+
+  private func overview(_ workspace: Workspace) -> Overview {
+    Overview(workspace: workspace, now: clock.wall(), deadlineRule: deadlineRule)
   }
 
   /// The clock the import was timed by, so "updated …" counts from the same origin.
@@ -167,7 +181,7 @@ final class SourceFeed {
       let last = try? await store.lastCommittedImport()
       guard case .loading = state else { return }
       lastImport = last
-      state = .loaded(Overview(workspace: workspace, now: clock.wall()))
+      state = .loaded(overview(workspace))
     } catch {
       storeUnreadable = true
       if case .loading = state { state = .unavailable }
@@ -204,7 +218,7 @@ final class SourceFeed {
     guard case .loaded(let overview) = state else { return }
     let now = clock.wall()
     guard !overview.calendar.isDate(overview.now, inSameDayAs: now) else { return }
-    state = .loaded(Overview(workspace: overview.workspace, now: now))
+    state = .loaded(Overview(workspace: overview.workspace, now: now, deadlineRule: deadlineRule))
   }
 
   private func observeDayChanges() {
@@ -226,7 +240,7 @@ final class SourceFeed {
     guard let store = environment?.store else { return }
     lastImport = try? await store.lastCommittedImport()
     do {
-      state = .loaded(Overview(workspace: try await store.workspace(), now: clock.wall()))
+      state = .loaded(overview(try await store.workspace()))
     } catch {
       if case .loading = state { state = .unavailable }
     }

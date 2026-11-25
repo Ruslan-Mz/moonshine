@@ -46,6 +46,16 @@ final class CountingSettings: AppSettings, @unchecked Sendable {
   func setVaultBookmark(_ value: StoredBookmark) {
     vaultWrites.append(value)
   }
+
+  /// The deadline rule (S4-3c-2).
+  var storedRule = DeadlineRule.allDueDates
+  private(set) var ruleWrites: [DeadlineRule] = []
+
+  var deadlineRule: DeadlineRule { ruleWrites.last ?? storedRule }
+
+  func setDeadlineRule(_ value: DeadlineRule) {
+    ruleWrites.append(value)
+  }
 }
 
 /// An error that names its kind, as the bridge's do.
@@ -615,6 +625,58 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     app.setVaultBookmark(bookmark)
     #expect(app.vaultBookmark == bookmark)
     #expect(storage.writes == ["vaultBookmark"])
+  }
+
+  /// S4-3c-2: the rule as two strings, the mode's pinned name and the trimmed tag.
+  @Test func theDeadlineRuleIsStoredAsTwoStrings() throws {
+    try #require(AppModel.isTestHost)
+    let storage = RecordingStorage()
+    let rule = DeadlineRule(mode: .dueDateAndTag, tag: " Hard ")
+    let host = StandardSettings(storage: storage)
+    #expect(host.deadlineRule == .allDueDates)
+    host.setDeadlineRule(rule)
+    #expect(storage.reads.isEmpty && storage.writes.isEmpty)
+    let app = StandardSettings(storage: storage, isTestHost: false)
+    #expect(app.deadlineRule == .allDueDates)
+    app.setDeadlineRule(rule)
+    #expect(storage.writes == ["deadlineMode", "deadlineTag"])
+    #expect(storage.string(forKey: "deadlineMode") == "dueDateAndTag")
+    #expect(storage.string(forKey: "deadlineTag") == "Hard")
+    #expect(app.deadlineRule == DeadlineRule(mode: .dueDateAndTag, tag: "Hard"))
+  }
+
+  @Test func anUnknownStoredModeReadsAsAllDueDates() {
+    let storage = RecordingStorage()
+    storage.set("everyOtherDate", forKey: "deadlineMode")
+    storage.set("Hard", forKey: "deadlineTag")
+    #expect(
+      StandardSettings(storage: storage, isTestHost: false).deadlineRule
+        == DeadlineRule(mode: .allDueDates, tag: "Hard"))
+  }
+
+  /// S4-3c-2: the midnight rebuild keeps the rule (`dayMayHaveChanged`).
+  @MainActor @Test func midnightKeepsTheDeadlineRule() async throws {
+    let store = try await storeWithAnImport()
+    let time = SettableClock(DemoEnvironment.now)
+    let settings = CountingSettings("live")
+    settings.storedRule = DeadlineRule(mode: .dueDateAndTag, tag: "deadline")
+    let model = AppModel(isTestHost: false, settings: settings) {
+      $0 == .live ? live(.notRunning, store: store, clock: time.clock) : nil
+    }
+    model.start()
+    await waitFor { isLoaded(model.state) && model.omniFocusState == .notRunning }
+    let tomorrow = DemoEnvironment.now.addingTimeInterval(9 * 3_600)
+    time.set(tomorrow)
+    NotificationCenter.default.post(name: .NSCalendarDayChanged, object: nil)
+    await waitFor {
+      if case .loaded(let overview) = model.state { overview.now == tomorrow } else { false }
+    }
+    guard case .loaded(let after) = model.state else {
+      Issue.record("not loaded")
+      return
+    }
+    #expect(after.now == tomorrow)
+    #expect(after.deadlineRule == settings.storedRule)
   }
 
   @MainActor @Test func aReadableIdentityMapOverAnUnreadableWorkspaceIsUnavailable() async {

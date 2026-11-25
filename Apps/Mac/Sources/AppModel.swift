@@ -11,6 +11,9 @@ protocol AppSettings {
   /// The vault folder's bookmark (S4-4d); nil while none is chosen.
   var vaultBookmark: StoredBookmark? { get }
   func setVaultBookmark(_ value: StoredBookmark)
+  /// Which due dates are deadlines (S4-3c-2); all due dates while none is stored.
+  var deadlineRule: DeadlineRule { get }
+  func setDeadlineRule(_ value: DeadlineRule)
 }
 
 /// The vault folder's bookmark, its name and when it was chosen: one value under one key, so a
@@ -34,6 +37,10 @@ extension UserDefaults: SettingsStorage {}
 struct StandardSettings: AppSettings {
   private static let sourceKey = "source"
   private static let vaultKey = "vaultBookmark"
+  /// The rule's mode and tag apart: each is meaningful alone, so a reader never pairs them
+  /// wrongly (S4-3c-2).
+  private static let deadlineModeKey = "deadlineMode"
+  private static let deadlineTagKey = "deadlineTag"
   private let storage: any SettingsStorage
   private let isTestHost: Bool
 
@@ -61,6 +68,21 @@ struct StandardSettings: AppSettings {
   func setVaultBookmark(_ value: StoredBookmark) {
     guard !isTestHost, let data = try? PropertyListEncoder().encode(value) else { return }
     storage.set(data, forKey: Self.vaultKey)
+  }
+
+  /// An absent or unknown mode reads as all due dates, the spec's default; an absent tag as
+  /// `deadline`.
+  var deadlineRule: DeadlineRule {
+    guard !isTestHost else { return .allDueDates }
+    let mode = storage.string(forKey: Self.deadlineModeKey).flatMap(DeadlineRule.Mode.init)
+    return DeadlineRule(
+      mode: mode ?? .allDueDates, tag: storage.string(forKey: Self.deadlineTagKey) ?? "")
+  }
+
+  func setDeadlineRule(_ value: DeadlineRule) {
+    guard !isTestHost else { return }
+    storage.set(value.mode.rawValue, forKey: Self.deadlineModeKey)
+    storage.set(value.tag, forKey: Self.deadlineTagKey)
   }
 }
 
@@ -92,6 +114,8 @@ final class AppModel {
   let vaultFolder: VaultFolder
   /// Why the last folder picked was not kept; cleared by a kept one.
   private(set) var vaultRefusal: VaultFolder.Refusal?
+  /// Which due dates are deadlines; every source's overview is built with it (S4-3c-2).
+  private(set) var deadlineRule: DeadlineRule
 
   /// The unit tests run inside the app (`project.yml`), so every test run launches it.
   nonisolated static var isTestHost: Bool {
@@ -117,6 +141,7 @@ final class AppModel {
     self.environments = environments
     self.vaultFolder = vaultFolder ?? VaultFolder(settings: settings)
     source = Self.source(isTestHost: isTestHost, settings: settings)
+    deadlineRule = settings.deadlineRule
   }
 
   /// Demo only, with no settings.
@@ -230,6 +255,14 @@ final class AppModel {
     }
   }
 
+  /// Settings → Deadlines: stored, then every source built shows it at once, without an import.
+  func setDeadlineRule(_ rule: DeadlineRule) {
+    guard rule != deadlineRule else { return }
+    deadlineRule = rule
+    settings.setDeadlineRule(rule)
+    for feed in feeds.values { feed.deadlineRule = rule }
+  }
+
   /// For tests: `start()`, then wait until the first import has ended (bounded).
   func load() async {
     start()
@@ -241,7 +274,7 @@ final class AppModel {
 
   private func feed(for source: Source) -> SourceFeed {
     if let feed = feeds[source] { return feed }
-    let feed = SourceFeed(environment: environments(source))
+    let feed = SourceFeed(environment: environments(source), deadlineRule: deadlineRule)
     feeds[source] = feed
     return feed
   }
@@ -258,4 +291,6 @@ struct NoSettings: AppSettings {
   func setSource(_ value: String) {}
   var vaultBookmark: StoredBookmark? { nil }
   func setVaultBookmark(_ value: StoredBookmark) {}
+  var deadlineRule: DeadlineRule { .allDueDates }
+  func setDeadlineRule(_ value: DeadlineRule) {}
 }

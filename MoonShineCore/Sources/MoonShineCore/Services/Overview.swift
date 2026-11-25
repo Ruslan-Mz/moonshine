@@ -279,6 +279,9 @@ public struct Overview: Sendable {
   public let calendar: Calendar
   public let stats: Stats
   public let tracer: Tracer
+  public let deadlineRule: DeadlineRule
+  /// Nil when every due date is a deadline.
+  private let deadlines: Set<TaskItemID>?
 
   public static let quietAfterDays = 14
   public static let anchorsShown = 5
@@ -287,12 +290,21 @@ public struct Overview: Sendable {
   public static let anchorTag = "anchor"
   public static let sparklineWeeks = 8
 
-  public init(workspace: Workspace, now: Date) {
+  /// The app passes its rule; the default is the spec's, all due dates.
+  public init(workspace: Workspace, now: Date, deadlineRule: DeadlineRule = .allDueDates) {
     self.workspace = workspace
     self.now = now
     self.calendar = .iso8601(in: workspace.timeZone)
     self.stats = Stats(workspace: workspace, now: now)
     self.tracer = Tracer(workspace: workspace, now: now)
+    self.deadlineRule = deadlineRule
+    self.deadlines = deadlineRule.deadlineTasks(in: workspace)
+  }
+
+  /// Whether a task's due date counts as a deadline under the rule; urgency and the due badge
+  /// read it, Top 3's order does not.
+  private func isDeadline(_ task: TaskItem) -> Bool {
+    deadlines?.contains(task.id) ?? true
   }
 
   /// Vault line order, Life ops last.
@@ -338,7 +350,7 @@ public struct Overview: Sendable {
       let plannedEarlier = task.effectivePlannedAt.flatMap { $0 < day.start ? $0 : nil }
       return TodayItem(
         task: task, trace: tracer.trace(task), reasons: reasons,
-        isUrgent: !isDone && reasons.contains(.due),
+        isUrgent: !isDone && reasons.contains(.due) && isDeadline(task),
         plannedDaysAgo: isDone ? nil : plannedEarlier.map { calendarDays(from: $0, to: day) },
         isDone: isDone)
     }
@@ -488,7 +500,7 @@ public struct Overview: Sendable {
       items[index].append(
         WeekItem(
           task: task, trace: tracer.trace(task),
-          hasDueBadge: task.effectiveDueAt.map(range.contains) ?? false))
+          hasDueBadge: (task.effectiveDueAt.map(range.contains) ?? false) && isDeadline(task)))
     }
     return WeekOverview(
       week: week,
@@ -611,7 +623,7 @@ public struct Overview: Sendable {
       return LineDetailItem(
         task: task, project: task.projectID.flatMap { projectsByID[$0] },
         placement: task.effectivePlannedAt ?? task.effectiveDeferUntil ?? task.effectiveDueAt,
-        isToday: !reasons.isEmpty, isUrgent: reasons.contains(.due))
+        isToday: !reasons.isEmpty, isUrgent: reasons.contains(.due) && isDeadline(task))
     }
 
     let target = tracer.target(of: id)
