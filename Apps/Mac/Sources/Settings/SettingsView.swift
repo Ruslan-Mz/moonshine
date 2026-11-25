@@ -9,10 +9,16 @@ struct SettingsView: View {
   @Bindable var model: AppModel
   /// The vault picker: `Choose…`, and a switch to Live with no folder chosen (S4-4d).
   @State private var choosingVault = false
-  /// The deadline tag as typed; committed on Return, focus loss, the window resigning key and
-  /// closing, never per keystroke: a cleared field would revert to `deadline` while typing.
-  @State private var tagDraft = ""
+  /// The deadline tag as typed, seeded with the stored tag, so a commit before it is edited
+  /// changes nothing; committed on Return, focus loss, any window resigning key and closing,
+  /// never per keystroke: a cleared field would revert to `deadline` while typing.
+  @State private var tagDraft: String
   @FocusState private var tagFocused: Bool
+
+  init(model: AppModel) {
+    self.model = model
+    _tagDraft = State(initialValue: model.deadlineRule.tag)
+  }
 
   var body: some View {
     Form {
@@ -77,11 +83,11 @@ struct SettingsView: View {
     .fileImporter(isPresented: $choosingVault, allowedContentTypes: [.folder]) { result in
       if case .success(let url) = result { model.chooseVault(url) }
     }
-    .onAppear { tagDraft = model.deadlineRule.tag }
     .onChange(of: tagFocused) { _, focused in
       if !focused { commitTag() }
     }
     // A click into the main window keeps the field's focus; ⌘W closes without a focus change.
+    // Any window's notification commits: an unchanged draft writes nothing.
     .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) {
       _ in commitTag()
     }
@@ -132,8 +138,7 @@ struct SettingsView: View {
 
   /// The field shows the stored tag after it, so an empty one shows `deadline` again.
   private func commitTag() {
-    model.setDeadlineRule(DeadlineRule(mode: model.deadlineRule.mode, tag: tagDraft))
-    tagDraft = model.deadlineRule.tag
+    tagDraft = model.commitDeadlineTag(tagDraft)
   }
 
   private func line(_ line: VaultLine) -> some View {

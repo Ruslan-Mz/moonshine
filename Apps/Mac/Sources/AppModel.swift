@@ -263,6 +263,13 @@ final class AppModel {
     for feed in feeds.values { feed.deadlineRule = rule }
   }
 
+  /// The Tag field's draft, committed with the current mode; returns the tag stored, which the
+  /// field then shows (an empty draft shows `deadline`). An unchanged draft writes nothing.
+  func commitDeadlineTag(_ draft: String) -> String {
+    setDeadlineRule(DeadlineRule(mode: deadlineRule.mode, tag: draft))
+    return deadlineRule.tag
+  }
+
   /// For tests: `start()`, then wait until the first import has ended (bounded).
   func load() async {
     start()

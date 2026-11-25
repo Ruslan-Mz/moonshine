@@ -85,7 +85,9 @@ private func urgent(_ overview: Overview) -> Set<TaskItemID> {
     #expect(fridayBadge(try overview(model)) == false)
   }
 
-  /// `showStored` and the first import build with the stored rule.
+  /// A stored rule is read at launch; Demo's store starts empty, so this overview is the first
+  /// import's (`reload`). The build from a stored workspace (`showStored`) is tested in
+  /// `LiveSourceTests.theStoredOverviewAndMidnightKeepTheDeadlineRule`.
   @MainActor @Test func aStoredRuleShowsFromTheStart() async throws {
     let settings = CountingSettings(nil)
     settings.storedRule = tagged
