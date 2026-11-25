@@ -147,6 +147,9 @@ struct TodayScreen: Equatable {
   /// Done today shows the most recent ones; the rest sit behind "N more".
   static let doneShown = 3
 
+  /// Every row the table can show, in a collapsed group or not.
+  var tableRows: [Row] { top + sections.flatMap(\.rows) + fromEarlier + lifeOps + doneToday }
+
   var doneVisible: [Row] { Array(doneToday.prefix(Self.doneShown)) }
   var doneMore: [Row] { Array(doneToday.dropFirst(Self.doneShown)) }
 

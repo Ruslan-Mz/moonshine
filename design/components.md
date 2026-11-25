@@ -13,13 +13,13 @@ Each entry gives the anatomy, its states and a SwiftUI suggestion. Sizes are in 
 
 One line, 28 high, in a 5-column layout:
 
-| Col | Width (Today) | Content                                                                                           |
-| --- | ------------- | ------------------------------------------------------------------------------------------------- |
-| 1   | 34            | checkbox: 16 circle, 1.5 stroke `checkboxStroke`; done = filled accent + white check              |
-| 2   | flex          | title 13.5, truncates at the tail; repeat glyph (`arrow.2.squarepath`, 11, tertiary) if repeating |
-| 3   | 290           | `TraceChip`                                                                                       |
-| 4   | 100           | estimate `≈ 45 min`, 12 secondary, monospaced digits                                              |
-| 5   | 118           | `DueBadge`, or `planned 3 days ago` (11.5 tertiary), or empty                                     |
+| Col | Width (Today)                                              | Content                                                                                           |
+| --- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 1   | 34                                                         | checkbox: 16 circle, 1.5 stroke `checkboxStroke`; done = filled accent + white check              |
+| 2   | flex                                                       | title 13.5, truncates at the tail; repeat glyph (`arrow.2.squarepath`, 11, tertiary) if repeating |
+| 3   | 290                                                        | `TraceChip`                                                                                       |
+| 4   | 100                                                        | estimate `≈ 45 min`, 12 secondary, monospaced digits                                              |
+| 5   | minimum 118, ideal measured (`screens/today.md` § SwiftUI) | `DueBadge`, or `planned 3 days ago` (11.5 tertiary), or empty                                     |
 
 States: open · selected (`selection` background) · done (title `doneText` + strikethrough) · repeating · with due · from earlier. Hairline `rowSeparator` between rows.
 

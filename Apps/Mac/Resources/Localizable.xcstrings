@@ -2301,6 +2301,38 @@
         }
       }
     },
+    "Settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки"
+          }
+        }
+      }
+    },
+    "Settings (⌘,)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings (⌘,)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки (⌘,)"
+          }
+        }
+      }
+    },
     "Shortened: %@": {
       "localizations": {
         "en": {
@@ -3531,25 +3563,25 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "запланировано %lld день назад"
+                  "value": "назначено %lld день назад"
                 }
               },
               "few": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "запланировано %lld дня назад"
+                  "value": "назначено %lld дня назад"
                 }
               },
               "many": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "запланировано %lld дней назад"
+                  "value": "назначено %lld дней назад"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "запланировано %lld дня назад"
+                  "value": "назначено %lld дня назад"
                 }
               }
             }

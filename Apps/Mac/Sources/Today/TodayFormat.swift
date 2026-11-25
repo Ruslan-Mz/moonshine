@@ -62,14 +62,27 @@ enum TodayFormat {
     case planned(String)
   }
 
+  /// A due badge shows its time only for a due time today; Line detail reads the same rule
+  /// (owner, 2026-11-16).
+  static func showsDueTime(dueHasTime: Bool, dueIsToday: Bool) -> Bool {
+    dueIsToday && dueHasTime
+  }
+
   static func when(_ row: TodayScreen.Row, timeZone: TimeZone, locale: Locale) -> When? {
     if let due = row.due {
       return .due(
-        row.dueIsToday && row.dueHasTime
+        showsDueTime(dueHasTime: row.dueHasTime, dueIsToday: row.dueIsToday)
           ? time(due, timeZone: timeZone, locale: locale)
           : dueDate(due, timeZone: timeZone, locale: locale))
     }
     return row.plannedTime.map { .planned(time($0, timeZone: timeZone, locale: locale)) }
+  }
+
+  /// The catalog's string in `locale`'s language, as `Text` reads it from the environment.
+  static func localized(_ value: String.LocalizationValue, _ locale: Locale) -> String {
+    var resource = LocalizedStringResource(value)
+    resource.locale = locale
+    return String(localized: resource)
   }
 
   /// `08`: the hour of a day window's edge, as `day window 08–22` reads it.

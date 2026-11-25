@@ -238,8 +238,11 @@ private struct LineDetailWhenText: View {
 
   var body: some View {
     switch when {
-    case .due(let due, let urgent):
-      let date = TodayFormat.dueDate(due, today: today, timeZone: timeZone, locale: locale)
+    case .due(let due, let urgent, let showsTime):
+      let date =
+        showsTime
+        ? TodayFormat.time(due, timeZone: timeZone, locale: locale)
+        : TodayFormat.dueDate(due, today: today, timeZone: timeZone, locale: locale)
       switch TodayFormat.dueStyle(isUrgent: urgent) {
       case .deadline:
         Text("Due \(date)")

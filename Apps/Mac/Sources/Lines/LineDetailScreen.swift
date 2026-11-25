@@ -95,7 +95,9 @@ struct LineDetailScreen: Equatable {
       ItemRow(
         id: item.task.id, title: item.task.title, project: item.project?.title,
         estimateMinutes: item.task.estimateMinutes,
-        when: LineDetailFormat.when(item, now: overview.now, week: week))
+        when: LineDetailFormat.when(
+          item, now: overview.now, week: week, calendar: overview.calendar,
+          defaultTimes: overview.workspace.defaultTimes))
     }
     completions = detail.completions.map {
       CompletionRow(
@@ -137,8 +139,9 @@ extension LineDetailScreen.Count {
 /// Line detail's When column and the card's horizon, as values.
 enum LineDetailFormat {
   enum When: Hashable {
-    /// The due badge, amber only when urgent (CLAUDE.md rule 8).
-    case due(Date, urgent: Bool)
+    /// The due badge, amber only when urgent (CLAUDE.md rule 8); its time instead of the date
+    /// for a due time today, as Today shows it (owner, 2026-11-16).
+    case due(Date, urgent: Bool, showsTime: Bool)
     /// On Today's list by a date (`LineDetailItem.isToday`).
     case today
     /// Later this week: `Fri`.
@@ -149,8 +152,17 @@ enum LineDetailFormat {
   }
 
   /// A due date first, as Today shows it; then Today's rule; then the placement.
-  static func when(_ item: LineDetailItem, now: Date, week: Horizon?) -> When {
-    if let due = item.task.effectiveDueAt { return .due(due, urgent: item.isUrgent) }
+  static func when(
+    _ item: LineDetailItem, now: Date, week: Horizon?, calendar: Calendar,
+    defaultTimes: DefaultTimes
+  ) -> When {
+    if let due = item.task.effectiveDueAt {
+      return .due(
+        due, urgent: item.isUrgent,
+        showsTime: TodayFormat.showsDueTime(
+          dueHasTime: !defaultTimes.isDateOnly(due, kind: .due),
+          dueIsToday: calendar.isDate(due, inSameDayAs: now)))
+    }
     if item.isToday { return .today }
     guard let placement = item.placement else { return .none }
     if let week, week.contains(placement), placement > now { return .weekday(placement) }

@@ -362,6 +362,7 @@ The canvas mockups are generated files and are not edited by hand; draft-5's wer
 5. **Draft-3 items**: the day rail on iPad and iPhone (open question 14 above); free time on Today as the rest of the window (`≈ 2 h 25 min free until 22:00` at 16:20); the deadline rule (`screens/settings.md` § Deadlines: the setting, and plain `due 20:35` text and neutral day-rail marks for due dates that are not deadlines); read-only checkboxes on the day rail.
 6. **iPad home screen widget** (ADR-0017): reminders now and the next tasks.
 7. **iPhone capture, draft-5 leftovers:** the Dynamic Island with two and three timers, StandBy, RTL of the capture app.
+8. **The Russian planned age** (owner, 2026-11-25, PR #70; the generated files are unchanged): `Today.dc.html`, `Today-Time.dc.html`, `iPadToday.dc.html`, `iPad11Today.dc.html`, `iPadSplitThird.dc.html` and `iPhoneToday.dc.html` render `запланировано N … назад`; `copy.md` § Today and the app read `назначено N дней назад`. A From earlier row with a due date shows only the due text, its age as the tooltip (`screens/today.md` § SwiftUI). Until the redraw, the screen spec wins.
 
 ## Day rail · dense day (decided, 2026-11-17)
 
