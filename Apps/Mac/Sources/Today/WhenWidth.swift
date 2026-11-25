@@ -22,14 +22,23 @@ enum WhenWidth {
   static let spacing: CGFloat = 6
   static let badgePadding: CGFloat = 10
 
+  /// A row from earlier with a due date shows only the due text: the stronger fact, and both
+  /// side by side do not fit 1100×700 with the rail. Its planned age is the cell's tooltip,
+  /// and VoiceOver reads it after the due text (owner, 2026-11-25, PR #70 round 2).
+  static func ageIsTooltip(_ row: TodayScreen.Row, when: TodayFormat.When?) -> Bool {
+    guard row.plannedDaysAgo != nil, case .due = when else { return false }
+    return true
+  }
+
   /// `WhenText`'s pieces in its order: the planned age, then a due date or a planned time.
   static func parts(_ row: TodayScreen.Row, timeZone: TimeZone, locale: Locale) -> [Part] {
     var parts: [Part] = []
-    if let days = row.plannedDaysAgo {
+    let when = TodayFormat.when(row, timeZone: timeZone, locale: locale)
+    if let days = row.plannedDaysAgo, !ageIsTooltip(row, when: when) {
       let age = TodayFormat.localized("planned \(days) days ago", locale)
       parts.append(Part(text: age, style: .plain))
     }
-    switch TodayFormat.when(row, timeZone: timeZone, locale: locale) {
+    switch when {
     case .due(let date):
       switch TodayFormat.dueStyle(isUrgent: row.isUrgent) {
       case .deadline:

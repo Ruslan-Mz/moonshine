@@ -38,6 +38,8 @@ enum TodayColumns {
   static let when: CGFloat = 118
   /// The inset table style's side margins and the spacing between five columns.
   static let margins: CGFloat = 40
+  /// The right rail's width (the inspector).
+  static let rail: CGFloat = 300
 
   /// The narrowest Today: every column at its minimum.
   static var minimumWidth: CGFloat {
@@ -141,7 +143,7 @@ struct TodayView<Notice: View>: View {
         screen: screen, rail: rail, now: now, calendars: calendars, selected: selectedTask,
         reveal: reveal
       )
-      .inspectorColumnWidth(300)
+      .inspectorColumnWidth(TodayColumns.rail)
     }
     .toolbar {
       Button {
@@ -355,18 +357,31 @@ struct EstimateText: View {
 }
 
 /// A due date (amber only when urgent; today's with its time), else a planned time today, and
-/// for a task from earlier its planned age (`today.md` § Calendar).
+/// for a task from earlier its planned age (`today.md` § Calendar), as its tooltip when the
+/// task has a due date (`WhenWidth.ageIsTooltip`).
 struct WhenText: View {
   let row: TodayScreen.Row
   let timeZone: TimeZone
   @Environment(\.locale) private var locale
 
   var body: some View {
+    let when = TodayFormat.when(row, timeZone: timeZone, locale: locale)
+    if let days = row.plannedDaysAgo, WhenWidth.ageIsTooltip(row, when: when) {
+      cell(when, age: nil)
+        .help(Text("planned \(days) days ago"))
+        .accessibilityElement(children: .combine)
+        .accessibilityHint(Text("planned \(days) days ago"))
+    } else {
+      cell(when, age: row.plannedDaysAgo)
+    }
+  }
+
+  private func cell(_ when: TodayFormat.When?, age: Int?) -> some View {
     HStack(spacing: 6) {
-      if let days = row.plannedDaysAgo {
+      if let days = age {
         Text("planned \(days) days ago").foregroundStyle(.secondary)
       }
-      switch TodayFormat.when(row, timeZone: timeZone, locale: locale) {
+      switch when {
       case .due(let date):
         switch TodayFormat.dueStyle(isUrgent: row.isUrgent) {
         case .deadline:

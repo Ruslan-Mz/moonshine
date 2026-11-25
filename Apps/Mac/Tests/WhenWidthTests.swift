@@ -26,14 +26,40 @@ struct WhenWidthTests {
   static func characters(_ part: WhenWidth.Part) -> CGFloat { CGFloat(part.text.count) }
 
   @Test func thePartsAreTheCatalogsWordsInTheUILanguage() {
-    let row = Self.row(due: Self.october1, urgent: true, plannedDaysAgo: 3)
-    let russian = WhenWidth.parts(row, timeZone: Self.zone, locale: Self.russian)
-    #expect(russian.map(\.text).first == "назначено 3 дня назад")
-    #expect(russian.last?.text.hasPrefix("Срок ") == true)
-    #expect(russian.map(\.style) == [.plain, .badge])
-    let english = WhenWidth.parts(row, timeZone: Self.zone, locale: Self.english)
-    #expect(english.first?.text == "planned 3 days ago")
-    #expect(english.last?.text.hasPrefix("Due ") == true)
+    let age = Self.row(plannedDaysAgo: 3)
+    #expect(
+      WhenWidth.parts(age, timeZone: Self.zone, locale: Self.russian)
+        == [.init(text: "назначено 3 дня назад", style: .plain)])
+    #expect(
+      WhenWidth.parts(age, timeZone: Self.zone, locale: Self.english)
+        == [.init(text: "planned 3 days ago", style: .plain)])
+    let due = Self.row(due: Self.october1, urgent: true)
+    let russian = WhenWidth.parts(due, timeZone: Self.zone, locale: Self.russian)
+    #expect(russian.map(\.style) == [.badge])
+    #expect(russian.first?.text.hasPrefix("Срок ") == true)
+    let english = WhenWidth.parts(due, timeZone: Self.zone, locale: Self.english)
+    #expect(english.first?.text.hasPrefix("Due ") == true)
+  }
+
+  /// A row from earlier with a due date shows only the due text; its age is the tooltip
+  /// (owner, 2026-11-25, PR #70 round 2).
+  @Test func aRowFromEarlierWithADueDateShowsOnlyTheDueText() {
+    for locale in [Self.english, Self.russian] {
+      for urgent in [true, false] {
+        let row = Self.row(due: Self.october1, urgent: urgent, plannedDaysAgo: 3)
+        let when = TodayFormat.when(row, timeZone: Self.zone, locale: locale)
+        #expect(WhenWidth.ageIsTooltip(row, when: when))
+        let parts = WhenWidth.parts(row, timeZone: Self.zone, locale: locale)
+        let dueOnly = Self.row(due: Self.october1, urgent: urgent)
+        #expect(parts == WhenWidth.parts(dueOnly, timeZone: Self.zone, locale: locale))
+      }
+    }
+    // Without a due date the age stays in the cell; without an age there is no tooltip.
+    let age = Self.row(plannedDaysAgo: 3)
+    #expect(!WhenWidth.ageIsTooltip(age, when: nil))
+    let due = Self.row(due: Self.october1)
+    let when = TodayFormat.when(due, timeZone: Self.zone, locale: Self.english)
+    #expect(!WhenWidth.ageIsTooltip(due, when: when))
   }
 
   @Test func aPlainDueIsNotABadge() {
@@ -73,7 +99,7 @@ struct WhenWidthTests {
 
   /// Russian is longer: the column follows the UI language.
   @Test func russianNeedsAWiderColumn() {
-    let rows = [Self.row(due: Self.october1, urgent: true, plannedDaysAgo: 12)]
+    let rows = [Self.row(plannedDaysAgo: 12)]
     func ideal(_ locale: Locale) -> CGFloat {
       WhenWidth.ideal(
         rows.map { WhenWidth.parts($0, timeZone: Self.zone, locale: locale) },
@@ -84,18 +110,40 @@ struct WhenWidthTests {
   }
 
   /// At 1100×700 with the rail, the When column keeps what the other columns leave: the
-  /// window less the sidebar's 200 (`RootView`), the rail's 300 (`TodayView`), two dividers
-  /// and every other column at its minimum. A three-digit Russian age fits there (owner,
-  /// 2026-11-25, PR #70 round 1).
-  @Test func aThreeDigitRussianAgeFitsAt1100WithTheRail() {
+  /// window less the sidebar, the rail, two 1 pt dividers and every other column at its
+  /// minimum (184 pt).
+  static var availableAt1100: CGFloat {
     let others = TodayColumns.minimumWidth - TodayColumns.when
-    let available: CGFloat = 1100 - 200 - 300 - 2 - others
+    return 1100 - RootView.sidebarWidth - TodayColumns.rail - 2 - others
+  }
+
+  /// A three-digit Russian age fits there (owner, 2026-11-25, PR #70 round 1).
+  @Test func aThreeDigitRussianAgeFitsAt1100WithTheRail() {
     let parts = WhenWidth.parts(
       Self.row(plannedDaysAgo: 120), timeZone: Self.zone, locale: Self.russian)
     #expect(parts.map(\.text) == ["назначено 120 дней назад"])
     let width = WhenWidth.width(parts, measure: WhenWidth.measured)
-    print("Russian three-digit age: \(width) of \(available) pt")
-    #expect(width <= available)
+    print("Russian three-digit age: \(width) of \(Self.availableAt1100) pt")
+    #expect(width <= Self.availableAt1100)
+  }
+
+  /// The widest row from earlier with a due date fits too, in English and Russian: a
+  /// two-digit day in every month, as a badge and as plain text (owner, 2026-11-25, round 2).
+  @Test func theWidestRowFromEarlierWithADueDateFitsAt1100WithTheRail() {
+    let calendar = Calendar.iso8601(in: Self.zone)
+    for locale in [Self.english, Self.russian] {
+      var widest: CGFloat = 0
+      for month in 1...12 {
+        let due = calendar.date(from: DateComponents(year: 2026, month: month, day: 28, hour: 12))!
+        for urgent in [true, false] {
+          let row = Self.row(due: due, urgent: urgent, plannedDaysAgo: 120)
+          let parts = WhenWidth.parts(row, timeZone: Self.zone, locale: locale)
+          widest = max(widest, WhenWidth.width(parts, measure: WhenWidth.measured))
+        }
+      }
+      print("Widest row from earlier with a due date, \(locale.identifier): \(widest) pt")
+      #expect(widest <= Self.availableAt1100)
+    }
   }
 
   /// A row in a collapsed group counts: `From earlier` is collapsed by default, and the column

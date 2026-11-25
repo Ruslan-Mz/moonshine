@@ -11,6 +11,9 @@ enum SidebarItem: Hashable {
 struct RootView: View {
   @Bindable var model: AppModel
 
+  /// The sidebar's ideal width.
+  static let sidebarWidth: CGFloat = 200
+
   var body: some View {
     NavigationSplitView {
       // Week and Month join with their slices (S5).
@@ -18,7 +21,7 @@ struct RootView: View {
         Label("Today", systemImage: "sun.max").tag(SidebarItem.today)
         Label("Lines", systemImage: "chart.bar").tag(SidebarItem.lines)
       }
-      .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+      .navigationSplitViewColumnWidth(min: 180, ideal: Self.sidebarWidth)
     } detail: {
       // The bar takes its own height, so no row ends under it (owner, 2026-11-11).
       VStack(spacing: 0) {
