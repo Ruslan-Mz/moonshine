@@ -294,6 +294,19 @@ for (const [line, kind] of [
   ["import EventKit", "an import"],
   ["@testable import ObsidianAdapter", "an import"],
   ["import struct Foundation.URL", "an import"],
+  // P-AM3 (owner, 2026-11-25): statements only, wherever Swift may start one on the line.
+  ["import EventKit // calendars", "an import"],
+  ["public import Foundation", "an import"],
+  ["@_exported import SwiftUI", "an import"],
+  ["@preconcurrency import Foundation", "an import"],
+  ["@_spi(Private) import SwiftUI", "an import"],
+  ["#if canImport(EventKit)", "an import"],
+  ["let a = 1; import Security", "an import"],
+  ["let a = 1\rimport Security", "an import"],
+  ["// c\rimport Security", "an import"],
+  ["/* x */ import Security", "an import"],
+  ["public /* x */ import Security", "an import"],
+  ["@preconcurrency", "concurrency"],
 ]) {
   test(`a risky token is risky: ${line}`, () => {
     risky({}, { "Apps/Mac/Sources/Today/Probe.swift": `${line}\n` }, kind);
@@ -307,6 +320,11 @@ for (const line of [
   "let skill = 1",
   "import Charts",
   "import SwiftUI",
+  "import SwiftUI // views",
+  // The word in prose, as #70 hit it in RootView.swift (P-AM3).
+  '  /// "not read yet", which would invite an import over a store that holds history.',
+  "      // A failed first import names its kind; nothing named means Live could not be opened.",
+  '    case .failure(.other): Text("The last import did not finish")',
   "@AppStorage(\"density\") var density = 0",
   "@SceneStorage(\"tab\") var tab = 0",
   "let selection = model.selection",

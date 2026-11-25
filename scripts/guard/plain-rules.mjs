@@ -64,7 +64,7 @@ const tokens = [
   ["concurrency", word(["async", "await"]), false],
   ["concurrency", word(["actor", "Sendable", "nonisolated", "isolated", "Thread", "Timer"]), true],
   ["concurrency", part(["TaskGroup", "Dispatch", "OperationQueue", "Async\\w*Stream", "Continuation"]), true],
-  ["concurrency", part(["NSLock", "NSRecursiveLock", "NSCondition", "pthread_", "os_unfair_lock", "assumeIsolated", "@concurrent"]), true],
+  ["concurrency", part(["NSLock", "NSRecursiveLock", "NSCondition", "pthread_", "os_unfair_lock", "assumeIsolated", "@concurrent", "@preconcurrency"]), true],
   ["concurrency", part(["performSelector", "afterDelay"]), true],
   ["process", word(["Process", "typealias", "dlopen", "dlsym", "getenv", "fopen", "popen"]), true],
   ["process", part(["ProcessInfo", "NSWorkspace", "NSAppleScript", "OSAKit", "NotificationCenter", "posix_spawn"]), true],
@@ -114,6 +114,11 @@ const importModules = new Set([
 ]);
 // `import Synchronization` stays risky in tests too: a lock is concurrency (rule 2).
 const testableModules = new Set(["MoonShineCore", "MoonShineFixtures", "MoonShineMac"]);
+// An import statement, not the word in a comment or a string (#70; P-AM3, owner 2026-11-25): where
+// Swift may start one on a scanned line (its start, a lone CR, which ends a Swift line but not git's,
+// `;`, or the end of a block comment), after attributes and access modifiers (`public import`).
+const importStatement =
+  /(?:^|[\r;]|\*\/)\s*(?:(?:@[A-Za-z_]\w*(?:\([^)\n]*\))?|public|package|internal|fileprivate|private)\s+)*import(?![A-Za-z0-9_])/;
 
 // P-AM (owner, 2026-11-12, 2026-11-15 and 2026-11-16): three shapes are taken out of a line before
 // the tokens scan it; every other token still scans the rest of the line.
@@ -168,7 +173,8 @@ function scanned(text, path, inTests) {
 /// Why a Swift line is risky, as a kind, or null.
 function riskyToken(text, path) {
   const inTests = testPath.test(path);
-  if (/(?<![A-Za-z0-9_])import(?![A-Za-z0-9_])/.test(text)) {
+  if (/canImport\s*\(/.test(text)) return "an import";
+  if (importStatement.test(text)) {
     const plainImport = /^\s*(@testable\s+)?import\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:\/\/.*)?$/.exec(text);
     if (!plainImport) return "an import";
     const [, testable, module] = plainImport;

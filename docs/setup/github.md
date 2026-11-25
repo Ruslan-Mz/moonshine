@@ -67,6 +67,18 @@ Check after a change to the policy: a body edit of an open pull request (`gh-pos
 2. re-pushes its head here as a branch named `fork/<pr>-<slug>`: `<pr>` the fork PR's number, `<slug>` a few words of its own, `git push origin HEAD:refs/heads/fork/<pr>-<slug>`;
 3. opens a pull request from that branch. `guard` scans it as usual; `/review-pr` treats a head branch starting `fork/` as read-only too, like a cross-repository head, since its code is still a stranger's.
 
+## After merging a pull request that changes `.claude/`
+
+P-AM3 (owner, 2026-11-25). The sandbox denies a session's writes to `.claude/settings.json`, `.claude/hooks/` and `.claude/skills/` (CLAUDE.md → Commands → Local sandbox; `.claude/skills/` seen on 2026-11-24). So a session's `git merge --ff-only origin/main` over such a merge, or a later `git switch` onto it, stops halfway. The owner runs these from the owner's own terminal, in this order:
+
+1. `git -C <main checkout> fetch origin`;
+2. `git -C <main checkout> switch main`: the main checkout may still be on the merged slice's branch, and a fast-forward of that branch leaves local `main` behind, so the next `git switch main` would stop on `.claude/` again;
+3. `git -C <main checkout> merge --ff-only origin/main`;
+4. `git -C <worktree> switch --detach origin/main`, for each author worktree (they share the main checkout's refs, so step 1 serves them);
+5. when the merge also changed `scripts/guard/`, `scripts/xcbuild.sh` or `scripts/check-project-scripts.mjs`, the guard's reinstall (CLAUDE.md → Commands → Guard).
+
+**When a fast-forward stopped halfway.** git writes the files first and moves `HEAD` and the index last. A stop leaves `HEAD` where it was, with some of the merge's files written over it. The session stops and tells the owner, and touches nothing. The owner checks with `git -C <checkout> status` that every changed or untracked path belongs to the merge, and that no other work is uncommitted. Then, in the main checkout on `main`: `git -C <main checkout> reset --hard origin/main`. In a worktree: `git -C <worktree> switch --detach --discard-changes origin/main`. Anything `status` shows that the merge did not change is the session's own work: commit it or set it aside first.
+
 ## What the guard in CI does not do
 
 It keeps a match off `main` and flags it on the pull request. It does not keep a pushed commit off GitHub: a pushed branch is public at once, and GitHub keeps every pull request's head. A branch pushed without a pull request is not scanned; a scheduled scan of branch heads and tags not reachable from `main` is a follow-up (`docs/specs/phase-1-see.md` → PUB).
