@@ -81,6 +81,9 @@ import Testing
     #expect(try when(five, defaultDue: fiveOClock) == .due(five, urgent: true, showsTime: false))
     let tomorrow = Self.date(10, 1, 18)
     #expect(try when(tomorrow) == .due(tomorrow, urgent: false, showsTime: false))
+    // A due time on an earlier day is a date: only today shows the time.
+    let yesterday = Self.date(9, 29, 18)
+    #expect(try when(yesterday) == .due(yesterday, urgent: true, showsTime: false))
   }
 
   @Test func horizonIsAYearOrAQuarter() {

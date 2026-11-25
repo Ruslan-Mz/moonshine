@@ -87,8 +87,15 @@ struct WhenWidthTests {
   /// must not jump when it opens. Today's minimum width stays 532 (owner, 2026-10-26).
   @MainActor @Test func everyRowOfTheScreenCountsAndTheMinimumStays() async throws {
     let screen = TodayScreen(try await demoOverview())
-    #expect(!screen.fromEarlier.isEmpty)
-    #expect(screen.tableRows.count >= screen.fromEarlier.count + screen.lifeOps.count)
+    // Every group of the table, each with rows in Demo, so a group left out is missed.
+    let ids = Set(screen.tableRows.map(\.id))
+    for group in [
+      screen.top, screen.sections.flatMap(\.rows), screen.fromEarlier, screen.lifeOps,
+      screen.doneToday,
+    ] {
+      #expect(!group.isEmpty)
+      #expect(group.allSatisfy { ids.contains($0.id) })
+    }
     let earlier = screen.fromEarlier.map {
       WhenWidth.parts($0, timeZone: screen.timeZone, locale: Self.english)
     }
