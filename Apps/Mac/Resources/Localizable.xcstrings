@@ -897,6 +897,22 @@
         }
       }
     },
+    "All due dates": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All due dates"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Все сроки"
+          }
+        }
+      }
+    },
     "Anchors": {
       "localizations": {
         "en": {
@@ -1125,6 +1141,22 @@
         }
       }
     },
+    "Deadlines": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deadlines"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сроки"
+          }
+        }
+      }
+    },
     "Demo": {
       "localizations": {
         "en": {
@@ -1217,6 +1249,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Срок %@"
+          }
+        }
+      }
+    },
+    "Due date + tag": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due date + tag"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Срок + тег"
           }
         }
       }
@@ -1721,6 +1769,22 @@
         }
       }
     },
+    "No tag is named “%@” — check the name; no due date is amber now": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No tag is named “%@” — check the name; no due date is amber now"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Тега «%@» нет — проверьте название; янтарных сроков сейчас нет"
+          }
+        }
+      }
+    },
     "Not chosen": {
       "localizations": {
         "en": {
@@ -1881,6 +1945,22 @@
         }
       }
     },
+    "OmniFocus can't be read — see Settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OmniFocus can't be read — see Settings"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OmniFocus не читается — см. Настройки"
+          }
+        }
+      }
+    },
     "OmniFocus did not answer in time. If macOS is asking for permission, answer it, then press ⌘R.": {
       "localizations": {
         "en": {
@@ -1941,6 +2021,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "OmniFocus прислал данные, которые MoonShine не может прочитать"
+          }
+        }
+      }
+    },
+    "Only deadlines get the amber due badge. Other due dates are shown as plain text.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only deadlines get the amber due badge. Other due dates are shown as plain text."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Янтарная метка — только у жёстких сроков. Остальные сроки показаны обычным текстом."
           }
         }
       }
@@ -2165,6 +2261,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Обновить"
+          }
+        }
+      }
+    },
+    "Refresh (⌘R)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh (⌘R)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Обновить (⌘R)"
           }
         }
       }
@@ -2489,6 +2601,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Следующий шаг"
+          }
+        }
+      }
+    },
+    "Tag": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tag"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Тег"
           }
         }
       }
@@ -2853,6 +2981,38 @@
         }
       }
     },
+    "Vault can't be read": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vault can't be read"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Хранилище не читается"
+          }
+        }
+      }
+    },
+    "Vault not chosen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vault not chosen"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Хранилище не выбрано"
+          }
+        }
+      }
+    },
     "Vault not read yet": {
       "localizations": {
         "en": {
@@ -2865,6 +3025,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Хранилище ещё не прочитано"
+          }
+        }
+      }
+    },
+    "Vault too large to read": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vault too large to read"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Хранилище слишком большое — не прочитано"
           }
         }
       }

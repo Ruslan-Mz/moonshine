@@ -15,6 +15,8 @@ related:
 
 # 0009 — Localization and multilingual content: String Catalogs, values-not-strings in Core, in-app language switch, RTL/CJK-ready
 
+**Schedule changed** (owner, 2026-11-25, timebox option A): the in-app language spike, the picker and the literal-string check moved from S4-3c to the usage period; the decision itself is unchanged.
+
 ## Context and Problem Statement
 
 The owner works in Russian, English and Latvian, studies Italian and German, and plans 13 languages including Chinese, Japanese, Greek, Hebrew and Arabic; his tasks and notes are already written in several languages at once. The UI must be switchable inside the app; user data must be rendered, searched and sorted correctly in any script and never translated. Plural rules range from 2 forms (EN) to 6 (AR); Hebrew and Arabic need right-to-left layout. **How do we localise the UI and handle multilingual content without retrofitting every view later?**
