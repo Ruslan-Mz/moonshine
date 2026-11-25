@@ -144,7 +144,7 @@ import Testing
     #expect(screen.weeks.count == Overview.sparklineWeeks)
   }
 
-  /// The artifact's card takes its year note's horizon and path; a parent note its own.
+  /// The artifact's card takes its year note's horizon, path and note; a parent note its own.
   @Test func theParentCardIsTheArtifactOrTheParentNote() throws {
     let year = try #require(Horizon.containing(Self.now, scale: .year, calendar: Self.calendar))
     let quarter = try #require(
@@ -173,13 +173,13 @@ import Testing
       violin.parent
         == .init(
           isArtifact: true, title: "Spring recital", horizon: .year(2026),
-          path: "Years/Artifacts_2026.md"))
+          path: "Years/Artifacts_2026.md", note: yearNote.id))
     let note = try #require(LineDetailScreen(overview, line: sketching.id))
     #expect(
       note.parent
         == .init(
           isArtifact: false, title: "Q3 2026", horizon: .quarter(3, year: 2026),
-          path: "Years/Q3_2026.md"))
+          path: "Years/Q3_2026.md", note: quarterNote.id))
   }
 
   // MARK: Columns

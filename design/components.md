@@ -57,11 +57,11 @@ Title (colour square + "Rhythm" + subtitle), big number (30 bold) + context ("th
 
 Card (radius 10, `card` + `cardBorder`, padding 14): emoji + name, and on the right a moon symbol + `quiet for 29 days` (secondary). Below: "Last: Lesson 14 review, 2 September", a divider, "Suggested next step" (11 tertiary), the action (13), then `≈ 10 min est.` and the link "Open in OmniFocus".
 
-Rule: active lines with no completion for ≥ 14 days. Never maintenance, never paused, never foundation. The suggested next step is the line's first available next action in source order (an available task that is not the parent of another available task; owner, 2026-10-24); a line with none shows `no next action` in its place. The link "Open in OmniFocus" comes with the link opener (S4-5).
+Rule: active lines with no completion for ≥ 14 days. Never maintenance, never paused, never foundation. The suggested next step is the line's first available next action in source order (an available task that is not the parent of another available task; owner, 2026-10-24); a line with none shows `no next action` in its place. The link "Open in OmniFocus" opens the next step's task through the link opener (built in S4-5).
 
 ## NoActivityCard
 
-Dashed border, no fill: emoji + name + `no completions since 6 July`, the first day of OmniFocus' completed-task window, or `no activity yet` while that day is not known (S4-4c-3, owner 2026-11-09); "First step: …", the same next-action rule as the QuietLineCard, or `no next action`. An active line with no completions in the store, foundation lines included (owner, 2026-10-28).
+Dashed border, no fill: emoji + name + `no completions since 6 July`, the first day of OmniFocus' completed-task window, or `no activity yet` while that day is not known (S4-4c-3, owner 2026-11-09); "First step: …", the same next-action rule as the QuietLineCard, with the same "Open in OmniFocus" link (S4-5, owner 2026-11-25), or `no next action`. An active line with no completions in the store, foundation lines included (owner, 2026-10-28).
 
 ## LineRemovalNotice
 
@@ -87,11 +87,11 @@ Native `Picker(.segmented)` and `Slider`. Drawn segmented: track `ctrl`, the sel
 
 ## AnchorStrip (draft-2)
 
-40 high. Label `Anchors` 12 semibold + `3 of 5 done` 12 tertiary, then up to 5 chips — the count covers all anchors, further anchors stay in their line sections (radius 6, `chipFill`, padding 3×8): checkbox 14 + title 12.5 (one line, ≤ 22 characters, tail truncation) + line emoji. Done = checked, title in `doneText`. Read-only in phase 1 (click opens in OmniFocus).
+40 high. Label `Anchors` 12 semibold + `3 of 5 done` 12 tertiary, then up to 5 chips — the count covers all anchors, further anchors stay in their line sections (radius 6, `chipFill`, padding 3×8): checkbox 14 + title 12.5 (one line, ≤ 22 characters, tail truncation) + line emoji. Done = checked, title in `doneText`. Read-only in phase 1 (click opens in OmniFocus; built in S4-5).
 
 ## QuarterFocusCard (draft-2)
 
-Right-rail card (radius 10, `card`): title `Q4 focus` 13 semibold + `2 of 5 done` 12 tertiary; rows: status glyph (`circle` / `checkmark.circle`, neutral colours) · line emoji · artifact title 12.5 (2 lines max). Footer link `Open quarter note`; from R1 a second link `Open quarter review`. No progress bars, no percentages.
+Right-rail card (radius 10, `card`): title `Q4 focus` 13 semibold + `2 of 5 done` 12 tertiary; rows: status glyph (`circle` / `checkmark.circle`, neutral colours) · line emoji · artifact title 12.5 (2 lines max). Footer link `Open quarter note`, which opens the quarter note in Obsidian through the link opener (built in S4-5); from R1 a second link `Open quarter review`. No progress bars, no percentages.
 
 ## FoundationRow / floor (draft-2)
 

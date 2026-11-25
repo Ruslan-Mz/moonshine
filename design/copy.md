@@ -93,6 +93,20 @@ Facts about the source, with a next step where there is one; no "failed", no red
 | Settings — Data caption (first phrase)                                                                                                                                                                                                  | `Demo shows bundled sample data — nothing is read from OmniFocus or your vault.`                                                                                                                                                                | `Демо показывает встроенные примеры — из OmniFocus и хранилища ничего не читается.`                                                                                                                                                                                |
 | Automation prompt (Info.plist)                                                                                                                                                                                                          | `MoonShine reads your OmniFocus tasks to show them. It never changes them.`                                                                                                                                                                     | `MoonShine читает ваши задачи OmniFocus, чтобы показать их, и никогда их не меняет.`                                                                                                                                                                               |
 
+## Opening links (S4-5)
+
+Owner, 2026-11-25. The notice sits on the left of the status bar for 5 s, in the freshness text's place, neutral, and VoiceOver announces it; it names the outcome only, never a path, a name, an id or a title. A vault that cannot be read reuses the status bar's `Vault not chosen` / `Vault can't be read`.
+
+| Context                                                                      | EN                                 | RU                                         |
+| ---------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------ |
+| Toolbar (Line detail), QuietLineCard and NoActivityCard link                 | `Open in OmniFocus`                | `Открыть в OmniFocus`                      |
+| Parent card (Line detail)                                                    | `Open in Obsidian`                 | `Открыть в Obsidian`                       |
+| Quarter focus card, footer link                                              | `Open quarter note`                | `Открыть заметку квартала`                 |
+| Read-only checkbox and anchor chip, VoiceOver hint                           | `Opens in OmniFocus`               | `Открывает в OmniFocus`                    |
+| Notice: the note's file is not where the store says                          | `Note not found`                   | `Заметка не найдена`                       |
+| Notice: no OmniFocus id, an id outside its alphabet, or no app took the link | `Could not open it`                | `Не удалось открыть`                       |
+| Notice: Demo (its ids and paths are invented)                                | `Demo data — opens with Live data` | `Демо-данные — откроется с живыми данными` |
+
 ## Held line removal (S4-4e)
 
 Decided by the owner on 2026-11-09. A fact with a next step; the notice cannot be dismissed. Above the Today table, the first three lines by name, then `…`.

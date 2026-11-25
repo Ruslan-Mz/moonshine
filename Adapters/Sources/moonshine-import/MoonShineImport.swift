@@ -256,6 +256,10 @@ import SQLiteStore
       print(
         "counts: folders \(document.folders.count) · tags \(document.tags.count) · projects \(document.projects.count) · tasks \(byStatus(document.tasks.map(\.status)))"
       )
+      // The ids the link opener would refuse (S4-5): expected 0 and 0.
+      let refusedTasks = document.tasks.filter { !OmniFocusLink.isOpenableID($0.id) }.count
+      let refusedProjects = document.projects.filter { !OmniFocusLink.isOpenableID($0.id) }.count
+      print("ids the link opener refuses: tasks \(refusedTasks) · projects \(refusedProjects)")
       let times = document.defaultTimes
       print(
         "default times: "

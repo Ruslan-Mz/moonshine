@@ -1025,6 +1025,22 @@
         }
       }
     },
+    "Could not open it": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not open it"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не удалось открыть"
+          }
+        }
+      }
+    },
     "Couldn't keep the new folder — the vault is still %@": {
       "localizations": {
         "en": {
@@ -1201,6 +1217,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Демо-данные не загрузились."
+          }
+        }
+      }
+    },
+    "Demo data — opens with Live data": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demo data — opens with Live data"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Демо-данные — откроется с живыми данными"
           }
         }
       }
@@ -1881,6 +1913,22 @@
         }
       }
     },
+    "Note not found": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note not found"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заметка не найдена"
+          }
+        }
+      }
+    },
     "Nothing on the rail today": {
       "localizations": {
         "en": {
@@ -2037,6 +2085,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "Янтарная метка — только у жёстких сроков. Остальные сроки показаны обычным текстом."
+          }
+        }
+      }
+    },
+    "Open in Obsidian": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open in Obsidian"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открыть в Obsidian"
+          }
+        }
+      }
+    },
+    "Open in OmniFocus": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open in OmniFocus"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открыть в OmniFocus"
+          }
+        }
+      }
+    },
+    "Open quarter note": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open quarter note"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открыть заметку квартала"
+          }
+        }
+      }
+    },
+    "Opens in OmniFocus": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens in OmniFocus"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открывает в OmniFocus"
           }
         }
       }

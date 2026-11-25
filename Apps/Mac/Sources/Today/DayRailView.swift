@@ -351,52 +351,62 @@ private struct DayRailRow: View {
       .accessibilityElement(children: .ignore)
       .accessibilityLabel(reading)
     case .planned(let item):
-      Button {
-        reveal(item.id)
-      } label: {
-        HStack(alignment: .firstTextBaseline, spacing: 5) {
-          Checkbox(isDone: item.status == .completed).imageScale(.small)
-          Text(verbatim: item.title).strikethrough(item.status == .completed)
-          Spacer(minLength: 0)
-          rangeText
-          if let emoji { Text(verbatim: emoji).fixedSize() }
+      HStack(alignment: .firstTextBaseline, spacing: 5) {
+        OpeningCheckbox(isDone: item.status == .completed, id: item.id).imageScale(.small)
+        Button {
+          reveal(item.id)
+        } label: {
+          HStack(alignment: .firstTextBaseline, spacing: 5) {
+            Text(verbatim: item.title).strikethrough(item.status == .completed)
+            Spacer(minLength: 0)
+            rangeText
+            if let emoji { Text(verbatim: emoji).fixedSize() }
+          }
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+          .contentShape(Rectangle())
         }
-        .lineLimit(1)
-        .padding(.horizontal, 6)
-        .padding(.top, 3)
-        .foregroundStyle(item.status == .completed ? Tokens.doneText : Color.primary)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(.background, in: RoundedRectangle(cornerRadius: 3))
-        .modifier(Selection(isSelected: isSelected, outline: true))
-        .contentShape(Rectangle())
+        .buttonStyle(.plain)
+        .accessibilityLabel(reading)
       }
-      .buttonStyle(.plain)
-      .accessibilityLabel(reading)
+      .lineLimit(1)
+      .padding(.horizontal, 6)
+      .padding(.top, 3)
+      .foregroundStyle(item.status == .completed ? Tokens.doneText : Color.primary)
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+      .background(.background, in: RoundedRectangle(cornerRadius: 3))
+      .modifier(Selection(isSelected: isSelected, outline: true))
+      // One click selects its row; a double-click opens it (`today.md` § Calendar).
+      .opensOnDoubleClick(.task(item.id))
     case .due(let item, let isDeadline):
-      Button {
-        reveal(item.id)
-      } label: {
-        HStack(spacing: 5) {
-          Rectangle()
-            .fill(isDeadline ? AnyShapeStyle(Tokens.dueText) : AnyShapeStyle(Tokens.checkboxStroke))
-            .frame(width: 3)
-          Checkbox(isDone: item.status == .completed).imageScale(.small)
-          due(isDeadline).fixedSize().layoutPriority(1)
-          Text(verbatim: item.title)
-            .strikethrough(item.status == .completed)
-            .foregroundStyle(item.status == .completed ? Tokens.doneText : Color.primary)
-          Spacer(minLength: 0)
-          if let emoji { Text(verbatim: emoji).fixedSize() }
+      HStack(spacing: 5) {
+        Rectangle()
+          .fill(isDeadline ? AnyShapeStyle(Tokens.dueText) : AnyShapeStyle(Tokens.checkboxStroke))
+          .frame(width: 3)
+        OpeningCheckbox(isDone: item.status == .completed, id: item.id).imageScale(.small)
+        Button {
+          reveal(item.id)
+        } label: {
+          HStack(spacing: 5) {
+            due(isDeadline).fixedSize().layoutPriority(1)
+            Text(verbatim: item.title)
+              .strikethrough(item.status == .completed)
+              .foregroundStyle(item.status == .completed ? Tokens.doneText : Color.primary)
+            Spacer(minLength: 0)
+            if let emoji { Text(verbatim: emoji).fixedSize() }
+          }
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+          .contentShape(Rectangle())
         }
-        .lineLimit(1)
-        .padding(.trailing, 6)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .background(.background)
-        .modifier(Selection(isSelected: isSelected, outline: false))
-        .contentShape(Rectangle())
+        .buttonStyle(.plain)
+        .accessibilityLabel(reading)
       }
-      .buttonStyle(.plain)
-      .accessibilityLabel(reading)
+      .lineLimit(1)
+      .padding(.trailing, 6)
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+      .background(.background)
+      .modifier(Selection(isSelected: isSelected, outline: false))
+      // One click selects its row; a double-click opens it (`today.md` § Calendar).
+      .opensOnDoubleClick(.task(item.id))
     }
   }
 

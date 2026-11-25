@@ -330,6 +330,103 @@ test("in Apps anything that opens a URL fails; elsewhere those names are free", 
   passes("ShareLink(item: text)", app);
   passes("NavigationLink(value: line) { Text(line.name) }", app);
   passes("let scenes = UIApplication.shared.connectedScenes", app);
+  passes("SettingsLink { Label(title, systemImage: name) }", app);
+  // Incoming URLs are not opened by the app.
+  passes(".onOpenURL { url in handle(url) }", app);
+});
+
+test("S4-5: a generic Link, Launch Services, Apple Events and web views open URLs in Apps", () => {
+  const openers = [
+    "Link<Text>(destination: url) { Text(title) }",
+    "Link <Label<Text, Image>> (destination: url) { label }",
+    "LSOpenCFURLRef(url as CFURL, nil)",
+    "LSOpenURLsWithRole(urls, .all, nil, nil, nil, 0)",
+    "LSOpenFromURLSpec(&spec, nil)",
+    "LSOpenFSRef(&ref, nil)",
+    "AESendMessage(&event, nil, 0, 0)",
+    "let event = NSAppleEventDescriptor(eventClass: a, eventID: b, targetDescriptor: c, returnID: 0, transactionID: 0)",
+    "let view = WKWebView(frame: .zero)",
+    "WebView(url: url)",
+    "let page = WebPage()",
+  ];
+  for (const line of openers) {
+    fails(line, app, "URL opener");
+    passes(line, adapter);
+  }
+});
+
+test("S4-5: links inside text fail in Apps; a link button style and a subscripted call pass", () => {
+  const texts = [
+    "let text = try AttributedString(markdown: source)",
+    "let text = try AttributedString( markdown: source, options: options)",
+    "attributes[NSAttributedString.Key.link] = url",
+    "container.link = url",
+    "attributes[.link] = url",
+    "attributes[ .link ] = url",
+    'Text("Read [the help](https://example.com)")',
+    'Text("Open [today](obsidian://daily?vault=v)")',
+    'Text("[x](omnifocus:///add?name=y)")',
+  ];
+  for (const line of texts) {
+    fails(line, app, "URL opener");
+    passes(line, adapter);
+  }
+  for (const line of [
+    ".buttonStyle(.link)",
+    'Button("Open quarter note") { show(note) }.buttonStyle(.link)',
+    "if style.link == other.link { return }",
+    "let value = handlers[0](value: 1)",
+    "let link = row.link",
+  ]) {
+    passes(line, app);
+  }
+});
+
+test("S4-5: the opener's two texts pass once in its own file, never twice or elsewhere", () => {
+  const opener = "Apps/Mac/Sources/Links/LinkOpener.swift";
+  const texts = [
+    "    NSWorkspace.shared.open(url)",
+    "      .environment(\\.openURL, OpenURLAction { opener.openFromText($0) })",
+    "  func openFromText(_ url: URL) -> OpenURLAction.Result {",
+  ];
+  for (const line of texts) {
+    passes(line, opener);
+    fails(line.trim(), app, "");
+    fails(line.trim(), signals, "");
+    const twice = check({ [opener]: `import AppKit\n${line}\n${line}\n` });
+    assert.equal(twice.status, 1, twice.stdout);
+    assert.match(twice.stdout, /LinkOpener\.swift: allowed text more than once/);
+  }
+  // Only the exact text: another URL call or another action in the opener still fails.
+  fails("NSWorkspace.shared.open(other)", opener, "process or script");
+  fails("NSWorkspace.shared.open(url, configuration: c)", opener, "process or script");
+  fails(".environment(\\.openURL, OpenURLAction { _ in .systemAction })", opener, "URL opener");
+  fails("@Environment(\\.openURL) private var openURL", opener, "URL opener");
+});
+
+test("S4-5: both scenes of the app route their links through the opener", () => {
+  const appFile = "Apps/Mac/Sources/MoonShineApp.swift";
+  const both = [
+    "WindowGroup {",
+    "  RootView(model: model)",
+    "    .linksThroughOpener(model)",
+    "    .task { model.start() }",
+    "}",
+    "Settings {",
+    "  SettingsView(model: model)",
+    "    .linksThroughOpener(model)",
+    "}",
+  ].join("\n");
+  const clean = check({ [appFile]: `import SwiftUI\n${both}\n` });
+  assert.equal(clean.status, 0, clean.stdout + clean.stderr);
+  for (const [scene, without] of [
+    ["RootView", both.replace("  RootView(model: model)\n    .linksThroughOpener(model)", "  RootView(model: model)")],
+    ["SettingsView", both.replace("  SettingsView(model: model)\n    .linksThroughOpener(model)", "  SettingsView(model: model)")],
+  ]) {
+    const result = check({ [appFile]: `import SwiftUI\n${without}\n` });
+    assert.equal(result.status, 1, `${scene}\n${result.stdout}`);
+    assert.match(result.stdout, new RegExp(`MoonShineApp\\.swift: ${scene} without the opener`));
+  }
 });
 
 const eventStore = "Adapters/Sources/CalendarAdapter/SystemEventStore.swift";

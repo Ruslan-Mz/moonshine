@@ -41,6 +41,8 @@ struct LineDetailScreen: Equatable {
     let title: String
     let horizon: LineDetailFormat.HorizonLabel?
     let path: String?
+    /// The note "Open in Obsidian" opens: the artifact's year note, or the parent note (S4-5).
+    let note: NoteID?
   }
 
   /// One count of the subtitle; zero counts are left out, as on Lines.
@@ -116,9 +118,11 @@ struct LineDetailScreen: Equatable {
     switch detail.target {
     case .artifact(let artifact):
       parent = Parent(
-        isArtifact: true, title: artifact.title, horizon: horizon, path: detail.targetNote?.path)
+        isArtifact: true, title: artifact.title, horizon: horizon, path: detail.targetNote?.path,
+        note: detail.targetNote?.id)
     case .note(let note):
-      parent = Parent(isArtifact: false, title: note.title, horizon: horizon, path: note.path)
+      parent = Parent(
+        isArtifact: false, title: note.title, horizon: horizon, path: note.path, note: note.id)
     case nil:
       parent = nil
     }

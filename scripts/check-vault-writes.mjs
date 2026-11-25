@@ -4,8 +4,9 @@
 // files, open a database, start a process or script, or change another app's run state, and
 // fails on any outside the allowlist below. From the Write phase the `VaultWriter` implementation joins the allowlist. In `Apps`
 // it also fails on anything that opens a URL: the app opens external URLs through one function
-// with an allowlist of schemes (ADR-0015, amendment of 2026-10-10); that function joins the
-// allowlist here in S4.
+// with an allowlist of schemes (ADR-0015, amendment of 2026-10-10). Since S4-5 that function is
+// `Links/LinkOpener.swift`: its one `NSWorkspace` call and its one `openURL` line are allowed
+// there once each, and both scenes of `MoonShineApp.swift` must route links through it.
 //
 // Another app's run state is the owner's machine, changed from the Act phase only: a member
 // call to `terminate`, `forceTerminate`, `activate`, `hide` or `unhide` fails in every file
@@ -46,6 +47,8 @@ const required = ["MoonShineCore/Sources", "Adapters/Sources"];
 // Searched when it exists. Only here are folders named `*Tests` left out: under the two
 // required folders SwiftPM compiles such a folder into the product.
 const optional = ["Apps"];
+
+const opener = "Apps/Mac/Sources/Links/LinkOpener.swift";
 
 // File plus exact text. The text is removed from each line of that file before the search, so
 // an allowed call never hides another call on the same line or elsewhere in the file.
@@ -90,7 +93,25 @@ const allowed = {
     "NSWorkspace.didLaunchApplicationNotification",
     "NSWorkspace.didTerminateApplicationNotification",
   ],
+  // The one opener (S4-5): its one URL call, and the root action that drops links from text,
+  // with the declaration of the function it calls.
+  [opener]: [
+    "NSWorkspace.shared.open(url)",
+    ".environment(\\.openURL, OpenURLAction { opener.openFromText($0) })",
+    "func openFromText(_ url: URL) -> OpenURLAction.Result {",
+  ],
 };
+
+// Allowed texts that may appear at most once in their file: a second copy would be a second way
+// to open a URL that the allowlist above removes with the first (S4-5).
+const allowedOnce = { [opener]: allowed[opener] };
+
+// Both scenes route every link through the opener: the main window and Settings (S4-5).
+const appFile = "Apps/Mac/Sources/MoonShineApp.swift";
+const sceneRoots = [
+  ["RootView", /RootView\(model: model\)\s*\.linksThroughOpener\(model\)/],
+  ["SettingsView", /SettingsView\(model: model\)\s*\.linksThroughOpener\(model\)/],
+];
 
 // The one file that may use EventKit, read-only.
 const eventStore = "Adapters/Sources/CalendarAdapter/SystemEventStore.swift";
@@ -165,7 +186,28 @@ const patterns = [
     cCall(["system", "popen", "execv", "execve", "execvp", "execvP", "execl", "execle", "execlp"]),
   ],
   ["URL opener", word(["openURL", "OpenURLAction", "SFSafariViewController"]), false, "Apps"],
-  ["URL opener", /(?<![A-Za-z0-9_])Link\s*\(|UIApplication\.shared\.open/, false, "Apps"],
+  // `Link(…)` and `Link<Text>(…)`; `NavigationLink`, `ShareLink` and `SettingsLink` pass.
+  ["URL opener", /(?<![A-Za-z0-9_])Link\s*(?:<.*>)?\s*\(|UIApplication\.shared\.open/, false, "Apps"],
+  // Launch Services and Apple Events open URLs without NSWorkspace; web content navigates by
+  // itself (S4-5).
+  [
+    "URL opener",
+    word([
+      "LSOpenCFURLRef", "LSOpenURLsWithRole", "LSOpenFromURLSpec", "LSOpenFSRef", "AESendMessage",
+      "NSAppleEventDescriptor", "WKWebView", "WebView", "WebPage",
+    ]),
+    false,
+    "Apps",
+  ],
+  // Links inside text open through SwiftUI's default action: markdown parsed into an attributed
+  // string, a link attribute, or a markdown link target in a string (`](https:`). A call such as
+  // `handlers[0](value: 1)` passes: the colon is followed by a space (S4-5).
+  [
+    "URL opener",
+    /AttributedString\s*\(\s*markdown:|Key\.link(?![A-Za-z0-9_])|\.link\s*=(?!=)|\[\s*\.link\s*\]|\]\(\s*[A-Za-z][A-Za-z0-9+.-]*:(?!\s)/,
+    false,
+    "Apps",
+  ],
 ];
 
 // Every import spelling `scripts/check-core-imports.sh` accepts: block comments before the
@@ -231,7 +273,16 @@ for (const dir of [...required, ...optional.filter((dir) => isFolder(join(root, 
       findings.push(`${file}: symbolic link`);
       continue;
     }
-    readFileSync(path, "utf8").split("\n").forEach((text, index) => {
+    const source = readFileSync(path, "utf8");
+    for (const allow of allowedOnce[file] ?? []) {
+      if (source.split(allow).length > 2) findings.push(`${file}: allowed text more than once`);
+    }
+    if (file === appFile) {
+      for (const [scene, root] of sceneRoots) {
+        if (!root.test(source)) findings.push(`${file}: ${scene} without the opener`);
+      }
+    }
+    source.split("\n").forEach((text, index) => {
       const line = (allowed[file] ?? []).reduce((rest, allow) => rest.split(allow).join(" "), text);
       const comment = line.trimStart().startsWith("//");
       for (const [name, pattern, inComments, only] of patterns) {
