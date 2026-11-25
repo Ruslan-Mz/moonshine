@@ -22,10 +22,12 @@ import Testing
   /// Each sleep waits until the test lets it go.
   final class ManualSleep: Sendable {
     let gates = Mutex<[CheckedContinuation<Void, Never>]>([])
+    let delays = Mutex<[Duration]>([])
 
     var count: Int { gates.withLock { $0.count } }
 
-    func sleep() async {
+    func sleep(_ delay: Duration) async {
+      delays.withLock { $0.append(delay) }
       await withCheckedContinuation { gate in gates.withLock { $0.append(gate) } }
     }
 
@@ -134,7 +136,7 @@ import Testing
     let sleeper = sleeper
     return LinkOpener(
       opening: recorder, vault: vault, noticeDelay: .seconds(5),
-      sleep: { _ in await sleeper.sleep() })
+      sleep: { await sleeper.sleep($0) })
   }
 
   func chosen(_ vault: Vault) throws -> VaultFolder {
@@ -353,4 +355,99 @@ import Testing
     }
     #expect(LinkOpener.text(.opened) == nil)
   }
+
+  // MARK: Round 1 (PR #73)
+
+  /// A note Obsidian wrote with composed names (й, a folder `Йога`): the vault walk stores its
+  /// path decomposed, and it opens with the names on disk (PR #73 round 1). The names are
+  /// created with POSIX calls, which keep the bytes as given; Foundation would decompose them.
+  @Test func aComposedNameOnDiskOpensFromTheWalksStoredPath() async throws {
+    let vault = try Vault()
+    let folder = try chosen(vault)
+    let composedFolder = "\u{0419}\u{043E}\u{0433}\u{0430}"
+    let composedFile = "\u{0439}.md"
+    let folderPath = vault.root.path(percentEncoded: false) + "/" + composedFolder
+    try #require(mkdir(folderPath, 0o755) == 0)
+    let descriptor = Darwin.open(folderPath + "/" + composedFile, O_CREAT | O_WRONLY, 0o644)
+    try #require(descriptor >= 0)
+    close(descriptor)
+    let root = vault.root.resolvingSymlinksInPath().standardizedFileURL
+    let walker = try #require(
+      FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil))
+    let stored = try #require(
+      walker.compactMap { ($0 as? URL)?.standardizedFileURL.path }
+        // The decomposed й (U+0306), outside the Foundation-written `Заметки` folder.
+        .first {
+          $0.hasSuffix(".md") && !$0.contains("/Заметки/") && $0.unicodeScalars.contains("\u{0306}")
+        }
+        .map { String($0.dropFirst(root.path.count + 1)) })
+    let id = NoteID.generate(at: Self.now)
+    let overview = Overview(
+      workspace: Workspace(
+        timeZone: .gmt,
+        notes: [
+          NoteRef(
+            id: id, refs: [], path: stored, title: "Invented note", type: nil, scale: nil,
+            period: nil, parentLink: nil, lineKey: nil, status: nil)
+        ]),
+      now: Self.now)
+    #expect(await opener(vault: folder).open(.note(id), in: overview, isDemo: false) == .opened)
+    let file = recorder.opened.first.flatMap {
+      URLComponents(url: $0, resolvingAgainstBaseURL: false)?.queryItems?.last?.value
+    }
+    let onDisk = composedFolder + "/" + composedFile
+    #expect(file.map { $0.unicodeScalars.elementsEqual(onDisk.unicodeScalars) } == true)
+  }
+
+  @Test func anOpenClearsAnEarlierNotice() async {
+    let opener = opener(vault: VaultFolder(settings: CountingSettings(nil)))
+    await opener.open(.task(Self.bareTaskID), in: Self.overview, isDemo: false)
+    #expect(opener.notice == .notOpened)
+    await opener.open(.task(Self.taskID), in: Self.overview, isDemo: false)
+    #expect(opener.notice == nil)
+    #expect(opener.clearing == nil)
+  }
+
+  @Test func theNoticeStaysFiveSeconds() async throws {
+    #expect(LinkOpener.noticeDelay == .seconds(5))
+    let opener = opener(vault: VaultFolder(settings: CountingSettings(nil)))
+    await opener.open(.task(Self.bareTaskID), in: Self.overview, isDemo: false)
+    try #require(await sleeper.waitFor(1))
+    #expect(sleeper.delays.withLock { $0 } == [.seconds(5)])
+    sleeper.release(0)
+    await opener.clearing?.value
+  }
+
+  /// The model decides Demo and "nothing before a workspace" (PR #73 round 1).
+  @Test func theModelOpensNothingInDemoNorBeforeAWorkspace() async throws {
+    let environment = try AppEnvironment.demo(snapshot: Self.trackedSnapshot)
+    let (recorder, sleeper) = (recorder, sleeper)
+    let model = AppModel(
+      isTestHost: true, settings: NoSettings(),
+      linkOpener: { vault in
+        LinkOpener(
+          opening: recorder, vault: vault, noticeDelay: .seconds(5),
+          sleep: { await sleeper.sleep($0) })
+      },
+      environments: { $0 == .demo ? environment : nil })
+    #expect(model.open(.task(Self.taskID)) == nil)
+    await model.load()
+    guard case .loaded(let overview) = model.state else {
+      Issue.record("Demo did not load")
+      return
+    }
+    let task = try #require(overview.workspace.tasks.first)
+    let outcome = await model.open(.task(task.id))?.value
+    #expect(outcome == .demo)
+    #expect(model.linkOpener.notice == .demo)
+    #expect(recorder.opened.isEmpty)
+    try #require(await sleeper.waitFor(1))
+    sleeper.release(0)
+    await model.linkOpener.clearing?.value
+  }
+
+  /// The tracked fixture, read from the checkout (CLAUDE.md rule 5).
+  nonisolated static let trackedSnapshot = URL(fileURLWithPath: #filePath)
+    .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+    .deletingLastPathComponent().appendingPathComponent("fixtures/omnifocus.snapshot.json")
 }

@@ -53,9 +53,12 @@ final class LinkOpener {
   @ObservationIgnored private let noticeDelay: Duration
   @ObservationIgnored private let sleep: @Sendable (Duration) async -> Void
 
+  /// How long a notice stays (owner, 2026-11-25).
+  static let noticeDelay: Duration = .seconds(5)
+
   static func production(vault: VaultFolder) -> LinkOpener {
     LinkOpener(
-      opening: WorkspaceOpening(), vault: vault, noticeDelay: .seconds(5),
+      opening: WorkspaceOpening(), vault: vault, noticeDelay: noticeDelay,
       sleep: { try? await Task.sleep(for: $0) })
   }
 
@@ -69,7 +72,8 @@ final class LinkOpener {
     self.sleep = sleep
   }
 
-  /// Opens `target` from the workspace shown; any outcome but `.opened` becomes the notice.
+  /// Opens `target` from the workspace shown; any outcome but `.opened` becomes the notice, and
+  /// `.opened` clears an earlier one, so the bar never reports an older failure.
   @discardableResult
   func open(_ target: OpenTarget, in overview: Overview, isDemo: Bool) async -> OpenOutcome {
     let outcome: OpenOutcome
@@ -81,7 +85,7 @@ final class LinkOpener {
       case .failure(let refusal): outcome = refusal.outcome
       }
     }
-    if outcome != .opened { show(outcome) }
+    if outcome == .opened { hideNotice() } else { show(outcome) }
     return outcome
   }
 
@@ -101,6 +105,12 @@ final class LinkOpener {
     case .notOpened: String(localized: "Could not open it")
     case .demo: String(localized: "Demo data — opens with Live data")
     }
+  }
+
+  private func hideNotice() {
+    clearing?.cancel()
+    clearing = nil
+    notice = nil
   }
 
   private func show(_ outcome: OpenOutcome) {
@@ -141,17 +151,31 @@ final class LinkOpener {
       case .unreadable: return .failure(Refusal(outcome: .vaultUnavailable(.unreadable)))
       case .folder(let url): root = url
       }
-      let scoped = root.startAccessingSecurityScopedResource()
-      defer { if scoped { root.stopAccessingSecurityScopedResource() } }
-      guard VaultFolder.isVault(root) else {
-        return .failure(Refusal(outcome: .vaultUnavailable(.unreadable)))
+      switch await Self.locate(path: note.path, in: root) {
+      case .vaultUnreadable: return .failure(Refusal(outcome: .vaultUnavailable(.unreadable)))
+      case .notFound: return .failure(Refusal(outcome: .noteNotFound))
+      case .file(let onDisk):
+        return ObsidianLink.open(vault: root.lastPathComponent, file: onDisk).map { .success($0) }
+          ?? .failure(notOpened)
       }
-      guard Self.noteExists(root: root, path: note.path) else {
-        return .failure(Refusal(outcome: .noteNotFound))
-      }
-      return ObsidianLink.open(vault: root.lastPathComponent, file: note.path).map { .success($0) }
-        ?? .failure(notOpened)
     }
+  }
+
+  /// Where a stored note path leads in the vault.
+  enum NoteLookup: Equatable {
+    case vaultUnreadable
+    case notFound
+    /// The vault-relative path in the names the file system keeps, for Obsidian's exact lookup.
+    case file(String)
+  }
+
+  /// The vault check and the walk, off the main actor: a slow or sleeping volume never holds
+  /// the window (PR #73 round 1).
+  @concurrent nonisolated static func locate(path: String, in root: URL) async -> NoteLookup {
+    let scoped = root.startAccessingSecurityScopedResource()
+    defer { if scoped { root.stopAccessingSecurityScopedResource() } }
+    guard VaultFolder.isVault(root) else { return .vaultUnreadable }
+    return noteFile(root: root, path: path).map { .file($0) } ?? .notFound
   }
 
   private static func omniFocusID(_ refs: [ExternalRef]?) -> String? {
@@ -161,27 +185,37 @@ final class LinkOpener {
   /// The note's file, walked from the vault root one component at a time: each is listed in
   /// its folder byte for byte (APFS ignores case and Unicode form, Obsidian does not), none is
   /// hidden (Obsidian indexes no hidden folder), `.` or `..`, or a symbolic link, and the last
-  /// is a regular file. Folders are listed as URLs, as the vault walk lists them
-  /// (`ObsidianAdapter/VaultWalk.swift`), so a stored path reads back in the form it was stored.
-  nonisolated static func noteExists(root: URL, path: String) -> Bool {
-    guard !path.hasPrefix("/") else { return false }
+  /// is a regular file. An entry is compared in the form the vault walk stores it, the last
+  /// component of its standardized path (`ObsidianAdapter/VaultWalk.swift`, `relativePath`),
+  /// which Foundation decomposes; the path returned is in the names on disk (PR #73 round 1).
+  nonisolated static func noteFile(root: URL, path: String) -> String? {
+    guard !path.hasPrefix("/") else { return nil }
     let components = path.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
     let keys: [URLResourceKey] = [.isSymbolicLinkKey, .isRegularFileKey, .isDirectoryKey]
     var folder = root
+    var onDisk: [String] = []
     for (index, component) in components.enumerated() {
       guard !component.isEmpty, !component.hasPrefix("."),
         let items = try? FileManager.default.contentsOfDirectory(
           at: folder, includingPropertiesForKeys: keys),
         let item = items.first(where: {
-          $0.lastPathComponent.unicodeScalars.elementsEqual(component.unicodeScalars)
+          storedName($0).unicodeScalars.elementsEqual(component.unicodeScalars)
         }),
         let values = try? item.resourceValues(forKeys: Set(keys)), values.isSymbolicLink != true
-      else { return false }
-      if index == components.count - 1 { return values.isRegularFile == true }
-      guard values.isDirectory == true else { return false }
+      else { return nil }
+      onDisk.append(item.lastPathComponent)
+      if index == components.count - 1 {
+        return values.isRegularFile == true ? onDisk.joined(separator: "/") : nil
+      }
+      guard values.isDirectory == true else { return nil }
       folder = item
     }
-    return false
+    return nil
+  }
+
+  /// An entry's name as the vault walk stores it: the last component of its standardized path.
+  nonisolated private static func storedName(_ item: URL) -> String {
+    item.standardizedFileURL.path.split(separator: "/").last.map(String.init) ?? ""
   }
 }
 
@@ -206,19 +240,22 @@ private struct LinksThroughOpener: ViewModifier {
   }
 }
 
-/// A double-click anywhere on the view opens `target`; a single click keeps its own action.
+/// A double-click anywhere in the view's frame opens `target`, gaps included; a single click
+/// keeps its own action.
 private struct OpensOnDoubleClick: ViewModifier {
   let target: OpenTarget
   @Environment(\.openTarget) private var openTarget
 
   func body(content: Content) -> some View {
-    content.simultaneousGesture(TapGesture(count: 2).onEnded { openTarget(target) })
+    content
+      .contentShape(Rectangle())
+      .simultaneousGesture(TapGesture(count: 2).onEnded { openTarget(target) })
   }
 }
 
 extension View {
   func linksThroughOpener(_ model: AppModel) -> some View {
-    modifier(LinksThroughOpener(opener: model.linkOpener, open: model.open))
+    modifier(LinksThroughOpener(opener: model.linkOpener, open: { model.open($0) }))
   }
 
   func opensOnDoubleClick(_ target: OpenTarget) -> some View {

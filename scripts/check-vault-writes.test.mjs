@@ -348,6 +348,9 @@ test("S4-5: a generic Link, Launch Services, Apple Events and web views open URL
     "let view = WKWebView(frame: .zero)",
     "WebView(url: url)",
     "let page = WebPage()",
+    "let view = NSTextView(frame: .zero)",
+    // An explicit `.init` (PR #73 round 1).
+    "Link.init(destination: url) { Text(title) }",
   ];
   for (const line of openers) {
     fails(line, app, "URL opener");
@@ -366,6 +369,15 @@ test("S4-5: links inside text fail in Apps; a link button style and a subscripte
     'Text("Read [the help](https://example.com)")',
     'Text("Open [today](obsidian://daily?vault=v)")',
     'Text("[x](omnifocus:///add?name=y)")',
+    // PR #73 round 1: a dictionary literal, an added attribute, a container, angle brackets,
+    // an autolink, an explicit `.init`.
+    'NSAttributedString(string: "x", attributes: [.link: url])',
+    "let attributes: [NSAttributedString.Key: Any] = [.font: font, .link: url]",
+    "text.addAttribute(.link, value: url, range: range)",
+    "let container = AttributeContainer().link(url)",
+    'Text("Read [the help](<https://example.com>)")',
+    'Text("Read <https://example.com>")',
+    "Text(try AttributedString.init(markdown: source))",
   ];
   for (const line of texts) {
     fails(line, app, "URL opener");
@@ -377,12 +389,14 @@ test("S4-5: links inside text fail in Apps; a link button style and a subscripte
     "if style.link == other.link { return }",
     "let value = handlers[0](value: 1)",
     "let link = row.link",
+    "func sorted<T: Comparable>(_ items: [T]) -> [T] { items }",
+    "switch kind { case .link: break }",
   ]) {
     passes(line, app);
   }
 });
 
-test("S4-5: the opener's two texts pass once in its own file, never twice or elsewhere", () => {
+test("S4-5: the opener's three texts pass once in its own file, never twice or elsewhere", () => {
   const opener = "Apps/Mac/Sources/Links/LinkOpener.swift";
   const texts = [
     "    NSWorkspace.shared.open(url)",
@@ -419,6 +433,17 @@ test("S4-5: both scenes of the app route their links through the opener", () => 
   ].join("\n");
   const clean = check({ [appFile]: `import SwiftUI\n${both}\n` });
   assert.equal(clean.status, 0, clean.stdout + clean.stderr);
+  // A call in a comment does not count (PR #73 round 1).
+  const commented = [
+    "// RootView(model: model).linksThroughOpener(model)",
+    "/* SettingsView(model: model).linksThroughOpener(model) */",
+    "WindowGroup { RootView(model: model) }",
+    "Settings { SettingsView(model: model) }",
+  ].join("\n");
+  const inComments = check({ [appFile]: `import SwiftUI\n${commented}\n` });
+  assert.equal(inComments.status, 1, inComments.stdout);
+  assert.match(inComments.stdout, /RootView without the opener/);
+  assert.match(inComments.stdout, /SettingsView without the opener/);
   for (const [scene, without] of [
     ["RootView", both.replace("  RootView(model: model)\n    .linksThroughOpener(model)", "  RootView(model: model)")],
     ["SettingsView", both.replace("  SettingsView(model: model)\n    .linksThroughOpener(model)", "  SettingsView(model: model)")],

@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// `design/components.md` § AnchorStrip: the count covers every anchor of today, the chips
-/// the first five. Read-only in phase 1; opening a task comes with the link opener (S4-5).
+/// the first five. Read-only in phase 1; a click on a chip opens its task in OmniFocus (S4-5).
 struct AnchorStrip: View {
   let anchors: [TodayScreen.Anchor]
   let total: Int

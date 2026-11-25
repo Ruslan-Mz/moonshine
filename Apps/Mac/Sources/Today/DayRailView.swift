@@ -36,8 +36,8 @@ extension DayRail {
 
 /// The Day section at the top of Today's rail: `design/screens/today.md` § Calendar,
 /// `design/screens/day-rail-dense.md` (direction 1, the compressed timeline) and
-/// `design/components.md` § Day rail. Read only: a task row selects its row in the list; opening
-/// a task in OmniFocus comes with the link opener (S4-5).
+/// `design/components.md` § Day rail. Read only: a task row selects its row in the list; its
+/// checkbox and a double-click open the task in OmniFocus through the opener (S4-5).
 struct DayRailView: View {
   let rail: DayRail
   let now: Date
@@ -366,6 +366,9 @@ private struct DayRailRow: View {
           .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // One click selects its row; a double-click opens it (`today.md` § Calendar). Not on
+        // the checkbox, whose own click opens it once (PR #73 round 1).
+        .opensOnDoubleClick(.task(item.id))
         .accessibilityLabel(reading)
       }
       .lineLimit(1)
@@ -375,8 +378,7 @@ private struct DayRailRow: View {
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
       .background(.background, in: RoundedRectangle(cornerRadius: 3))
       .modifier(Selection(isSelected: isSelected, outline: true))
-      // One click selects its row; a double-click opens it (`today.md` § Calendar).
-      .opensOnDoubleClick(.task(item.id))
+
     case .due(let item, let isDeadline):
       HStack(spacing: 5) {
         Rectangle()
@@ -398,6 +400,9 @@ private struct DayRailRow: View {
           .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // One click selects its row; a double-click opens it (`today.md` § Calendar). Not on
+        // the checkbox, whose own click opens it once (PR #73 round 1).
+        .opensOnDoubleClick(.task(item.id))
         .accessibilityLabel(reading)
       }
       .lineLimit(1)
@@ -405,8 +410,7 @@ private struct DayRailRow: View {
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
       .background(.background)
       .modifier(Selection(isSelected: isSelected, outline: false))
-      // One click selects its row; a double-click opens it (`today.md` § Calendar).
-      .opensOnDoubleClick(.task(item.id))
+
     }
   }
 

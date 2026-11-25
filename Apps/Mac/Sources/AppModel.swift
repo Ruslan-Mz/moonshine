@@ -261,11 +261,12 @@ final class AppModel {
   }
 
   /// Opens a task, project or note of the workspace shown, through the one opener; nothing
-  /// while no workspace is shown.
-  func open(_ target: OpenTarget) {
-    guard case .loaded(let overview) = state else { return }
+  /// while no workspace is shown, and nothing in Demo (owner, 2026-11-25). The task is for tests.
+  @discardableResult
+  func open(_ target: OpenTarget) -> Task<OpenOutcome, Never>? {
+    guard case .loaded(let overview) = state else { return nil }
     let isDemo = source == .demo
-    Task { await linkOpener.open(target, in: overview, isDemo: isDemo) }
+    return Task { await linkOpener.open(target, in: overview, isDemo: isDemo) }
   }
 
   /// Settings → Deadlines: stored, then every source built shows it at once, without an import.

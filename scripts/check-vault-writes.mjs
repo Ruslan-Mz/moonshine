@@ -5,8 +5,9 @@
 // fails on any outside the allowlist below. From the Write phase the `VaultWriter` implementation joins the allowlist. In `Apps`
 // it also fails on anything that opens a URL: the app opens external URLs through one function
 // with an allowlist of schemes (ADR-0015, amendment of 2026-10-10). Since S4-5 that function is
-// `Links/LinkOpener.swift`: its one `NSWorkspace` call and its one `openURL` line are allowed
-// there once each, and both scenes of `MoonShineApp.swift` must route links through it.
+// `Links/LinkOpener.swift`: its one `NSWorkspace` call, its one `openURL` line and the
+// declaration that line calls are allowed there once each, and both scenes of
+// `MoonShineApp.swift` must route links through it, outside comments.
 //
 // Another app's run state is the owner's machine, changed from the Act phase only: a member
 // call to `terminate`, `forceTerminate`, `activate`, `hide` or `unhide` fails in every file
@@ -187,24 +188,40 @@ const patterns = [
   ],
   ["URL opener", word(["openURL", "OpenURLAction", "SFSafariViewController"]), false, "Apps"],
   // `Link(…)` and `Link<Text>(…)`; `NavigationLink`, `ShareLink` and `SettingsLink` pass.
-  ["URL opener", /(?<![A-Za-z0-9_])Link\s*(?:<.*>)?\s*\(|UIApplication\.shared\.open/, false, "Apps"],
+  ["URL opener", /(?<![A-Za-z0-9_])Link\s*(?:<.*>)?\s*(?:\.init\s*)?\(|UIApplication\.shared\.open/, false, "Apps"],
   // Launch Services and Apple Events open URLs without NSWorkspace; web content navigates by
   // itself (S4-5).
   [
     "URL opener",
     word([
       "LSOpenCFURLRef", "LSOpenURLsWithRole", "LSOpenFromURLSpec", "LSOpenFSRef", "AESendMessage",
-      "NSAppleEventDescriptor", "WKWebView", "WebView", "WebPage",
+      "NSAppleEventDescriptor", "WKWebView", "WebView", "WebPage", "NSTextView",
     ]),
     false,
     "Apps",
   ],
-  // Links inside text open through SwiftUI's default action: markdown parsed into an attributed
-  // string, a link attribute, or a markdown link target in a string (`](https:`). A call such as
-  // `handlers[0](value: 1)` passes: the colon is followed by a space (S4-5).
+  // Links inside text open through SwiftUI's or AppKit's own link handling: markdown parsed into
+  // an attributed string, a link attribute (set, subscripted, in a dictionary literal, added or
+  // in a container), or a markdown link target in a string (`](https:`, `](<https:`, an autolink
+  // `<https://`). A call such as `handlers[0](value: 1)` passes: the colon is followed by a space
+  // (S4-5; PR #73 round 1).
   [
     "URL opener",
-    /AttributedString\s*\(\s*markdown:|Key\.link(?![A-Za-z0-9_])|\.link\s*=(?!=)|\[\s*\.link\s*\]|\]\(\s*[A-Za-z][A-Za-z0-9+.-]*:(?!\s)/,
+    new RegExp(
+      [
+        /AttributedString\s*(?:\.init\s*)?\(\s*markdown:/,
+        /Key\.link(?![A-Za-z0-9_])/,
+        /\.link\s*=(?!=)/,
+        /\[\s*\.link\s*\]/,
+        /[[,]\s*\.link\s*:/,
+        /addAttribute\s*\(\s*\.link\b/,
+        /\.link\s*\(/,
+        /\]\(\s*<?\s*[A-Za-z][A-Za-z0-9+.-]*:(?!\s)/,
+        /<[A-Za-z][A-Za-z0-9+.-]*:\/\//,
+      ]
+        .map((part) => part.source)
+        .join("|"),
+    ),
     false,
     "Apps",
   ],
@@ -278,8 +295,10 @@ for (const dir of [...required, ...optional.filter((dir) => isFolder(join(root, 
       if (source.split(allow).length > 2) findings.push(`${file}: allowed text more than once`);
     }
     if (file === appFile) {
+      // A call in a comment does not count (PR #73 round 1).
+      const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
       for (const [scene, root] of sceneRoots) {
-        if (!root.test(source)) findings.push(`${file}: ${scene} without the opener`);
+        if (!root.test(code)) findings.push(`${file}: ${scene} without the opener`);
       }
     }
     source.split("\n").forEach((text, index) => {
