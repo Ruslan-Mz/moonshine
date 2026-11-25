@@ -28,7 +28,7 @@ struct WhenWidthTests {
   @Test func thePartsAreTheCatalogsWordsInTheUILanguage() {
     let row = Self.row(due: Self.october1, urgent: true, plannedDaysAgo: 3)
     let russian = WhenWidth.parts(row, timeZone: Self.zone, locale: Self.russian)
-    #expect(russian.map(\.text).first == "запланировано 3 дня назад")
+    #expect(russian.map(\.text).first == "назначено 3 дня назад")
     #expect(russian.last?.text.hasPrefix("Срок ") == true)
     #expect(russian.map(\.style) == [.plain, .badge])
     let english = WhenWidth.parts(row, timeZone: Self.zone, locale: Self.english)
@@ -81,6 +81,21 @@ struct WhenWidthTests {
     }
     #expect(ideal(Self.english) > TodayColumns.when)
     #expect(ideal(Self.russian) > ideal(Self.english))
+  }
+
+  /// At 1100×700 with the rail, the When column keeps what the other columns leave: the
+  /// window less the sidebar's 200 (`RootView`), the rail's 300 (`TodayView`), two dividers
+  /// and every other column at its minimum. A three-digit Russian age fits there (owner,
+  /// 2026-11-25, PR #70 round 1).
+  @Test func aThreeDigitRussianAgeFitsAt1100WithTheRail() {
+    let others = TodayColumns.minimumWidth - TodayColumns.when
+    let available: CGFloat = 1100 - 200 - 300 - 2 - others
+    let parts = WhenWidth.parts(
+      Self.row(plannedDaysAgo: 120), timeZone: Self.zone, locale: Self.russian)
+    #expect(parts.map(\.text) == ["назначено 120 дней назад"])
+    let width = WhenWidth.width(parts, measure: WhenWidth.measured)
+    print("Russian three-digit age: \(width) of \(available) pt")
+    #expect(width <= available)
   }
 
   /// A row in a collapsed group counts: `From earlier` is collapsed by default, and the column

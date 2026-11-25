@@ -3563,25 +3563,25 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "запланировано %lld день назад"
+                  "value": "назначено %lld день назад"
                 }
               },
               "few": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "запланировано %lld дня назад"
+                  "value": "назначено %lld дня назад"
                 }
               },
               "many": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "запланировано %lld дней назад"
+                  "value": "назначено %lld дней назад"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "запланировано %lld дня назад"
+                  "value": "назначено %lld дня назад"
                 }
               }
             }
