@@ -74,10 +74,18 @@ P-AM3 (owner, 2026-11-25). The sandbox denies a session's writes to `.claude/set
 1. `git -C <main checkout> fetch origin`;
 2. `git -C <main checkout> switch main`: the main checkout may still be on the merged slice's branch, and a fast-forward of that branch leaves local `main` behind, so the next `git switch main` would stop on `.claude/` again;
 3. `git -C <main checkout> merge --ff-only origin/main`;
-4. `git -C <worktree> switch --detach origin/main`, for each author worktree (they share the main checkout's refs, so step 1 serves them);
+4. each author worktree, by its state (owner, PR #71 round 1). Worktrees share the main checkout's refs, so step 1 serves them. `git -C <worktree> branch --show-current` prints nothing when the worktree is detached, and the slice branch's name when it is on one:
+   - idle or detached: `git -C <worktree> switch --detach origin/main`;
+   - mid-slice on its own branch: never detach it. `git -C <worktree> merge origin/main` merges the change into the slice branch, and the session then pushes as usual, with no non-fast-forward;
 5. when the merge also changed `scripts/guard/`, `scripts/xcbuild.sh` or `scripts/check-project-scripts.mjs`, the guard's reinstall (CLAUDE.md → Commands → Guard).
 
-**When a fast-forward stopped halfway.** git writes the files first and moves `HEAD` and the index last. A stop leaves `HEAD` where it was, with some of the merge's files written over it. The session stops and tells the owner, and touches nothing. The owner checks with `git -C <checkout> status` that every changed or untracked path belongs to the merge, and that no other work is uncommitted. Then, in the main checkout on `main`: `git -C <main checkout> reset --hard origin/main`. In a worktree: `git -C <worktree> switch --detach --discard-changes origin/main`. Anything `status` shows that the merge did not change is the session's own work: commit it or set it aside first.
+**When a fast-forward or a switch stopped halfway.** git writes the files first and moves `HEAD` and the index last. A stop leaves `HEAD` where it was, with some of the new commit's files written over it. The session stops and tells the owner, and touches nothing. The owner checks with `git -C <checkout> status` that every changed or untracked path is one the stopped merge or switch was writing, and that no other work is uncommitted. Then:
+
+- the main checkout on `main`: `git -C <main checkout> reset --hard origin/main`;
+- the main checkout still on the merged slice's branch, after a `git switch main` stopped (PR #71 round 1): `git -C <main checkout> switch --discard-changes main`, then steps 3 to 5 above. A `reset --hard` there would move the slice branch, not `main`;
+- a detached worktree: `git -C <worktree> switch --detach --discard-changes origin/main`.
+
+Anything `status` shows that the stopped merge or switch was not writing is the session's own work: commit it or set it aside first.
 
 ## What the guard in CI does not do
 

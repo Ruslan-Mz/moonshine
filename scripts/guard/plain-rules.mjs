@@ -117,8 +117,11 @@ const testableModules = new Set(["MoonShineCore", "MoonShineFixtures", "MoonShin
 // An import statement, not the word in a comment or a string (#70; P-AM3, owner 2026-11-25): where
 // Swift may start one on a scanned line (its start, a lone CR, which ends a Swift line but not git's,
 // `;`, or the end of a block comment), after attributes and access modifiers (`public import`).
+// It runs only on a line holding `import`, no longer than `importLength`; a longer one is not read and
+// stays risky, so a long line cannot make the match slow (PR #71 round 1).
+const importLength = 1000;
 const importStatement =
-  /(?:^|[\r;]|\*\/)\s*(?:(?:@[A-Za-z_]\w*(?:\([^)\n]*\))?|public|package|internal|fileprivate|private)\s+)*import(?![A-Za-z0-9_])/;
+  /(?:^|[\r;]|\*\/)\s*(?:(?:@[A-Za-z_]\w{0,80}(?:\([^)\n]{0,200}\))?|public|package|internal|fileprivate|private)\s+)*import(?![A-Za-z0-9_])/;
 
 // P-AM (owner, 2026-11-12, 2026-11-15 and 2026-11-16): three shapes are taken out of a line before
 // the tokens scan it; every other token still scans the rest of the line.
@@ -174,7 +177,8 @@ function scanned(text, path, inTests) {
 function riskyToken(text, path) {
   const inTests = testPath.test(path);
   if (/canImport\s*\(/.test(text)) return "an import";
-  if (importStatement.test(text)) {
+  if (text.includes("import") && text.length > importLength) return "an import";
+  if (text.includes("import") && importStatement.test(text)) {
     const plainImport = /^\s*(@testable\s+)?import\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:\/\/.*)?$/.exec(text);
     if (!plainImport) return "an import";
     const [, testable, module] = plainImport;

@@ -297,6 +297,10 @@ for (const [line, kind] of [
   // P-AM3 (owner, 2026-11-25): statements only, wherever Swift may start one on the line.
   ["import EventKit // calendars", "an import"],
   ["public import Foundation", "an import"],
+  ["package import Security", "an import"],
+  ["internal import Security", "an import"],
+  ["fileprivate import Security", "an import"],
+  ["private import Security", "an import"],
   ["@_exported import SwiftUI", "an import"],
   ["@preconcurrency import Foundation", "an import"],
   ["@_spi(Private) import SwiftUI", "an import"],
@@ -576,6 +580,24 @@ test("a conformance check stays fast on a long line, and a line too long for it 
     console.log(`a ${text.length}-character declaration line: ${took.toFixed(1)} ms`);
     assert.ok(took < 2_000, `${took} ms`);
     assert.equal(result.plain, false);
+  }
+});
+
+test("the import check stays fast on a long line, and a long line holding import stays risky", () => {
+  // PR #71 round 1: an unbounded attribute argument made the statement match quadratic (about 10 s at
+  // 192,000 characters). The bound is far above a working run and far below a broken one.
+  for (const [text, plain] of [
+    [";@a(".repeat(50_000), true],
+    [`${";@a(".repeat(50_000)} import`, false],
+    [`import SwiftUI // ${"x".repeat(1_000)}`, false],
+  ]) {
+    const started = performance.now();
+    const result = classify([{ path: "Apps/Mac/Sources/Today/Probe.swift", oldMode: "000000", newMode: "100644", status: "A", binary: false, hunks: [[{ kind: "+", text }]] }], []);
+    const took = performance.now() - started;
+    console.log(`a ${text.length}-character line for the import check: ${took.toFixed(1)} ms`);
+    assert.ok(took < 2_000, `${took} ms`);
+    assert.equal(result.plain, plain);
+    if (!plain) assert.ok(result.reasons.some((reason) => reason.includes("an import")), result.reasons.join("; "));
   }
 });
 

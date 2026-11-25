@@ -152,8 +152,11 @@ export function decisionsFileExists(top, pr, round) {
 }
 
 // A decision's label (PR #69, owner 2026-11-23; any case, P-AM3, owner 2026-11-25):
-// `- <path:line or class>: keep` or `- <path:line or class>: fix: <what>`, with some text after `fix:`.
-const decisionLabel = /^- \S.*?: (?:keep(?![A-Za-z0-9_-])|fix:[ \t]*\S)/i;
+// `- <path:line or class>: keep` or `- <path:line or class>: fix: <what>`, right after the first `: `
+// (the reference holds none), with some text after `fix:`. Zero-width characters and the soft
+// hyphen are taken out first, so one alone after `fix:` is no text (PR #71 round 1).
+const decisionLabel = /^- (?=\S)(?:(?!: ).)+: (?:keep(?![A-Za-z0-9_-])|fix:\s*\S)/i;
+const invisible = /[­᠎​-‏⁠-⁤﻿]/g;
 
 /// Whether an answer comment carries the owner decisions block of round `round` of PR `pr` (P-AM2,
 /// owner 2026-11-17 and 2026-11-20): exactly one line `Owner decisions: <decisionsFile>`, followed
@@ -169,7 +172,7 @@ export function ownerDecisions(body, count, pr, round) {
   const items = lines.slice(at[0] + 1);
   const end = items.findIndex((line) => !/^- \S/.test(line));
   const block = end === -1 ? items : items.slice(0, end);
-  const labelled = block.filter((line) => decisionLabel.test(line)).length;
+  const labelled = block.filter((line) => decisionLabel.test(line.replace(invisible, ""))).length;
   return labelled === count && (end === -1 || items[end].trim() === "");
 }
 

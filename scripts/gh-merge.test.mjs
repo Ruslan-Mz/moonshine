@@ -795,6 +795,11 @@ for (const [name, answer, expected] of [
   ["a fix: with only spaces after it", decisions(["- a: fix:   "]), "owner decisions block"],
   ["a word that only starts with keep", decisions(["- a: keeping"]), "owner decisions block"],
   ["a label with no reference before it", decisions(["- keep"]), "owner decisions block"],
+  // PR #71 round 1: the label only right after the first `: `, and no invisible text after `fix:`.
+  ["keep after a later colon", decisions(["- a: undecided, asked the owner: keep or fix?"]), "owner decisions block"],
+  ["fix: after a later colon", decisions(["- x.swift:12: open question: fix: who decides"]), "owner decisions block"],
+  ["a zero-width space alone after fix:", decisions(["- a: fix: ​"]), "owner decisions block"],
+  ["a soft hyphen alone after fix:", decisions(["- a: fix:­"]), "owner decisions block"],
 ]) {
   test(`owner findings are refused with ${name}`, () => {
     const context = setUp();
