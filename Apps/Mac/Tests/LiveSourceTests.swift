@@ -46,6 +46,16 @@ final class CountingSettings: AppSettings, @unchecked Sendable {
   func setVaultBookmark(_ value: StoredBookmark) {
     vaultWrites.append(value)
   }
+
+  /// The deadline rule (S4-3c-2).
+  var storedRule = DeadlineRule.allDueDates
+  private(set) var ruleWrites: [DeadlineRule] = []
+
+  var deadlineRule: DeadlineRule { ruleWrites.last ?? storedRule }
+
+  func setDeadlineRule(_ value: DeadlineRule) {
+    ruleWrites.append(value)
+  }
 }
 
 /// An error that names its kind, as the bridge's do.
@@ -267,6 +277,12 @@ private func storeWithAnImport() async throws -> InMemoryStore {
 @MainActor
 private func waitFor(_ condition: () -> Bool) async {
   for _ in 0..<1_000 where !condition() { try? await Task.sleep(for: .milliseconds(10)) }
+}
+
+/// Friday's due task of `design/demo-data.md`, the one without the `deadline` tag: its Week badge.
+private func fridayBadge(_ overview: Overview) -> Bool? {
+  overview.week().days.flatMap(\.items)
+    .first { $0.task.title == "Book rehearsal room for November" }?.hasDueBadge
 }
 
 private func isLoaded(_ state: AppModel.State) -> Bool {
@@ -615,6 +631,97 @@ private func isUnavailable(_ state: AppModel.State) -> Bool {
     app.setVaultBookmark(bookmark)
     #expect(app.vaultBookmark == bookmark)
     #expect(storage.writes == ["vaultBookmark"])
+  }
+
+  /// S4-3c-2: the rule as two strings, the mode's pinned name and the trimmed tag.
+  @Test func theDeadlineRuleIsStoredAsTwoStrings() throws {
+    try #require(AppModel.isTestHost)
+    let storage = RecordingStorage()
+    let rule = DeadlineRule(mode: .dueDateAndTag, tag: " Hard ")
+    let host = StandardSettings(storage: storage)
+    #expect(host.deadlineRule == .allDueDates)
+    host.setDeadlineRule(rule)
+    #expect(storage.reads.isEmpty && storage.writes.isEmpty)
+    let app = StandardSettings(storage: storage, isTestHost: false)
+    #expect(app.deadlineRule == .allDueDates)
+    app.setDeadlineRule(rule)
+    #expect(storage.writes == ["deadlineMode", "deadlineTag"])
+    #expect(storage.string(forKey: "deadlineMode") == "dueDateAndTag")
+    #expect(storage.string(forKey: "deadlineTag") == "Hard")
+    #expect(app.deadlineRule == DeadlineRule(mode: .dueDateAndTag, tag: "Hard"))
+  }
+
+  @Test func anUnknownStoredModeReadsAsAllDueDates() {
+    let storage = RecordingStorage()
+    storage.set("everyOtherDate", forKey: "deadlineMode")
+    storage.set("Hard", forKey: "deadlineTag")
+    #expect(
+      StandardSettings(storage: storage, isTestHost: false).deadlineRule
+        == DeadlineRule(mode: .allDueDates, tag: "Hard"))
+  }
+
+  /// S4-3c-2: the launch build from the stored workspace (`showStored`; OmniFocus is not running,
+  /// so no import follows) and the midnight rebuild (`dayMayHaveChanged`) keep the rule.
+  @MainActor @Test func theStoredOverviewAndMidnightKeepTheDeadlineRule() async throws {
+    let store = try await storeWithAnImport()
+    let time = SettableClock(DemoEnvironment.now)
+    let settings = CountingSettings("live")
+    settings.storedRule = DeadlineRule(mode: .dueDateAndTag, tag: "deadline")
+    let model = AppModel(isTestHost: false, settings: settings) {
+      $0 == .live ? live(.notRunning, store: store, clock: time.clock) : nil
+    }
+    model.start()
+    await waitFor { isLoaded(model.state) && model.omniFocusState == .notRunning }
+    guard case .loaded(let stored) = model.state else {
+      Issue.record("not loaded")
+      return
+    }
+    #expect(model.importOutcomes == 0)
+    #expect(stored.deadlineRule == settings.storedRule)
+    #expect(fridayBadge(stored) == false)
+    let tomorrow = DemoEnvironment.now.addingTimeInterval(9 * 3_600)
+    time.set(tomorrow)
+    NotificationCenter.default.post(name: .NSCalendarDayChanged, object: nil)
+    await waitFor {
+      if case .loaded(let overview) = model.state { overview.now == tomorrow } else { false }
+    }
+    guard case .loaded(let after) = model.state else {
+      Issue.record("not loaded")
+      return
+    }
+    #expect(after.now == tomorrow)
+    #expect(after.deadlineRule == settings.storedRule)
+  }
+
+  /// S4-3c-2: a rule set while Live is shown reaches Demo's feed, built but not shown.
+  @MainActor @Test func theRuleReachesASourceNotShown() async throws {
+    let demo = try AppEnvironment.demo(snapshot: trackedSnapshot)
+    let model = AppModel(isTestHost: false, settings: CountingSettings(nil)) {
+      $0 == .demo ? demo : live(.notRunning)
+    }
+    await model.load()
+    #expect(model.source == .demo)
+    model.select(.live)
+    model.setDeadlineRule(DeadlineRule(mode: .dueDateAndTag, tag: "deadline"))
+    model.select(.demo)
+    guard case .loaded(let shown) = model.state else {
+      Issue.record("not loaded")
+      return
+    }
+    #expect(shown.deadlineRule.mode == .dueDateAndTag)
+    #expect(fridayBadge(shown) == false)
+  }
+
+  /// S4-3c-2: the tag commits through the model; an empty draft stores and shows `deadline`, an
+  /// unchanged one writes nothing.
+  @MainActor @Test func aCommittedTagIsTheStoredOne() async throws {
+    let settings = CountingSettings(nil)
+    settings.storedRule = DeadlineRule(mode: .dueDateAndTag, tag: "Hard")
+    let model = AppModel(isTestHost: false, settings: settings) { _ in nil }
+    #expect(model.commitDeadlineTag("Hard") == "Hard")
+    #expect(settings.ruleWrites.isEmpty)
+    #expect(model.commitDeadlineTag("  ") == "deadline")
+    #expect(settings.ruleWrites == [DeadlineRule(mode: .dueDateAndTag, tag: "deadline")])
   }
 
   @MainActor @Test func aReadableIdentityMapOverAnUnreadableWorkspaceIsUnavailable() async {

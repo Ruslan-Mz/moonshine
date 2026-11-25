@@ -1,14 +1,24 @@
+import AppKit
 import MoonShineCore
 import ObsidianAdapter
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Settings (⌘,), applied at once (`design/screens/settings.md`). The Data group only; the
-/// other groups come with S4-3c.
+/// Settings (⌘,), applied at once (`design/screens/settings.md`): the Data and Deadlines groups.
 struct SettingsView: View {
   @Bindable var model: AppModel
   /// The vault picker: `Choose…`, and a switch to Live with no folder chosen (S4-4d).
   @State private var choosingVault = false
+  /// The deadline tag as typed, seeded with the stored tag, so a commit before it is edited
+  /// changes nothing; committed on Return, focus loss, any window resigning key and closing,
+  /// never per keystroke: a cleared field would revert to `deadline` while typing.
+  @State private var tagDraft: String
+  @FocusState private var tagFocused: Bool
+
+  init(model: AppModel) {
+    self.model = model
+    _tagDraft = State(initialValue: model.deadlineRule.tag)
+  }
 
   var body: some View {
     Form {
@@ -66,12 +76,69 @@ struct SettingsView: View {
         .font(.caption)
         .foregroundStyle(.secondary)
       }
+      deadlines
     }
     .formStyle(.grouped)
     .frame(width: 580)
     .fileImporter(isPresented: $choosingVault, allowedContentTypes: [.folder]) { result in
       if case .success(let url) = result { model.chooseVault(url) }
     }
+    .onChange(of: tagFocused) { _, focused in
+      if !focused { commitTag() }
+    }
+    // A click into the main window keeps the field's focus; ⌘W closes without a focus change.
+    // Any window's notification commits: an unchanged draft writes nothing.
+    .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) {
+      _ in commitTag()
+    }
+    .onDisappear(perform: commitTag)
+  }
+
+  /// `design/screens/settings.md` § Deadlines.
+  private var deadlines: some View {
+    Section("Deadlines") {
+      Picker(
+        "Deadlines",
+        selection: Binding(
+          get: { model.deadlineRule.mode },
+          set: { mode in
+            model.setDeadlineRule(DeadlineRule(mode: mode, tag: tagDraft))
+            tagDraft = model.deadlineRule.tag
+          })
+      ) {
+        Text("All due dates").tag(DeadlineRule.Mode.allDueDates)
+        Text("Due date + tag").tag(DeadlineRule.Mode.dueDateAndTag)
+      }
+      .pickerStyle(.radioGroup)
+      .labelsHidden()
+      if model.deadlineRule.mode == .dueDateAndTag {
+        TextField("Tag", text: $tagDraft)
+          .focused($tagFocused)
+          .onSubmit(commitTag)
+        if let line = DeadlineTagLine(rule: model.deadlineRule, workspace: shownWorkspace) {
+          Group {
+            switch line {
+            case .notFound(let tag):
+              Text("No tag is named “\(tag)” — check the name; no due date is amber now")
+            }
+          }
+          .font(.caption)
+          .foregroundStyle(.secondary)
+        }
+      }
+      Text("Only deadlines get the amber due badge. Other due dates are shown as plain text.")
+        .font(.caption)
+        .foregroundStyle(.secondary)
+    }
+  }
+
+  private var shownWorkspace: Workspace? {
+    if case .loaded(let overview) = model.state { overview.workspace } else { nil }
+  }
+
+  /// The field shows the stored tag after it, so an empty one shows `deadline` again.
+  private func commitTag() {
+    tagDraft = model.commitDeadlineTag(tagDraft)
   }
 
   private func line(_ line: VaultLine) -> some View {
@@ -219,6 +286,18 @@ enum TagGroupsLine: Equatable {
     case .demo(let groups), .groups(let groups):
       self = workspace.map { .found($0.groupsFound(groups), of: groups.count) } ?? .notCountedYet
     }
+  }
+}
+
+/// The quiet caption under the deadline tag: no tag of the workspace shown has its name, so no
+/// due date is amber (owner, 2026-11-25, S4-3c-2). Nil in all-due-dates mode, while no workspace
+/// is shown, and when a tag has the name.
+enum DeadlineTagLine: Equatable {
+  case notFound(String)
+
+  init?(rule: DeadlineRule, workspace: Workspace?) {
+    guard let workspace, !rule.tagFound(in: workspace) else { return nil }
+    self = .notFound(rule.tag)
   }
 }
 
