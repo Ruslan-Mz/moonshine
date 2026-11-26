@@ -432,21 +432,28 @@ import Testing
     let fake = VaultFolderTests.FakeBookmarks()
     let folder = VaultFolder(settings: CountingSettings("live"), bookmarks: fake.bookmarks)
     try folder.choose(vault.root)
-    let entered = Mutex(false)
+    let (entered, signal) = AsyncStream.makeStream(of: Void.self)
     let release = DispatchSemaphore(value: 0)
     fake.whileResolving = {
-      entered.withLock { $0 = true }
+      signal.yield(())
       _ = release.wait(timeout: .now() + .seconds(10))
     }
     let opener = opener(vault: folder)
     let note = OpenTarget.note(Self.noteIDs["Notes/Plan.md"]!)
     let older = Task { await opener.open(note, in: Self.overview, isDemo: false) }
-    var yields = 0
-    while !entered.withLock({ $0 }) && yields < 10_000 {
-      await Task.yield()
-      yields += 1
+    // Waits for the lookup to reach the resolve; the 10 s bound tells "never entered" from
+    // "slow" (owner, 2026-11-26).
+    let reached = await withTaskGroup(of: Bool.self) { group in
+      group.addTask { await entered.first { _ in true } != nil }
+      group.addTask {
+        try? await Task.sleep(for: .seconds(10))
+        return false
+      }
+      let first = await group.next() ?? false
+      group.cancelAll()
+      return first
     }
-    try #require(entered.withLock { $0 })
+    try #require(reached)
     let newer = await opener.open(.task(Self.bareTaskID), in: Self.overview, isDemo: false)
     #expect(newer == .notOpened)
     release.signal()

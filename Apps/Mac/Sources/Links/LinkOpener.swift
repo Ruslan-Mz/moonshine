@@ -252,9 +252,10 @@ struct OpenCommands: Commands {
   let model: AppModel
   @FocusedValue(\.lineProject) private var project
 
-  /// The first project in Line detail's Projects order; nil with no project or no screen.
+  /// ⌘↵: opens in the other app everywhere (design/principles.md).
   static let shortcut = KeyboardShortcut(.return, modifiers: .command)
 
+  /// The first project in Line detail's Projects order; nil with no project or no screen.
   static func target(_ screen: LineDetailScreen?) -> OpenTarget? {
     screen?.projects.first.map { .project($0.id) }
   }
