@@ -213,4 +213,28 @@ import Testing
     #expect(screen.completions.count == Overview.completionsShown)
     #expect(screen.parent?.isArtifact == true)
   }
+
+  // MARK: ⌘O (owner, 2026-11-26)
+
+  @MainActor @Test func openInOmniFocusTargetsTheFirstProjectInProjectsOrder() async throws {
+    let overview = try await demoOverview()
+    let violin = try #require(overview.workspace.lines.first { $0.key == "violin" })
+    let screen = try #require(LineDetailScreen(overview, line: violin.id))
+    let first = try #require(screen.projects.first)
+    #expect(screen.projects.count > 1)
+    #expect(OpenCommands.target(screen) == .project(first.id))
+  }
+
+  @Test func aLineWithNoProjectHasNoOpenTarget() throws {
+    let overview = Overview(
+      workspace: Workspace(timeZone: Self.zone, lines: [Self.violin]), now: Self.now)
+    let screen = try #require(LineDetailScreen(overview, line: Self.violin.id))
+    #expect(screen.projects.isEmpty)
+    #expect(OpenCommands.target(screen) == nil)
+  }
+
+  /// No Line detail: a line that left the workspace; other screens never set the value.
+  @Test func withoutALineDetailThereIsNoOpenTarget() {
+    #expect(OpenCommands.target(nil) == nil)
+  }
 }

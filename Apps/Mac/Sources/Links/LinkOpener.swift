@@ -226,6 +226,33 @@ extension EnvironmentValues {
   }
 }
 
+extension FocusedValues {
+  /// The project ⌘O opens: set by Line detail only, so it is nil on every other screen.
+  @Entry var lineProject: OpenTarget?
+}
+
+/// Open in OmniFocus, ⌘O, beside Refresh: the line's first project, as Line detail's toolbar
+/// opens it; disabled everywhere else, Today included, which has ↵ (owner, 2026-11-26).
+struct OpenCommands: Commands {
+  let model: AppModel
+  @FocusedValue(\.lineProject) private var project
+
+  /// The first project in Line detail's Projects order; nil with no project or no screen.
+  static func target(_ screen: LineDetailScreen?) -> OpenTarget? {
+    screen?.projects.first.map { .project($0.id) }
+  }
+
+  var body: some Commands {
+    CommandGroup(after: .toolbar) {
+      Button("Open in OmniFocus") {
+        if let project { model.open(project) }
+      }
+      .keyboardShortcut("o", modifiers: .command)
+      .disabled(project == nil)
+    }
+  }
+}
+
 /// Every link in a scene goes through the opener: MoonShine's own targets through
 /// `openTarget`, and a link inside any text or catalog string through the `openURL` action,
 /// which drops it (`scripts/check-vault-writes.mjs` requires it on both scenes).

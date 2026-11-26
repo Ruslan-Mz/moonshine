@@ -18,6 +18,7 @@ struct MoonShineApp: App {
         Button("Refresh") { model.refresh() }
           .keyboardShortcut("r", modifiers: .command)
       }
+      OpenCommands(model: model)
       TodayCommands()
       LineRemovalCommands()
       // Show / Hide Inspector, ⌃⌘I, in the View menu.

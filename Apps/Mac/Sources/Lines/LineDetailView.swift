@@ -21,14 +21,17 @@ struct LineDetailDestination: View {
   @Binding var path: [LineID]
 
   var body: some View {
+    let screen = LineDetailScreen(overview, line: id)
     Group {
-      if let screen = LineDetailScreen(overview, line: id) {
+      if let screen {
         LineDetailView(screen: screen)
       } else {
         // A line that left the workspace while its detail was open.
         ContentUnavailableView("This line is not in the data shown.", systemImage: "tray")
       }
     }
+    // ⌘O's project (`OpenCommands`).
+    .focusedSceneValue(\.lineProject, OpenCommands.target(screen))
     .navigationBarBackButtonHidden()
     .toolbar {
       ToolbarItem(placement: .navigation) {
@@ -77,15 +80,15 @@ struct LineDetailView: View {
           min: LineDetailColumns.inspectorMinimum, ideal: LineDetailColumns.inspectorIdeal)
     }
     .toolbar {
-      // The line's first project: a folder or tag perspective is not on the allowlist, and
-      // the store keeps no folder ids (owner, 2026-11-25).
+      // The line's first project, as ⌘O: a folder or tag perspective is not on the
+      // allowlist, and the store keeps no folder ids (owner, 2026-11-25).
       Button {
-        if let project = screen.projects.first { openTarget(.project(project.id)) }
+        if let project = OpenCommands.target(screen) { openTarget(project) }
       } label: {
         Label("Open in OmniFocus", systemImage: "arrow.up.forward.app")
       }
       .help(Text("Open in OmniFocus"))
-      .disabled(screen.projects.isEmpty)
+      .disabled(OpenCommands.target(screen) == nil)
       Button {
         inspectorShown.toggle()
       } label: {
