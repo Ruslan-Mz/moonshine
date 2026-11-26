@@ -399,6 +399,67 @@ import Testing
     #expect(file.map { $0.unicodeScalars.elementsEqual(onDisk.unicodeScalars) } == true)
   }
 
+  /// Obsidian names a vault by its folder as macOS gives the path back, in the form on disk;
+  /// a resolved bookmark's URL is decomposed, as this test's root is (PR #73 round 2).
+  @Test func theVaultIsNamedAsItsFolderIsOnDisk() async throws {
+    let base = FileManager.default.temporaryDirectory
+      .appending(path: "opener-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: base) }
+    try FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+    let composed = "\u{0439}\u{0430}"
+    let decomposed = "\u{0438}\u{0306}\u{0430}"
+    let rootPath = base.path(percentEncoded: false) + "/" + composed
+    try #require(mkdir(rootPath, 0o755) == 0)
+    try #require(mkdir(rootPath + "/.obsidian", 0o755) == 0)
+    try #require(mkdir(rootPath + "/Notes", 0o755) == 0)
+    let descriptor = Darwin.open(rootPath + "/Notes/Plan.md", O_CREAT | O_WRONLY, 0o644)
+    try #require(descriptor >= 0)
+    close(descriptor)
+    let folder = VaultFolder(
+      settings: CountingSettings("live"), bookmarks: VaultFolderTests.FakeBookmarks().bookmarks)
+    try folder.choose(base.appending(path: decomposed))
+    #expect(await open(.note(Self.noteIDs["Notes/Plan.md"]!), vault: folder) == .opened)
+    let vault = recorder.opened.first.flatMap {
+      URLComponents(url: $0, resolvingAgainstBaseURL: false)?.queryItems?.first?.value
+    }
+    #expect(vault.map { $0.unicodeScalars.elementsEqual(composed.unicodeScalars) } == true)
+  }
+
+  /// The latest open wins: a note lookup that finishes after a newer open opens nothing and
+  /// leaves the newer notice (PR #73 round 2).
+  @Test func anOlderOpenThatFinishesLateChangesNothing() async throws {
+    let vault = try Vault()
+    let fake = VaultFolderTests.FakeBookmarks()
+    let folder = VaultFolder(settings: CountingSettings("live"), bookmarks: fake.bookmarks)
+    try folder.choose(vault.root)
+    let entered = Mutex(false)
+    let release = DispatchSemaphore(value: 0)
+    fake.whileResolving = {
+      entered.withLock { $0 = true }
+      _ = release.wait(timeout: .now() + .seconds(10))
+    }
+    let opener = opener(vault: folder)
+    let note = OpenTarget.note(Self.noteIDs["Notes/Plan.md"]!)
+    let older = Task { await opener.open(note, in: Self.overview, isDemo: false) }
+    var yields = 0
+    while !entered.withLock({ $0 }) && yields < 10_000 {
+      await Task.yield()
+      yields += 1
+    }
+    try #require(entered.withLock { $0 })
+    let newer = await opener.open(.task(Self.bareTaskID), in: Self.overview, isDemo: false)
+    #expect(newer == .notOpened)
+    release.signal()
+    #expect(await older.value == .superseded)
+    #expect(opener.notice == .notOpened)
+    #expect(recorder.opened.isEmpty)
+  }
+
+  /// ⌘↵ opens in the other app, as everywhere (`design/principles.md`; owner, 2026-11-26).
+  @Test func openInOmniFocusIsCommandReturn() {
+    #expect(OpenCommands.shortcut == KeyboardShortcut(.return, modifiers: .command))
+  }
+
   @Test func anOpenClearsAnEarlierNotice() async {
     let opener = opener(vault: VaultFolder(settings: CountingSettings(nil)))
     await opener.open(.task(Self.bareTaskID), in: Self.overview, isDemo: false)

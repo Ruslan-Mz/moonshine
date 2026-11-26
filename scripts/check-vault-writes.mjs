@@ -107,12 +107,77 @@ const allowed = {
 // to open a URL that the allowlist above removes with the first (S4-5).
 const allowedOnce = { [opener]: allowed[opener] };
 
-// Both scenes route every link through the opener: the main window and Settings (S4-5).
+// Both scenes route every link through the opener: the main window and Settings, each call
+// inside its own scene's body (S4-5; PR #73 round 2).
 const appFile = "Apps/Mac/Sources/MoonShineApp.swift";
 const sceneRoots = [
-  ["RootView", /RootView\(model: model\)\s*\.linksThroughOpener\(model\)/],
-  ["SettingsView", /SettingsView\(model: model\)\s*\.linksThroughOpener\(model\)/],
+  ["RootView", /\bWindowGroup\s*(?:\([^)]*\))?\s*\{/g, /RootView\(model: model\)\s*\.linksThroughOpener\(model\)/],
+  ["SettingsView", /(?<![A-Za-z0-9_])Settings\s*\{/g, /SettingsView\(model: model\)\s*\.linksThroughOpener\(model\)/],
 ];
+
+/// The source with its comments blanked, nested block comments included, line breaks kept;
+/// with `blankStrings`, the contents of string literals too (PR #73 round 2).
+function stripComments(source, blankStrings = false) {
+  const blank = (char) => (char === "\n" ? "\n" : " ");
+  let out = "";
+  let i = 0;
+  while (i < source.length) {
+    if (source.startsWith("//", i)) {
+      while (i < source.length && source[i] !== "\n") {
+        out += " ";
+        i += 1;
+      }
+    } else if (source.startsWith("/*", i)) {
+      let depth = 0;
+      do {
+        if (source.startsWith("/*", i) || source.startsWith("*/", i)) {
+          depth += source[i] === "/" ? 1 : -1;
+          out += "  ";
+          i += 2;
+        } else {
+          out += blank(source[i]);
+          i += 1;
+        }
+      } while (i < source.length && depth > 0);
+    } else if (/^#*"/.test(source.slice(i, i + 8))) {
+      const hashes = /^#*/.exec(source.slice(i))[0];
+      const multi = source.startsWith('"""', i + hashes.length);
+      const quote = multi ? '"""' : '"';
+      const close = quote + hashes;
+      out += hashes + quote;
+      i += hashes.length + quote.length;
+      while (i < source.length && !source.startsWith(close, i) && (multi || source[i] !== "\n")) {
+        const length = !hashes && source[i] === "\\" ? 2 : 1;
+        const text = source.slice(i, i + length);
+        out += blankStrings ? [...text].map(blank).join("") : text;
+        i += length;
+      }
+      if (source.startsWith(close, i)) {
+        out += close;
+        i += close.length;
+      }
+    } else {
+      out += source[i];
+      i += 1;
+    }
+  }
+  return out;
+}
+
+/// The bodies of the blocks that `opening` (ending at their `{`) starts, braces balanced.
+function blockBodies(code, opening) {
+  return [...code.matchAll(opening)].map((match) => {
+    const start = match.index + match[0].length;
+    let depth = 1;
+    let end = start;
+    while (end < code.length && depth > 0) {
+      if (code[end] === "{") depth += 1;
+      if (code[end] === "}") depth -= 1;
+      end += 1;
+    }
+    return code.slice(start, end - 1);
+  });
+}
 
 // The one file that may use EventKit, read-only.
 const eventStore = "Adapters/Sources/CalendarAdapter/SystemEventStore.swift";
@@ -204,7 +269,7 @@ const patterns = [
   // an attributed string, a link attribute (set, subscripted, in a dictionary literal, added or
   // in a container), or a markdown link target in a string (`](https:`, `](<https:`, an autolink
   // `<https://`). A call such as `handlers[0](value: 1)` passes: the colon is followed by a space
-  // (S4-5; PR #73 round 1).
+  // (S4-5; PR #73 round 1). A wrapped key starts its own line (`.link: url`; PR #73 round 2).
   [
     "URL opener",
     new RegExp(
@@ -214,6 +279,7 @@ const patterns = [
         /\.link\s*=(?!=)/,
         /\[\s*\.link\s*\]/,
         /[[,]\s*\.link\s*:/,
+        /^\s*\.link\s*:/,
         /addAttribute\s*\(\s*\.link\b/,
         /\.link\s*\(/,
         /\]\(\s*<?\s*[A-Za-z][A-Za-z0-9+.-]*:(?!\s)/,
@@ -295,10 +361,24 @@ for (const dir of [...required, ...optional.filter((dir) => isFolder(join(root, 
       if (source.split(allow).length > 2) findings.push(`${file}: allowed text more than once`);
     }
     if (file === appFile) {
-      // A call in a comment does not count (PR #73 round 1).
-      const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
-      for (const [scene, root] of sceneRoots) {
-        if (!root.test(code)) findings.push(`${file}: ${scene} without the opener`);
+      // A call in a comment, in a conditional branch or outside its scene does not count
+      // (PR #73 rounds 1 and 2).
+      const code = stripComments(source, true);
+      if (/^\s*#if\b/m.test(code)) findings.push(`${file}: conditional compilation in the scene file`);
+      for (const [scene, opening, call] of sceneRoots) {
+        const bodies = blockBodies(code, opening);
+        if (bodies.length === 0 || bodies.some((body) => !call.test(body))) {
+          findings.push(`${file}: ${scene} without the opener`);
+        }
+      }
+    }
+    if (file.startsWith("Apps/")) {
+      // `addAttribute(` wrapped before its `.link` key, as swift-format wraps a long call; the
+      // one-line form is a line pattern below (PR #73 round 2).
+      const code = stripComments(source);
+      for (const match of code.matchAll(/addAttribute\s*\(\s*\.link\b/g)) {
+        if (!match[0].includes("\n")) continue;
+        findings.push(`${file}:${code.slice(0, match.index).split("\n").length}: URL opener`);
       }
     }
     source.split("\n").forEach((text, index) => {

@@ -30,7 +30,7 @@ struct LineDetailDestination: View {
         ContentUnavailableView("This line is not in the data shown.", systemImage: "tray")
       }
     }
-    // ⌘O's project (`OpenCommands`).
+    // ⌘↵'s project (`OpenCommands`).
     .focusedSceneValue(\.lineProject, OpenCommands.target(screen))
     .navigationBarBackButtonHidden()
     .toolbar {
@@ -80,7 +80,7 @@ struct LineDetailView: View {
           min: LineDetailColumns.inspectorMinimum, ideal: LineDetailColumns.inspectorIdeal)
     }
     .toolbar {
-      // The line's first project, as ⌘O: a folder or tag perspective is not on the
+      // The line's first project, as ⌘↵: a folder or tag perspective is not on the
       // allowlist, and the store keeps no folder ids (owner, 2026-11-25).
       Button {
         if let project = OpenCommands.target(screen) { openTarget(project) }

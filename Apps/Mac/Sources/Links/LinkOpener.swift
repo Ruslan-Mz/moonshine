@@ -20,6 +20,9 @@ enum OpenOutcome: Hashable {
   case notOpened
   /// Demo's ids and paths are invented: nothing opens (owner, 2026-11-25).
   case demo
+  /// A newer open started while this one looked its note up: the latest open wins, so this one
+  /// opens nothing and leaves the notice alone (PR #73 round 2).
+  case superseded
 
   enum VaultReason: Hashable {
     case notChosen
@@ -52,6 +55,8 @@ final class LinkOpener {
   @ObservationIgnored private let vault: VaultFolder
   @ObservationIgnored private let noticeDelay: Duration
   @ObservationIgnored private let sleep: @Sendable (Duration) async -> Void
+  /// The newest open's number: only that open may open or touch the notice.
+  @ObservationIgnored private var latest = 0
 
   /// How long a notice stays (owner, 2026-11-25).
   static let noticeDelay: Duration = .seconds(5)
@@ -73,14 +78,19 @@ final class LinkOpener {
   }
 
   /// Opens `target` from the workspace shown; any outcome but `.opened` becomes the notice, and
-  /// `.opened` clears an earlier one, so the bar never reports an older failure.
+  /// `.opened` clears an earlier one, so the bar never reports an older failure. The latest
+  /// open wins: one overtaken while it looked its note up is `.superseded` (PR #73 round 2).
   @discardableResult
   func open(_ target: OpenTarget, in overview: Overview, isDemo: Bool) async -> OpenOutcome {
+    latest += 1
+    let number = latest
     let outcome: OpenOutcome
     if isDemo {
       outcome = .demo
     } else {
-      switch await url(target, in: overview.workspace) {
+      let result = await url(target, in: overview.workspace)
+      guard number == latest else { return .superseded }
+      switch result {
       case .success(let url): outcome = opening.open(url) ? .opened : .notOpened
       case .failure(let refusal): outcome = refusal.outcome
       }
@@ -104,6 +114,7 @@ final class LinkOpener {
     case .vaultUnavailable(.unreadable): String(localized: "Vault can't be read")
     case .notOpened: String(localized: "Could not open it")
     case .demo: String(localized: "Demo data — opens with Live data")
+    case .superseded: nil
     }
   }
 
@@ -154,8 +165,8 @@ final class LinkOpener {
       switch await Self.locate(path: note.path, in: root) {
       case .vaultUnreadable: return .failure(Refusal(outcome: .vaultUnavailable(.unreadable)))
       case .notFound: return .failure(Refusal(outcome: .noteNotFound))
-      case .file(let onDisk):
-        return ObsidianLink.open(vault: root.lastPathComponent, file: onDisk).map { .success($0) }
+      case .file(let vault, let path):
+        return ObsidianLink.open(vault: vault, file: path).map { .success($0) }
           ?? .failure(notOpened)
       }
     }
@@ -165,8 +176,9 @@ final class LinkOpener {
   enum NoteLookup: Equatable {
     case vaultUnreadable
     case notFound
-    /// The vault-relative path in the names the file system keeps, for Obsidian's exact lookup.
-    case file(String)
+    /// The vault's folder name and the vault-relative path, in the names the file system keeps,
+    /// for Obsidian's exact lookup (PR #73 rounds 1 and 2).
+    case file(vault: String, path: String)
   }
 
   /// The vault check and the walk, off the main actor: a slow or sleeping volume never holds
@@ -174,8 +186,10 @@ final class LinkOpener {
   @concurrent nonisolated static func locate(path: String, in root: URL) async -> NoteLookup {
     let scoped = root.startAccessingSecurityScopedResource()
     defer { if scoped { root.stopAccessingSecurityScopedResource() } }
-    guard VaultFolder.isVault(root) else { return .vaultUnreadable }
-    return noteFile(root: root, path: path).map { .file($0) } ?? .notFound
+    // A resolved bookmark's URL is decomposed; the name key gives the folder's name on disk.
+    guard VaultFolder.isVault(root), let vault = try? root.resourceValues(forKeys: [.nameKey]).name
+    else { return .vaultUnreadable }
+    return noteFile(root: root, path: path).map { .file(vault: vault, path: $0) } ?? .notFound
   }
 
   private static func omniFocusID(_ refs: [ExternalRef]?) -> String? {
@@ -227,17 +241,20 @@ extension EnvironmentValues {
 }
 
 extension FocusedValues {
-  /// The project ⌘O opens: set by Line detail only, so it is nil on every other screen.
+  /// The project ⌘↵ opens: set by Line detail only, so it is nil on every other screen.
   @Entry var lineProject: OpenTarget?
 }
 
-/// Open in OmniFocus, ⌘O, beside Refresh: the line's first project, as Line detail's toolbar
-/// opens it; disabled everywhere else, Today included, which has ↵ (owner, 2026-11-26).
+/// Open in OmniFocus, ⌘↵, beside Refresh: the line's first project, as Line detail's toolbar
+/// opens it; disabled everywhere else, Today included, which has ↵ (owner, 2026-11-26). ⌘↵
+/// opens in the other app everywhere (`design/principles.md`).
 struct OpenCommands: Commands {
   let model: AppModel
   @FocusedValue(\.lineProject) private var project
 
   /// The first project in Line detail's Projects order; nil with no project or no screen.
+  static let shortcut = KeyboardShortcut(.return, modifiers: .command)
+
   static func target(_ screen: LineDetailScreen?) -> OpenTarget? {
     screen?.projects.first.map { .project($0.id) }
   }
@@ -247,7 +264,7 @@ struct OpenCommands: Commands {
       Button("Open in OmniFocus") {
         if let project { model.open(project) }
       }
-      .keyboardShortcut("o", modifiers: .command)
+      .keyboardShortcut(Self.shortcut)
       .disabled(project == nil)
     }
   }

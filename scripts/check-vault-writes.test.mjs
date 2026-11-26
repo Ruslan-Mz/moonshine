@@ -396,6 +396,31 @@ test("S4-5: links inside text fail in Apps; a link button style and a subscripte
   }
 });
 
+test("S4-5: wrapped link attributes fail in Apps, in swift-format's shape (PR #73 round 2)", () => {
+  const wrapped = [
+    'let attributes: [NSAttributedString.Key: Any] = [\n  .link: URL(string: "omnifocus:///add?name=x")!\n]',
+    "let attributes: [NSAttributedString.Key: Any] = [\n  .font: font,\n  .link: url,\n]",
+    "text.addAttribute(\n  .link, value: url, range: range)",
+    "text.addAttribute(\n  .link,\n  value: url,\n  range: range\n)",
+  ];
+  for (const text of wrapped) {
+    const inApp = check({ [app]: `import Foundation\n${text}\n` });
+    assert.equal(inApp.status, 1, `${text}\n${inApp.stdout}`);
+    assert.match(inApp.stdout, /A\.swift:\d+: URL opener/, text);
+    const inAdapter = check({ [adapter]: `import Foundation\n${text}\n` });
+    assert.equal(inAdapter.status, 0, `${text}\n${inAdapter.stdout}`);
+  }
+  for (const text of [
+    ".buttonStyle(.link)",
+    "Button(action: open) {\n  Text(title)\n}\n.buttonStyle(.link)",
+    "switch kind {\ncase .link: break\ndefault: break\n}",
+    "text.addAttribute(\n  .font, value: font, range: range)",
+  ]) {
+    const result = check({ [app]: `import Foundation\n${text}\n` });
+    assert.equal(result.status, 0, `${text}\n${result.stdout}`);
+  }
+});
+
 test("S4-5: the opener's three texts pass once in its own file, never twice or elsewhere", () => {
   const opener = "Apps/Mac/Sources/Links/LinkOpener.swift";
   const texts = [
@@ -444,6 +469,46 @@ test("S4-5: both scenes of the app route their links through the opener", () => 
   assert.equal(inComments.status, 1, inComments.stdout);
   assert.match(inComments.stdout, /RootView without the opener/);
   assert.match(inComments.stdout, /SettingsView without the opener/);
+  // Nested comments, a conditional scene and a call outside its scene's body do not count
+  // (PR #73 round 2).
+  const nested = [
+    "WindowGroup {",
+    "  /* a /* b */ RootView(model: model).linksThroughOpener(model) */",
+    "  RootView(model: model)",
+    "}",
+    "Settings {",
+    "  SettingsView(model: model)",
+    "    .linksThroughOpener(model)",
+    "}",
+  ].join("\n");
+  const inNested = check({ [appFile]: `import SwiftUI\n${nested}\n` });
+  assert.equal(inNested.status, 1, inNested.stdout);
+  assert.match(inNested.stdout, /MoonShineApp\.swift: RootView without the opener/);
+  assert.doesNotMatch(inNested.stdout, /SettingsView without the opener/);
+  const conditional = [
+    "WindowGroup {",
+    "  RootView(model: model)",
+    "    .linksThroughOpener(model)",
+    "}",
+    "Settings {",
+    "  #if DEBUG",
+    "    SettingsView(model: model).linksThroughOpener(model)",
+    "  #else",
+    "    SettingsView(model: model)",
+    "  #endif",
+    "}",
+  ].join("\n");
+  const inConditional = check({ [appFile]: `import SwiftUI\n${conditional}\n` });
+  assert.equal(inConditional.status, 1, inConditional.stdout);
+  assert.match(inConditional.stdout, /MoonShineApp\.swift: conditional compilation in the scene file/);
+  const outside = [
+    "let preview = RootView(model: model).linksThroughOpener(model)",
+    "WindowGroup { RootView(model: model) }",
+    "Settings { SettingsView(model: model).linksThroughOpener(model) }",
+  ].join("\n");
+  const inOutside = check({ [appFile]: `import SwiftUI\n${outside}\n` });
+  assert.equal(inOutside.status, 1, inOutside.stdout);
+  assert.match(inOutside.stdout, /MoonShineApp\.swift: RootView without the opener/);
   for (const [scene, without] of [
     ["RootView", both.replace("  RootView(model: model)\n    .linksThroughOpener(model)", "  RootView(model: model)")],
     ["SettingsView", both.replace("  SettingsView(model: model)\n    .linksThroughOpener(model)", "  SettingsView(model: model)")],

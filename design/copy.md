@@ -100,6 +100,7 @@ Owner, 2026-11-25. The notice sits on the left of the status bar for 5 s, in the
 | Context                                                                      | EN                                 | RU                                         |
 | ---------------------------------------------------------------------------- | ---------------------------------- | ------------------------------------------ |
 | Toolbar (Line detail), QuietLineCard and NoActivityCard link                 | `Open in OmniFocus`                | `Открыть в OmniFocus`                      |
+| View menu, ⌘↵ (Line detail only; owner, 2026-11-26)                          | `Open in OmniFocus`                | `Открыть в OmniFocus`                      |
 | Parent card (Line detail)                                                    | `Open in Obsidian`                 | `Открыть в Obsidian`                       |
 | Quarter focus card, footer link                                              | `Open quarter note`                | `Открыть заметку квартала`                 |
 | Read-only checkbox and anchor chip, VoiceOver hint                           | `Opens in OmniFocus`               | `Открывает в OmniFocus`                    |
