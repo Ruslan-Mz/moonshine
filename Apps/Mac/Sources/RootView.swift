@@ -59,7 +59,11 @@ struct RootView: View {
       }
       .environment(\.timeZone, zone)
       .environment(\.calendar, TodayFormat.calendar(zone))
-      .environment(\.dayRailInput, model.source == .demo ? .demo : .live)
+      .environment(\.dayRailInput, model.dayRailInput(calendar: overview.calendar))
+      .onChange(of: overview.calendar.dateInterval(of: .day, for: overview.now), initial: true) {
+        _, day in
+        if let day { model.showCalendarDay(day) }
+      }
       // Another source is another workspace: an open Line detail goes back to Lines.
       .id(model.source)
     } else {

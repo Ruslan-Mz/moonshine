@@ -309,8 +309,20 @@ const calendarWrites = [
   "save", "remove", "commit", "saveCalendar", "removeCalendar", "saveReminder", "removeReminder",
   "requestWriteOnlyAccessToEvents", "requestFullAccessToReminders",
 ];
+// An app test runs inside the app, outside the sandbox: it reaches the system's calendars only
+// through the adapter, so it names neither the adapter nor its live types (CLAUDE.md rule 5;
+// S4-3d). The app's sources build the live provider in `AppModel.production()` only.
+const isAppTest = (file) =>
+  file.startsWith("Apps/") && file.split("/").slice(1, -1).some((part) => part.endsWith("Tests"));
 // [name, pattern, searched in a line that is only a comment, applies to this file, also in tests]
 const calendarPatterns = [
+  [
+    "live calendar in an app test",
+    new RegExp(`${importOf("CalendarAdapter").source}|${word(["EventKitCalendarProvider", "SystemEventStore"]).source}`),
+    false,
+    isAppTest,
+    true,
+  ],
   ["EventKit import", importOf("EventKit"), false, (file) => file !== eventStore, true],
   ["EventKitUI import", importOf("EventKitUI"), false, () => true, true],
   ["EventKit name", word(["EK[A-Z][A-Za-z0-9_]*"]), false, (file) => file !== eventStore, true],

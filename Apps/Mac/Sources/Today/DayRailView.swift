@@ -1,30 +1,113 @@
 import MoonShineCore
-import MoonShineFixtures
 import SwiftUI
 
-/// The calendar the Day rail reads, set by `RootView` from the app's source.
+/// The calendar the Day rail reads, set by `RootView` from the model's calendar feed (S4-3d).
 struct DayRailInput {
   let events: CalendarRead<[CalendarEvent]>
   let visibility: CalendarVisibility
   /// For the bar colours.
   let calendars: [CalendarInfo]
+  /// The rail's span and the free term: Settings' in Live, `DayWindow.standard` in Demo.
+  let window: DayWindow
   /// Demo's clock stands still at the overview's `now`; Live's runs.
   let isFrozen: Bool
+  /// The row under the rail; nil for none.
+  var row: CalendarRow?
+  var isConnecting = false
+  var connect: @MainActor () -> Void = {}
+  var notNow: @MainActor () -> Void = {}
 
-  /// The fixture calendar's week, read here until S4-3d moves the read behind the calendar
-  /// provider (owner, 2026-11-16).
-  static let demo = DayRailInput(
-    events: .read(DemoCalendar.events, skipped: 0), visibility: DemoCalendar.visibility,
-    calendars: DemoCalendar.calendars, isFrozen: true)
-
-  /// No calendar read before S4-3d: the rail shows the tasks with a time and no calendar fact.
-  static let live = DayRailInput(
+  /// Before the model sets one: the tasks with a time, no calendar fact and no row.
+  static let none = DayRailInput(
     events: .unavailable(.notDetermined), visibility: CalendarVisibility(), calendars: [],
-    isFrozen: false)
+    window: .standard, isFrozen: false)
 }
 
 extension EnvironmentValues {
-  @Entry var dayRailInput = DayRailInput.live
+  @Entry var dayRailInput = DayRailInput.none
+}
+
+/// The row under Today's rail while the calendar cannot be read (`design/screens/today.md` §
+/// Calendar, `design/copy.md` § Calendar strings). Its words hold no event, calendar or account.
+enum CalendarRow: Equatable, CaseIterable {
+  /// Not asked yet: `Connect calendars…` and `Not now`.
+  case connect
+  /// Denied: `Open System Settings`.
+  case off
+  /// Add Events Only: access is on but of the wrong kind; `Open System Settings` (owner,
+  /// 2026-11-27, PR #74 round 1).
+  case fullAccessOnly
+
+  /// How long `Not now` hides the connect row, in calendar days.
+  static let notNowDays = 30
+
+  /// Nil before access is known, when granted, while `Not now` hides it (from the day it was
+  /// pressed until 30 calendar days later, in `calendar`'s zone; a day after today, the clock
+  /// moved back, hides nothing), and when restricted: the Mac's owner cannot lift a
+  /// device-management restriction, and Settings → Calendars explains it (owner, 2026-11-27).
+  init?(access: CalendarAccess?, notNow: Date?, now: Date, calendar: Calendar) {
+    switch access {
+    case .notDetermined?:
+      if let notNow, Self.hides(pressed: notNow, now: now, calendar: calendar) { return nil }
+      self = .connect
+    case .denied?: self = .off
+    case .writeOnly?: self = .fullAccessOnly
+    case .granted?, .restricted?, nil: return nil
+    }
+  }
+
+  /// The row offers `Open System Settings` rather than `Connect calendars…` and `Not now`.
+  var opensSystemSettings: Bool { self != .connect }
+
+  private static func hides(pressed: Date, now: Date, calendar: Calendar) -> Bool {
+    let pressed = calendar.startOfDay(for: pressed)
+    let today = calendar.startOfDay(for: now)
+    guard pressed <= today, let days = calendar.dateComponents([.day], from: pressed, to: today).day
+    else { return false }
+    return days < notNowDays
+  }
+
+  var sentence: String { String(localized: resource) }
+
+  /// The sentence in `locale`, whatever the Mac's language.
+  func sentence(in locale: Locale) -> String {
+    var resource = resource
+    resource.locale = locale
+    return String(localized: resource)
+  }
+
+  private var resource: LocalizedStringResource {
+    switch self {
+    case .connect: "Calendar is not connected. Events stay on this device."
+    case .off: "Calendar access is off for MoonShine."
+    case .fullAccessOnly: "MoonShine can only read calendars with Full Access."
+    }
+  }
+}
+
+/// `CalendarRow` under the rail; buttons as links, as the rail's other actions.
+struct CalendarAccessRow: View {
+  @Environment(\.dayRailInput) private var input
+  @Environment(\.openTarget) private var openTarget
+
+  var body: some View {
+    if let row = input.row {
+      VStack(alignment: .leading, spacing: 4) {
+        Text(verbatim: row.sentence).foregroundStyle(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
+        HStack(spacing: 12) {
+          if row.opensSystemSettings {
+            Button("Open System Settings") { openTarget(.calendarPrivacySettings) }
+          } else {
+            Button("Connect calendars…") { input.connect() }.disabled(input.isConnecting)
+            Button("Not now") { input.notNow() }
+          }
+        }
+        .buttonStyle(.link)
+      }
+      .font(.system(size: 11))
+    }
+  }
 }
 
 extension DayRail {
@@ -85,7 +168,8 @@ struct DayRailView: View {
         {
           facts
         }
-        Text("day window \(hour(window.start))–\(hour(window.end))")
+        let edges = TodayFormat.windowEdges(window, calendar: screen.calendar)
+        Text("day window \(edges.0)–\(edges.1)")
       }
       .font(.system(size: 11))
       .foregroundStyle(.secondary)
@@ -304,10 +388,6 @@ struct DayRailView: View {
 
   private func time(_ date: Date) -> String {
     TodayFormat.time(date, timeZone: zone, locale: locale)
-  }
-
-  private func hour(_ date: Date) -> String {
-    TodayFormat.hour(date, timeZone: zone, locale: locale)
   }
 }
 

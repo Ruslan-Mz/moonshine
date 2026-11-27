@@ -578,6 +578,28 @@ test("the test folders are searched for EventKit imports and names, not for vaul
   }
 });
 
+test("S4-3d: an app test reaches no live calendar store; the adapter's own tests and the app may", () => {
+  const appTests = ["Apps/Mac/Tests/A.swift", "Apps/MoonShineMacTests/A.swift"];
+  for (const where of appTests) {
+    for (const line of [
+      "import CalendarAdapter",
+      "@testable import CalendarAdapter",
+      "@preconcurrency import CalendarAdapter",
+      "let provider = EventKitCalendarProvider()",
+      "let store = SystemEventStore()",
+      "_ = CalendarAdapter.EventKitCalendarProvider.self",
+    ]) {
+      fails(line, where, "live calendar in an app test");
+    }
+    passes("let provider = FakeCalendar()", where);
+    passes("// EventKitCalendarProvider is built only in AppModel.production()", where);
+  }
+  passes("import CalendarAdapter", "Apps/Mac/Sources/AppModel.swift");
+  passes("let live = EventKitCalendarProvider()", "Apps/Mac/Sources/AppModel.swift");
+  passes("@testable import CalendarAdapter", "Adapters/Tests/CalendarAdapterTests/A.swift");
+  passes("let provider = EventKitCalendarProvider(store: fake)", "Adapters/Tests/CalendarAdapterTests/A.swift");
+});
+
 test("the event store calls no EventKit write and asks for no reminders", () => {
   for (const line of [
     "try store.save(event, span: .thisEvent)",

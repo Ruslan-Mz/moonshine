@@ -6,6 +6,15 @@ import Testing
 
 @testable import MoonShineMac
 
+/// The two inputs the app built before S4-3d moved the read behind the calendar provider: the
+/// fixture week, and no calendar fact.
+extension DayRailInput {
+  static let demo = DayRailInput(
+    events: .read(DemoCalendar.events, skipped: 0), visibility: DemoCalendar.visibility,
+    calendars: DemoCalendar.calendars, window: .standard, isFrozen: true)
+  static let live = DayRailInput.none
+}
+
 /// Today's Day rail as the app builds it from Demo (`design/screens/today.md` § Calendar).
 @Suite(.serialized) struct DayRailTests {
   /// Every row of the table, wherever it sits.
@@ -91,6 +100,31 @@ import Testing
     // On the rail, though no table section holds a line that is not found.
     #expect(screen.railTasks.contains { $0.id == lost.id })
     #expect(screen.lineNames[lost.id] == nil)
+  }
+
+  /// A changed window moves the span, the pinned rows and the free term; nothing appears or
+  /// disappears (`today.md:131`). 07:00–23:00 takes Mobility (07:30) and the 23:59 due mark
+  /// stays after it.
+  @MainActor @Test func theRailFollowsTheInputsWindow() async throws {
+    let overview = try await demoOverview()
+    let screen = TodayScreen(overview)
+    let wide = try #require(DayWindow(startMinute: 7 * 60, endMinute: 23 * 60))
+    let input = DayRailInput(
+      events: DayRailInput.demo.events, visibility: DemoCalendar.visibility,
+      calendars: DemoCalendar.calendars, window: wide, isFrozen: true)
+    let standard = screen.rail(now: overview.now, input: .demo)
+    let rail = screen.rail(now: overview.now, input: input)
+    #expect(Self.time(rail.load.window.start) == "07:00")
+    #expect(Self.time(rail.load.window.end) == "23:00")
+    #expect(rail.above.isEmpty)
+    #expect(rail.below.map { RailText.describe($0) } == ["Due 23:59 Submit workshop abstract"])
+    #expect(
+      rail.above.count + rail.marks.count + rail.below.count
+        == standard.above.count + standard.marks.count + standard.below.count)
+    // 16:20–23:00 = 6 h 40 min − Violin 1 h − Parents' evening 1 h 30 min − Allemande 45 min.
+    #expect(
+      TodayFormat.dayFact(rail.load).last
+        == .free(.hoursAndMinutes(3, 25), until: rail.load.window.end))
   }
 
   @MainActor @Test func liveHasNoEventsAndKeepsThePlannedTerm() async throws {
@@ -212,7 +246,28 @@ import Testing
       let locale = Locale(identifier: id)
       #expect(TodayFormat.time(evening, timeZone: zone, locale: locale) == "20:30")
       #expect(TodayFormat.time(morning, timeZone: zone, locale: locale) == "08:00")
-      #expect(TodayFormat.hour(morning, timeZone: zone, locale: locale) == "08")
+    }
+  }
+
+  /// Whole hours as `08–22`; minutes at either edge put both in `HH:MM`; the day's end is `24`
+  /// (owner, 2026-11-27, PR #74 round 1). The same digits in EN and RU.
+  @Test func theDayWindowCaptionShowsBothEdgesInOneForm() throws {
+    let calendar = DemoCalendar.calendar
+    let cases: [(start: Int, end: Int, edges: String)] = [
+      (8 * 60, 22 * 60, "08–22"), (7 * 60 + 30, 22 * 60, "07:30–22:00"), (0, 24 * 60, "00–24"),
+      (8 * 60, 24 * 60, "08–24"), (22 * 60 + 30, 24 * 60, "22:30–24:00"),
+    ]
+    for (start, end, edges) in cases {
+      let window = try #require(DayWindow(startMinute: start, endMinute: end))
+        .interval(on: DemoCalendar.now, calendar: calendar)
+      let (from, to) = TodayFormat.windowEdges(window, calendar: calendar)
+      #expect("\(from)–\(to)" == edges)
+      #expect(
+        TodayFormat.localized("day window \(from)–\(to)", Locale(identifier: "en"))
+          == "day window \(edges)")
+      #expect(
+        TodayFormat.localized("day window \(from)–\(to)", Locale(identifier: "ru"))
+          == "окно дня \(edges)")
     }
   }
 }

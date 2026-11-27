@@ -514,6 +514,49 @@ import Testing
     await model.linkOpener.clearing?.value
   }
 
+  // MARK: System Settings (S4-3d)
+
+  @Test func systemSettingsOpensExactlyThePrivacyCalendarsPane() async {
+    #expect(await open(.calendarPrivacySettings) == .opened)
+    let opener = opener(vault: VaultFolder(settings: CountingSettings(nil)))
+    #expect(await opener.open(.calendarPrivacySettings, in: nil, isDemo: false) == .opened)
+    let pane = SystemSettingsLink.calendarPrivacy
+    #expect(recorder.opened == [pane, pane])
+  }
+
+  /// Without a workspace only System Settings has a URL.
+  @Test func withoutAWorkspaceATaskOpensNothing() async {
+    let opener = opener(vault: VaultFolder(settings: CountingSettings(nil)))
+    #expect(await opener.open(.task(Self.taskID), in: nil, isDemo: false) == .notOpened)
+    #expect(recorder.opened.isEmpty)
+  }
+
+  /// Live with nothing loaded yet (OmniFocus never read): System Settings still opens; in Demo
+  /// nothing opens, as every link there (owner, 2026-11-27).
+  @Test func theModelOpensSystemSettingsBeforeAWorkspaceAndNotInDemo() async throws {
+    let (recorder, sleeper) = (recorder, sleeper)
+    let opener: @MainActor (VaultFolder) -> LinkOpener = { vault in
+      LinkOpener(
+        opening: recorder, vault: vault, noticeDelay: .seconds(5),
+        sleep: { await sleeper.sleep($0) })
+    }
+    let live = AppModel(
+      isTestHost: false, settings: CountingSettings("live"), linkOpener: opener,
+      environments: { _ in nil })
+    #expect(live.open(.task(Self.taskID)) == nil)
+    #expect(await live.open(.calendarPrivacySettings)?.value == .opened)
+    #expect(recorder.opened == [SystemSettingsLink.calendarPrivacy])
+    let demo = AppModel(
+      isTestHost: true, settings: NoSettings(), linkOpener: opener, environments: { _ in nil })
+    #expect(await demo.open(.calendarPrivacySettings)?.value == .demo)
+    #expect(recorder.opened.count == 1)
+    try #require(await sleeper.waitFor(1))
+    // Every timer goes: a Live notice that should not exist holds a gate too, and the run must
+    // fail on the expectations above, not hang.
+    for index in 0..<sleeper.count { sleeper.release(index) }
+    await demo.linkOpener.clearing?.value
+  }
+
   /// The tracked fixture, read from the checkout (CLAUDE.md rule 5).
   nonisolated static let trackedSnapshot = URL(fileURLWithPath: #filePath)
     .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()

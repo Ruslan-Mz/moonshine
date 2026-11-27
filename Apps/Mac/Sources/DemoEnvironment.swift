@@ -12,6 +12,11 @@ enum DemoEnvironment {
   /// Stands still at `now`, so the Demo always reads as just imported.
   static let clock = ImportClock.frozen(at: now)
 
+  /// The invented calendars of `design/demo-data.md`; never EventKit (ADR-0012).
+  static func calendarProvider() -> any CalendarProvider { DemoCalendar() }
+  /// Birthdays off, Holidays shown and not busy (`design/demo-data.md` § Draft-3).
+  static let calendarVisibility = DemoCalendar.visibility
+
   /// The snapshot copied into the app bundle from `fixtures/`.
   static var bundledSnapshot: URL? {
     Bundle.main.url(forResource: "omnifocus.snapshot", withExtension: "json")

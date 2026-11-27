@@ -75,6 +75,8 @@ The opener of S4 (S4-5) adds these two forms to its allowlist; its tests cover `
 - **Demo** opens nothing: its ids and paths are invented, and a Demo path could match a file in the owner's vault.
 - **Not added:** `omnifocus:///folder/<id>`, which needs folder ids in the store (usage period), and the System Settings and calendar URLs, which S4-3d adds with their tests.
 
+**Amendment (2026-11-27, owner; S4-3d-1).** The opener gains one target with no input, `calendarPrivacySettings`, which opens exactly `x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars` (System Settings → Privacy & Security → Calendars), a constant in `Domain/OpenLinks.swift` (`SystemSettingsLink.calendarPrivacy`) with its test. It needs no loaded workspace, and in Demo it opens nothing, as every other target. If the owner's live check finds that it does not land on the Calendars pane, the `com.apple.settings.PrivacySecurity.extension` form replaces it in the same PR. **No calendar URL:** macOS documents no URL that opens a single event in Calendar, so "show in Calendar" is not in phase 1 and event rows keep no action. It waits for the usage period, and needs a Core field for the event's link and a further amendment here.
+
 ### Commands
 
 Vault writes are commands of the provider `vault` and go through the `CommandBus` (ADR-0013), with the activity log and undo.
