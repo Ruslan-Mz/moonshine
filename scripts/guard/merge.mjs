@@ -20,8 +20,9 @@
 //      and is round 2 at most;
 //   7. after every marker review with findings, its own answer comment: recorded, later than that
 //      review and earlier than the account's next marker review, from another session than that
-//      review's; after a round with owner findings, one of them carries its owner decisions block,
-//      and the decisions file it names exists in the checkout (never read).
+//      review's; after a round with owner findings, one of them carries its owner decisions block
+//      (one labelled line per owner finding, P-AM3), and the decisions file it names exists in the
+//      checkout (never read).
 // Then `gh pr merge <n> --merge --match-head-commit <head>`, once. A refusal names the check, never
 // PR text. git runs with replace refs off, in a full clone without grafts, so it reads the commits
 // GitHub merges (github.mjs: the git folder the guard was installed for, no replace refs). The state
@@ -248,7 +249,7 @@ export function merge(pr, stop) {
       }
       if (marker.owner > 0) {
         if (!own.some((answer) => ownerDecisions(answer.body, marker.owner, pr, marker.round))) {
-          stop(`A round with owner findings has no answer with its owner decisions block (Owner decisions: ${decisionsFile(pr, marker.round)}, one line per finding).`);
+          stop(`A round with owner findings has no answer with its owner decisions block (Owner decisions: ${decisionsFile(pr, marker.round)}, one labelled line per finding).`);
         }
         if (!decisionsFileExists(top, pr, marker.round)) stop(`The owner's decisions file ${decisionsFile(pr, marker.round)} is not in the checkout; the owner writes it.`);
       }

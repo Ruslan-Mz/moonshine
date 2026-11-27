@@ -526,7 +526,14 @@ test("round 2 after owner findings on a plain PR, answered with the decisions bl
   exits(context, context.run(), 0, "reviewed and posted");
 });
 
+test("round 2 after owner findings answered with fix: <what> runs", needsPs, () => {
+  const context = setUp();
+  ownerRound1(context, { answer: decisionsBlock.replace("keep as is", "fix: name the path") });
+  exits(context, context.run(), 0, "reviewed and posted");
+});
+
 for (const [name, options, expected, ending] of [
+  ["an unlabelled decision (P-AM3)", { answer: decisionsBlock.replace("keep as is", "noted") }, "owner decisions block"],
   ["a risky PR", { body: "Class: risky\n" }, "no round 2"],
   ["a body with no class line", { body: "A change.\n" }, "no round 2"],
   ["no answer", { answer: null }, "owner decisions block"],

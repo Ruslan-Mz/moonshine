@@ -151,10 +151,18 @@ export function decisionsFileExists(top, pr, round) {
   }
 }
 
+// A decision's label (PR #69, owner 2026-11-23; any case, P-AM3, owner 2026-11-25):
+// `- <path:line or class>: keep` or `- <path:line or class>: fix: <what>`, right after the first `: `
+// (the reference holds none), with some text after `fix:`. Zero-width characters and the soft
+// hyphen are taken out first, so one alone after `fix:` is no text (PR #71 round 1).
+const decisionLabel = /^- (?=\S)(?:(?!: ).)+: (?:keep(?![A-Za-z0-9_-])|fix:\s*\S)/i;
+const invisible = /[­᠎​-‏⁠-⁤﻿]/g;
+
 /// Whether an answer comment carries the owner decisions block of round `round` of PR `pr` (P-AM2,
 /// owner 2026-11-17 and 2026-11-20): exactly one line `Owner decisions: <decisionsFile>`, followed
-/// directly by exactly `count` lines starting `- ` and some text (an empty item is no decision), then
-/// a blank line or the end. The file itself is never read here; the callers check that it exists.
+/// directly by lines starting `- ` and some text, then a blank line or the end. Exactly `count` of
+/// them carry a label; a line without one decides nothing and counts for nothing (P-AM3). The file
+/// itself is never read here; the callers check that it exists.
 export function ownerDecisions(body, count, pr, round) {
   if (typeof body !== "string") return false;
   const lines = body.replace(/\r/g, "").split("\n");
@@ -163,8 +171,9 @@ export function ownerDecisions(body, count, pr, round) {
   if (at.length !== 1 || lines[at[0]] !== header) return false;
   const items = lines.slice(at[0] + 1);
   const end = items.findIndex((line) => !/^- \S/.test(line));
-  const listed = end === -1 ? items.length : end;
-  return listed === count && (end === -1 || items[end].trim() === "");
+  const block = end === -1 ? items : items.slice(0, end);
+  const labelled = block.filter((line) => decisionLabel.test(line.replace(invisible, ""))).length;
+  return labelled === count && (end === -1 || items[end].trim() === "");
 }
 
 /// The review's counted marker: { round, head, high, medium, low, owner }; null when the body has no

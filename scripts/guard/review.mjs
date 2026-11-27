@@ -114,7 +114,7 @@ if (round === 2) {
     const answered = pages(`${repo}/issues/${pr}/comments`).some(
       (comment) => comment?.user?.login === login && Date.parse(comment.created_at) > submitted && ownerDecisions(comment.body, last.owner, pr, 1),
     );
-    if (!answered) refuse(`Round 1's owner findings have no answer with the owner decisions block (Owner decisions: ${decisionsFile(pr, 1)}, one line per finding).`);
+    if (!answered) refuse(`Round 1's owner findings have no answer with the owner decisions block (Owner decisions: ${decisionsFile(pr, 1)}, one labelled line per finding).`);
     if (!decisionsFileExists(top, pr, 1)) refuseOwner(`The owner's decisions file ${decisionsFile(pr, 1)} is not in the checkout; the owner writes it.`);
   }
 }

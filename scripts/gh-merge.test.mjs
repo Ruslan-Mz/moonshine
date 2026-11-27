@@ -789,6 +789,17 @@ for (const [name, answer, expected] of [
   ["another PR's file", decisions(["- a: keep"]).replace("pr7-round1", "pr8-round1"), "owner decisions block"],
   ["items followed by text without a blank line", "Owner decisions: Claude outputs/next/pr7-round1.md\n- a: keep\nmore text\n", "owner decisions block"],
   ["a body that is not text", null, "owner decisions block"],
+  // P-AM3 (owner, 2026-11-25): only a line labelled `keep` or `fix: <what>` counts.
+  ["an unlabelled line in place of the decision", decisions(["- a: noted"]), "owner decisions block"],
+  ["a fix: with nothing after it", decisions(["- a: fix:"]), "owner decisions block"],
+  ["a fix: with only spaces after it", decisions(["- a: fix:   "]), "owner decisions block"],
+  ["a word that only starts with keep", decisions(["- a: keeping"]), "owner decisions block"],
+  ["a label with no reference before it", decisions(["- keep"]), "owner decisions block"],
+  // PR #71 round 1: the label only right after the first `: `, and no invisible text after `fix:`.
+  ["keep after a later colon", decisions(["- a: undecided, asked the owner: keep or fix?"]), "owner decisions block"],
+  ["fix: after a later colon", decisions(["- x.swift:12: open question: fix: who decides"]), "owner decisions block"],
+  ["a zero-width space alone after fix:", decisions(["- a: fix: ​"]), "owner decisions block"],
+  ["a soft hyphen alone after fix:", decisions(["- a: fix:­"]), "owner decisions block"],
 ]) {
   test(`owner findings are refused with ${name}`, () => {
     const context = setUp();
@@ -797,6 +808,30 @@ for (const [name, answer, expected] of [
     refused(context, expected);
   });
 }
+
+for (const [name, lines] of [
+  ["keep in mixed case", ["- a: Keep"]],
+  ["fix: in mixed case", ["- docs/a.md:3: FIX: rename it"]],
+  ["an unlabelled line next to the labelled one", ["- a: noted", "- b: fix: rename it"]],
+]) {
+  test(`owner findings answered with ${name} merge`, () => {
+    const context = setUp();
+    ownerRounds(context, { answer: decisions(lines) });
+    merges(context);
+  });
+}
+
+test("two owner findings with keep and fix: <what> merge", () => {
+  const context = setUp();
+  ownerRounds(context, { first: { owner: 2 }, answer: decisions(["- a: keep", "- b.md:4: fix: name the path"]) });
+  merges(context);
+});
+
+test("two owner findings and one labelled line are refused", () => {
+  const context = setUp();
+  ownerRounds(context, { first: { owner: 2 }, answer: decisions(["- a: keep", "- b: noted"]) });
+  refused(context, "owner decisions block");
+});
 
 test("the decisions block in CRLF lines counts", () => {
   const context = setUp();
