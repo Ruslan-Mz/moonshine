@@ -110,12 +110,25 @@ struct StandardSettings: AppSettings {
     return CalendarVisibility(Dictionary(read, uniquingKeysWith: { first, _ in first }))
   }
 
-  /// Replaces this calendar's entry only: entries the read ignores stay as stored.
+  /// Replaces this calendar's entry only: entries the read ignores stay as stored. Bytes the
+  /// read accepts but `JSONSerialization` does not (a number out of range) keep the entries the
+  /// read shows. A new calendar past the 500 entries the read takes is not stored: it could
+  /// never be read back.
   func setCalendarSetting(_ value: CalendarSetting, for id: CalendarID) {
     guard !isTestHost, Self.isStorable(id.rawValue) else { return }
-    var entries =
-      storage.data(forKey: Self.calendarSettingsKey)
-      .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
+    let readable = calendarVisibility.stored
+    guard readable[id] != nil || readable.count < Self.calendarSettingsLimit else { return }
+    let data = storage.data(forKey: Self.calendarSettingsKey)
+    let object = data.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+    var entries: [String: Any]
+    if let object {
+      entries = object
+    } else {
+      entries = [:]
+      for (id, setting) in readable {
+        entries[id.rawValue] = ["show": setting.show, "busy": setting.countsAsBusy]
+      }
+    }
     entries[id.rawValue] = ["show": value.show, "busy": value.countsAsBusy]
     guard let data = try? JSONSerialization.data(withJSONObject: entries, options: .sortedKeys)
     else { return }

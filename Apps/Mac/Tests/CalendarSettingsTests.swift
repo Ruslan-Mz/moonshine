@@ -111,6 +111,49 @@ import Testing
     #expect(read == [Self.a: CalendarSetting(show: true, countsAsBusy: false)])
   }
 
+  /// `JSONDecoder` reads a number out of `Double`'s range where `JSONSerialization` refuses
+  /// the whole value: the toggle keeps what the read shows.
+  @Test func aToggleOverBytesOnlyTheReadAcceptsKeepsTheReadEntries() throws {
+    let (settings, storage) = settings([
+      Self.visibilityKey: json(
+        #"{"invented-a": {"show": false, "busy": true}, "invented-b": 1e400}"#)
+    ])
+    #expect(settings.calendarVisibility.stored[Self.a] != nil)
+    settings.setCalendarSetting(CalendarSetting(show: true, countsAsBusy: true), for: Self.b)
+    #expect(object(storage.data(forKey: Self.visibilityKey)) != nil)
+    let read = settings.calendarVisibility.stored
+    #expect(read[Self.a] == CalendarSetting(show: false, countsAsBusy: true))
+    #expect(read[Self.b] == CalendarSetting(show: true, countsAsBusy: true))
+  }
+
+  /// The read takes 500: a new calendar past them is not stored, a stored one still changes.
+  @Test func aNewCalendarPastFiveHundredIsNotStored() {
+    let entries = (0..<500).map {
+      String(format: #""id%03d": {"show": true, "busy": false}"#, $0)
+    }
+    let (settings, storage) = settings([
+      Self.visibilityKey: json("{\(entries.joined(separator: ","))}")
+    ])
+    let writes = storage.writes
+    let off = CalendarSetting(show: false, countsAsBusy: false)
+    settings.setCalendarSetting(off, for: CalendarID("zz"))
+    #expect(storage.writes == writes)
+    let first = CalendarID("id000")
+    settings.setCalendarSetting(off, for: first)
+    #expect(settings.calendarVisibility.stored[first] == off)
+  }
+
+  /// The limit is 256 bytes, not characters: `ж` is two bytes in UTF-8.
+  @Test func theIdLimitCountsBytes() {
+    let longest = String(repeating: "ж", count: 128)
+    let tooLong = String(repeating: "ж", count: 129)
+    let entry = #"{"show": true, "busy": true}"#
+    let (settings, _) = settings([
+      Self.visibilityKey: json(#"{"\#(longest)": \#(entry), "\#(tooLong)": \#(entry)}"#)
+    ])
+    #expect(Set(settings.calendarVisibility.stored.keys) == [CalendarID(longest)])
+  }
+
   @Test func aToggleWithAnIdTheReadWouldIgnoreWritesNothing() {
     let (settings, storage) = settings()
     let setting = CalendarSetting(show: true, countsAsBusy: true)

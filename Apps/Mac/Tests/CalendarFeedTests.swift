@@ -219,6 +219,7 @@ func settle() async {
     await settle()
     #expect(fake.calls == calls)
     #expect(feed.events.value == nil)
+    #expect(feed.calendars.isEmpty)
   }
 
   /// Live, Demo, Live: the change stream follows again.
@@ -244,10 +245,15 @@ func settle() async {
     feed.resume()
     await waitUntil { fake.waiting == 1 }
     feed.show(day: Self.nextDay)
+    // Only the earlier day's read goes; the follow-up stays held, so its result cannot hide
+    // a stale one that landed.
+    fake.release()
+    await waitUntil { fake.calls.events.count == 2 && fake.waiting == 1 }
+    await settle()
+    #expect(feed.events.value == nil)
     fake.set { $0.gated = false }
     fake.release()
-    await waitUntil { fake.calls.events.count == 2 && feed.events.value != nil }
-    await settle()
+    await waitUntil { feed.events.value != nil }
     #expect(fake.calls.events == [Self.day, Self.nextDay])
     #expect(feed.events.value == [FakeCalendar.event(at: Self.nextDay.start)])
   }
@@ -324,9 +330,17 @@ func settle() async {
   }
 
   @Test func theRowsSayTheDesignsWords() {
+    let english = Locale(identifier: "en")
     #expect(
-      CalendarRow.connect.sentence == "Calendar is not connected. Events stay on this device.")
-    #expect(CalendarRow.off.sentence == "Calendar access is off for MoonShine.")
+      CalendarRow.connect.sentence(in: english)
+        == "Calendar is not connected. Events stay on this device.")
+    #expect(CalendarRow.off.sentence(in: english) == "Calendar access is off for MoonShine.")
+    let russian = Locale(identifier: "ru")
+    #expect(
+      CalendarRow.connect.sentence(in: russian)
+        == "Календарь не подключён. События остаются на этом устройстве.")
+    #expect(
+      CalendarRow.off.sentence(in: russian) == "Доступ к календарю для MoonShine выключен.")
   }
 
   /// No event title, calendar or account name reaches a row or a notice (owner, 2026-11-27).
@@ -422,6 +436,53 @@ func settle() async {
     let input = model.dayRailInput(calendar: CalendarRowTests.calendar)
     #expect(input.window == .standard)
     #expect(input.isFrozen)
+  }
+
+  /// The rail draws the feed's events and calendars with the source's visibility: Live's stored
+  /// one with the system's calendar, Demo's invented one with Demo's.
+  @Test func theRailInputCarriesTheFeedsEventsAndTheSourcesVisibility() async throws {
+    let settings = CountingSettings("live")
+    let stored = CalendarVisibility([
+      FakeCalendar.calendar.id: CalendarSetting(show: true, countsAsBusy: false)
+    ])
+    settings.storedVisibility = stored
+    let live = liveModel(FakeCalendar(), settings: settings)
+    live.showCalendarDay(CalendarFeedTests.day)
+    live.start()
+    await waitUntil { live.calendar.events.value != nil }
+    let liveInput = live.dayRailInput(calendar: CalendarRowTests.calendar)
+    #expect(liveInput.events.value == [FakeCalendar.event(at: CalendarFeedTests.day.start)])
+    #expect(liveInput.calendars == [FakeCalendar.calendar])
+    #expect(liveInput.visibility == stored)
+
+    let demo = AppModel(isTestHost: true, settings: NoSettings()) { _ in nil }
+    let day = try #require(
+      DemoCalendar.calendar.dateInterval(of: .day, for: DemoCalendar.now))
+    demo.showCalendarDay(day)
+    demo.start()
+    await waitUntil { demo.calendar.events.value != nil }
+    let expected = try await DemoCalendar().events(in: day).value
+    let demoInput = demo.dayRailInput(calendar: DemoCalendar.calendar)
+    #expect(demoInput.events.value == expected)
+    #expect(demoInput.events.value?.isEmpty == false)
+    #expect(demoInput.calendars == DemoCalendar.calendars)
+    #expect(demoInput.visibility == DemoCalendar.visibility)
+  }
+
+  /// A `Not now` stored before launch: hidden within 30 calendar days, shown from day 30.
+  @Test(arguments: [(0, false), (29, false), (30, true)])
+  func aStoredNotNowIsReadAtLaunch(daysAgo: Int, shows: Bool) async throws {
+    let settings = CountingSettings("live")
+    // A started model's clock: before `start()` a model with no environment shows Demo's.
+    let probe = liveModel(FakeCalendar(access: .notDetermined), settings: settings)
+    probe.start()
+    let zone = CalendarRowTests.calendar
+    settings.storedNotNow = try #require(
+      zone.date(byAdding: .day, value: -daysAgo, to: probe.clock.wall()))
+    let model = liveModel(FakeCalendar(access: .notDetermined), settings: settings)
+    model.start()
+    await waitUntil { model.calendar.access == .notDetermined }
+    #expect(model.dayRailInput(calendar: zone).row == (shows ? .connect : nil))
   }
 
   @Test func notNowHidesTheRowAndIsStored() async {

@@ -59,10 +59,19 @@ enum CalendarRow: Equatable, CaseIterable {
     return days < notNowDays
   }
 
-  var sentence: String {
+  var sentence: String { String(localized: resource) }
+
+  /// The sentence in `locale`, whatever the Mac's language.
+  func sentence(in locale: Locale) -> String {
+    var resource = resource
+    resource.locale = locale
+    return String(localized: resource)
+  }
+
+  private var resource: LocalizedStringResource {
     switch self {
-    case .connect: String(localized: "Calendar is not connected. Events stay on this device.")
-    case .off: String(localized: "Calendar access is off for MoonShine.")
+    case .connect: "Calendar is not connected. Events stay on this device."
+    case .off: "Calendar access is off for MoonShine."
     }
   }
 }

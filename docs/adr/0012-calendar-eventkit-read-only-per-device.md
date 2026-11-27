@@ -62,7 +62,7 @@ Rules that follow:
 
 - **Change signal.** `ChangeSignal` drives imports only; calendar changes do not join it. Each source's calendar feed (`Apps/Mac/Sources/Calendars/CalendarFeed.swift`) follows its provider's own change stream, and the app's activation, and reads the shown day again: one read in flight, at most one follow-up. It starts no import. This replaces "feeds the `ChangeSignal` port" in the rule above.
 - **A source not shown reads nothing.** Switching to Demo pauses Live's feed: it follows no change, reads nothing and holds no events; switching back reads again.
-- **No entitlement.** The app has no App Sandbox and no hardened runtime, so calendar access needs only `NSCalendarsFullAccessUsageDescription` (in the generated Info.plist and its String Catalog), no entitlement. An entitlement is added with the sandbox, if that comes.
+- **No entitlement yet.** The app has no App Sandbox and no hardened runtime, so calendar access needs only `NSCalendarsFullAccessUsageDescription` (in the generated Info.plist and its String Catalog). Either one, when it comes, needs its calendars entitlement with it: `com.apple.security.personal-information.calendars`, under the App Sandbox or the hardened runtime (for notarization alike); without it access is refused with no prompt. This replaces the entitlement line in Consequences below for phase 1.
 - **Settings stored.** Show and Counts as busy per calendar, the day window and Today's `Not now` are each one value under its own key in the app's defaults, checked on every read; nothing about a calendar but its identifier is stored. Demo stores none of them.
 - **Nothing logged.** No event title, calendar name, calendar id or event id reaches `os_log`, `print`, a notice, the import log or the method log; the rows and notices say only outcomes.
 
@@ -74,7 +74,7 @@ Rules that follow:
 - Bad — a number that mixes synced plans with local calendar time can differ between devices when they see different calendars; phase 2's stored busy minutes reduce this for forecasts.
 - Bad — no event history: a past event that is deleted or changed disappears from past days. Past busy time is reproducible only from phase 2 onward (stored busy minutes).
 - Bad — each device asks for calendar access separately; the app must be complete without it.
-- Neutral — needs the calendars entitlement and `NSCalendarsFullAccessUsageDescription`.
+- Neutral — needs `NSCalendarsFullAccessUsageDescription`, and the calendars entitlement once the app has the App Sandbox or the hardened runtime (note of 2026-11-27).
 - Neutral — privacy rule 5 in `CLAUDE.md` is extended: no real event titles, attendees or calendar names in commits, PRs or logs; fixtures are invented.
 
 ### Confirmation
