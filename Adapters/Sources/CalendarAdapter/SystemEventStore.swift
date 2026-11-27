@@ -27,7 +27,7 @@ actor SystemEventStore: EventStoreReading {
         RawCalendar(
           id: calendar.calendarIdentifier, title: calendar.title, account: calendar.source?.title,
           rgb: Self.rgb(calendar.cgColor), typeRaw: calendar.type.rawValue,
-          isSubscribed: calendar.isSubscribed))
+          isSubscribed: calendar.isSubscribed, accountID: calendar.source?.sourceIdentifier))
     }
   }
 

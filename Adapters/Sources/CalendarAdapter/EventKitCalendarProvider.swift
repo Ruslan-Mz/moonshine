@@ -14,8 +14,9 @@ public struct EventKitCalendarProvider: CalendarProvider {
     self.store = store
   }
 
-  /// Whenever access becomes granted, by MoonShine's prompt or later in System Settings, the
-  /// store forgets what it cached without access, so the next read sees the events.
+  /// Whenever access becomes granted, the store forgets what it cached without access, so the
+  /// next read sees the events. After MoonShine's prompt that is at once; a grant in System
+  /// Settings reaches a running app only after it is reopened (owner, 2026-11-27).
   public func access() async -> CalendarAccess {
     let access: CalendarAccess =
       switch await store.authorization() {
@@ -43,7 +44,7 @@ public struct EventKitCalendarProvider: CalendarProvider {
     let calendars = await store.calendars().map {
       CalendarInfo(
         id: CalendarID($0.id), title: $0.title, account: $0.account, colorHex: $0.colorHex,
-        kind: $0.kind)
+        kind: $0.kind, accountID: $0.accountID)
     }
     return .read(calendars, skipped: 0)
   }

@@ -98,9 +98,23 @@ import Testing
       CalendarGroup.groups(mixed).map { $0.calendars.map(\.id.rawValue) } == [["a", "c"], ["b"]])
   }
 
-  static func calendar(_ id: String, account: String?) -> CalendarInfo {
+  /// Two accounts with one title are two sections: they are told apart by their identifier.
+  @Test func accountsThatShareATitleAreTwoGroups() {
+    let calendars = [
+      Self.calendar("a", account: "Invented", accountID: "one"),
+      Self.calendar("b", account: "Invented", accountID: "two"),
+      Self.calendar("c", account: "Invented", accountID: "one"),
+    ]
+    #expect(
+      CalendarGroup.groups(calendars).map { $0.calendars.map(\.id.rawValue) } == [
+        ["a", "c"], ["b"],
+      ])
+  }
+
+  static func calendar(_ id: String, account: String?, accountID: String? = nil) -> CalendarInfo {
     CalendarInfo(
-      id: CalendarID(id), title: "Invented", account: account, colorHex: nil, kind: .other)
+      id: CalendarID(id), title: "Invented", account: account, colorHex: nil, kind: .other,
+      accountID: accountID)
   }
 
   // MARK: The day window
@@ -180,6 +194,20 @@ import Testing
     #expect(again.dayWindow == wide)
   }
 
+  /// What shows is what is stored: a write the settings refuse (an id the read would ignore, a
+  /// window off the quarter hour) changes nothing shown.
+  @MainActor @Test func aRefusedWriteShowsNothingNew() throws {
+    let storage = RecordingStorage()
+    let model = liveModel(storage)
+    let tooLong = CalendarID(String(repeating: "x", count: 257))
+    model.setCalendarSetting(CalendarSetting(show: false, countsAsBusy: false), for: tooLong)
+    #expect(model.calendarVisibility.stored[tooLong] == nil)
+    model.setDayWindow(try #require(DayWindow(startMinute: 7 * 60 + 10, endMinute: 23 * 60)))
+    #expect(model.dayWindow == .standard)
+    #expect(!storage.writes.contains("calendarSettings"))
+    #expect(!storage.writes.contains("dayWindow"))
+  }
+
   /// Counts as busy off changes the free-time facts and nothing else (`settings-calendars.md`
   /// § Acceptance): the Violin lesson stays on the rail and in the count.
   @MainActor @Test func countsAsBusyOffChangesOnlyTheTotals() async throws {
@@ -231,11 +259,14 @@ import Testing
         .events(4), .inCalendar(.hours(4)), .planned(.hoursAndMinutes(1, 15)),
         .free(.hoursAndMinutes(2, 25), until: rail.load.window.end),
       ])
-    #expect(rail.copies(of: violin) == 3)
     let mark = try #require(
       rail.marks.first {
-        if case .event(let event) = $0.kind { event == violin } else { false }
+        if case .event(let event) = $0.kind { event.title == violin.title } else { false }
       })
+    guard case .event(let shown) = mark.kind else { return }
+    // All three count as busy: by calendar id, the Family copy stands for them.
+    #expect(shown.calendarID == CalendarID("demo-family"))
+    #expect(rail.copies(of: shown) == 3)
     let reading = RailReading(
       now: overview.now, dayStart: DemoCalendar.calendar.startOfDay(for: overview.now),
       zone: screen.timeZone, locale: Self.english, lines: screen.lineNames, selected: nil,

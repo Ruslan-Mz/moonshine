@@ -156,8 +156,9 @@ public struct DayLoad: Hashable, Sendable {
       visibility.setting(for: event.calendarID, kind: event.calendarKind)
     }
     let shown = read.filter { $0.overlaps(dayInterval) && setting($0).show }
+    let counts = { (event: CalendarEvent) in Self.counts(event, visibility) }
     let busy: [DateInterval] = shown.compactMap { event in
-      guard !event.isAllDay, event.occupiesTime, setting(event).occupiesTime else { return nil }
+      guard counts(event) else { return nil }
       return clip(floorMinute(event.start), floorMinute(event.end), span)
     }
 
@@ -176,10 +177,16 @@ public struct DayLoad: Hashable, Sendable {
             taken.compactMap { clip($0.start, $0.end, DateInterval(start: from, end: span.end)) })
       }
     return DayLoad(
-      window: span, eventCount: EventCopies.collapse(shown).count,
+      window: span, eventCount: EventCopies.collapse(shown, counts: counts).count,
       inCalendarMinutes: minutes(busyUnion),
       plannedMinutes: minutes(taken) - minutes(busyUnion), freeWholeWindowMinutes: wholeFree,
       freeFromNowMinutes: freeFromNow)
+  }
+
+  /// A timed event that takes time, from a calendar that counts as busy.
+  fileprivate static func counts(_ event: CalendarEvent, _ visibility: CalendarVisibility) -> Bool {
+    !event.isAllDay && event.occupiesTime
+      && visibility.setting(for: event.calendarID, kind: event.calendarKind).occupiesTime
   }
 
   fileprivate static func floorMinute(_ date: Date) -> Date {
@@ -270,7 +277,7 @@ public struct DayRail: Hashable, Sendable {
       (events.value ?? []).filter {
         $0.overlaps(dayInterval)
           && visibility.setting(for: $0.calendarID, kind: $0.calendarKind).show
-      })
+      }, counts: { DayLoad.counts($0, visibility) })
     let shown = rows.map(\.event)
     var items: [Mark] = shown.filter { !$0.isAllDay }.map {
       Mark(kind: .event($0), start: DayLoad.floorMinute($0.start), end: DayLoad.floorMinute($0.end))
@@ -310,9 +317,11 @@ public struct DayRail: Hashable, Sendable {
 
 /// Events with the same title, start, end and all-day flag, whatever their calendar, are one
 /// row (owner, 2026-11-27): an account that copies one meeting into a calendar three times shows
-/// it once. The first copy in input order stands for the others.
+/// it once. EventKit gives events in no set order, so the copy that stands for the others is
+/// chosen, not found first: one that counts as busy, then one drawn normal, then by calendar
+/// and event id. The busy union still takes every copy.
 private struct EventCopies {
-  let event: CalendarEvent
+  var event: CalendarEvent
   var copies: Int
 
   private struct Key: Hashable {
@@ -322,7 +331,10 @@ private struct EventCopies {
     let isAllDay: Bool
   }
 
-  static func collapse(_ events: [CalendarEvent]) -> [EventCopies] {
+  /// `counts`: the event takes busy time (its own rule and its calendar's).
+  static func collapse(_ events: [CalendarEvent], counts: (CalendarEvent) -> Bool)
+    -> [EventCopies]
+  {
     var rows: [EventCopies] = []
     var index: [Key: Int] = [:]
     for event in events {
@@ -330,12 +342,26 @@ private struct EventCopies {
         title: event.title, start: event.start, end: event.end, isAllDay: event.isAllDay)
       if let row = index[key] {
         rows[row].copies += 1
+        if precedes(event, rows[row].event, counts) { rows[row].event = event }
       } else {
         index[key] = rows.count
         rows.append(EventCopies(event: event, copies: 1))
       }
     }
     return rows
+  }
+
+  private static func precedes(
+    _ a: CalendarEvent, _ b: CalendarEvent, _ counts: (CalendarEvent) -> Bool
+  ) -> Bool {
+    func rank(_ event: CalendarEvent) -> (Int, Int) {
+      (counts(event) ? 0 : 1, event.display == .normal ? 0 : 1)
+    }
+    if rank(a) != rank(b) { return rank(a) < rank(b) }
+    if a.calendarID.rawValue != b.calendarID.rawValue {
+      return a.calendarID.rawValue < b.calendarID.rawValue
+    }
+    return a.id < b.id
   }
 }
 

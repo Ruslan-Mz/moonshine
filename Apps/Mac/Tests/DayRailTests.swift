@@ -71,7 +71,7 @@ extension DayRailInput {
     let reading = RailReading(
       now: overview.now, dayStart: DemoCalendar.calendar.startOfDay(for: overview.now),
       zone: screen.timeZone, locale: Locale(identifier: "en_GB"), lines: screen.lineNames,
-      selected: nil)
+      selected: nil, copies: rail.copies)
     #expect(
       reading.section(rail, DayTimeline.layout(rail, now: overview.now))
         == "Day, 10 items with a time, 1 before 08:00, 1 after 22:00. "
@@ -318,7 +318,7 @@ struct RailReadingTests {
       now: at(14, 40), dayStart: calendar.startOfDay(for: DemoCalendar.now),
       zone: calendar.timeZone, locale: Locale(identifier: locale),
       lines: Dictionary(uniqueKeysWithValues: monday.map { ($0.id, .lifeOps) }),
-      selected: selected)
+      selected: selected, copies: [:])
   }
 
   static var rows: [DayTimeline.Row] {
@@ -361,7 +361,7 @@ struct RailReadingTests {
     let unlined = RailReading(
       now: Self.at(14, 40), dayStart: Self.calendar.startOfDay(for: DemoCalendar.now),
       zone: Self.calendar.timeZone, locale: Locale(identifier: "en_GB"), lines: [:],
-      selected: nil)
+      selected: nil, copies: [:])
     #expect(unlined.row(mark) == "10:20, Call a supplier, task, no estimate, not completed")
   }
 
@@ -392,7 +392,7 @@ struct RailReadingTests {
     let reading = RailReading(
       now: Self.at(14, 40), dayStart: Self.calendar.startOfDay(for: DemoCalendar.now),
       zone: Self.calendar.timeZone, locale: Locale(identifier: "en_GB"), lines: [:],
-      selected: both.id)
+      selected: both.id, copies: [:])
     #expect(rail.marks.count == 2)
     #expect(rail.marks.allSatisfy { reading.row($0).hasSuffix(", selected") })
     // The fill and the ring, on both rows; never on another task's row.

@@ -85,15 +85,19 @@ public struct CalendarInfo: Hashable, Sendable, Identifiable, CustomStringConver
   /// `#RRGGBB`; Core holds no colour type.
   public let colorHex: String?
   public let kind: CalendarKind
+  /// The account's own identifier (`sourceIdentifier`): two accounts may share a title.
+  public let accountID: String?
 
   public init(
-    id: CalendarID, title: String, account: String?, colorHex: String?, kind: CalendarKind
+    id: CalendarID, title: String, account: String?, colorHex: String?, kind: CalendarKind,
+    accountID: String? = nil
   ) {
     self.id = id
     self.title = title
     self.account = account
     self.colorHex = colorHex
     self.kind = kind
+    self.accountID = accountID
   }
 
   public var description: String { "CalendarInfo(kind: \(kind))" }

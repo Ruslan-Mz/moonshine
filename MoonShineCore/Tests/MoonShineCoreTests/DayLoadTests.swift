@@ -438,7 +438,7 @@ extension RigaDay {
       Issue.record("no event row")
       return
     }
-    #expect(shown == copies[0])
+    #expect(copies.contains(shown))
     #expect(rail.copies(of: shown) == 3)
     // `N events` counts rows.
     #expect(rail.load.eventCount == 1)
@@ -457,11 +457,50 @@ extension RigaDay {
     }
   }
 
+  /// Each field of the key tells rows apart: a start, or the all-day flag.
+  @Test func anotherStartOrAllDayFlagIsAnotherRow() {
+    let first = R.event(R.at(13), R.at(14), title: Self.copy)
+    let later = R.event(R.at(13, 30), R.at(14), title: Self.copy)
+    #expect(R.rail([first, later]).marks.count == 2)
+    let day = R.event(R.at(0), R.at(0, day: 2), title: Self.copy)
+    let allDay = R.event(R.at(0), R.at(0, day: 2), allDay: true, title: Self.copy)
+    let rail = R.rail([day, allDay])
+    #expect(rail.copies.isEmpty)
+    #expect(rail.load.eventCount == 2)
+  }
+
+  /// The row is drawn from the copy that counts, whatever order the store gives: a tentative
+  /// copy in one calendar and an accepted one in another draw one normal row.
+  @Test func theRowStandsForTheCopyThatCounts() {
+    let tentative = R.event(
+      R.at(13), R.at(14), calendar: Self.home, display: .tentative, occupies: false,
+      title: Self.copy)
+    let accepted = R.event(R.at(13), R.at(14), title: Self.copy)
+    for order in [[tentative, accepted], [accepted, tentative]] {
+      let rail = R.rail(order)
+      guard case .event(let shown) = rail.marks.first?.kind else {
+        Issue.record("no event row")
+        continue
+      }
+      #expect(shown == accepted)
+      #expect(rail.copies(of: accepted) == 2)
+      #expect(rail.load.inCalendarMinutes == 60)
+    }
+    // Neither counts: the same calendar order picks the same copy either way.
+    let other = R.event(
+      R.at(13), R.at(14), display: .tentative, occupies: false, title: Self.copy)
+    let picked = [[tentative, other], [other, tentative]].map { order -> CalendarEvent? in
+      if case .event(let shown) = R.rail(order).marks.first?.kind { shown } else { nil }
+    }
+    #expect(picked[0] == picked[1])
+  }
+
   /// Another calendar's copy counts; a hidden calendar's is left out before the collapse.
   @Test func copiesAcrossCalendarsAndAHiddenOne() {
     let work = R.event(R.at(13), R.at(14), title: Self.copy)
     let home = R.event(R.at(13), R.at(14), calendar: Self.home, title: Self.copy)
-    #expect(R.rail([work, home]).copies(of: work) == 2)
+    // By calendar id, `home` stands for both.
+    #expect(R.rail([work, home]).copies == [home: 2])
     let hidden = CalendarVisibility([Self.home: CalendarSetting(show: false, countsAsBusy: true)])
     let rail = R.rail([work, home], visibility: hidden)
     #expect(rail.marks.count == 1)
@@ -469,13 +508,15 @@ extension RigaDay {
     #expect(rail.copies(of: work) == 1)
   }
 
-  @Test func allDayCopiesAreOneRow() {
+  @Test func allDayCopiesAreOneRow() throws {
     let copies = (0..<2).map { _ in
       R.event(R.at(0), R.at(0, day: 2), allDay: true, title: Self.copy)
     }
     let rail = R.rail(copies)
-    #expect(rail.allDay == [copies[0]])
-    #expect(rail.copies(of: copies[0]) == 2)
+    #expect(rail.allDay.count == 1)
+    let shown = try #require(rail.allDay.first)
+    #expect(copies.contains(shown))
+    #expect(rail.copies(of: shown) == 2)
   }
 
   @Test func theBusyTotalIsOneCopys() {

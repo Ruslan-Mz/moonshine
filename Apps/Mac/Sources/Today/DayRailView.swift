@@ -639,8 +639,8 @@ struct RailReading {
   /// A task's line; a task with no line found has no line term.
   let lines: [TaskItemID: TodayScreen.LineName]
   let selected: TaskItemID?
-  /// `DayRail.copies`: an event row reads its count.
-  var copies: [CalendarEvent: Int] = [:]
+  /// `DayRail.copies`: an event row reads its count. No default, so no caller drops it.
+  let copies: [CalendarEvent: Int]
 
   /// `Day, 15 items with a time, 1 before 08:00. Shortened: 08:30 to 10:05, 10:35 to 11:40.
   /// Now 14:40, during Draft the summary.`

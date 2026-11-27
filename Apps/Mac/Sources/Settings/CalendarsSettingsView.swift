@@ -20,7 +20,8 @@ struct CalendarsSettingsView: View {
           _, group in
           calendars(group)
         }
-      } else {
+      } else if feed.access != nil {
+        // Nothing before the first read; then the list waits for Full Access.
         Section {
           Text("Calendars appear here after you connect.").foregroundStyle(.secondary)
         }
@@ -102,24 +103,27 @@ struct CalendarsSettingsView: View {
       }
       // A calendar with Show off contributes nothing: greyed.
       .opacity(setting.show ? 1 : 0.45)
-      toggle("Show", setting.show) {
+      toggle("Show", calendar, setting.show) {
         model.setCalendarSetting(
           CalendarSetting(show: $0, countsAsBusy: setting.countsAsBusy), for: calendar.id)
       }
-      toggle("Counts as busy", setting.countsAsBusy) {
+      toggle("Counts as busy", calendar, setting.countsAsBusy) {
         model.setCalendarSetting(
           CalendarSetting(show: setting.show, countsAsBusy: $0), for: calendar.id)
       }
     }
   }
 
+  /// VoiceOver names the calendar with the column: `Family, Show`.
   private func toggle(
-    _ label: LocalizedStringKey, _ isOn: Bool, set: @escaping (Bool) -> Void
+    _ label: LocalizedStringResource, _ calendar: CalendarInfo, _ isOn: Bool,
+    set: @escaping (Bool) -> Void
   ) -> some View {
-    Toggle(label, isOn: Binding(get: { isOn }, set: set))
+    Toggle(isOn: Binding(get: { isOn }, set: set)) { Text(label) }
       .labelsHidden()
       .toggleStyle(.switch)
       .controlSize(.mini)
+      .accessibilityLabel(Text(verbatim: "\(calendar.title), \(String(localized: label))"))
   }
 
   private var dayWindow: some View {
@@ -238,15 +242,26 @@ enum CalendarAccessLine: Equatable, CaseIterable {
 }
 
 /// The calendars of one account, in the order the provider gives them; accounts in the order
-/// of their first calendar.
+/// of their first calendar. An account is its identifier where the provider gives one: two
+/// accounts may share a title.
 struct CalendarGroup: Equatable {
   let account: String?
   var calendars: [CalendarInfo]
 
+  private enum Key: Equatable {
+    case id(String)
+    case title(String?)
+
+    init(_ calendar: CalendarInfo) {
+      self = calendar.accountID.map(Key.id) ?? .title(calendar.account)
+    }
+  }
+
   static func groups(_ calendars: [CalendarInfo]) -> [CalendarGroup] {
     var groups: [CalendarGroup] = []
     for calendar in calendars {
-      if let index = groups.firstIndex(where: { $0.account == calendar.account }) {
+      let key = Key(calendar)
+      if let index = groups.firstIndex(where: { $0.calendars.first.map(Key.init) == key }) {
         groups[index].calendars.append(calendar)
       } else {
         groups.append(CalendarGroup(account: calendar.account, calendars: [calendar]))

@@ -36,6 +36,7 @@ struct CalendarRecord: Sendable {
   var account: String?
   var colorHex: String?
   var kind: CalendarKind
+  var accountID: String? = nil
 }
 
 struct EventRecord: Sendable {
