@@ -308,9 +308,25 @@ func settle() async {
     #expect(row(nil) == nil)
     #expect(row(.notDetermined) == .connect)
     #expect(row(.denied) == .off)
-    #expect(row(.writeOnly) == .off)
+    #expect(row(.writeOnly) == .fullAccessOnly)
     #expect(row(.restricted) == nil)
     #expect(row(.granted) == nil)
+  }
+
+  /// Denied: the off sentence; Add Events Only: the Full Access sentence; both with `Open System
+  /// Settings`. Restricted shows no row (owner, 2026-11-27, PR #74 round 1).
+  @Test func deniedAddEventsOnlyAndRestrictedOnToday() throws {
+    let english = Locale(identifier: "en")
+    let russian = Locale(identifier: "ru")
+    let denied = try #require(row(.denied))
+    #expect(denied.sentence(in: english) == "Calendar access is off for MoonShine.")
+    #expect(denied.opensSystemSettings)
+    let addOnly = try #require(row(.writeOnly))
+    #expect(addOnly.sentence(in: english) == "MoonShine can only read calendars with Full Access.")
+    #expect(addOnly.sentence(in: russian) == "MoonShine читает календари только с полным доступом.")
+    #expect(addOnly.opensSystemSettings)
+    #expect(row(.restricted, notNow: nil) == nil)
+    #expect(!CalendarRow.connect.opensSystemSettings)
   }
 
   /// Pressed late on 27 Nov: hidden through 26 Dec, back on 27 Dec, by calendar days.

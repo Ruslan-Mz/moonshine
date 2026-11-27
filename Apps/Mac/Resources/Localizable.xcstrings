@@ -1669,6 +1669,22 @@
         }
       }
     },
+    "MoonShine can only read calendars with Full Access.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine can only read calendars with Full Access."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine читает календари только с полным доступом."
+          }
+        }
+      }
+    },
     "MoonShine has not read OmniFocus yet": {
       "localizations": {
         "en": {

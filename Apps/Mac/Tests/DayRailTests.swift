@@ -246,7 +246,28 @@ extension DayRailInput {
       let locale = Locale(identifier: id)
       #expect(TodayFormat.time(evening, timeZone: zone, locale: locale) == "20:30")
       #expect(TodayFormat.time(morning, timeZone: zone, locale: locale) == "08:00")
-      #expect(TodayFormat.hour(morning, timeZone: zone, locale: locale) == "08")
+    }
+  }
+
+  /// Whole hours as `08–22`; minutes at either edge put both in `HH:MM`; the day's end is `24`
+  /// (owner, 2026-11-27, PR #74 round 1). The same digits in EN and RU.
+  @Test func theDayWindowCaptionShowsBothEdgesInOneForm() throws {
+    let calendar = DemoCalendar.calendar
+    let cases: [(start: Int, end: Int, edges: String)] = [
+      (8 * 60, 22 * 60, "08–22"), (7 * 60 + 30, 22 * 60, "07:30–22:00"), (0, 24 * 60, "00–24"),
+      (8 * 60, 24 * 60, "08–24"), (22 * 60 + 30, 24 * 60, "22:30–24:00"),
+    ]
+    for (start, end, edges) in cases {
+      let window = try #require(DayWindow(startMinute: start, endMinute: end))
+        .interval(on: DemoCalendar.now, calendar: calendar)
+      let (from, to) = TodayFormat.windowEdges(window, calendar: calendar)
+      #expect("\(from)–\(to)" == edges)
+      #expect(
+        TodayFormat.localized("day window \(from)–\(to)", Locale(identifier: "en"))
+          == "day window \(edges)")
+      #expect(
+        TodayFormat.localized("day window \(from)–\(to)", Locale(identifier: "ru"))
+          == "окно дня \(edges)")
     }
   }
 }

@@ -32,24 +32,32 @@ extension EnvironmentValues {
 enum CalendarRow: Equatable, CaseIterable {
   /// Not asked yet: `Connect calendars…` and `Not now`.
   case connect
-  /// Denied, or events cannot be read (Add Events Only): `Open System Settings`.
+  /// Denied: `Open System Settings`.
   case off
+  /// Add Events Only: access is on but of the wrong kind; `Open System Settings` (owner,
+  /// 2026-11-27, PR #74 round 1).
+  case fullAccessOnly
 
   /// How long `Not now` hides the connect row, in calendar days.
   static let notNowDays = 30
 
-  /// Nil before access is known, when granted or restricted, and while `Not now` hides it:
-  /// from the day it was pressed until 30 calendar days later, in `calendar`'s zone. A day
-  /// after today (the clock moved back) hides nothing.
+  /// Nil before access is known, when granted, while `Not now` hides it (from the day it was
+  /// pressed until 30 calendar days later, in `calendar`'s zone; a day after today, the clock
+  /// moved back, hides nothing), and when restricted: the Mac's owner cannot lift a
+  /// device-management restriction, and Settings → Calendars explains it (owner, 2026-11-27).
   init?(access: CalendarAccess?, notNow: Date?, now: Date, calendar: Calendar) {
     switch access {
     case .notDetermined?:
       if let notNow, Self.hides(pressed: notNow, now: now, calendar: calendar) { return nil }
       self = .connect
-    case .denied?, .writeOnly?: self = .off
+    case .denied?: self = .off
+    case .writeOnly?: self = .fullAccessOnly
     case .granted?, .restricted?, nil: return nil
     }
   }
+
+  /// The row offers `Open System Settings` rather than `Connect calendars…` and `Not now`.
+  var opensSystemSettings: Bool { self != .connect }
 
   private static func hides(pressed: Date, now: Date, calendar: Calendar) -> Bool {
     let pressed = calendar.startOfDay(for: pressed)
@@ -72,6 +80,7 @@ enum CalendarRow: Equatable, CaseIterable {
     switch self {
     case .connect: "Calendar is not connected. Events stay on this device."
     case .off: "Calendar access is off for MoonShine."
+    case .fullAccessOnly: "MoonShine can only read calendars with Full Access."
     }
   }
 }
@@ -87,12 +96,11 @@ struct CalendarAccessRow: View {
         Text(verbatim: row.sentence).foregroundStyle(.secondary)
           .fixedSize(horizontal: false, vertical: true)
         HStack(spacing: 12) {
-          switch row {
-          case .connect:
+          if row.opensSystemSettings {
+            Button("Open System Settings") { openTarget(.calendarPrivacySettings) }
+          } else {
             Button("Connect calendars…") { input.connect() }.disabled(input.isConnecting)
             Button("Not now") { input.notNow() }
-          case .off:
-            Button("Open System Settings") { openTarget(.calendarPrivacySettings) }
           }
         }
         .buttonStyle(.link)
@@ -160,7 +168,8 @@ struct DayRailView: View {
         {
           facts
         }
-        Text("day window \(hour(window.start))–\(hour(window.end))")
+        let edges = TodayFormat.windowEdges(window, calendar: screen.calendar)
+        Text("day window \(edges.0)–\(edges.1)")
       }
       .font(.system(size: 11))
       .foregroundStyle(.secondary)
@@ -379,10 +388,6 @@ struct DayRailView: View {
 
   private func time(_ date: Date) -> String {
     TodayFormat.time(date, timeZone: zone, locale: locale)
-  }
-
-  private func hour(_ date: Date) -> String {
-    TodayFormat.hour(date, timeZone: zone, locale: locale)
   }
 }
 

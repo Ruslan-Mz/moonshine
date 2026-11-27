@@ -85,9 +85,23 @@ enum TodayFormat {
     return String(localized: resource)
   }
 
-  /// `08`: the hour of a day window's edge, as `day window 08–22` reads it.
-  static func hour(_ date: Date, timeZone: TimeZone, locale: Locale) -> String {
-    String(time(date, timeZone: timeZone, locale: locale).prefix(2))
+  /// The edges of `day window 08–22` (owner, 2026-11-27, PR #74 round 1): whole hours as `08`;
+  /// when either edge has minutes, both as `07:30` and `22:00`; the day's end is `24`, never
+  /// `00`. The same digits in every language; `calendar` carries the day's zone.
+  static func windowEdges(_ window: DateInterval, calendar: Calendar) -> (String, String) {
+    let day = calendar.startOfDay(for: window.start)
+    let next = calendar.date(byAdding: .day, value: 1, to: day)
+    func clock(_ date: Date) -> (hour: Int, minute: Int) {
+      if let next, date >= next { return (24, 0) }
+      let parts = calendar.dateComponents([.hour, .minute], from: date)
+      return (parts.hour ?? 0, parts.minute ?? 0)
+    }
+    let (start, end) = (clock(window.start), clock(window.end))
+    func text(_ edge: (hour: Int, minute: Int)) -> String {
+      start.minute == 0 && end.minute == 0
+        ? String(format: "%02d", edge.hour) : String(format: "%02d:%02d", edge.hour, edge.minute)
+    }
+    return (text(start), text(end))
   }
 
   /// The day fact of the toolbar and the Day rail (`design/components.md` § FreeTimeFact).
