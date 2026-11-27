@@ -7,9 +7,11 @@ struct ViewCommands: Commands {
 
   var body: some Commands {
     CommandGroup(before: .sidebar) {
-      // ⌘2 and ⌘3 come with their views (S5).
+      // ⌘3 comes with Month in the usage period.
       Button("Today") { model.selection = .today }
         .keyboardShortcut("1", modifiers: .command)
+      Button("Week") { model.selection = .week }
+        .keyboardShortcut("2", modifiers: .command)
       Button("Lines") { model.selection = .lines }
         .keyboardShortcut("4", modifiers: .command)
       Divider()

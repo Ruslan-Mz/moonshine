@@ -171,8 +171,12 @@ import Testing
       "Done last week, planned Tuesday", line: violin, planned: W.date(2026, 9, 29, 9),
       completed: W.date(2026, 9, 25, 10))
     let week = Overview(workspace: world.workspace, now: now).week()
-    #expect(placement(week) == ["Done Monday, planned Friday": [0], "Open Monday": [0], "Done today": [2]])
-    #expect(week.days[0].items.map { $0.task.title } == ["Open Monday", "Done Monday, planned Friday"])
+    #expect(
+      placement(week) == [
+        "Done Monday, planned Friday": [0], "Open Monday": [0], "Done today": [2],
+      ])
+    #expect(
+      week.days[0].items.map { $0.task.title } == ["Open Monday", "Done Monday, planned Friday"])
     #expect(week.days[0].items.map(\.isCompleted) == [false, true])
     #expect(week.days.map(\.doneCount) == [1, 0, 1, 0, 0, 0, 0])
   }

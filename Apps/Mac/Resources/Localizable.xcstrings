@@ -97,6 +97,22 @@
         }
       }
     },
+    "%@ · ISO week": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · ISO week"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · ISO-неделя"
+          }
+        }
+      }
+    },
     "%@ · Week %lld · %@ · %@": {
       "localizations": {
         "en": {
@@ -881,6 +897,22 @@
         }
       }
     },
+    "+ %lld more": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+ %lld more"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ещё %lld"
+          }
+        }
+      }
+    },
     "Active this season": {
       "localizations": {
         "en": {
@@ -1265,6 +1297,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Сделано сегодня"
+          }
+        }
+      }
+    },
+    "Drag onto a day to plan — comes with the Act phase": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag onto a day to plan — comes with the Act phase"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перетаскивание на день — в фазе «Действие»"
           }
         }
       }
@@ -1781,6 +1829,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Нет следующих шагов"
+          }
+        }
+      }
+    },
+    "No plan": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No plan"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Без плана"
           }
         }
       }
@@ -3173,6 +3237,70 @@
         }
       }
     },
+    "Week": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Week"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неделя"
+          }
+        }
+      }
+    },
+    "Week %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Week %lld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неделя %lld"
+          }
+        }
+      }
+    },
+    "Week in progress — %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Week in progress — %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неделя идёт — %@"
+          }
+        }
+      }
+    },
+    "Week in progress — %@ to %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Week in progress — %1$@ to %2$@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Неделя идёт — %1$@–%2$@"
+          }
+        }
+      }
+    },
     "Weeks %lld–%lld": {
       "localizations": {
         "en": {
@@ -3877,6 +4005,38 @@
         }
       }
     },
+    "progress %lld, average %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "progress %1$lld, average %2$@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "прогресс %1$lld, в среднем %2$@"
+          }
+        }
+      }
+    },
+    "progress not applicable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "progress not applicable"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "прогресс не применим"
+          }
+        }
+      }
+    },
     "quiet for %lld days": {
       "localizations": {
         "en": {
@@ -3941,6 +4101,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "повторяющиеся занятия"
+          }
+        }
+      }
+    },
+    "rhythm %lld, average %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "rhythm %1$lld, average %2$@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ритм %1$lld, в среднем %2$@"
+          }
+        }
+      }
+    },
+    "rhythm not applicable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "rhythm not applicable"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ритм не применим"
           }
         }
       }
