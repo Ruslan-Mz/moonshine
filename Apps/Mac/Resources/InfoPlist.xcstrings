@@ -17,6 +17,23 @@
           }
         }
       }
+    },
+    "NSCalendarsFullAccessUsageDescription": {
+      "comment": "The calendar prompt on Connect calendars… (Live); the text names no screen (owner, 2026-11-27).",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine reads your calendar events to show them next to your tasks, and never changes them."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine читает события ваших календарей, чтобы показать их рядом с задачами, и никогда их не меняет."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

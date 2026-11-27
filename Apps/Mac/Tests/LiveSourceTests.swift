@@ -56,6 +56,33 @@ final class CountingSettings: AppSettings, @unchecked Sendable {
   func setDeadlineRule(_ value: DeadlineRule) {
     ruleWrites.append(value)
   }
+
+  /// The calendar rules (S4-3d).
+  var storedVisibility = CalendarVisibility()
+  private(set) var calendarSettingWrites: [CalendarID] = []
+  var storedWindow = DayWindow.standard
+  private(set) var windowWrites: [DayWindow] = []
+  var storedNotNow: Date?
+  private(set) var notNowWrites: [Date] = []
+
+  var calendarVisibility: CalendarVisibility { storedVisibility }
+
+  func setCalendarSetting(_ value: CalendarSetting, for id: CalendarID) {
+    calendarSettingWrites.append(id)
+    storedVisibility.stored[id] = value
+  }
+
+  var dayWindow: DayWindow { windowWrites.last ?? storedWindow }
+
+  func setDayWindow(_ value: DayWindow) {
+    windowWrites.append(value)
+  }
+
+  var calendarNotNow: Date? { notNowWrites.last ?? storedNotNow }
+
+  func setCalendarNotNow(_ value: Date) {
+    notNowWrites.append(value)
+  }
 }
 
 /// An error that names its kind, as the bridge's do.

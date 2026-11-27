@@ -50,6 +50,9 @@ targets:
       # Live reads its meta tag groups from `mapping.yaml` in the data folder (S4-4c-2).
       - package: Adapters
         product: ObsidianAdapter
+      # Live reads the system calendars, read-only (ADR-0012).
+      - package: Adapters
+        product: CalendarAdapter
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.moonshine.mac
@@ -57,6 +60,7 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: MoonShine
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
         INFOPLIST_KEY_NSAppleEventsUsageDescription: MoonShine reads your OmniFocus tasks to show them. It never changes them.
+        INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: MoonShine reads your calendar events to show them next to your tasks, and never changes them.
         MARKETING_VERSION: "0.1"
         CURRENT_PROJECT_VERSION: "1"
   MoonShineMacTests:

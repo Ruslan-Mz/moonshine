@@ -1,30 +1,96 @@
 import MoonShineCore
-import MoonShineFixtures
 import SwiftUI
 
-/// The calendar the Day rail reads, set by `RootView` from the app's source.
+/// The calendar the Day rail reads, set by `RootView` from the model's calendar feed (S4-3d).
 struct DayRailInput {
   let events: CalendarRead<[CalendarEvent]>
   let visibility: CalendarVisibility
   /// For the bar colours.
   let calendars: [CalendarInfo]
+  /// The rail's span and the free term: Settings' in Live, `DayWindow.standard` in Demo.
+  let window: DayWindow
   /// Demo's clock stands still at the overview's `now`; Live's runs.
   let isFrozen: Bool
+  /// The row under the rail; nil for none.
+  var row: CalendarRow?
+  var isConnecting = false
+  var connect: @MainActor () -> Void = {}
+  var notNow: @MainActor () -> Void = {}
 
-  /// The fixture calendar's week, read here until S4-3d moves the read behind the calendar
-  /// provider (owner, 2026-11-16).
-  static let demo = DayRailInput(
-    events: .read(DemoCalendar.events, skipped: 0), visibility: DemoCalendar.visibility,
-    calendars: DemoCalendar.calendars, isFrozen: true)
-
-  /// No calendar read before S4-3d: the rail shows the tasks with a time and no calendar fact.
-  static let live = DayRailInput(
+  /// Before the model sets one: the tasks with a time, no calendar fact and no row.
+  static let none = DayRailInput(
     events: .unavailable(.notDetermined), visibility: CalendarVisibility(), calendars: [],
-    isFrozen: false)
+    window: .standard, isFrozen: false)
 }
 
 extension EnvironmentValues {
-  @Entry var dayRailInput = DayRailInput.live
+  @Entry var dayRailInput = DayRailInput.none
+}
+
+/// The row under Today's rail while the calendar cannot be read (`design/screens/today.md` §
+/// Calendar, `design/copy.md` § Calendar strings). Its words hold no event, calendar or account.
+enum CalendarRow: Equatable, CaseIterable {
+  /// Not asked yet: `Connect calendars…` and `Not now`.
+  case connect
+  /// Denied, or events cannot be read (Add Events Only): `Open System Settings`.
+  case off
+
+  /// How long `Not now` hides the connect row, in calendar days.
+  static let notNowDays = 30
+
+  /// Nil before access is known, when granted or restricted, and while `Not now` hides it:
+  /// from the day it was pressed until 30 calendar days later, in `calendar`'s zone. A day
+  /// after today (the clock moved back) hides nothing.
+  init?(access: CalendarAccess?, notNow: Date?, now: Date, calendar: Calendar) {
+    switch access {
+    case .notDetermined?:
+      if let notNow, Self.hides(pressed: notNow, now: now, calendar: calendar) { return nil }
+      self = .connect
+    case .denied?, .writeOnly?: self = .off
+    case .granted?, .restricted?, nil: return nil
+    }
+  }
+
+  private static func hides(pressed: Date, now: Date, calendar: Calendar) -> Bool {
+    let pressed = calendar.startOfDay(for: pressed)
+    let today = calendar.startOfDay(for: now)
+    guard pressed <= today, let days = calendar.dateComponents([.day], from: pressed, to: today).day
+    else { return false }
+    return days < notNowDays
+  }
+
+  var sentence: String {
+    switch self {
+    case .connect: String(localized: "Calendar is not connected. Events stay on this device.")
+    case .off: String(localized: "Calendar access is off for MoonShine.")
+    }
+  }
+}
+
+/// `CalendarRow` under the rail; buttons as links, as the rail's other actions.
+struct CalendarAccessRow: View {
+  @Environment(\.dayRailInput) private var input
+  @Environment(\.openTarget) private var openTarget
+
+  var body: some View {
+    if let row = input.row {
+      VStack(alignment: .leading, spacing: 4) {
+        Text(verbatim: row.sentence).foregroundStyle(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
+        HStack(spacing: 12) {
+          switch row {
+          case .connect:
+            Button("Connect calendars…") { input.connect() }.disabled(input.isConnecting)
+            Button("Not now") { input.notNow() }
+          case .off:
+            Button("Open System Settings") { openTarget(.calendarPrivacySettings) }
+          }
+        }
+        .buttonStyle(.link)
+      }
+      .font(.system(size: 11))
+    }
+  }
 }
 
 extension DayRail {

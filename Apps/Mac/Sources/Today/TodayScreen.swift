@@ -169,10 +169,10 @@ struct TodayScreen: Equatable {
     }
   }
 
-  /// The Day rail at `now` over the day window (`DayWindow.standard` until Settings sets one).
+  /// The Day rail at `now` over the input's day window.
   func rail(now: Date, input: DayRailInput) -> DayRail {
     DayRail.compute(
-      day: day, now: now, window: .standard, events: input.events,
+      day: day, now: now, window: input.window, events: input.events,
       visibility: input.visibility, tasks: railTasks, deadlines: deadlines,
       defaultTimes: defaultTimes, calendar: calendar)
   }

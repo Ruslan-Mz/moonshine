@@ -1,7 +1,8 @@
 import Foundation
 
-/// "A source may have changed" (ADR-0011). Calendar changes join this port later; they do not
-/// start the importer.
+/// "A source may have changed" (ADR-0011); it drives imports only. Calendar changes never join
+/// it: the calendar feed follows its provider's own change stream and starts no import (ADR-0012,
+/// note of 2026-11-27).
 public enum ChangeSignal: Sendable, Equatable {
   case launch
   /// ⌘R.

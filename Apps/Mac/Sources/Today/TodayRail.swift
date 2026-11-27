@@ -21,6 +21,7 @@ struct TodayRail: View {
           DayRailView(
             rail: rail, now: now, screen: screen, calendars: calendars, selected: selected,
             reveal: reveal)
+          CalendarAccessRow()
         }
         if let focus = screen.quarterFocus { QuarterFocusCard(focus: focus) }
         if !screen.touched.isEmpty { touched }

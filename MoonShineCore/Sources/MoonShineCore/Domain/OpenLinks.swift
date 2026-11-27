@@ -37,6 +37,13 @@ public enum OmniFocusLink {
   }
 }
 
+/// The one System Settings pane MoonShine opens (ADR-0015, amendment of 2026-11-27): Privacy &
+/// Security → Calendars, a constant with no input.
+public enum SystemSettingsLink {
+  public static let calendarPrivacy = URL(
+    string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")!
+}
+
 /// MoonShine's own Obsidian URL (ADR-0015, correction of 2026-10-12): `obsidian://open` with
 /// `vault` and `file` only; no `paneType` in phase 1.
 public enum ObsidianLink {

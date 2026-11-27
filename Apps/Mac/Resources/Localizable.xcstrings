@@ -977,6 +977,38 @@
         }
       }
     },
+    "Calendar access is off for MoonShine.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calendar access is off for MoonShine."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Доступ к календарю для MoonShine выключен."
+          }
+        }
+      }
+    },
+    "Calendar is not connected. Events stay on this device.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calendar is not connected. Events stay on this device."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Календарь не подключён. События остаются на этом устройстве."
+          }
+        }
+      }
+    },
     "Can't be read — choose it again": {
       "localizations": {
         "en": {
@@ -1021,6 +1053,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Выполнено"
+          }
+        }
+      }
+    },
+    "Connect calendars…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect calendars…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подключить календари…"
           }
         }
       }
@@ -1881,6 +1929,22 @@
         }
       }
     },
+    "Not now": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not now"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не сейчас"
+          }
+        }
+      }
+    },
     "Not read yet": {
       "localizations": {
         "en": {
@@ -2085,6 +2149,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Янтарная метка — только у жёстких сроков. Остальные сроки показаны обычным текстом."
+          }
+        }
+      }
+    },
+    "Open System Settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open System Settings"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открыть Системные настройки"
           }
         }
       }

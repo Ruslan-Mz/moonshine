@@ -58,6 +58,14 @@ Rules that follow:
 
 **Amendment (2026-10-28, S4-3a).** The default times are stored, and a snapshot without the `defaultTimes` object keeps the stored ones and reports `defaultTimesNotRead`; 00:00 alone counts as "date only" only when nothing is stored yet, or for a date kind whose key is absent (`docs/discovery/snapshot-contract.md` § Default times).
 
+**Note (2026-11-27, owner; S4-3d-1).** As built in the app:
+
+- **Change signal.** `ChangeSignal` drives imports only; calendar changes do not join it. Each source's calendar feed (`Apps/Mac/Sources/Calendars/CalendarFeed.swift`) follows its provider's own change stream, and the app's activation, and reads the shown day again: one read in flight, at most one follow-up. It starts no import. This replaces "feeds the `ChangeSignal` port" in the rule above.
+- **A source not shown reads nothing.** Switching to Demo pauses Live's feed: it follows no change, reads nothing and holds no events; switching back reads again.
+- **No entitlement.** The app has no App Sandbox and no hardened runtime, so calendar access needs only `NSCalendarsFullAccessUsageDescription` (in the generated Info.plist and its String Catalog), no entitlement. An entitlement is added with the sandbox, if that comes.
+- **Settings stored.** Show and Counts as busy per calendar, the day window and Today's `Not now` are each one value under its own key in the app's defaults, checked on every read; nothing about a calendar but its identifier is stored. Demo stores none of them.
+- **Nothing logged.** No event title, calendar name, calendar id or event id reaches `os_log`, `print`, a notice, the import log or the method log; the rows and notices say only outcomes.
+
 ### Consequences
 
 - Good — events are current within a second on every device, with no importer and no Mac dependency.
