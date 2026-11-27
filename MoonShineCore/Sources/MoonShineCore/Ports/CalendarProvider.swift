@@ -57,7 +57,9 @@ public enum CalendarRangeError: Error, Equatable, Sendable {
 
 // MARK: - Values (in memory only: not Codable; descriptions show no title, name or id)
 
-/// A calendar's device-local identifier (`calendarIdentifier`). Never stored or synced.
+/// A calendar's device-local identifier (`calendarIdentifier`). Never synced, and stored only as
+/// the key of its Show and Counts as busy in the app's local defaults (ADR-0012, note of
+/// 2026-11-27).
 public struct CalendarID: Hashable, Sendable, CustomStringConvertible, CustomReflectable {
   public let rawValue: String
 

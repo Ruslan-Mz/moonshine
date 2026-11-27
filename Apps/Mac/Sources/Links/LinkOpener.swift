@@ -8,6 +8,8 @@ enum OpenTarget: Hashable {
   case task(TaskItemID)
   case project(ProjectID)
   case note(NoteID)
+  /// System Settings → Privacy & Security → Calendars (S4-3d): needs no workspace.
+  case calendarPrivacySettings
 }
 
 /// What came of one open. None carries a path, a name, an id or a title.
@@ -80,15 +82,16 @@ final class LinkOpener {
   /// Opens `target` from the workspace shown; any outcome but `.opened` becomes the notice, and
   /// `.opened` clears an earlier one, so the bar never reports an older failure. The latest
   /// open wins: one overtaken while it looked its note up is `.superseded` (PR #73 round 2).
+  /// With no overview only System Settings opens (S4-3d).
   @discardableResult
-  func open(_ target: OpenTarget, in overview: Overview, isDemo: Bool) async -> OpenOutcome {
+  func open(_ target: OpenTarget, in overview: Overview?, isDemo: Bool) async -> OpenOutcome {
     latest += 1
     let number = latest
     let outcome: OpenOutcome
     if isDemo {
       outcome = .demo
     } else {
-      let result = await url(target, in: overview.workspace)
+      let result = await url(target, in: overview?.workspace)
       guard number == latest else { return .superseded }
       switch result {
       case .success(let url): outcome = opening.open(url) ? .opened : .notOpened
@@ -141,19 +144,21 @@ final class LinkOpener {
     let outcome: OpenOutcome
   }
 
-  private func url(_ target: OpenTarget, in workspace: Workspace) async -> Result<URL, Refusal> {
+  private func url(_ target: OpenTarget, in workspace: Workspace?) async -> Result<URL, Refusal> {
     let notOpened = Refusal(outcome: .notOpened)
     switch target {
+    case .calendarPrivacySettings:
+      return .success(SystemSettingsLink.calendarPrivacy)
     case .task(let id):
-      let task = workspace.tasks.first { $0.id == id }
+      let task = workspace?.tasks.first { $0.id == id }
       return Self.omniFocusID(task?.refs).flatMap(OmniFocusLink.task).map { .success($0) }
         ?? .failure(notOpened)
     case .project(let id):
-      let project = workspace.projects.first { $0.id == id }
+      let project = workspace?.projects.first { $0.id == id }
       return Self.omniFocusID(project?.refs).flatMap(OmniFocusLink.project).map { .success($0) }
         ?? .failure(notOpened)
     case .note(let id):
-      guard let note = workspace.notes.first(where: { $0.id == id }) else {
+      guard let note = workspace?.notes.first(where: { $0.id == id }) else {
         return .failure(Refusal(outcome: .noteNotFound))
       }
       let root: URL

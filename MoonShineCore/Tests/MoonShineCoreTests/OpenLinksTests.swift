@@ -81,4 +81,20 @@ import Testing
     #expect(ObsidianLink.open(vault: "v", file: String(repeating: "a", count: 1024)) != nil)
     #expect(ObsidianLink.open(vault: "v", file: String(repeating: "a", count: 1025)) == nil)
   }
+
+  // MARK: System Settings
+
+  /// The one pane, exactly: Privacy & Security → Calendars (S4-3d).
+  @Test func theCalendarPaneIsExactlyItsURL() throws {
+    let url = SystemSettingsLink.calendarPrivacy
+    #expect(
+      url.absoluteString
+        == "x-apple.systempreferences:com.apple.preference.security?Privacy_Calendars")
+    let parts = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
+    #expect(parts.scheme == "x-apple.systempreferences")
+    #expect(parts.host == nil)
+    #expect(parts.path == "com.apple.preference.security")
+    #expect(parts.query == "Privacy_Calendars")
+    #expect(parts.fragment == nil)
+  }
 }

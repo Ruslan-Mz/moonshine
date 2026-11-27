@@ -56,7 +56,7 @@ Three facts follow. Building the task list is the whole cost; reading properties
 
 Rules that follow:
 
-- **`ChangeSignal` port in Core**: a stream of "a source may have changed" events. Mac adapters: OmniFocus resigned active (`NSWorkspace.didDeactivateApplicationNotification` for its bundle id), a timer, app launch, ⌘R. Calendar changes (ADR-0012) use the same port but do not start the importer.
+- **`ChangeSignal` port in Core**: a stream of "a source may have changed" events. Mac adapters: OmniFocus resigned active (`NSWorkspace.didDeactivateApplicationNotification` for its bundle id), a timer, app launch, ⌘R. Calendar changes (ADR-0012) use the same port but do not start the importer. **Replaced (2026-11-27, owner; S4-3d-1):** calendar changes do not join this port; the calendar feed follows its provider's own change stream and starts no import (ADR-0012, note of 2026-11-27).
 - **Never while OmniFocus is frontmost.** A signal that arrives then is held until OmniFocus resigns active. ⌘R is always allowed: MoonShine is frontmost when it is pressed.
 - **Timer**: default 15 min, a setting; runs only while OmniFocus is running and not frontmost; skipped when an import finished within the interval. It exists for changes that arrive through OmniFocus' own sync from other devices.
 - **Coalescing**: `ImportService` stays single-flight. A signal during an import schedules exactly one more import after it.
@@ -105,7 +105,7 @@ Rules that follow:
 
 - Good — fresh data a few seconds after switching apps, with no perceptible freeze in normal use.
 - Good — one import path, documented interfaces, nothing read from OmniFocus' private files.
-- Good — the same port serves the calendar signal now and a sync signal later.
+- Good — the same port serves the calendar signal now and a sync signal later. (The calendar signal no longer does: ADR-0012, note of 2026-11-27.)
 - Bad — a timer import holds OmniFocus for about 11 s in the background; if the owner returns to OmniFocus during it, he feels the freeze. A script already running cannot be cancelled.
 - Bad — a change made on another device appears only after OmniFocus on the Mac has synced and then up to one timer interval later.
 - Bad — "seconds", not "instant". True real-time for tasks needs MoonShine-native tasks (phase 7).
