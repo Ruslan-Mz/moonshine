@@ -105,8 +105,8 @@ struct TodayContainer<Notice: View>: View {
   }
 }
 
-/// `design/screens/today.md`, draft-2 list. Checkboxes show state only; opening a task in
-/// OmniFocus comes with the link opener (S4-5).
+/// `design/screens/today.md`, draft-2 list. Checkboxes show state only and write nothing; a
+/// click on one, ↵ and a double-click open the task in OmniFocus through the opener (S4-5).
 struct TodayView<Notice: View>: View {
   let screen: TodayScreen
   let rail: DayRail
@@ -125,6 +125,7 @@ struct TodayView<Notice: View>: View {
   /// even when an earlier click went to the sidebar.
   @FocusState private var listFocused: Bool
   @Environment(\.locale) private var locale
+  @Environment(\.openTarget) private var openTarget
 
   var body: some View {
     VStack(spacing: 0) {
@@ -158,7 +159,7 @@ struct TodayView<Notice: View>: View {
   private var table: some View {
     Table(of: TodayTableRow.self, selection: $selection) {
       TableColumn(Text(verbatim: "")) { row in
-        if case .task(let task) = row { Checkbox(isDone: task.isDone) }
+        if case .task(let task) = row { OpeningCheckbox(isDone: task.isDone, id: task.id) }
       }
       .width(TodayColumns.checkbox)
       TableColumn("Task") { row in
@@ -250,6 +251,13 @@ struct TodayView<Notice: View>: View {
     }
     .tableStyle(.inset)
     .alternatingRowBackgrounds(.disabled)
+    // ↵ and a double-click open a task row in OmniFocus; disclosure rows only expand.
+    .contextMenu(forSelectionType: TodayTableRow.ID.self) { _ in
+    } primaryAction: { ids in
+      for id in ids {
+        if case .task(let task) = id { openTarget(.task(task)) }
+      }
+    }
     .focused($listFocused)
     .defaultFocus($listFocused, true)
     .onChange(of: selection) { _, selected in
@@ -310,6 +318,24 @@ struct TodayView<Notice: View>: View {
     guard let dayFact = DayFactText.joined(terms, timeZone: screen.timeZone, locale: locale)
     else { return facts }
     return Text("\(facts) │ \(dayFact)")
+  }
+}
+
+/// The read-only checkbox of a task: a click opens the task in OmniFocus, never completes it
+/// (`today.md` § Behaviour).
+struct OpeningCheckbox: View {
+  let isDone: Bool
+  let id: TaskItemID
+  @Environment(\.openTarget) private var openTarget
+
+  var body: some View {
+    Button {
+      openTarget(.task(id))
+    } label: {
+      Checkbox(isDone: isDone)
+    }
+    .buttonStyle(.plain)
+    .accessibilityHint(Text("Opens in OmniFocus"))
   }
 }
 

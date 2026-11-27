@@ -207,7 +207,11 @@ struct StatusBar: View {
     HStack {
       // In the order of `design/screens/settings.md` § Status bar.
       Text(model.source == .live ? "Live" : "Demo data")
-      if case .loaded(let overview) = model.state, model.lastImport != nil {
+      // An open that did not open says so for a few seconds in the freshness text's place
+      // (owner, 2026-11-25, S4-5).
+      if let notice = model.linkOpener.notice.flatMap(LinkOpener.text) {
+        Text(verbatim: notice)
+      } else if case .loaded(let overview) = model.state, model.lastImport != nil {
         TimelineView(.everyMinute) { _ in
           if let freshness = model.freshness() {
             text(freshness, timeZone: overview.workspace.timeZone)

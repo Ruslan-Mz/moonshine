@@ -6,7 +6,9 @@ struct MoonShineApp: App {
 
   var body: some Scene {
     WindowGroup {
+      // Every link in the window goes through the one opener (S4-5).
       RootView(model: model)
+        .linksThroughOpener(model)
         .task { model.start() }
     }
     .defaultSize(width: 1440, height: 900)
@@ -16,6 +18,7 @@ struct MoonShineApp: App {
         Button("Refresh") { model.refresh() }
           .keyboardShortcut("r", modifiers: .command)
       }
+      OpenCommands(model: model)
       TodayCommands()
       LineRemovalCommands()
       // Show / Hide Inspector, ⌃⌘I, in the View menu.
@@ -23,6 +26,7 @@ struct MoonShineApp: App {
     }
     Settings {
       SettingsView(model: model)
+        .linksThroughOpener(model)
     }
   }
 }

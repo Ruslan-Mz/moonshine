@@ -66,6 +66,15 @@ The one URL-opening function of S4 therefore allows `http`, `https`, `moonshine:
 
 The opener of S4 (S4-5) adds these two forms to its allowlist; its tests cover `add`, `paste` and another action taken from text, and an id that would add a path, a query or a fragment.
 
+**Amendment (2026-11-25, owner; S4-5).** The opener as built (`Apps/Mac/Sources/Links/LinkOpener.swift`, URLs from `MoonShineCore` `Domain/OpenLinks.swift`):
+
+- It takes MoonShine's own ids, never a URL or a string. It builds `omnifocus:///task/<id>` and `omnifocus:///project/<id>` from the stored id when the id is in `[A-Za-z0-9_-]{1,64}`, optionally followed by `.` and 1–6 digits (an occurrence), and `obsidian://open` with `vault` and `file` only (no `paneType` in phase 1), every reserved character escaped; each URL is parsed back before it opens.
+- **Links from text, phase 1:** every one is dropped, `http`, `https` and `moonshine://` included. The root `openURL` action of both scenes discards it. The allowance of the 2026-10-10 amendment waits for the spec that first shows a URL before it opens (Hub / Write), as the No-network rule below asks.
+- **A note** opens only when its file is found from the vault root component by component, byte for byte (APFS ignores case and Unicode form, Obsidian does not), with no hidden component, no `.` or `..`, no symbolic link, and a regular file at the end; otherwise "note not found". An unchosen or unreadable vault says so instead.
+- **Two vaults with one folder name:** Obsidian picks a vault by name, and `path` stays ruled out, so the file check runs against MoonShine's vault while Obsidian may open the other one. Accepted (owner, 2026-11-25).
+- **Demo** opens nothing: its ids and paths are invented, and a Demo path could match a file in the owner's vault.
+- **Not added:** `omnifocus:///folder/<id>`, which needs folder ids in the store (usage period), and the System Settings and calendar URLs, which S4-3d adds with their tests.
+
 ### Commands
 
 Vault writes are commands of the provider `vault` and go through the `CommandBus` (ADR-0013), with the activity log and undo.

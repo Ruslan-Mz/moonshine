@@ -116,6 +116,8 @@ final class AppModel {
   private(set) var vaultRefusal: VaultFolder.Refusal?
   /// Which due dates are deadlines; every source's overview is built with it (S4-3c-2).
   private(set) var deadlineRule: DeadlineRule
+  /// The one way the app opens a task, project or note (S4-5).
+  let linkOpener: LinkOpener
 
   /// The unit tests run inside the app (`project.yml`), so every test run launches it.
   nonisolated static var isTestHost: Bool {
@@ -134,12 +136,15 @@ final class AppModel {
   init(
     isTestHost: Bool = AppModel.isTestHost, settings: any AppSettings,
     vaultFolder: VaultFolder? = nil,
+    linkOpener: @MainActor (VaultFolder) -> LinkOpener = LinkOpener.production,
     environments: @escaping @MainActor (Source) -> AppEnvironment?
   ) {
     self.isTestHost = isTestHost
     self.settings = settings
     self.environments = environments
-    self.vaultFolder = vaultFolder ?? VaultFolder(settings: settings)
+    let vaultFolder = vaultFolder ?? VaultFolder(settings: settings)
+    self.vaultFolder = vaultFolder
+    self.linkOpener = linkOpener(vaultFolder)
     source = Self.source(isTestHost: isTestHost, settings: settings)
     deadlineRule = settings.deadlineRule
   }
@@ -253,6 +258,15 @@ final class AppModel {
     } catch {
       vaultRefusal = error
     }
+  }
+
+  /// Opens a task, project or note of the workspace shown, through the one opener; nothing
+  /// while no workspace is shown, and nothing in Demo (owner, 2026-11-25). The task is for tests.
+  @discardableResult
+  func open(_ target: OpenTarget) -> Task<OpenOutcome, Never>? {
+    guard case .loaded(let overview) = state else { return nil }
+    let isDemo = source == .demo
+    return Task { await linkOpener.open(target, in: overview, isDemo: isDemo) }
   }
 
   /// Settings → Deadlines: stored, then every source built shows it at once, without an import.

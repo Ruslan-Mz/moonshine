@@ -2,8 +2,7 @@ import MoonShineCore
 import SwiftUI
 
 /// `design/screens/today.md` § Right rail: Day, Quarter focus, Touched today, Quiet lines,
-/// Paused on purpose. "Open in OmniFocus" and "Open quarter note" come with the link opener
-/// (S4-5).
+/// Paused on purpose. "Open in OmniFocus" and "Open quarter note" go through the opener (S4-5).
 struct TodayRail: View {
   let screen: TodayScreen
   let rail: DayRail
@@ -144,6 +143,7 @@ private struct CountText: View {
 /// percentages.
 private struct QuarterFocusCard: View {
   let focus: TodayScreen.QuarterFocus
+  @Environment(\.openTarget) private var openTarget
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
@@ -162,6 +162,8 @@ private struct QuarterFocusCard: View {
           Text(verbatim: row.title).font(.system(size: 12.5)).lineLimit(2)
         }
       }
+      Button("Open quarter note") { openTarget(.note(focus.note)) }
+        .buttonStyle(.link)
     }
     .padding(14)
     .background(Tokens.card, in: RoundedRectangle(cornerRadius: 10))
@@ -234,6 +236,7 @@ private struct NoActivityCard: View {
 private struct NextStepBlock: View {
   let label: LocalizedStringKey
   let next: TodayScreen.NextStep?
+  @Environment(\.openTarget) private var openTarget
 
   var body: some View {
     VStack(alignment: .leading, spacing: 3) {
@@ -243,6 +246,8 @@ private struct NextStepBlock: View {
         if let estimate = TodayFormat.estimate(next.estimateMinutes) {
           EstimateText.text(estimate, total: true).foregroundStyle(.secondary)
         }
+        Button("Open in OmniFocus") { openTarget(.task(next.id)) }
+          .buttonStyle(.link)
       } else {
         Text("no next action").foregroundStyle(.secondary)
       }
