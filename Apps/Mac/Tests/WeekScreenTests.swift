@@ -102,6 +102,17 @@ private func date(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) ->
         == ("пн", "чт"))
   }
 
+  @Test func aColumnHeaderKeepsTheCapitalTextLowercasesRussian() {
+    let thursday = date(2026, 10, 1, 9)
+    #expect(WeekFormat.weekday(thursday, timeZone: riga, locale: en) == "Thu")
+    #expect(WeekFormat.weekdayInText(thursday, timeZone: riga, locale: en) == "Thu")
+    #expect(WeekFormat.weekdayInText(thursday, timeZone: riga, locale: ru) == "чт")
+    #expect(
+      WeekFormat.due(
+        WeekScreen.Due(date: date(2026, 10, 2, 12), hasTime: true, isDeadline: false),
+        timeZone: riga, locale: ru) == "пт 12:00")
+  }
+
   @Test func averagesUseTheLocalesSeparator() {
     #expect(WeekFormat.average(4, locale: en) == "4.0")
     #expect(WeekFormat.average(4, locale: ru) == "4,0")

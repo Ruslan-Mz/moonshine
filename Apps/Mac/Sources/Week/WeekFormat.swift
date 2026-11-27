@@ -11,9 +11,17 @@ enum WeekFormat {
     return "\(start) – \(last.formatted(day.year()))"
   }
 
-  /// `Mon`, `пн`.
+  /// `Mon`, `Пн`: a column's header, the stand-alone form.
   static func weekday(_ date: Date, timeZone: TimeZone, locale: Locale) -> String {
     date.formatted(style(timeZone, locale).weekday(.abbreviated))
+  }
+
+  /// `Mon`, `пн`: a weekday inside a sentence, as `design/copy.md` writes `неделя идёт — пн–чт`
+  /// and `Срок пт 12:00`. macOS formats a Russian abbreviated weekday capitalized (`Пн`) in
+  /// every context, and Russian writes it lowercase in running text; English keeps its capital.
+  static func weekdayInText(_ date: Date, timeZone: TimeZone, locale: Locale) -> String {
+    let day = weekday(date, timeZone: timeZone, locale: locale)
+    return locale.language.languageCode == .russian ? day.lowercased(with: locale) : day
   }
 
   /// `28`: the day of the month in a column's header.
@@ -27,9 +35,9 @@ enum WeekFormat {
     first: Date, today: Date, timeZone: TimeZone, locale: Locale
   ) -> (first: String, today: String?) {
     let calendar = TodayFormat.calendar(timeZone)
-    let start = weekday(first, timeZone: timeZone, locale: locale)
+    let start = weekdayInText(first, timeZone: timeZone, locale: locale)
     guard !calendar.isDate(first, inSameDayAs: today) else { return (start, nil) }
-    return (start, weekday(today, timeZone: timeZone, locale: locale))
+    return (start, weekdayInText(today, timeZone: timeZone, locale: locale))
   }
 
   /// `4.0`, `4,0`: a 4-week average with one decimal in the locale's separator.
@@ -39,7 +47,7 @@ enum WeekFormat {
 
   /// `Fri 12:00`, or `Fri` for a date-only due date.
   static func due(_ due: WeekScreen.Due, timeZone: TimeZone, locale: Locale) -> String {
-    let day = weekday(due.date, timeZone: timeZone, locale: locale)
+    let day = weekdayInText(due.date, timeZone: timeZone, locale: locale)
     guard due.hasTime else { return day }
     return "\(day) \(TodayFormat.time(due.date, timeZone: timeZone, locale: locale))"
   }
