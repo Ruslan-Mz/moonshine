@@ -121,7 +121,7 @@ public struct WeekDay: Hashable, Sendable {
   public var doneCount: Int { items.filter(\.isCompleted).count }
 }
 
-/// A line's cell in Week's strip; paused lines and Life ops have none (owner, 2026-11-27).
+/// A line's week, for every line and Life ops; Week's screen picks the strip's cells.
 public struct LineWeekHeader: Hashable, Sendable {
   public let line: LineAssignment
   public let thisWeek: WeekCounts
@@ -565,9 +565,8 @@ public struct Overview: Sendable {
           estimateMinutes: Self.estimateSum(open[index].map { $0.task.estimateMinutes }))
       },
       noPlan: noPlan,
-      header: workspace.lines.filter { $0.state != .paused }.map { line in
-        let line = LineAssignment.line(line.id)
-        return LineWeekHeader(
+      header: lineOrder.map { line in
+        LineWeekHeader(
           line: line, thisWeek: stats.counts(line, in: week),
           previousAverage: stats.average(line, before: week),
           hasRhythm: rhythmLines.contains(line), hasProgress: progressLines.contains(line))

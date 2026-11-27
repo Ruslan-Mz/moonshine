@@ -52,10 +52,27 @@ private func date(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) ->
     #expect(friday(.allDueDates)?.due?.isDeadline == true)
   }
 
-  @MainActor @Test func theStripLeavesOutPausedLinesAndSaysWhatApplies() async throws {
+  /// The strip's filter is the screen's (owner, 2026-11-27): Core's header keeps every line and
+  /// Life ops. The cells carry no text of their own; the Life ops label is checked in both
+  /// languages so a cell never stands for it.
+  @MainActor @Test(arguments: [en, ru])
+  func theStripLeavesOutPausedLinesAndLifeOpsInBudgetOrder(locale: Locale) async throws {
+    let overview = try await demoOverview()
+    let screen = WeekScreen(overview)
+    let header = overview.week().header
+    #expect(header.count == 12)
+    #expect(header.last?.line == .lifeOps)
+    let shown = overview.workspace.lines.filter { $0.state != .paused }
+    #expect(screen.cells.map(\.id) == shown.map(\.id))
+    #expect(!screen.cells.contains { $0.name == "Calligraphy" })
+    let lifeOps = TodayFormat.localized("Life ops", locale)
+    #expect(!lifeOps.isEmpty)
+    #expect(!screen.cells.contains { $0.name == lifeOps })
+  }
+
+  @MainActor @Test func theStripSaysWhichSeriesApply() async throws {
     let screen = WeekScreen(try await demoOverview())
     let cells = Dictionary(uniqueKeysWithValues: screen.cells.map { ($0.name, $0) })
-    #expect(cells["Calligraphy"] == nil)
     #expect(screen.cells.count == 10)
     #expect(cells["AI/ML"]?.hasRhythm == false)
     #expect(cells["AI/ML"]?.hasProgress == true)

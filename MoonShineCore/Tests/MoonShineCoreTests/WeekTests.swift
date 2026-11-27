@@ -111,8 +111,7 @@ import Testing
       world.task("Etude \(day)", line: violin, completed: W.date(2026, 9, day))
     }
     let header = Overview(workspace: world.workspace, now: now).week().header
-    // Life ops has no strip cell (owner, 2026-11-27).
-    #expect(header.map(\.line) == [violin, piano])
+    #expect(header.map(\.line) == [violin, piano, .lifeOps])
     #expect(header.first?.thisWeek == WeekCounts(rhythm: 1))
     #expect(header.first?.previousAverage == WeekAverage(rhythm: 0, progress: 1))
   }
@@ -206,19 +205,20 @@ import Testing
     #expect(days.map(\.estimateMinutes) == [0, 50, 0, .max, 0, 0, 0])
   }
 
-  @Test func stripLeavesOutPausedLinesAndSaysWhichSeriesApply() {
+  @Test func headerKeepsEveryLineAndSaysWhichSeriesApply() {
     var world = W()
     let violin = LineAssignment.line(world.line("violin").id)
     let piano = LineAssignment.line(world.line("piano").id)
     let japanese = LineAssignment.line(world.line("japanese").id)
-    world.line("italian", state: .paused)
+    let italian = LineAssignment.line(world.line("italian", state: .paused).id)
     world.session("Scales", line: violin, at: W.date(2026, 8, 3))
     world.task("Sonatina", line: piano, completed: W.date(2026, 9, 2))
     world.task("Kana", line: japanese)
     let header = Overview(workspace: world.workspace, now: now).week().header
-    #expect(header.map(\.line) == [violin, piano, japanese])
-    #expect(header.map(\.hasRhythm) == [true, false, false])
-    #expect(header.map(\.hasProgress) == [false, true, false])
+    // Every line and Life ops; Week's screen leaves paused lines and Life ops out of the strip.
+    #expect(header.map(\.line) == [violin, piano, japanese, italian, .lifeOps])
+    #expect(header.map(\.hasRhythm) == [true, false, false, false, false])
+    #expect(header.map(\.hasProgress) == [false, true, false, false, false])
   }
 
   @Test func aDaylightSavingWeekHasSevenLocalDays() throws {

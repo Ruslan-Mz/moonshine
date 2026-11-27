@@ -105,8 +105,11 @@ struct WeekScreen: Equatable {
     firstDay = week.days.first?.day.start ?? todayStart
     lastDay = week.days.last?.day.start ?? todayStart
     today = overview.now
+    // The strip is the screen's choice, as Lines' sections are (owner, 2026-11-27): no cell for
+    // Life ops, which is not a line, nor for a paused line, whose cards still show in the days.
     cells = week.header.compactMap { header in
-      guard case .line(let id) = header.line, let line = lines[id] else { return nil }
+      guard case .line(let id) = header.line, let line = lines[id], line.state != .paused
+      else { return nil }
       return Cell(
         id: id, emoji: line.emoji, name: line.name, thisWeek: header.thisWeek,
         average: header.previousAverage, hasRhythm: header.hasRhythm,
