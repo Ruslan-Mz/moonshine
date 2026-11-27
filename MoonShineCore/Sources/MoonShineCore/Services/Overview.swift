@@ -105,18 +105,32 @@ public struct TodayOverview: Hashable, Sendable {
 public struct WeekItem: Hashable, Sendable {
   public let task: TaskItem
   public let trace: Trace
+  /// A deadline due inside the week, on an open task.
   public let hasDueBadge: Bool
+  /// Completed on its day: drawn checked and dimmed.
+  public let isCompleted: Bool
 }
 
 public struct WeekDay: Hashable, Sendable {
   public let day: Horizon
+  /// The open tasks placed on the day, then the tasks completed on it, each in source order.
   public let items: [WeekItem]
+  /// The positive estimates of the open items, summed; `Int.max` instead of an overflow.
+  public let estimateMinutes: Int
+
+  public var doneCount: Int { items.filter(\.isCompleted).count }
 }
 
+/// A line's cell in Week's strip; paused lines and Life ops have none (owner, 2026-11-27).
 public struct LineWeekHeader: Hashable, Sendable {
   public let line: LineAssignment
   public let thisWeek: WeekCounts
   public let previousAverage: WeekAverage
+  /// The store holds a completed occurrence of the line: rhythm applies (owner, 2026-11-27).
+  public let hasRhythm: Bool
+  /// The store holds a completed one-off task of the line: progress applies. Neither: the
+  /// line has no completion in the store.
+  public let hasProgress: Bool
 }
 
 public struct WeekOverview: Hashable, Sendable {
@@ -478,6 +492,28 @@ public struct Overview: Sendable {
 
   // MARK: Week
 
+  /// Planned, else defer, else due (effective dates): where Week places a task.
+  private static func weekAnchor(_ task: TaskItem) -> Date? {
+    task.effectivePlannedAt ?? task.effectiveDeferUntil ?? task.effectiveDueAt
+  }
+
+  /// The tasks Week's columns and its No plan tray place, and Estimated this week sums (owner,
+  /// 2026-11-12, 2026-11-13 and 2026-11-27; `docs/specs/phase-1-see.md` → S4-2a, S5-1): open
+  /// leaf tasks (not the parent of another available or blocked task), available, or blocked
+  /// with an effective defer date after now, outside on-hold projects. The store cannot tell
+  /// a deferred task from one a sequential project blocks, so that clause stands in for
+  /// "blocked only by its own defer date". In source order.
+  private var weekTasks: [TaskItem] {
+    let open = workspace.tasks.filter { $0.status == .available || $0.status == .blocked }
+    let parents = Set(open.compactMap(\.parentTaskID))
+    let onHold = Set(workspace.projects.filter { $0.status == .onHold }.map(\.id))
+    return open.filter { task in
+      if parents.contains(task.id) { return false }
+      if let project = task.projectID, onHold.contains(project) { return false }
+      return task.status == .available || (task.effectiveDeferUntil.map { $0 > now } ?? false)
+    }
+  }
+
   public func week() -> WeekOverview {
     let week = ISOWeek(containing: now, calendar: calendar)
     let range = week.horizon(calendar: calendar) ?? day(containing: now)
@@ -485,31 +521,56 @@ public struct Overview: Sendable {
       .map { day(containing: $0) }
     let activeLines = Set(workspace.lines.filter { $0.state == .active }.map(\.id))
 
-    var items: [[WeekItem]] = Array(repeating: [], count: days.count)
+    var open: [[WeekItem]] = Array(repeating: [], count: days.count)
+    var done: [[WeekItem]] = Array(repeating: [], count: days.count)
     var noPlan: [WeekItem] = []
-    for task in available {
-      guard
-        let anchor = task.effectivePlannedAt ?? task.effectiveDeferUntil ?? task.effectiveDueAt
-      else {
-        if case .line(let id) = task.line, activeLines.contains(id) {
-          noPlan.append(WeekItem(task: task, trace: tracer.trace(task), hasDueBadge: false))
+    for task in weekTasks {
+      guard let anchor = Self.weekAnchor(task) else {
+        if task.status == .available, case .line(let id) = task.line, activeLines.contains(id) {
+          noPlan.append(
+            WeekItem(task: task, trace: tracer.trace(task), hasDueBadge: false, isCompleted: false))
         }
         continue
       }
       guard let index = days.firstIndex(where: { $0.contains(anchor) }) else { continue }
-      items[index].append(
+      open[index].append(
         WeekItem(
           task: task, trace: tracer.trace(task),
-          hasDueBadge: (task.effectiveDueAt.map(range.contains) ?? false) && isDeadline(task)))
+          hasDueBadge: (task.effectiveDueAt.map(range.contains) ?? false) && isDeadline(task),
+          isCompleted: false))
+    }
+    // A completion sits on its day, up to today, whatever its dates (owner, 2026-11-27).
+    for task in workspace.tasks where task.status == .completed {
+      guard let completed = task.completedAt,
+        let index = days.firstIndex(where: { $0.contains(completed) }), days[index].start <= now
+      else { continue }
+      done[index].append(
+        WeekItem(task: task, trace: tracer.trace(task), hasDueBadge: false, isCompleted: true))
+    }
+
+    var rhythmLines: Set<LineAssignment> = []
+    var progressLines: Set<LineAssignment> = []
+    for task in workspace.tasks where task.status == .completed && task.completedAt != nil {
+      if task.isOccurrence {
+        rhythmLines.insert(task.line)
+      } else {
+        progressLines.insert(task.line)
+      }
     }
     return WeekOverview(
       week: week,
-      days: zip(days, items).map { WeekDay(day: $0, items: $1) },
+      days: days.indices.map { index in
+        WeekDay(
+          day: days[index], items: open[index] + done[index],
+          estimateMinutes: Self.estimateSum(open[index].map { $0.task.estimateMinutes }))
+      },
       noPlan: noPlan,
-      header: lineOrder.map { line in
-        LineWeekHeader(
+      header: workspace.lines.filter { $0.state != .paused }.map { line in
+        let line = LineAssignment.line(line.id)
+        return LineWeekHeader(
           line: line, thisWeek: stats.counts(line, in: week),
-          previousAverage: stats.average(line, before: week))
+          previousAverage: stats.average(line, before: week),
+          hasRhythm: rhythmLines.contains(line), hasProgress: progressLines.contains(line))
       })
   }
 
@@ -561,24 +622,16 @@ public struct Overview: Sendable {
   }
 
   /// Estimated this week (owner, 2026-11-12; `docs/specs/phase-1-see.md` → S4-2): the positive
-  /// estimates of each line's open leaf tasks whose anchor (planned, else defer, else due) lies
-  /// in the current week, available, or blocked with a defer date after now, outside on-hold
-  /// projects. The store cannot tell a deferred task from one a sequential project blocks, so
-  /// that clause stands in for "blocked only by its own defer date". Saturating.
+  /// estimates of each line's tasks that Week places in the current week (`weekTasks`).
+  /// Saturating.
   private func estimatedThisWeek() -> [LineAssignment: Int] {
     let week =
       ISOWeek(containing: now, calendar: calendar).horizon(calendar: calendar)
       ?? day(containing: now)
-    let open = workspace.tasks.filter { $0.status == .available || $0.status == .blocked }
-    let parents = Set(open.compactMap(\.parentTaskID))
-    let onHold = Set(workspace.projects.filter { $0.status == .onHold }.map(\.id))
     var totals: [LineAssignment: Int] = [:]
-    for task in open where !parents.contains(task.id) {
-      if let project = task.projectID, onHold.contains(project) { continue }
-      let deferredLater = task.effectiveDeferUntil.map { $0 > now } ?? false
-      if task.status == .blocked && !deferredLater { continue }
+    for task in weekTasks {
       guard
-        let anchor = task.effectivePlannedAt ?? task.effectiveDeferUntil ?? task.effectiveDueAt,
+        let anchor = Self.weekAnchor(task),
         week.contains(anchor), let estimate = task.estimateMinutes, estimate > 0
       else { continue }
       let (total, overflow) = (totals[task.line] ?? 0).addingReportingOverflow(estimate)

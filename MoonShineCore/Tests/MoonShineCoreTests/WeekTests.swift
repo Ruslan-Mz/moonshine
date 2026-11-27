@@ -85,7 +85,8 @@ import Testing
     world.task("Blocked Tuesday", line: violin, status: .blocked, planned: W.date(2026, 9, 29, 9))
     world.task("Sunday 23:30", line: violin, planned: W.date(2026, 10, 4, 23, 30))
     let week = Overview(workspace: world.workspace, now: now).week()
-    #expect(placement(week) == ["Sunday 23:30": [6]])
+    // A completion sits on its day since S5-1 (owner, 2026-11-27).
+    #expect(placement(week) == ["Done Tuesday": [1], "Sunday 23:30": [6]])
   }
 
   @Test func noPlanTrayHoldsUndatedAvailableTasksInActiveLinesOnly() {
@@ -110,8 +111,123 @@ import Testing
       world.task("Etude \(day)", line: violin, completed: W.date(2026, 9, day))
     }
     let header = Overview(workspace: world.workspace, now: now).week().header
-    #expect(header.map(\.line) == [violin, piano, .lifeOps])
+    // Life ops has no strip cell (owner, 2026-11-27).
+    #expect(header.map(\.line) == [violin, piano])
     #expect(header.first?.thisWeek == WeekCounts(rhythm: 1))
     #expect(header.first?.previousAverage == WeekAverage(rhythm: 0, progress: 1))
+  }
+
+  // MARK: S5-1 (owner, 2026-11-27)
+
+  @Test func onlyLeafTasksArePlaced() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    let group = world.task("Group", line: violin, planned: W.date(2026, 9, 29, 9))
+    world.task("Step", line: violin, parent: group.id, planned: W.date(2026, 9, 29, 9))
+    let undated = world.task("Undated group", line: violin)
+    world.task("Undated step", line: violin, parent: undated.id)
+    let week = Overview(workspace: world.workspace, now: now).week()
+    #expect(placement(week) == ["Step": [1]])
+    #expect(week.noPlan.map { $0.task.title } == ["Undated step"])
+  }
+
+  @Test func blockedTasksArePlacedOnlyWhenDeferredPastNow() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.task(
+      "Deferred Friday", line: violin, status: .blocked, defer: W.date(2026, 10, 2, 9))
+    world.task(
+      "Deferred Monday, still blocked", line: violin, status: .blocked,
+      defer: W.date(2026, 9, 28, 9))
+    world.task(
+      "Blocked, planned Thursday", line: violin, status: .blocked,
+      planned: W.date(2026, 10, 1, 9))
+    let week = Overview(workspace: world.workspace, now: now).week()
+    #expect(placement(week) == ["Deferred Friday": [4]])
+  }
+
+  @Test func onHoldProjectsAreInNoColumnAndNotInTheTray() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    let held = world.project("Held", line: violin, status: .onHold)
+    let active = world.project("Active", line: violin)
+    world.task("Held, Thursday", line: violin, project: held.id, planned: W.date(2026, 10, 1, 9))
+    world.task("Held, undated", line: violin, project: held.id)
+    world.task("Active, undated", line: violin, project: active.id)
+    let week = Overview(workspace: world.workspace, now: now).week()
+    #expect(placement(week).isEmpty)
+    #expect(week.noPlan.map { $0.task.title } == ["Active, undated"])
+  }
+
+  @Test func completionsSitOnTheirDayAfterTheOpenTasks() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.task(
+      "Done Monday, planned Friday", line: violin, planned: W.date(2026, 10, 2, 9),
+      completed: W.date(2026, 9, 28, 10))
+    world.task("Open Monday", line: violin, planned: W.date(2026, 9, 28, 18))
+    world.task("Done today", line: .lifeOps, completed: W.date(2026, 9, 30, 9))
+    world.task(
+      "Done last week, planned Tuesday", line: violin, planned: W.date(2026, 9, 29, 9),
+      completed: W.date(2026, 9, 25, 10))
+    let week = Overview(workspace: world.workspace, now: now).week()
+    #expect(placement(week) == ["Done Monday, planned Friday": [0], "Open Monday": [0], "Done today": [2]])
+    #expect(week.days[0].items.map { $0.task.title } == ["Open Monday", "Done Monday, planned Friday"])
+    #expect(week.days[0].items.map(\.isCompleted) == [false, true])
+    #expect(week.days.map(\.doneCount) == [1, 0, 1, 0, 0, 0, 0])
+  }
+
+  @Test func aCompletedDeadlineHasNoBadge() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.task(
+      "Due Tuesday, done Monday", line: violin, due: W.date(2026, 9, 29, 18),
+      completed: W.date(2026, 9, 28, 10))
+    let items = Overview(workspace: world.workspace, now: now).week().days.flatMap(\.items)
+    #expect(items.map(\.hasDueBadge) == [false])
+  }
+
+  @Test func dayEstimatesSumTheOpenItemsPositiveEstimatesSaturating() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    let tuesday = W.date(2026, 9, 29, 9)
+    world.task("A", line: violin, planned: tuesday, estimate: 20)
+    world.task("B", line: violin, planned: tuesday)
+    world.task("C", line: violin, planned: tuesday, estimate: 30)
+    world.task("D", line: violin, planned: tuesday, estimate: -5)
+    world.task("Done", line: violin, planned: tuesday, estimate: 50, completed: tuesday)
+    world.task("Huge", line: violin, planned: W.date(2026, 10, 1, 9), estimate: .max)
+    world.task("More", line: violin, planned: W.date(2026, 10, 1, 9), estimate: 5)
+    let days = Overview(workspace: world.workspace, now: now).week().days
+    #expect(days.map(\.estimateMinutes) == [0, 50, 0, .max, 0, 0, 0])
+  }
+
+  @Test func stripLeavesOutPausedLinesAndSaysWhichSeriesApply() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    let piano = LineAssignment.line(world.line("piano").id)
+    let japanese = LineAssignment.line(world.line("japanese").id)
+    world.line("italian", state: .paused)
+    world.session("Scales", line: violin, at: W.date(2026, 8, 3))
+    world.task("Sonatina", line: piano, completed: W.date(2026, 9, 2))
+    world.task("Kana", line: japanese)
+    let header = Overview(workspace: world.workspace, now: now).week().header
+    #expect(header.map(\.line) == [violin, piano, japanese])
+    #expect(header.map(\.hasRhythm) == [true, false, false])
+    #expect(header.map(\.hasProgress) == [false, true, false])
+  }
+
+  @Test func aDaylightSavingWeekHasSevenLocalDays() throws {
+    // W43 2026 in Riga: summer time ends on Sunday 25 October, a 25-hour day.
+    let riga = TimeZone(identifier: "Europe/Riga")!
+    let calendar = Calendar.iso8601(in: riga)
+    let date = { (d: Int) in
+      calendar.date(from: DateComponents(year: 2026, month: 10, day: d))!
+    }
+    let week = Overview(workspace: Workspace(timeZone: riga), now: date(21)).week()
+    #expect(week.days.map(\.day.start) == (19...25).map(date))
+    let sunday = try #require(week.days.last).day
+    #expect(sunday.end == date(26))
+    #expect(sunday.end.timeIntervalSince(sunday.start) == 25 * 3600)
   }
 }
