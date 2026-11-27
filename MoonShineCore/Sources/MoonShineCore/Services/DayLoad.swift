@@ -108,7 +108,8 @@ public struct DayWindow: Hashable, Sendable {
 /// minutes: event and task bounds and "now" are floored to the minute before the union.
 public struct DayLoad: Hashable, Sendable {
   public let window: DateInterval
-  /// Events shown on the day (Show on, tentative and all-day included); nil without access.
+  /// Event rows shown on the day (Show on, tentative and all-day included), identical copies as
+  /// one; nil without access.
   public let eventCount: Int?
   /// The union of busy events inside the window; nil without access.
   public let inCalendarMinutes: Int?
@@ -175,7 +176,8 @@ public struct DayLoad: Hashable, Sendable {
             taken.compactMap { clip($0.start, $0.end, DateInterval(start: from, end: span.end)) })
       }
     return DayLoad(
-      window: span, eventCount: shown.count, inCalendarMinutes: minutes(busyUnion),
+      window: span, eventCount: EventCopies.collapse(shown).count,
+      inCalendarMinutes: minutes(busyUnion),
       plannedMinutes: minutes(taken) - minutes(busyUnion), freeWholeWindowMinutes: wholeFree,
       freeFromNowMinutes: freeFromNow)
   }
@@ -243,6 +245,11 @@ public struct DayRail: Hashable, Sendable {
   public let marks: [Mark]
   /// At or after the window's end; time order.
   public let below: [Mark]
+  /// How many identical events a shown event stands for, where more than one.
+  public let copies: [CalendarEvent: Int]
+
+  /// 1 for an event that stands for itself alone.
+  public func copies(of event: CalendarEvent) -> Int { copies[event] ?? 1 }
 
   /// `tasks` as for `DayLoad.compute`; `deadlines` are the tasks whose due mark is amber.
   public static func compute(
@@ -259,9 +266,12 @@ public struct DayRail: Hashable, Sendable {
     let span = load.window
     func onDay(_ date: Date) -> Bool { date >= dayInterval.start && date < dayInterval.end }
 
-    let shown = (events.value ?? []).filter {
-      $0.overlaps(dayInterval) && visibility.setting(for: $0.calendarID, kind: $0.calendarKind).show
-    }
+    let rows = EventCopies.collapse(
+      (events.value ?? []).filter {
+        $0.overlaps(dayInterval)
+          && visibility.setting(for: $0.calendarID, kind: $0.calendarKind).show
+      })
+    let shown = rows.map(\.event)
     var items: [Mark] = shown.filter { !$0.isAllDay }.map {
       Mark(kind: .event($0), start: DayLoad.floorMinute($0.start), end: DayLoad.floorMinute($0.end))
     }
@@ -291,7 +301,41 @@ public struct DayRail: Hashable, Sendable {
     return DayRail(
       load: load, allDay: shown.filter(\.isAllDay), above: ordered.filter(isAbove),
       marks: ordered.filter { !isAbove($0) && $0.start < span.end },
-      below: ordered.filter { !isAbove($0) && $0.start >= span.end })
+      below: ordered.filter { !isAbove($0) && $0.start >= span.end },
+      copies: Dictionary(
+        rows.filter { $0.copies > 1 }.map { ($0.event, $0.copies) },
+        uniquingKeysWith: { first, _ in first }))
+  }
+}
+
+/// Events with the same title, start, end and all-day flag, whatever their calendar, are one
+/// row (owner, 2026-11-27): an account that copies one meeting into a calendar three times shows
+/// it once. The first copy in input order stands for the others.
+private struct EventCopies {
+  let event: CalendarEvent
+  var copies: Int
+
+  private struct Key: Hashable {
+    let title: String?
+    let start: Date
+    let end: Date
+    let isAllDay: Bool
+  }
+
+  static func collapse(_ events: [CalendarEvent]) -> [EventCopies] {
+    var rows: [EventCopies] = []
+    var index: [Key: Int] = [:]
+    for event in events {
+      let key = Key(
+        title: event.title, start: event.start, end: event.end, isAllDay: event.isAllDay)
+      if let row = index[key] {
+        rows[row].copies += 1
+      } else {
+        index[key] = rows.count
+        rows.append(EventCopies(event: event, copies: 1))
+      }
+    }
+    return rows
   }
 }
 

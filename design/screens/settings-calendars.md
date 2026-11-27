@@ -38,6 +38,8 @@ A tab in the native `Settings` scene (General · Data · **Calendars** · Refres
 
 Not connected / denied: the list is replaced by one neutral placeholder line (`Calendars appear here after you connect.`).
 
+**Built in S4-3d-2** (owner, 2026-11-27): two tabs in phase 1, Data and Calendars (General and Refresh wait for the usage period). The denied and Add Events Only captions say `Then reopen MoonShine.` after the sentence that names System Settings: macOS shows a new grant to a reopened app (`design/copy.md` § Calendar strings). No state shows before the first read. In Demo the switches act in memory for the session and are never stored, the day window stays `08:00`–`22:00` with its pickers off, and `Open System Settings…` opens nothing. In Live a switch or the window is stored, then read back, so what shows is what is stored. A start at or after the end moves the end a quarter hour after it.
+
 ## Data
 
 - `EKEventStore`, full read access to events (`requestFullAccessToEvents`), no reminders. Per calendar (by `calendarIdentifier`) the app stores **locally**: `show`, `countsAsBusy`, `lineID?`. Day window: one local setting holding its start and end (S4-3d-1).

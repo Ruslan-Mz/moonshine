@@ -4,7 +4,8 @@ import ObsidianAdapter
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Settings (⌘,), applied at once (`design/screens/settings.md`): the Data and Deadlines groups.
+/// Settings (⌘,), applied at once (`design/screens/settings.md`): the Data tab, with the Data and
+/// Deadlines groups, and the Calendars tab (S4-3d-2).
 struct SettingsView: View {
   @Bindable var model: AppModel
   /// The vault picker: `Choose…`, and a switch to Live with no folder chosen (S4-4d).
@@ -21,6 +22,16 @@ struct SettingsView: View {
   }
 
   var body: some View {
+    // Two tabs in phase 1 (owner, 2026-11-27): General and Refresh wait for the usage period.
+    TabView {
+      data.tabItem { Label("Data", systemImage: "externaldrive") }
+      CalendarsSettingsView(model: model)
+        .tabItem { Label("Calendars", systemImage: "calendar") }
+    }
+  }
+
+  /// The Data and Deadlines groups.
+  private var data: some View {
     Form {
       Section("Data") {
         Picker(

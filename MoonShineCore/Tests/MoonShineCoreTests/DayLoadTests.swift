@@ -22,10 +22,10 @@ struct RigaDay {
   static func event(
     _ start: Date, _ end: Date, calendar: CalendarID = work, kind: CalendarKind = .other,
     allDay: Bool = false,
-    display: EventDisplay = .normal, occupies: Bool = true
+    display: EventDisplay = .normal, occupies: Bool = true, title: String? = nil
   ) -> CalendarEvent {
     CalendarEvent(
-      id: UUID().uuidString, calendarID: calendar, calendarKind: kind, title: nil, start: start,
+      id: UUID().uuidString, calendarID: calendar, calendarKind: kind, title: title, start: start,
       end: end,
       isAllDay: allDay, display: display, occupiesTime: occupies)!
   }
@@ -423,6 +423,67 @@ extension RigaDay {
     let rail = R.rail([allDay, work])
     #expect(rail.allDay == [allDay])
     #expect(rail.marks.map { R.describe($0) } == ["event 13:00–14:00"])
+  }
+
+  // MARK: Identical events (owner, 2026-11-27): one row, whatever their calendar
+
+  static let copy = "Invented sync"
+  static let home = CalendarID("home")
+
+  @Test func threeIdenticalCopiesAreOneRowOfThree() {
+    let copies = (0..<3).map { _ in R.event(R.at(13), R.at(14), title: Self.copy) }
+    let rail = R.rail(copies)
+    #expect(rail.marks.map { R.describe($0) } == ["event 13:00–14:00"])
+    guard case .event(let shown) = rail.marks.first?.kind else {
+      Issue.record("no event row")
+      return
+    }
+    #expect(shown == copies[0])
+    #expect(rail.copies(of: shown) == 3)
+    // `N events` counts rows.
+    #expect(rail.load.eventCount == 1)
+    #expect(R.load(copies).eventCount == 1)
+  }
+
+  @Test func anotherEndOrTitleIsAnotherRow() {
+    let first = R.event(R.at(13), R.at(14), title: Self.copy)
+    let longer = R.event(R.at(13), R.at(14, 30), title: Self.copy)
+    let renamed = R.event(R.at(13), R.at(14), title: "Invented other")
+    for pair in [[first, longer], [first, renamed]] {
+      let rail = R.rail(pair)
+      #expect(rail.marks.count == 2)
+      #expect(rail.copies.isEmpty)
+      #expect(rail.load.eventCount == 2)
+    }
+  }
+
+  /// Another calendar's copy counts; a hidden calendar's is left out before the collapse.
+  @Test func copiesAcrossCalendarsAndAHiddenOne() {
+    let work = R.event(R.at(13), R.at(14), title: Self.copy)
+    let home = R.event(R.at(13), R.at(14), calendar: Self.home, title: Self.copy)
+    #expect(R.rail([work, home]).copies(of: work) == 2)
+    let hidden = CalendarVisibility([Self.home: CalendarSetting(show: false, countsAsBusy: true)])
+    let rail = R.rail([work, home], visibility: hidden)
+    #expect(rail.marks.count == 1)
+    #expect(rail.copies.isEmpty)
+    #expect(rail.copies(of: work) == 1)
+  }
+
+  @Test func allDayCopiesAreOneRow() {
+    let copies = (0..<2).map { _ in
+      R.event(R.at(0), R.at(0, day: 2), allDay: true, title: Self.copy)
+    }
+    let rail = R.rail(copies)
+    #expect(rail.allDay == [copies[0]])
+    #expect(rail.copies(of: copies[0]) == 2)
+  }
+
+  @Test func theBusyTotalIsOneCopys() {
+    let one = R.load([R.event(R.at(13), R.at(14), title: Self.copy)])
+    let three = R.load((0..<3).map { _ in R.event(R.at(13), R.at(14), title: Self.copy) })
+    #expect(three.inCalendarMinutes == one.inCalendarMinutes)
+    #expect(three.freeWholeWindowMinutes == one.freeWholeWindowMinutes)
+    #expect(three.inCalendarMinutes == 60)
   }
 
   @Test func anotherDaysTimesGiveNoMark() {

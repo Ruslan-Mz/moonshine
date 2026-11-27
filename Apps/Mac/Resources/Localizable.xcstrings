@@ -309,6 +309,58 @@
         }
       }
     },
+    "%lld copies of this event": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld copy of this event"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld copies of this event"
+                }
+              }
+            }
+          }
+        },
+        "ru": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld копия этого события"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld копии этого события"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld копий этого события"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld копии этого события"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld days ago": {
       "localizations": {
         "en": {
@@ -881,6 +933,22 @@
         }
       }
     },
+    "Access denied": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Access denied"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Доступ запрещён"
+          }
+        }
+      }
+    },
     "Active this season": {
       "localizations": {
         "en": {
@@ -977,6 +1045,22 @@
         }
       }
     },
+    "Calendar access": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calendar access"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Доступ к календарю"
+          }
+        }
+      }
+    },
     "Calendar access is off for MoonShine.": {
       "localizations": {
         "en": {
@@ -989,6 +1073,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Доступ к календарю для MoonShine выключен."
+          }
+        }
+      }
+    },
+    "Calendar access is off for MoonShine. Allow it in System Settings → Privacy & Security → Calendars. Then reopen MoonShine. Today, Week and Month work without events.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calendar access is off for MoonShine. Allow it in System Settings → Privacy & Security → Calendars. Then reopen MoonShine. Today, Week and Month work without events."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Доступ к календарю для MoonShine выключен. Включите его в Системных настройках → Конфиденциальность и безопасность → Календари. Затем перезапустите MoonShine. «Сегодня», «Неделя» и «Месяц» работают без событий."
+          }
+        }
+      }
+    },
+    "Calendar access is restricted on this device, for example by a device-management profile. Today, Week and Month work without events.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calendar access is restricted on this device, for example by a device-management profile. Today, Week and Month work without events."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Доступ к календарю на этом устройстве ограничен, например профилем управления. «Сегодня», «Неделя» и «Месяц» работают без событий."
           }
         }
       }
@@ -1009,6 +1125,38 @@
         }
       }
     },
+    "Calendars": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calendars"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Календари"
+          }
+        }
+      }
+    },
+    "Calendars appear here after you connect.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calendars appear here after you connect."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Календари появятся здесь после подключения."
+          }
+        }
+      }
+    },
     "Can't be read — choose it again": {
       "localizations": {
         "en": {
@@ -1021,6 +1169,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Не читается — выберите его снова"
+          }
+        }
+      }
+    },
+    "Can't read events": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't read events"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет доступа к событиям"
           }
         }
       }
@@ -1073,6 +1237,22 @@
         }
       }
     },
+    "Connected": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подключено"
+          }
+        }
+      }
+    },
     "Could not open it": {
       "localizations": {
         "en": {
@@ -1121,6 +1301,22 @@
         }
       }
     },
+    "Counts as busy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Counts as busy"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Считать занятым"
+          }
+        }
+      }
+    },
     "Data": {
       "localizations": {
         "en": {
@@ -1149,6 +1345,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "День"
+          }
+        }
+      }
+    },
+    "Day window": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Day window"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Окно дня"
           }
         }
       }
@@ -1349,6 +1561,22 @@
         }
       }
     },
+    "End": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Конец"
+          }
+        }
+      }
+    },
     "Estimate": {
       "localizations": {
         "en": {
@@ -1381,6 +1609,22 @@
         }
       }
     },
+    "Events stay on this device. They are not synced by MoonShine.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Events stay on this device. They are not synced by MoonShine."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "События остаются на этом устройстве. MoonShine их не синхронизирует."
+          }
+        }
+      }
+    },
     "First step": {
       "localizations": {
         "en": {
@@ -1409,6 +1653,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Фундамент"
+          }
+        }
+      }
+    },
+    "Free time = day window − time in calendars that count as busy − tasks with a planned time and an estimate. Today counts from now to the end of the window. Overlaps count once. Tentative, all-day and free events are shown but not counted; declined, delegated and cancelled events are hidden.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Free time = day window − time in calendars that count as busy − tasks with a planned time and an estimate. Today counts from now to the end of the window. Overlaps count once. Tentative, all-day and free events are shown but not counted; declined, delegated and cancelled events are hidden."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Свободное время = окно дня − время в календарях, которые считаются занятыми, − задачи с запланированным временем и оценкой. «Сегодня» считается от текущего момента до конца окна. Пересечения считаются один раз. События «под вопросом», на весь день и «свободно» показываются, но не считаются; отклонённые, делегированные и отменённые скрыты."
           }
         }
       }
@@ -1669,6 +1929,22 @@
         }
       }
     },
+    "MoonShine asks macOS for read-only access. Nothing is created or edited. The app works fully without it.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine asks macOS for read-only access. Nothing is created or edited. The app works fully without it."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine запросит у macOS доступ только на чтение. Ничего не создаётся и не меняется. Приложение полностью работает и без него."
+          }
+        }
+      }
+    },
     "MoonShine can only read calendars with Full Access.": {
       "localizations": {
         "en": {
@@ -1681,6 +1957,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "MoonShine читает календари только с полным доступом."
+          }
+        }
+      }
+    },
+    "MoonShine can only read calendars with Full Access. Change it in System Settings → Privacy & Security → Calendars. Then reopen MoonShine. Today, Week and Month work without events.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine can only read calendars with Full Access. Change it in System Settings → Privacy & Security → Calendars. Then reopen MoonShine. Today, Week and Month work without events."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine читает календари только с полным доступом. Измените это в Системных настройках → Конфиденциальность и безопасность → Календари. Затем перезапустите MoonShine. «Сегодня», «Неделя» и «Месяц» работают без событий."
           }
         }
       }
@@ -1729,6 +2021,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "MoonShine только читает хранилище; папка запоминается закладкой"
+          }
+        }
+      }
+    },
+    "MoonShine reads events through macOS (EventKit), read-only.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine reads events through macOS (EventKit), read-only."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MoonShine читает события через macOS (EventKit), только чтение."
           }
         }
       }
@@ -1881,6 +2189,22 @@
         }
       }
     },
+    "Not available": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not available"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Недоступно"
+          }
+        }
+      }
+    },
     "Not chosen": {
       "localizations": {
         "en": {
@@ -1909,6 +2233,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Не выполнено"
+          }
+        }
+      }
+    },
+    "Not connected": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not connected"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не подключено"
           }
         }
       }
@@ -2181,6 +2521,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Открыть Системные настройки"
+          }
+        }
+      }
+    },
+    "Open System Settings…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open System Settings…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открыть Системные настройки…"
           }
         }
       }
@@ -2669,6 +3025,22 @@
         }
       }
     },
+    "Show": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показывать"
+          }
+        }
+      }
+    },
     "Show All Flagged Tasks": {
       "localizations": {
         "en": {
@@ -2777,6 +3149,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Источник"
+          }
+        }
+      }
+    },
+    "Start": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Начало"
           }
         }
       }
@@ -2993,6 +3381,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Файл соответствий не читается — исправьте его, затем завершите MoonShine (⌘Q) и откройте снова"
+          }
+        }
+      }
+    },
+    "Then reopen MoonShine.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Then reopen MoonShine."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Затем перезапустите MoonShine."
           }
         }
       }
