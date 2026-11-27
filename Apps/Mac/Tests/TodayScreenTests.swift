@@ -509,9 +509,13 @@ private struct NotLoaded: Error {}
     #expect(italian.lastTitle == lastTask.title)
     #expect(italian.next?.title == next.title)
     #expect(italian.next?.estimateMinutes == next.estimateMinutes)
+    // "Open in OmniFocus" opens that task (S4-5).
+    #expect(italian.next?.id == next.id)
     #expect(!screen.railIsEmpty)
     // `Q4 focus · 2 of 5 done`, each artifact with its line's emoji.
     let focus = try #require(screen.quarterFocus)
+    // "Open quarter note" opens Core's quarter note (S4-5).
+    #expect(focus.note == overview.today().quarterFocus?.note.id)
     #expect(focus.quarter == 4)
     #expect(focus.done == 2)
     #expect(focus.rows.map(\.emoji) == ["🎻", "🤖", "🔬", "📐", "💪"])

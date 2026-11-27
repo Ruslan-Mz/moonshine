@@ -21,14 +21,17 @@ struct LineDetailDestination: View {
   @Binding var path: [LineID]
 
   var body: some View {
+    let screen = LineDetailScreen(overview, line: id)
     Group {
-      if let screen = LineDetailScreen(overview, line: id) {
+      if let screen {
         LineDetailView(screen: screen)
       } else {
         // A line that left the workspace while its detail was open.
         ContentUnavailableView("This line is not in the data shown.", systemImage: "tray")
       }
     }
+    // ⌘↵'s project (`OpenCommands`).
+    .focusedSceneValue(\.lineProject, OpenCommands.target(screen))
     .navigationBarBackButtonHidden()
     .toolbar {
       ToolbarItem(placement: .navigation) {
@@ -45,10 +48,12 @@ struct LineDetailDestination: View {
 }
 
 /// `design/screens/line-detail.md`, draft-1 for S4-2b: header, the two cards, Projects, Next
-/// actions; the inspector holds the parent and the last completions. Opening a task or a note
-/// comes with the link opener (S4-5).
+/// actions; the inspector holds the parent and the last completions. A double-click on a row
+/// opens it in OmniFocus, the toolbar opens the line's first project, the parent card its note
+/// in Obsidian (S4-5).
 struct LineDetailView: View {
   let screen: LineDetailScreen
+  @Environment(\.openTarget) private var openTarget
   /// Shown by default, as Today's rail; ⌃⌘I hides it (`InspectorCommands`).
   @SceneStorage("lineDetail.inspectorShown") private var inspectorShown = true
 
@@ -75,6 +80,15 @@ struct LineDetailView: View {
           min: LineDetailColumns.inspectorMinimum, ideal: LineDetailColumns.inspectorIdeal)
     }
     .toolbar {
+      // The line's first project, as ⌘↵: a folder or tag perspective is not on the
+      // allowlist, and the store keeps no folder ids (owner, 2026-11-25).
+      Button {
+        if let project = OpenCommands.target(screen) { openTarget(project) }
+      } label: {
+        Label("Open in OmniFocus", systemImage: "arrow.up.forward.app")
+      }
+      .help(Text("Open in OmniFocus"))
+      .disabled(OpenCommands.target(screen) == nil)
       Button {
         inspectorShown.toggle()
       } label: {
@@ -134,6 +148,7 @@ struct LineDetailView: View {
               Text(row.nextActions, format: .number).monospacedDigit()
               remaining(row.remainingMinutes)
             }
+            .opensOnDoubleClick(.project(row.id))
           }
         }
       }
@@ -166,6 +181,7 @@ struct LineDetailView: View {
               EstimateText(minutes: row.estimateMinutes)
               LineDetailWhenText(when: row.when, today: screen.today, timeZone: screen.timeZone)
             }
+            .opensOnDoubleClick(.task(row.id))
           }
         }
       }
@@ -267,6 +283,7 @@ private struct LineDetailWhenText: View {
 private struct LineDetailInspector: View {
   let screen: LineDetailScreen
   @Environment(\.locale) private var locale
+  @Environment(\.openTarget) private var openTarget
 
   var body: some View {
     ScrollView {
@@ -288,6 +305,7 @@ private struct LineDetailInspector: View {
                 }
               }
               .font(.callout)
+              .opensOnDoubleClick(.task(row.id))
             }
           }
         }
@@ -322,6 +340,9 @@ private struct LineDetailInspector: View {
           }
         }
         .font(.callout)
+        if let note = parent.note {
+          Button("Open in Obsidian") { openTarget(.note(note)) }
+        }
       }
       .padding(14)
       .frame(maxWidth: .infinity, alignment: .leading)

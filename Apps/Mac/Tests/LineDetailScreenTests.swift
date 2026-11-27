@@ -144,7 +144,7 @@ import Testing
     #expect(screen.weeks.count == Overview.sparklineWeeks)
   }
 
-  /// The artifact's card takes its year note's horizon and path; a parent note its own.
+  /// The artifact's card takes its year note's horizon, path and note; a parent note its own.
   @Test func theParentCardIsTheArtifactOrTheParentNote() throws {
     let year = try #require(Horizon.containing(Self.now, scale: .year, calendar: Self.calendar))
     let quarter = try #require(
@@ -173,13 +173,13 @@ import Testing
       violin.parent
         == .init(
           isArtifact: true, title: "Spring recital", horizon: .year(2026),
-          path: "Years/Artifacts_2026.md"))
+          path: "Years/Artifacts_2026.md", note: yearNote.id))
     let note = try #require(LineDetailScreen(overview, line: sketching.id))
     #expect(
       note.parent
         == .init(
           isArtifact: false, title: "Q3 2026", horizon: .quarter(3, year: 2026),
-          path: "Years/Q3_2026.md"))
+          path: "Years/Q3_2026.md", note: quarterNote.id))
   }
 
   // MARK: Columns
@@ -212,5 +212,29 @@ import Testing
     #expect(screen.projects.first?.kind == .repeatingSessions)
     #expect(screen.completions.count == Overview.completionsShown)
     #expect(screen.parent?.isArtifact == true)
+  }
+
+  // MARK: ⌘O (owner, 2026-11-26)
+
+  @MainActor @Test func openInOmniFocusTargetsTheFirstProjectInProjectsOrder() async throws {
+    let overview = try await demoOverview()
+    let violin = try #require(overview.workspace.lines.first { $0.key == "violin" })
+    let screen = try #require(LineDetailScreen(overview, line: violin.id))
+    let first = try #require(screen.projects.first)
+    #expect(screen.projects.count > 1)
+    #expect(OpenCommands.target(screen) == .project(first.id))
+  }
+
+  @Test func aLineWithNoProjectHasNoOpenTarget() throws {
+    let overview = Overview(
+      workspace: Workspace(timeZone: Self.zone, lines: [Self.violin]), now: Self.now)
+    let screen = try #require(LineDetailScreen(overview, line: Self.violin.id))
+    #expect(screen.projects.isEmpty)
+    #expect(OpenCommands.target(screen) == nil)
+  }
+
+  /// No Line detail: a line that left the workspace; other screens never set the value.
+  @Test func withoutALineDetailThereIsNoOpenTarget() {
+    #expect(OpenCommands.target(nil) == nil)
   }
 }

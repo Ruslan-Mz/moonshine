@@ -12,7 +12,7 @@ Example: 🎻 Violin.
 
 ## Layout
 
-Toolbar: breadcrumb `Lines › 🎻 Violin`, subtitle `Line detail · 4 projects · 9 next actions`, button "Open in OmniFocus" (opens the line's folder or tag perspective if possible, else the first project; with the link opener, S4-5, not built in S4-2b).
+Toolbar: breadcrumb `Lines › 🎻 Violin`, subtitle `Line detail · 4 projects · 9 next actions`, button "Open in OmniFocus" (opens the line's folder or tag perspective if possible, else the first project). As built in S4-5 (owner, 2026-11-25): it opens the line's first project in Projects order, `omnifocus:///project/<id>`, and is disabled when the line has none. Its menu command, Open in OmniFocus with ⌘↵ beside Refresh (⌘R), opens the same project and is enabled only here (owner, 2026-11-26; ⌘↵ opens in the other app everywhere, `design/principles.md`). OmniFocus's Copy as Link also has `omnifocus:///folder/<id>` (checked by the owner, 2026-11-25), but opening a folder-mapped line's folder waits for the usage period: it needs folder ids in the store (it keeps only `folderPath`), an ADR-0015 amendment adding `omnifocus:///folder/<id>` to the allowlist, and its tests; a folder often holds several lines (`docs/discovery/snapshot-contract.md:162-164`, rule 4). A tag perspective has no URL on the allowlist.
 
 Main (scroll):
 
@@ -23,7 +23,7 @@ Main (scroll):
 
 Inspector 360, shown by default; ⌃⌘I and the toolbar button hide and show it (S4-2b):
 
-- **Parent artifact** card: label, title 17 bold, description, Horizon / Target / Note path grid, button "Open in Obsidian". As built in S4-2b (owner, 2026-11-16): label (`Parent artifact`, or `Parent note` when the thread ends at a note), title, and a Horizon / Note grid. **Horizon**, two cases: a parent artifact shows the year of the year note that holds it, `2026 · year` (artifacts come only from year notes, and the vault contract gives an artifact no period of its own, `docs/discovery/vault-contract.md` § 2.1); a parent note shows its own period, `2026 · year` or `Q3 2026 · quarter`, and a note of another scale shows no Horizon row. No Target row (a target year on an artifact may come later, together with milestones) and **no Status row**. "Open in Obsidian" comes with the link opener (S4-5). The mockup's `2027 · year`, `Target May 2027`, description paragraph and per-artifact Note path are stale (`README.md` § Pending design rounds, Before 3b); this spec wins.
+- **Parent artifact** card: label, title 17 bold, description, Horizon / Target / Note path grid, button "Open in Obsidian". As built in S4-2b (owner, 2026-11-16): label (`Parent artifact`, or `Parent note` when the thread ends at a note), title, and a Horizon / Note grid. **Horizon**, two cases: a parent artifact shows the year of the year note that holds it, `2026 · year` (artifacts come only from year notes, and the vault contract gives an artifact no period of its own, `docs/discovery/vault-contract.md` § 2.1); a parent note shows its own period, `2026 · year` or `Q3 2026 · quarter`, and a note of another scale shows no Horizon row. No Target row (a target year on an artifact may come later, together with milestones) and **no Status row**. "Open in Obsidian" opens the artifact's year note, or the parent note, through the link opener (built in S4-5). The mockup's `2027 · year`, `Target May 2027`, description paragraph and per-artifact Note path are stale (`README.md` § Pending design rounds, Before 3b); this spec wins.
 - **Last 10 completions**: date (`Today`, `Wed 30 Sep`) · title · tag (`session` rhythm colour / `task` progress colour).
 
 ## Data
@@ -35,7 +35,8 @@ Tasks with the reminder tag (ADR-0017, S4 bridge) are in none of these: not in n
 ## Acceptance
 
 - [x] Two separate charts; the average is a dashed rule, not a third series (S4-2b).
-- [ ] "Open in Obsidian" uses `obsidian://open?vault=…&file=…` (with the link opener, S4-5).
+- [x] "Open in Obsidian" uses `obsidian://open?vault=…&file=…` (with the link opener, S4-5).
+- Rows (S4-5, owner 2026-11-25): a double-click on a Projects, Next actions or Last 10 completions row opens it in OmniFocus. The keyboard path to those rows (selection, ↵) moves to S5 polish. ⌘↵ (Open in OmniFocus) is the keyboard path to the line's project (owner, 2026-11-26).
 - [x] The kind "plan · 4 steps" appears only once plans exist (phase 2); in phase 1 show `one-off tasks` / `repeating sessions` (S4-2b).
 
 ## Calendar (draft-3)

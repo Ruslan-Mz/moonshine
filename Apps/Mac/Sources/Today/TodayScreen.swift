@@ -61,6 +61,8 @@ struct TodayScreen: Equatable {
 
   /// The line's first available next action in source order (owner, 2026-10-24).
   struct NextStep: Hashable {
+    /// The task "Open in OmniFocus" opens (S4-5).
+    let id: TaskItemID
     let title: String
     let estimateMinutes: Int?
   }
@@ -99,6 +101,8 @@ struct TodayScreen: Equatable {
       let isDone: Bool
     }
 
+    /// The quarter note "Open quarter note" opens (S4-5).
+    let note: NoteID
     /// 1–4, from the note's period in the workspace's time zone.
     let quarter: Int
     let rows: [Row]
@@ -241,7 +245,7 @@ struct TodayScreen: Equatable {
     var noActivity: [NoActivity] = []
     for line in today.quietLines {
       let next = line.nextStep.map {
-        NextStep(title: $0.title, estimateMinutes: $0.estimateMinutes)
+        NextStep(id: $0.id, title: $0.title, estimateMinutes: $0.estimateMinutes)
       }
       switch line.reason {
       case .quiet(let days, let last):
@@ -264,7 +268,7 @@ struct TodayScreen: Equatable {
       guard let start = focus.note.period?.start else { return nil }
       let month = overview.calendar.component(.month, from: start)
       return QuarterFocus(
-        quarter: (month - 1) / 3 + 1,
+        note: focus.note.id, quarter: (month - 1) / 3 + 1,
         rows: focus.artifacts.map { artifact in
           QuarterFocus.Row(
             id: artifact.id, emoji: artifact.lineIDs.lazy.compactMap { lines[$0]?.emoji }.first,

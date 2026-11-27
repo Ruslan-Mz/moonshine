@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// `design/components.md` § AnchorStrip: the count covers every anchor of today, the chips
-/// the first five. Read-only in phase 1; opening a task comes with the link opener (S4-5).
+/// the first five. Read-only in phase 1; a click on a chip opens its task in OmniFocus (S4-5).
 struct AnchorStrip: View {
   let anchors: [TodayScreen.Anchor]
   let total: Int
@@ -29,22 +29,33 @@ private struct AnchorChip: View {
     [anchor.title, anchor.emoji].compactMap { $0 }.joined(separator: " ")
   }
 
+  @Environment(\.openTarget) private var openTarget
+
+  /// Read-only: a click opens the task in OmniFocus (`components.md` § AnchorStrip).
   var body: some View {
-    HStack(spacing: 5) {
-      Checkbox(isDone: anchor.isDone).font(.system(size: 14))
-      Text(TodayFormat.chipTitle(anchor.title))
-        .lineLimit(1)
-        .foregroundStyle(anchor.isDone ? Tokens.doneText : Color.primary)
-      if let emoji = anchor.emoji { Text(verbatim: emoji) }
+    Button {
+      openTarget(.task(anchor.id))
+    } label: {
+      HStack(spacing: 5) {
+        Checkbox(isDone: anchor.isDone).font(.system(size: 14))
+        Text(TodayFormat.chipTitle(anchor.title))
+          .lineLimit(1)
+          .foregroundStyle(anchor.isDone ? Tokens.doneText : Color.primary)
+        if let emoji = anchor.emoji { Text(verbatim: emoji) }
+      }
+      .font(.system(size: 12.5))
+      .padding(.vertical, 3)
+      .padding(.horizontal, 8)
+      .background(Tokens.chipFill, in: RoundedRectangle(cornerRadius: 6))
+      .contentShape(RoundedRectangle(cornerRadius: 6))
     }
-    .font(.system(size: 12.5))
-    .padding(.vertical, 3)
-    .padding(.horizontal, 8)
-    .background(Tokens.chipFill, in: RoundedRectangle(cornerRadius: 6))
+    .buttonStyle(.plain)
     // The full title, where the chip shows it cut (owner, 2026-11-24); never a catalog key.
     .help(Text(verbatim: anchor.title))
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(Text(verbatim: spoken))
     .accessibilityValue(anchor.isDone ? Text("Completed") : Text("Not completed"))
+    .accessibilityHint(Text("Opens in OmniFocus"))
+    .accessibilityAddTraits(.isButton)
   }
 }

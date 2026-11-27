@@ -4,8 +4,10 @@
 // files, open a database, start a process or script, or change another app's run state, and
 // fails on any outside the allowlist below. From the Write phase the `VaultWriter` implementation joins the allowlist. In `Apps`
 // it also fails on anything that opens a URL: the app opens external URLs through one function
-// with an allowlist of schemes (ADR-0015, amendment of 2026-10-10); that function joins the
-// allowlist here in S4.
+// with an allowlist of schemes (ADR-0015, amendment of 2026-10-10). Since S4-5 that function is
+// `Links/LinkOpener.swift`: its one `NSWorkspace` call, its one `openURL` line and the
+// declaration that line calls are allowed there once each, and both scenes of
+// `MoonShineApp.swift` must route links through it, outside comments.
 //
 // Another app's run state is the owner's machine, changed from the Act phase only: a member
 // call to `terminate`, `forceTerminate`, `activate`, `hide` or `unhide` fails in every file
@@ -46,6 +48,8 @@ const required = ["MoonShineCore/Sources", "Adapters/Sources"];
 // Searched when it exists. Only here are folders named `*Tests` left out: under the two
 // required folders SwiftPM compiles such a folder into the product.
 const optional = ["Apps"];
+
+const opener = "Apps/Mac/Sources/Links/LinkOpener.swift";
 
 // File plus exact text. The text is removed from each line of that file before the search, so
 // an allowed call never hides another call on the same line or elsewhere in the file.
@@ -90,7 +94,90 @@ const allowed = {
     "NSWorkspace.didLaunchApplicationNotification",
     "NSWorkspace.didTerminateApplicationNotification",
   ],
+  // The one opener (S4-5): its one URL call, and the root action that drops links from text,
+  // with the declaration of the function it calls.
+  [opener]: [
+    "NSWorkspace.shared.open(url)",
+    ".environment(\\.openURL, OpenURLAction { opener.openFromText($0) })",
+    "func openFromText(_ url: URL) -> OpenURLAction.Result {",
+  ],
 };
+
+// Allowed texts that may appear at most once in their file: a second copy would be a second way
+// to open a URL that the allowlist above removes with the first (S4-5).
+const allowedOnce = { [opener]: allowed[opener] };
+
+// Both scenes route every link through the opener: the main window and Settings, each call
+// inside its own scene's body (S4-5; PR #73 round 2).
+const appFile = "Apps/Mac/Sources/MoonShineApp.swift";
+const sceneRoots = [
+  ["RootView", /\bWindowGroup\s*(?:\([^)]*\))?\s*\{/g, /RootView\(model: model\)\s*\.linksThroughOpener\(model\)/],
+  ["SettingsView", /(?<![A-Za-z0-9_])Settings\s*\{/g, /SettingsView\(model: model\)\s*\.linksThroughOpener\(model\)/],
+];
+
+/// The source with its comments blanked, nested block comments included, line breaks kept;
+/// with `blankStrings`, the contents of string literals too (PR #73 round 2).
+function stripComments(source, blankStrings = false) {
+  const blank = (char) => (char === "\n" ? "\n" : " ");
+  let out = "";
+  let i = 0;
+  while (i < source.length) {
+    if (source.startsWith("//", i)) {
+      while (i < source.length && source[i] !== "\n") {
+        out += " ";
+        i += 1;
+      }
+    } else if (source.startsWith("/*", i)) {
+      let depth = 0;
+      do {
+        if (source.startsWith("/*", i) || source.startsWith("*/", i)) {
+          depth += source[i] === "/" ? 1 : -1;
+          out += "  ";
+          i += 2;
+        } else {
+          out += blank(source[i]);
+          i += 1;
+        }
+      } while (i < source.length && depth > 0);
+    } else if (/^#*"/.test(source.slice(i, i + 8))) {
+      const hashes = /^#*/.exec(source.slice(i))[0];
+      const multi = source.startsWith('"""', i + hashes.length);
+      const quote = multi ? '"""' : '"';
+      const close = quote + hashes;
+      out += hashes + quote;
+      i += hashes.length + quote.length;
+      while (i < source.length && !source.startsWith(close, i) && (multi || source[i] !== "\n")) {
+        const length = !hashes && source[i] === "\\" ? 2 : 1;
+        const text = source.slice(i, i + length);
+        out += blankStrings ? [...text].map(blank).join("") : text;
+        i += length;
+      }
+      if (source.startsWith(close, i)) {
+        out += close;
+        i += close.length;
+      }
+    } else {
+      out += source[i];
+      i += 1;
+    }
+  }
+  return out;
+}
+
+/// The bodies of the blocks that `opening` (ending at their `{`) starts, braces balanced.
+function blockBodies(code, opening) {
+  return [...code.matchAll(opening)].map((match) => {
+    const start = match.index + match[0].length;
+    let depth = 1;
+    let end = start;
+    while (end < code.length && depth > 0) {
+      if (code[end] === "{") depth += 1;
+      if (code[end] === "}") depth -= 1;
+      end += 1;
+    }
+    return code.slice(start, end - 1);
+  });
+}
 
 // The one file that may use EventKit, read-only.
 const eventStore = "Adapters/Sources/CalendarAdapter/SystemEventStore.swift";
@@ -165,7 +252,45 @@ const patterns = [
     cCall(["system", "popen", "execv", "execve", "execvp", "execvP", "execl", "execle", "execlp"]),
   ],
   ["URL opener", word(["openURL", "OpenURLAction", "SFSafariViewController"]), false, "Apps"],
-  ["URL opener", /(?<![A-Za-z0-9_])Link\s*\(|UIApplication\.shared\.open/, false, "Apps"],
+  // `Link(…)` and `Link<Text>(…)`; `NavigationLink`, `ShareLink` and `SettingsLink` pass.
+  ["URL opener", /(?<![A-Za-z0-9_])Link\s*(?:<.*>)?\s*(?:\.init\s*)?\(|UIApplication\.shared\.open/, false, "Apps"],
+  // Launch Services and Apple Events open URLs without NSWorkspace; web content navigates by
+  // itself (S4-5).
+  [
+    "URL opener",
+    word([
+      "LSOpenCFURLRef", "LSOpenURLsWithRole", "LSOpenFromURLSpec", "LSOpenFSRef", "AESendMessage",
+      "NSAppleEventDescriptor", "WKWebView", "WebView", "WebPage", "NSTextView",
+    ]),
+    false,
+    "Apps",
+  ],
+  // Links inside text open through SwiftUI's or AppKit's own link handling: markdown parsed into
+  // an attributed string, a link attribute (set, subscripted, in a dictionary literal, added or
+  // in a container), or a markdown link target in a string (`](https:`, `](<https:`, an autolink
+  // `<https://`). A call such as `handlers[0](value: 1)` passes: the colon is followed by a space
+  // (S4-5; PR #73 round 1). A wrapped key starts its own line (`.link: url`; PR #73 round 2).
+  [
+    "URL opener",
+    new RegExp(
+      [
+        /AttributedString\s*(?:\.init\s*)?\(\s*markdown:/,
+        /Key\.link(?![A-Za-z0-9_])/,
+        /\.link\s*=(?!=)/,
+        /\[\s*\.link\s*\]/,
+        /[[,]\s*\.link\s*:/,
+        /^\s*\.link\s*:/,
+        /addAttribute\s*\(\s*\.link\b/,
+        /\.link\s*\(/,
+        /\]\(\s*<?\s*[A-Za-z][A-Za-z0-9+.-]*:(?!\s)/,
+        /<[A-Za-z][A-Za-z0-9+.-]*:\/\//,
+      ]
+        .map((part) => part.source)
+        .join("|"),
+    ),
+    false,
+    "Apps",
+  ],
 ];
 
 // Every import spelling `scripts/check-core-imports.sh` accepts: block comments before the
@@ -231,7 +356,32 @@ for (const dir of [...required, ...optional.filter((dir) => isFolder(join(root, 
       findings.push(`${file}: symbolic link`);
       continue;
     }
-    readFileSync(path, "utf8").split("\n").forEach((text, index) => {
+    const source = readFileSync(path, "utf8");
+    for (const allow of allowedOnce[file] ?? []) {
+      if (source.split(allow).length > 2) findings.push(`${file}: allowed text more than once`);
+    }
+    if (file === appFile) {
+      // A call in a comment, in a conditional branch or outside its scene does not count
+      // (PR #73 rounds 1 and 2).
+      const code = stripComments(source, true);
+      if (/^\s*#if\b/m.test(code)) findings.push(`${file}: conditional compilation in the scene file`);
+      for (const [scene, opening, call] of sceneRoots) {
+        const bodies = blockBodies(code, opening);
+        if (bodies.length === 0 || bodies.some((body) => !call.test(body))) {
+          findings.push(`${file}: ${scene} without the opener`);
+        }
+      }
+    }
+    if (file.startsWith("Apps/")) {
+      // `addAttribute(` wrapped before its `.link` key, as swift-format wraps a long call; the
+      // one-line form is a line pattern below (PR #73 round 2).
+      const code = stripComments(source);
+      for (const match of code.matchAll(/addAttribute\s*\(\s*\.link\b/g)) {
+        if (!match[0].includes("\n")) continue;
+        findings.push(`${file}:${code.slice(0, match.index).split("\n").length}: URL opener`);
+      }
+    }
+    source.split("\n").forEach((text, index) => {
       const line = (allowed[file] ?? []).reduce((rest, allow) => rest.split(allow).join(" "), text);
       const comment = line.trimStart().startsWith("//");
       for (const [name, pattern, inComments, only] of patterns) {
