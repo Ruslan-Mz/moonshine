@@ -220,11 +220,14 @@ func record(
   @Test func calendarsKeepTheirKind() async {
     let store = FakeStore(.fullAccess)
     await store.setCalendars([
-      CalendarRecord(id: "h", title: "h", account: "a", colorHex: "#C75C5C", kind: .subscribed)
+      CalendarRecord(
+        id: "h", title: "h", account: "a", colorHex: "#C75C5C", kind: .subscribed,
+        accountID: "source-1")
     ])
     let calendars = await EventKitCalendarProvider(store: store).calendars().value
     #expect(calendars?.map(\.kind) == [.subscribed])
     #expect(calendars?.first?.colorHex == "#C75C5C")
+    #expect(calendars?.first?.accountID == "source-1")
   }
 
   @Test func changesArriveFromTheStore() async {

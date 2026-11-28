@@ -73,6 +73,14 @@ import Testing
         id: "c", title: "t", account: "a", rgb: [0, 0, 0], typeRaw: 1, isSubscribed: true))
     #expect(calendar.kind == .subscribed)
     #expect(calendar.colorHex == "#000000")
+    #expect(calendar.accountID == nil)
+    // The account's identifier is carried: two accounts may share a title.
+    #expect(
+      CalendarRecord(
+        RawCalendar(
+          id: "c", title: "t", account: "a", rgb: nil, typeRaw: 1, isSubscribed: false,
+          accountID: "source-1")
+      ).accountID == "source-1")
     #expect(
       CalendarRecord(
         RawCalendar(id: "c", title: "t", account: nil, rgb: nil, typeRaw: 0, isSubscribed: false)

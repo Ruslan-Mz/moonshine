@@ -244,6 +244,8 @@ final class AppModel {
   /// Live's stored calendar rules, read at launch (S4-3d).
   private(set) var liveCalendarVisibility: CalendarVisibility
   private(set) var liveDayWindow: DayWindow
+  /// Demo's invented rules; its switches change them for the session, never stored.
+  private var demoCalendarVisibility = DemoEnvironment.calendarVisibility
   /// When Today's `Not now` was pressed; nil when never.
   private(set) var calendarNotNow: Date?
 
@@ -436,7 +438,7 @@ final class AppModel {
   /// Show and Counts as busy: Demo's invented ones, in memory only; Live's stored (owner,
   /// 2026-11-27).
   var calendarVisibility: CalendarVisibility {
-    source == .demo ? DemoEnvironment.calendarVisibility : liveCalendarVisibility
+    source == .demo ? demoCalendarVisibility : liveCalendarVisibility
   }
 
   /// Demo always spans 08:00–22:00, as `design/demo-data.md` draws it (owner, 2026-11-27).
@@ -459,6 +461,24 @@ final class AppModel {
   /// Today's day, which the calendar reads.
   func showCalendarDay(_ day: DateInterval) {
     calendar.show(day: day)
+  }
+
+  /// Settings → Calendars' switches, applied at once from the events held: Demo's in memory
+  /// only; Live's stored, then read back, so what shows is what is stored (owner, 2026-11-27).
+  func setCalendarSetting(_ setting: CalendarSetting, for id: CalendarID) {
+    guard source == .live else {
+      demoCalendarVisibility.stored[id] = setting
+      return
+    }
+    settings.setCalendarSetting(setting, for: id)
+    liveCalendarVisibility = settings.calendarVisibility
+  }
+
+  /// Live's only: Demo always spans 08:00–22:00.
+  func setDayWindow(_ window: DayWindow) {
+    guard source == .live else { return }
+    settings.setDayWindow(window)
+    liveDayWindow = settings.dayWindow
   }
 
   /// Today's `Not now`: the connect row hides for 30 days, in every window (owner, 2026-11-27).

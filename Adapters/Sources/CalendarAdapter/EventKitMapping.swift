@@ -14,6 +14,8 @@ struct RawCalendar: Sendable {
   var rgb: [Double]?
   var typeRaw: Int
   var isSubscribed: Bool
+  /// The account's `sourceIdentifier`: two accounts may share a title.
+  var accountID: String? = nil
 }
 
 /// One attendee, raw.
@@ -110,7 +112,8 @@ extension CalendarRecord {
   init(_ raw: RawCalendar) {
     self.init(
       id: raw.id, title: raw.title, account: raw.account, colorHex: raw.rgb.flatMap(hexColor),
-      kind: CalendarKind(typeRaw: raw.typeRaw, isSubscribed: raw.isSubscribed))
+      kind: CalendarKind(typeRaw: raw.typeRaw, isSubscribed: raw.isSubscribed),
+      accountID: raw.accountID)
   }
 }
 
