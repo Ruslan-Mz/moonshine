@@ -935,6 +935,9 @@ test("S4-2a: its Core and test files compute plain; the rest stays risky for its
     "MoonShineCore/Tests/MoonShineCoreTests/LinesTests.swift",
     "MoonShineCore/Tests/MoonShineCoreTests/TestWorld.swift",
     "Apps/Mac/Tests/TodayScreenTests.swift",
+    // P-GX: the adapter tests are scanned, no longer risky by path.
+    "Adapters/Tests/OmniFocusAdapterTests/DemoDataGoldenTests.swift",
+    "Adapters/Tests/OmniFocusAdapterTests/OverviewSmokeTests.swift",
     "Apps/Mac/Sources/Lines/LinesFormat.swift",
     "Apps/Mac/Sources/Lines/LinesScreen.swift",
     "Apps/Mac/Sources/Lines/LinesView.swift",
@@ -962,12 +965,174 @@ test("S4-2a: its Core and test files compute plain; the rest stays risky for its
   assert.deepEqual(
     byPath.map(([path]) => path).sort(),
     [
-      "Adapters/Tests/OmniFocusAdapterTests/DemoDataGoldenTests.swift",
-      "Adapters/Tests/OmniFocusAdapterTests/OverviewSmokeTests.swift",
       "Apps/Mac/Sources/LineRemoval.swift",
       "scripts/plain-rules.test.mjs",
     ],
   );
   assert.equal(Object.keys(judged).length, 27);
   assert.equal(classify(changes, []).plain, false);
+});
+
+// P-GX (owner, 2026-11-28): the adapter tests get the app's test scan; the package's own modules
+// are plain imports there; the live sources stay risky everywhere.
+const adapterTest = "Adapters/Tests/ObsidianAdapterTests/ProbeTests.swift";
+const adapterTestText = [
+  "import Foundation",
+  "import MoonShineCore",
+  "import Testing",
+  "",
+  "@testable import ObsidianAdapter",
+  "",
+  "@Suite struct ProbeTests {",
+  "  @Test func counts() {",
+  "    #expect(Fields.count == 3)",
+  "  }",
+  "}",
+  "",
+].join("\n");
+
+test("P-GX: a changed number in an adapter test's #expect is plain, imports next to it too", () => {
+  plain({ [adapterTest]: adapterTestText }, { [adapterTest]: adapterTestText.replace("== 3", "== 4") });
+  plain({ [adapterTest]: adapterTestText }, { [adapterTest]: adapterTestText.replace("import Testing\n", "import Testing\nimport OmniFocusAdapter\n") });
+  for (const module of ["ObsidianAdapter", "OmniFocusAdapter", "CalendarAdapter", "SQLiteStore", "moonshine_import"]) {
+    plain({}, { [`Adapters/Tests/X/ProbeTests.swift`]: `@testable import ${module}\nimport ${module}\n` });
+  }
+});
+
+test("P-GX: the package's modules are plain imports only in the adapter tests", () => {
+  risky({}, { "Apps/Mac/Tests/ProbeTests.swift": "@testable import CalendarAdapter\n" }, "an import");
+  risky({}, { "MoonShineCore/Tests/MoonShineCoreTests/ProbeTests.swift": "import SQLiteStore\n" }, "an import");
+  risky({}, { "Apps/Mac/Sources/Today/Probe.swift": "import OmniFocusAdapter\n" }, "an import");
+});
+
+for (const [line, kind] of [
+  ["import GRDB", "an import"],
+  ["import Yams", "an import"],
+  ["import Synchronization", "an import"],
+  ["let p = Process()", "process"],
+  ["let manager = FileManager.default", "storage"],
+  ["let session = URLSession.shared", "URL"],
+]) {
+  test(`P-GX: an adapter test stays risky for a process, file, network or other import: ${line}`, () => {
+    risky({}, { [adapterTest]: `${line}\n` }, kind);
+  });
+}
+
+test("P-GX: an instruction file under the adapter tests stays risky by path", () => {
+  risky({}, { "Adapters/Tests/OmniFocusAdapterTests/.claude/x.md": "x\n" }, "a path outside the plain list");
+  risky({}, { "Adapters/Tests/OmniFocusAdapterTests/Fixture.json": "{}\n" }, "a path outside the plain list");
+});
+
+for (const line of [
+  "let store = SystemEventStore()",
+  "let provider = EventKitCalendarProvider()",
+  "let provider = EventKitCalendarProvider.init()",
+  "let runner = ProcessScriptRunner()",
+  "let bridge = OmniFocusBridge(script: url)",
+  "let bridge = OmniFocusBridge.init(script: url, timeout: .seconds(5))",
+  "await MoonShineImport.main()",
+  "let base = try MoonShineImport.applicationSupport()",
+  "let bridge = MoonShineImport.bridge",
+  "try await MoonShineImport.incremental(minutes: 5)",
+  "try await MoonShineImport.probe()",
+  "try MoonShineImport.vault(at: folder, paths: false)",
+  "MoonShineImport.usage()",
+]) {
+  test(`P-GX: building a live source is risky, in an adapter test and elsewhere: ${line}`, () => {
+    risky({}, { [adapterTest]: `${line}\n` }, "live source");
+    risky({}, { "Apps/Mac/Tests/ProbeTests.swift": `${line}\n` }, "live source");
+  });
+}
+
+// `EventKitCalendarProvider` also holds the storage token `EventKit`; only the live kind is asked.
+test("P-GX: the provider with a fake store is no live source", () => {
+  const result = judge({}, { [adapterTest]: "let provider = EventKitCalendarProvider(store: store)\n" });
+  assert.ok(!result.reasons.some((reason) => reason.includes("live source")), result.reasons.join("; "));
+});
+
+for (const line of [
+  "OmniFocusBridge(script: script, runner: runner)",
+  "#expect(script.contains(OmniFocusBridge.bundleIdentifier))",
+  "#expect(MoonShineImport.describe(error) == \"x\")",
+  "try await MoonShineImport.full(runs: 1, base: base, bridge: bridge(runner))",
+  "let lines = try MoonShineImport.timingsLines(base: base)",
+]) {
+  test(`P-GX: a fake source, or a pure static of the CLI, passes: ${line}`, () => {
+    plain({}, { [adapterTest]: `${line}\n` });
+  });
+}
+
+// P-GX: the URL openers that check-vault-writes.mjs fails in Apps/, as AM's second layer (S4-5).
+for (const line of [
+  ".environment(\\.openURL, OpenURLAction { _ in .discarded })",
+  "Link<Text>(destination: url) { Text(\"a\") }",
+  "Link.init(destination: url) { }",
+  "LSOpenCFURLRef(url as CFURL, nil)",
+  "LSOpenURLsWithRole(urls, .all, nil, nil, nil, 0)",
+  "AESendMessage(&event, nil, 0, 0)",
+  "let view = WKWebView()",
+  "let view = WebView()",
+  "let page = WebPage()",
+  "let text = NSTextView()",
+  "let safari = SFSafariViewController(url: url)",
+  "UIApplication.shared.open(url)",
+  "let text = try AttributedString.init(markdown: source)",
+  "let key = NSAttributedString.Key.link",
+  "text[range][.link] = url",
+  "let attributes: [NSAttributedString.Key: Any] = [.link: url]",
+  "  .link: url,",
+  "storage.addAttribute(.link, value: url, range: range)",
+  'Text("Read [the guide](<https://example.com>)")',
+  'Text("See <https://example.com>")',
+]) {
+  test(`P-GX: a URL opener is risky: ${line}`, () => {
+    risky({}, { "Apps/Mac/Sources/Today/Probe.swift": `${line}\n` }, "URL");
+    risky({}, { "Apps/Mac/Tests/ProbeTests.swift": `${line}\n` }, "URL");
+  });
+}
+
+for (const line of ["NavigationLink<Text, Text>(destination: Text(\"a\")) { }", "SettingsLink { Text(\"Settings\") }", ".buttonStyle(.link)", "let link = row.link"]) {
+  test(`P-GX: a harmless line next to a URL opener passes: ${line}`, () => {
+    plain({}, { "Apps/Mac/Sources/Today/Probe.swift": `${line}\n` });
+  });
+}
+
+// P-GX item 5 (owner, 2026-11-28): `.task(` as an implicit member in an argument or a value, or on
+// `OpenTarget`, is the app's enum case, never SwiftUI's modifier, which needs a view before it.
+for (const line of [
+  ".task { await x() }",
+  ".task(id: day) {",
+  ".task(priority: .low) {",
+  "content.task(",
+  ".task(card.id)",
+  ".task(reload)",
+  "openTarget(content.task(reload))",
+]) {
+  test(`P-GX: a .task modifier stays risky: ${line}`, () => {
+    risky({}, { "Apps/Mac/Sources/Today/Probe.swift": `${line}\n` }, "concurrency");
+    risky({}, { "Apps/Mac/Tests/ProbeTests.swift": `${line}\n` }, "concurrency");
+  });
+}
+
+for (const line of [
+  "openTarget(.task(item.id))",
+  ".opensOnDoubleClick(.task(id))",
+  "model.open( .task(id))",
+  "let targets = [.task(a), .task(b)]",
+  "let target: OpenTarget = .task(id)",
+  "let target = OpenTarget.task(id)",
+  "case .task(let id):",
+]) {
+  test(`P-GX: the app's .task case passes: ${line}`, () => {
+    plain({}, { "Apps/Mac/Sources/Today/Probe.swift": `${line}\n` });
+    plain({}, { "Apps/Mac/Tests/ProbeTests.swift": `${line}\n` });
+  });
+}
+
+test("P-GX: a link target in angle brackets, or an autolink, in a String Catalog's value is risky", () => {
+  const catalog = "Apps/Mac/Resources/Localizable.xcstrings";
+  const value = (text) => `{\n  "strings" : {\n    "Open" : {\n      "localizations" : { "en" : { "stringUnit" : { "value" : "${text}" } } }\n    }\n  }\n}\n`;
+  risky({}, { [catalog]: value("Read [the guide](<https://example.com>)") }, "URL");
+  risky({}, { [catalog]: value("See <https://example.com>") }, "URL");
+  plain({}, { [catalog]: value("Open <this> one") });
 });

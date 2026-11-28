@@ -57,6 +57,7 @@ test("a good install writes the guard, the config and the hook, and sets core.ho
     "pre-push.mjs",
     "review-lock.mjs",
     "review.mjs",
+    "xcbuild-run.mjs",
     "xcbuild.sh",
   ]);
   assert.deepEqual(readdirSync(installed(work, "bin")).sort(), ["gh-post", "review", "review-allow-retry", "xcbuild"]);
@@ -245,9 +246,10 @@ test("running it outside any checkout is refused", () => {
   refused(work, install(work, [work.denyList], elsewhere), "inside a checkout of this repository");
 });
 
-// H1c: the build runs main's xcbuild.sh and project check, in a cleared environment.
+// H1c: the build runs main's xcbuild.sh and project check, in a cleared environment; P-GX adds the
+// runner it ends with.
 
-const buildFiles = ["xcbuild.sh", "check-project-scripts.mjs"];
+const buildFiles = ["xcbuild.sh", "check-project-scripts.mjs", "xcbuild-run.mjs"];
 // The folder of the node the installer finds on PATH, which may be a link to process.execPath.
 const nodeDir = dirname(spawnSync("/bin/sh", ["-c", "command -v node"], { encoding: "utf8" }).stdout.trim());
 

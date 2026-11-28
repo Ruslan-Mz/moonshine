@@ -1,8 +1,8 @@
 #!/bin/sh
 # Installs the push and post guard outside the checkout (CLAUDE.md → Commands → Guard). The owner
 # runs origin's main copy of this script, never the working tree's, as a stream from any checkout of
-# this repository, once per clone, after every merged change to scripts/guard/, scripts/xcbuild.sh or
-# scripts/check-project-scripts.mjs, and after creating a worktree (the exact command is in CLAUDE.md). It finds the repository from the current folder,
+# this repository, once per clone, after every merged change to scripts/guard/, scripts/xcbuild.sh,
+# scripts/xcbuild-run.mjs or scripts/check-project-scripts.mjs, and after creating a worktree (the exact command is in CLAUDE.md). It finds the repository from the current folder,
 # refuses unless origin is this GitHub repository, asks origin for main's commit with git ls-remote
 # (never trusting the local origin/main) and requires that commit here. It installs the guard's
 # files from that commit, never from the working tree, so neither an edit nor an index flag
@@ -10,7 +10,7 @@
 # the guard folder (and a config.json naming the deny-list and the scratchpad root of every
 # worktree) under a temporary name and swaps it in, writes the git hook and the gh-post command that
 # run it, and points core.hooksPath (this repository only) at the absolute hook folder last. The
-# folder also gets main's build script and project check, and bin/ the xcbuild command that runs
+# folder also gets main's build script, project check and runner, and bin/ the xcbuild command that runs
 # them in a cleared environment (H1c): the only build the local settings allow; and the review
 # command that starts a headless /review-pr (P-HR), with the claude link found now, and the owner's
 # review-allow-retry, which clears a stopped run's record (P-AM2). The state folder
@@ -74,8 +74,8 @@ for file in matcher.mjs commit-scan.mjs pre-push.mjs gh-post.mjs merge.mjs plain
   git cat-file blob "$main:scripts/guard/$file" > "$stage/$file" ||
     fail "origin's main has no scripts/guard/$file; the old guard is unchanged."
 done
-# The build's script and the project check it runs first (H1c).
-for file in xcbuild.sh check-project-scripts.mjs; do
+# The build's script, the project check it runs first (H1c) and the runner it ends with (P-GX).
+for file in xcbuild.sh check-project-scripts.mjs xcbuild-run.mjs; do
   git cat-file blob "$main:scripts/$file" > "$stage/$file" ||
     fail "origin's main has no scripts/$file; the old guard is unchanged."
 done

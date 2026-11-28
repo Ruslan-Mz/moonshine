@@ -24,7 +24,7 @@ import { ciGreen, decisionsFile, decisionsFileExists, gitHub, hasMarker, ownerDe
 import { config, denyList } from "./matcher.mjs";
 import { readPosts } from "./merge.mjs";
 import { instructions } from "./plain-rules.mjs";
-import { checkoutClean, killTree, removeWorktrees, sleepWatch, stoppedPath, takeLock } from "./review-lock.mjs";
+import { checkoutClean, heartbeat, killTree, removeWorktrees, sleepWatch, stoppedPath, takeLock } from "./review-lock.mjs";
 
 const home = join(dirname(fileURLToPath(import.meta.url)), "..");
 const budget = { standard: "15", deep: "40" };
@@ -223,10 +223,13 @@ if (child.pid && !lock.setChild(child.pid)) finish(6, "the lock could not record
 let lines = 0;
 let starts = 0;
 let result = null;
+// The waiting session sees the output grow (P-GX): counts only, at most every 5 minutes.
+const beat = heartbeat((text) => process.stdout.write(text));
 createInterface({ input: child.stdout, crlfDelay: Infinity }).on("line", (line) => {
   if (finish.done) return;
   stream.write(line + "\n");
   lines += 1;
+  beat.event();
   let event = null;
   try {
     event = JSON.parse(line);
