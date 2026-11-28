@@ -52,7 +52,7 @@ struct RootView: View {
       let zone = overview.workspace.timeZone
       Group {
         switch model.selection {
-        case .week: WeekView(screen: WeekScreen(overview))
+        case .week: WeekView(overview: overview)
         case .lines: LinesDetail(overview: overview)
         case .today, nil: TodayDetail(model: model, overview: overview)
         }

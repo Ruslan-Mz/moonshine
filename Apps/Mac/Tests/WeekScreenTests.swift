@@ -140,6 +140,127 @@ private func date(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) ->
     #expect(screen.noPlan.allSatisfy { $0.due == nil })
   }
 
+  // MARK: S5-1b, another week (owner, 2026-11-28)
+
+  @MainActor @Test func lastAndNextWeekOnDemo() async throws {
+    let overview = try await demoOverview()
+    let navigation = WeekNavigation(overview)
+    #expect(navigation.current == ISOWeek(year: 2026, week: 40))
+    #expect(WeekScreen(overview).isCurrent)
+    let last = WeekScreen(
+      overview, week: navigation.current.adding(-1, calendar: overview.calendar))
+    #expect(last.week == 39)
+    #expect(!last.isCurrent)
+    #expect(last.days.allSatisfy { $0.isPast && !$0.isToday })
+    #expect(last.firstDay == date(2026, 9, 21))
+    let next = WeekScreen(overview, week: navigation.current.adding(1, calendar: overview.calendar))
+    #expect(next.week == 41)
+    #expect(!next.isCurrent)
+    #expect(next.days.allSatisfy { !$0.isPast && !$0.isToday })
+    #expect(
+      next.days.allSatisfy { $0.summary.allSatisfy { if case .done = $0 { false } else { true } } })
+  }
+
+  /// ‹ stops at the week holding the completion window's start, 6 July in Demo (owner,
+  /// 2026-11-28): an earlier week would read unknown data as nothing done.
+  @MainActor @Test func backStopsAtTheWeekHoldingTheWindowStart() async throws {
+    let overview = try await demoOverview()
+    let navigation = WeekNavigation(overview)
+    let july6 = ISOWeek(year: 2026, week: 28)
+    #expect(
+      overview.workspace.completedSince.map { ISOWeek(containing: $0, calendar: overview.calendar) }
+        == july6)
+    #expect(navigation.earliest == july6)
+    #expect(navigation.clamped(july6) == july6)
+    #expect(navigation.clamped(ISOWeek(year: 2026, week: 27)) == july6)
+    #expect(WeekScreen(overview, week: ISOWeek(year: 2026, week: 27)).week == 28)
+    #expect(navigation.canStep(ISOWeek(year: 2026, week: 29), by: -1))
+    #expect(!navigation.canStep(july6, by: -1))
+    #expect(navigation.step(july6, by: -1) == july6)
+    #expect(navigation.canStep(july6, by: 1))
+  }
+
+  @Test func withNoWindowStartBothWaysReachTenYears() {
+    let navigation = WeekNavigation(
+      Overview(workspace: Workspace(timeZone: riga), now: date(2026, 9, 30, 12)))
+    let calendar = navigation.calendar
+    #expect(
+      navigation.earliest == navigation.current.adding(-WeekNavigation.reach, calendar: calendar))
+    #expect(
+      navigation.latest == navigation.current.adding(WeekNavigation.reach, calendar: calendar))
+    #expect(navigation.canStep(nil, by: -1))
+    #expect(!navigation.canStep(navigation.latest, by: 1))
+    #expect(navigation.step(navigation.latest, by: 1) == navigation.latest)
+    #expect(navigation.clamped(ISOWeek(year: 2100, week: 1)) == navigation.latest)
+  }
+
+  @Test func aStepThatReachesThisWeekIsNil() {
+    let navigation = WeekNavigation(
+      Overview(workspace: Workspace(timeZone: riga), now: date(2026, 9, 30, 12)))
+    let next = navigation.step(nil, by: 1)
+    #expect(next == ISOWeek(year: 2026, week: 41))
+    #expect(navigation.step(next, by: -1) == nil)
+    #expect(navigation.step(nil, by: -1) == ISOWeek(year: 2026, week: 39))
+  }
+
+  /// A future week has no count, and the same average for every future week: the four full weeks
+  /// before the current one (owner, 2026-11-28).
+  @MainActor @Test func aFutureWeeksStripShowsTheAverageOnly() async throws {
+    let overview = try await demoOverview()
+    let current = WeekScreen(overview)
+    let w41 = WeekScreen(overview, week: ISOWeek(year: 2026, week: 41))
+    let w43 = WeekScreen(overview, week: ISOWeek(year: 2026, week: 43))
+    #expect(current.cells.allSatisfy { $0.thisWeek != nil })
+    #expect(w41.cells.allSatisfy { $0.thisWeek == nil })
+    #expect(w41.cells.map(\.average) == current.cells.map(\.average))
+    #expect(w43.cells.map(\.average) == w41.cells.map(\.average))
+    #expect(current.cells.contains { $0.average != WeekAverage(rhythm: 0, progress: 0) })
+  }
+
+  /// In Riga, not Demo's Moscow, which has no summer time.
+  @Test func weeksAcrossTheDaylightSavingEndAndTheYearEnd() throws {
+    let overview = Overview(workspace: Workspace(timeZone: riga), now: date(2026, 9, 30, 12))
+    // W43: summer time ends in Riga on Sunday 25 October, a 25-hour day.
+    let w43 = WeekScreen(overview, week: ISOWeek(year: 2026, week: 43))
+    #expect(w43.week == 43)
+    #expect(w43.days.map(\.start) == (19...25).map { date(2026, 10, $0) })
+    let sunday = try #require(w43.days.last)
+    #expect(date(2026, 10, 26).timeIntervalSince(sunday.start) == TimeInterval(25 * 3600))
+    // 2026 has 53 ISO weeks: W53 starts Monday 28 December, 2027-W01 on 4 January.
+    let calendar = overview.calendar
+    let w53 = WeekScreen(
+      overview, week: ISOWeek(year: 2026, week: 40).adding(13, calendar: calendar))
+    #expect(w53.week == 53)
+    #expect(w53.firstDay == date(2026, 12, 28))
+    #expect(w53.days.count == 7)
+    let w01 = WeekScreen(
+      overview, week: ISOWeek(year: 2026, week: 40).adding(14, calendar: calendar))
+    #expect(w01.week == 1)
+    #expect(w01.firstDay == date(2027, 1, 4))
+    #expect(w01.days.count == 7)
+  }
+
+  /// PR #75 round 2's deferred Low: the due text's window starts at the week's Monday 00:00.
+  @Test func dueTextIsOnlyForTheShownWeeksOwnDays() {
+    let tasks = [
+      Self.item(
+        "Planned last Wednesday", planned: date(2026, 9, 23, 9), due: date(2026, 9, 27, 23, 59)),
+      Self.item(
+        "Planned Tuesday, due last Sunday", planned: date(2026, 9, 29, 9),
+        due: date(2026, 9, 27, 23, 59)),
+    ]
+    let overview = Overview(
+      workspace: Workspace(timeZone: riga, tasks: tasks), now: date(2026, 9, 30, 12))
+    let w39 = WeekScreen(overview, week: ISOWeek(year: 2026, week: 39))
+    let last = w39.days.flatMap(\.cards).first { $0.title == "Planned last Wednesday" }
+    #expect(last?.due?.date == date(2026, 9, 27, 23, 59))
+    let w40 = WeekScreen(overview)
+    let cards = Dictionary(uniqueKeysWithValues: w40.days.flatMap(\.cards).map { ($0.title, $0) })
+    #expect(cards["Planned last Wednesday"] == nil)
+    #expect(cards["Planned Tuesday, due last Sunday"] != nil)
+    #expect(cards["Planned Tuesday, due last Sunday"]?.due == nil)
+  }
+
   // MARK: Format
 
   @Test func rangeInOneYearAndAcrossTwo() {

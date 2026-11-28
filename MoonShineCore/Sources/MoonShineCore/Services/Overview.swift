@@ -124,7 +124,8 @@ public struct WeekDay: Hashable, Sendable {
 /// A line's week, for every line and Life ops; Week's screen picks the strip's cells.
 public struct LineWeekHeader: Hashable, Sendable {
   public let line: LineAssignment
-  public let thisWeek: WeekCounts
+  /// Nil on a future week, which has no count yet (owner, 2026-11-28).
+  public let thisWeek: WeekCounts?
   public let previousAverage: WeekAverage
   /// The store holds a completed occurrence of the line: rhythm applies (owner, 2026-11-27).
   public let hasRhythm: Bool
@@ -515,8 +516,14 @@ public struct Overview: Sendable {
   }
 
   public func week() -> WeekOverview {
-    let week = ISOWeek(containing: now, calendar: calendar)
-    let range = week.horizon(calendar: calendar) ?? day(containing: now)
+    week(containing: now)
+  }
+
+  /// The week holding `date` (S5-1b). Tasks are placed as they stand now, and completions shown
+  /// up to today, whatever the week.
+  public func week(containing date: Date) -> WeekOverview {
+    let week = ISOWeek(containing: date, calendar: calendar)
+    let range = week.horizon(calendar: calendar) ?? day(containing: date)
     let days = (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: range.start) }
       .map { day(containing: $0) }
     let activeLines = Set(workspace.lines.filter { $0.state == .active }.map(\.id))
@@ -557,6 +564,10 @@ public struct Overview: Sendable {
         progressLines.insert(task.line)
       }
     }
+    // A future week has no count, and its average is the one before the current week, the same
+    // for every future week (owner, 2026-11-28).
+    let isFuture = week > stats.currentWeek
+    let averageBefore = isFuture ? stats.currentWeek : week
     return WeekOverview(
       week: week,
       days: days.indices.map { index in
@@ -567,8 +578,8 @@ public struct Overview: Sendable {
       noPlan: noPlan,
       header: lineOrder.map { line in
         LineWeekHeader(
-          line: line, thisWeek: stats.counts(line, in: week),
-          previousAverage: stats.average(line, before: week),
+          line: line, thisWeek: isFuture ? nil : stats.counts(line, in: week),
+          previousAverage: stats.average(line, before: averageBefore),
           hasRhythm: rhythmLines.contains(line), hasProgress: progressLines.contains(line))
       })
   }

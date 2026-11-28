@@ -1,15 +1,48 @@
 import MoonShineCore
 import SwiftUI
 
-/// `design/screens/week.md`, draft-2: the line strip, seven day columns and the No plan tray.
-/// Checkboxes show state only and write nothing; cards open nothing until S5-1b.
+/// `design/screens/week.md`, draft-2: the line strip, seven day columns and the No plan tray,
+/// with ‹ Today › and the View menu's Previous Week (⌘←), Next Week (⌘→) and Go to Today (S5-1b).
+/// Checkboxes show state only and write nothing; a card opens its task in OmniFocus on a
+/// double-click or its accessibility action, through the opener.
 struct WeekView: View {
+  let overview: Overview
+  /// Nil is this week; held as the week, so midnight cannot move it.
+  @State private var shown: ISOWeek?
+
+  var body: some View {
+    let screen = WeekScreen(overview, week: shown)
+    let stepper = WeekStepper(navigation: screen.navigation, shown: $shown)
+    WeekContent(screen: screen)
+      .toolbar {
+        ToolbarItem(placement: .navigation) {
+          ControlGroup {
+            Button {
+              stepper.step(by: -1)
+            } label: {
+              Label("Previous Week", systemImage: "chevron.left")
+            }
+            .help(Text("Previous week (⌘←)"))
+            .disabled(!stepper.canStep(by: -1))
+            Button("Today") { stepper.goToToday() }
+              .disabled(stepper.isCurrent)
+            Button {
+              stepper.step(by: 1)
+            } label: {
+              Label("Next Week", systemImage: "chevron.right")
+            }
+            .help(Text("Next week (⌘→)"))
+            .disabled(!stepper.canStep(by: 1))
+          }
+        }
+      }
+      .focusedSceneValue(\.weekStepper, stepper)
+  }
+}
+
+private struct WeekContent: View {
   let screen: WeekScreen
   @Environment(\.locale) private var locale
-
-  /// Seven columns need this much before the cards' titles wrap to nothing.
-  static let minimumWidth: CGFloat = 760
-  static let trayHeight: CGFloat = 188
 
   var body: some View {
     VStack(spacing: 0) {
@@ -25,7 +58,7 @@ struct WeekView: View {
       Divider()
       tray
     }
-    .frame(minWidth: Self.minimumWidth)
+    .frame(minWidth: WeekView.minimumWidth)
     .navigationTitle(Text("Week \(screen.week)"))
     .navigationSubtitle(Text("\(range) · ISO week"))
   }
@@ -41,7 +74,8 @@ struct WeekView: View {
       HStack(spacing: 16) {
         WeekSwatch(color: Tokens.rhythm, text: Text("Rhythm"))
         WeekSwatch(color: Tokens.progress, text: Text("Progress"))
-        legend
+        // A past week is whole, and a future one has not started.
+        if screen.isCurrent { legend }
         Spacer()
       }
       .font(.caption)
@@ -94,8 +128,14 @@ struct WeekView: View {
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 8)
-    .frame(height: Self.trayHeight)
+    .frame(height: WeekView.trayHeight)
   }
+}
+
+extension WeekView {
+  /// Seven columns need this much before the cards' titles wrap to nothing.
+  static let minimumWidth: CGFloat = 760
+  static let trayHeight: CGFloat = 188
 }
 
 /// A day: weekday, date and summary, then its cards; today's column is tinted.
@@ -120,7 +160,13 @@ private struct DayColumn: View {
               Text("+ \(day.more.count) more")
             }
             .buttonStyle(.link)
-            .popover(isPresented: $showsMore) { moreList }
+            // Tab reaches it without Full Keyboard Access; ↵ or Space opens the popover.
+            .focusable()
+            .onKeyPress(keys: [.return, .space]) { _ in
+              showsMore = true
+              return .handled
+            }
+            .popover(isPresented: $showsMore) { MoreList(cards: day.more, timeZone: timeZone) }
           }
         }
         .padding(6)
@@ -174,18 +220,39 @@ private struct DayColumn: View {
     return terms.dropFirst().reduce(first) { Text("\($0) · \($1)") }
   }
 
-  /// The day's cards after the first six, in the same order.
-  private var moreList: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: 6) {
-        ForEach(day.more) { card in
-          CardView(card: card, timeZone: timeZone)
-        }
+}
+
+/// The day's cards after the first six, in the same order: arrows select, ⌘↵ opens the selected
+/// task in OmniFocus, as everywhere (`design/principles.md`), and Esc closes.
+private struct MoreList: View {
+  let cards: [WeekScreen.Card]
+  let timeZone: TimeZone
+  @State private var selection: TaskItemID?
+  @FocusState private var isFocused: Bool
+  @Environment(\.openTarget) private var openTarget
+
+  var body: some View {
+    VStack(spacing: 0) {
+      List(cards, selection: $selection) { card in
+        CardView(card: card, timeZone: timeZone)
       }
-      .padding(10)
+      .focused($isFocused)
+      Divider()
+      HStack {
+        Spacer()
+        Button("Open in OmniFocus") {
+          if let selection { openTarget(.task(selection)) }
+        }
+        .keyboardShortcut(OpenCommands.shortcut)
+        .disabled(selection == nil)
+      }
+      .padding(8)
     }
-    .frame(width: 260)
-    .frame(maxHeight: 420)
+    .frame(width: 280, height: 380)
+    .onAppear {
+      selection = cards.first?.id
+      isFocused = true
+    }
   }
 }
 
@@ -196,6 +263,7 @@ private struct CardView: View {
   let timeZone: TimeZone
   var isCompact = false
   @Environment(\.locale) private var locale
+  @Environment(\.openTarget) private var openTarget
 
   var body: some View {
     Group {
@@ -226,7 +294,9 @@ private struct CardView: View {
     .background(Tokens.card, in: RoundedRectangle(cornerRadius: 6))
     .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Tokens.cardBorder))
     .opacity(card.isCompleted ? 0.55 : 1)
+    .opensOnDoubleClick(.task(card.id))
     .accessibilityElement(children: .combine)
+    .accessibilityAction(named: Text("Open in OmniFocus")) { openTarget(.task(card.id)) }
   }
 
   private var facts: some View {
@@ -270,10 +340,10 @@ private struct StripCell: View {
           timeZone: screen.timeZone)
       } else {
         Series(
-          color: Tokens.rhythm, applies: cell.hasRhythm, count: cell.thisWeek.rhythm,
+          color: Tokens.rhythm, applies: cell.hasRhythm, count: cell.thisWeek?.rhythm,
           average: cell.average.rhythm, kind: .rhythm)
         Series(
-          color: Tokens.progress, applies: cell.hasProgress, count: cell.thisWeek.progress,
+          color: Tokens.progress, applies: cell.hasProgress, count: cell.thisWeek?.progress,
           average: cell.average.progress, kind: .progress)
       }
     }
@@ -288,7 +358,8 @@ private struct Series: View {
 
   let color: Color
   let applies: Bool
-  let count: Int
+  /// Nil on a future week: the average only (owner, 2026-11-28).
+  let count: Int?
   let average: Double
   let kind: Kind
   @Environment(\.locale) private var locale
@@ -297,7 +368,7 @@ private struct Series: View {
     HStack(spacing: 4) {
       RoundedRectangle(cornerRadius: 1).fill(color).frame(width: 8, height: 8)
       if applies {
-        Text(verbatim: "\(count)").monospacedDigit()
+        if let count { Text(verbatim: "\(count)").monospacedDigit() }
         Text("avg \(WeekFormat.average(average, locale: locale))")
           .foregroundStyle(.secondary)
           .monospacedDigit()
@@ -311,11 +382,13 @@ private struct Series: View {
 
   private var label: Text {
     let shown = WeekFormat.average(average, locale: locale)
-    switch (kind, applies) {
-    case (.rhythm, true): return Text("rhythm \(count), average \(shown)")
-    case (.progress, true): return Text("progress \(count), average \(shown)")
-    case (.rhythm, false): return Text("rhythm not applicable")
-    case (.progress, false): return Text("progress not applicable")
+    switch (kind, applies, count) {
+    case (.rhythm, true, let count?): return Text("rhythm \(count), average \(shown)")
+    case (.progress, true, let count?): return Text("progress \(count), average \(shown)")
+    case (.rhythm, true, nil): return Text("rhythm average \(shown)")
+    case (.progress, true, nil): return Text("progress average \(shown)")
+    case (.rhythm, false, _): return Text("rhythm not applicable")
+    case (.progress, false, _): return Text("progress not applicable")
     }
   }
 }

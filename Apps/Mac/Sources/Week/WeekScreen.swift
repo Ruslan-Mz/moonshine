@@ -49,7 +49,8 @@ struct WeekScreen: Equatable {
     let id: LineID
     let emoji: String?
     let name: String
-    let thisWeek: WeekCounts
+    /// Nil on a future week: the cell shows the average only (owner, 2026-11-28).
+    let thisWeek: WeekCounts?
     let average: WeekAverage
     let hasRhythm: Bool
     let hasProgress: Bool
@@ -59,6 +60,9 @@ struct WeekScreen: Equatable {
   }
 
   let week: Int
+  let navigation: WeekNavigation
+  /// The shown week holds today: only then does the strip read `Week in progress`.
+  let isCurrent: Bool
   let firstDay: Date
   let lastDay: Date
   /// Today, the last day of the partial week's legend.
@@ -70,8 +74,13 @@ struct WeekScreen: Equatable {
   let completedSince: Date?
   let timeZone: TimeZone
 
-  init(_ overview: Overview) {
-    let week = overview.week()
+  /// `week` nil is this week; a week outside the navigation's bounds is clamped to them.
+  init(_ overview: Overview, week shown: ISOWeek? = nil) {
+    let navigation = WeekNavigation(overview)
+    let start = navigation.clamped(shown).horizon(calendar: overview.calendar)?.start
+    let week = overview.week(containing: start ?? overview.now)
+    self.navigation = navigation
+    isCurrent = week.week == navigation.current
     let workspace = overview.workspace
     let lines = Dictionary(
       workspace.lines.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
