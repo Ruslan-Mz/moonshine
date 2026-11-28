@@ -126,7 +126,8 @@ public struct LineWeekHeader: Hashable, Sendable {
   public let line: LineAssignment
   /// Nil on a future week, which has no count yet (owner, 2026-11-28).
   public let thisWeek: WeekCounts?
-  public let previousAverage: WeekAverage
+  /// Over the known weeks only; nil when none of them is known (owner, 2026-11-28).
+  public let previousAverage: WeekAverage?
   /// The store holds a completed occurrence of the line: rhythm applies (owner, 2026-11-27).
   public let hasRhythm: Bool
   /// The store holds a completed one-off task of the line: progress applies. Neither: the
@@ -295,6 +296,11 @@ public struct Overview: Sendable {
   public let stats: Stats
   public let tracer: Tracer
   public let deadlineRule: DeadlineRule
+  /// Where the store's completions are known from: the earlier of the provider's window start
+  /// and the earliest completion the store keeps (ADR-0002; owner, 2026-11-28). It assumes an
+  /// import at least every 12 weeks, so the kept completions have no gap from the earliest on.
+  /// Nil when neither is known.
+  public let knownSince: Date?
   /// Nil when every due date is a deadline.
   private let deadlines: Set<TaskItemID>?
 
@@ -314,6 +320,9 @@ public struct Overview: Sendable {
     self.tracer = Tracer(workspace: workspace, now: now)
     self.deadlineRule = deadlineRule
     self.deadlines = deadlineRule.deadlineTasks(in: workspace)
+    let earliest = workspace.tasks.lazy.filter { $0.status == .completed }.compactMap(\.completedAt)
+      .min()
+    self.knownSince = [workspace.completedSince, earliest].compactMap { $0 }.min()
   }
 
   /// Whether a task's due date counts as a deadline under the rule; urgency and the due badge
@@ -579,7 +588,7 @@ public struct Overview: Sendable {
       header: lineOrder.map { line in
         LineWeekHeader(
           line: line, thisWeek: isFuture ? nil : stats.counts(line, in: week),
-          previousAverage: stats.average(line, before: averageBefore),
+          previousAverage: stats.average(line, before: averageBefore, knownFrom: knownSince),
           hasRhythm: rhythmLines.contains(line), hasProgress: progressLines.contains(line))
       })
   }

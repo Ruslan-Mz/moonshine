@@ -1737,18 +1737,18 @@
         }
       }
     },
-    "Go to Today": {
+    "Go to This Week": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Go to Today"
+            "value": "Go to This Week"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Перейти к сегодня"
+            "value": "Перейти к текущей неделе"
           }
         }
       }
@@ -4585,6 +4585,22 @@
         }
       }
     },
+    "progress %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "progress %lld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "продвижение %lld"
+          }
+        }
+      }
+    },
     "progress %lld, average %@": {
       "localizations": {
         "en": {
@@ -4697,6 +4713,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "повторяющиеся занятия"
+          }
+        }
+      }
+    },
+    "rhythm %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "rhythm %lld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ритм %lld"
           }
         }
       }

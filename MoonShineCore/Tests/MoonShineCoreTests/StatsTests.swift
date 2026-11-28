@@ -102,6 +102,45 @@ import Testing
     #expect(stats.average(violin, before: w40) == WeekAverage(rhythm: 0.75, progress: 0.25))
   }
 
+  // MARK: Known weeks only (owner, 2026-11-28, PR #77 round 1)
+
+  /// W36–W39 with a session in W37 and a task in W39; the bound decides which weeks count.
+  private func knownWorld() -> (Stats, LineAssignment) {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.session("Scales", line: violin, at: W.date(2026, 9, 8))  // W37
+    world.task("Rosin", line: violin, completed: W.date(2026, 9, 22))  // W39
+    return (Stats(workspace: world.workspace, now: now), violin)
+  }
+
+  @Test func withNoBoundTheAverageIsTheFourWeekOne() {
+    let (stats, violin) = knownWorld()
+    #expect(
+      stats.average(violin, before: w40, knownFrom: nil) == stats.average(violin, before: w40))
+  }
+
+  @Test func onlyWeeksStartingOnOrAfterTheBoundCount() {
+    let (stats, violin) = knownWorld()
+    // Monday 14 September 00:00 is W38's start: W38 and W39 are known, two weeks.
+    #expect(
+      stats.average(violin, before: w40, knownFrom: W.date(2026, 9, 14, 0))
+        == WeekAverage(rhythm: 0, progress: 0.5))
+    // A bound inside W38 leaves W38 partly covered, so only W39 counts.
+    #expect(
+      stats.average(violin, before: w40, knownFrom: W.date(2026, 9, 14, 9))
+        == WeekAverage(rhythm: 0, progress: 1))
+    // From W36's Monday, all four.
+    #expect(
+      stats.average(violin, before: w40, knownFrom: W.date(2026, 8, 31, 0))
+        == WeekAverage(rhythm: 0.25, progress: 0.25))
+  }
+
+  @Test func noKnownWeekGivesNoAverage() {
+    let (stats, violin) = knownWorld()
+    #expect(stats.average(violin, before: w40, knownFrom: W.date(2026, 9, 28, 0)) == nil)
+    #expect(stats.average(violin, before: w40, knownFrom: W.date(2026, 9, 21, 9)) == nil)
+  }
+
   @Test func lastCompletionPerLine() {
     var world = W()
     let violin = LineAssignment.line(world.line("violin").id)

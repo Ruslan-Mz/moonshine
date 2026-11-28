@@ -2,12 +2,13 @@ import MoonShineCore
 import SwiftUI
 
 /// `design/screens/week.md`, draft-2: the line strip, seven day columns and the No plan tray,
-/// with ‹ Today › and the View menu's Previous Week (⌘←), Next Week (⌘→) and Go to Today (S5-1b).
-/// Checkboxes show state only and write nothing; a card opens its task in OmniFocus on a
+/// with ‹ Today › and the View menu's Previous Week (⌘←), Next Week (⌘→) and Go to This Week
+/// (S5-1b). Checkboxes show state only and write nothing; a card opens its task in OmniFocus on a
 /// double-click or its accessibility action, through the opener.
 struct WeekView: View {
   let overview: Overview
-  /// Nil is this week; held as the week, so midnight cannot move it.
+  /// The shown week, held from the moment Week appears, so midnight cannot move it; nil only
+  /// until then (PR #77 round 1).
   @State private var shown: ISOWeek?
 
   var body: some View {
@@ -24,7 +25,7 @@ struct WeekView: View {
             }
             .help(Text("Previous week (⌘←)"))
             .disabled(!stepper.canStep(by: -1))
-            Button("Today") { stepper.goToToday() }
+            Button("Today") { stepper.goToThisWeek() }
               .disabled(stepper.isCurrent)
             Button {
               stepper.step(by: 1)
@@ -37,6 +38,7 @@ struct WeekView: View {
         }
       }
       .focusedSceneValue(\.weekStepper, stepper)
+      .onAppear { stepper.hold() }
   }
 }
 
@@ -237,6 +239,7 @@ private struct MoreList: View {
         CardView(card: card, timeZone: timeZone)
       }
       .focused($isFocused)
+      .defaultFocus($isFocused, true)
       Divider()
       HStack {
         Spacer()
@@ -341,10 +344,10 @@ private struct StripCell: View {
       } else {
         Series(
           color: Tokens.rhythm, applies: cell.hasRhythm, count: cell.thisWeek?.rhythm,
-          average: cell.average.rhythm, kind: .rhythm)
+          average: cell.average?.rhythm, kind: .rhythm)
         Series(
           color: Tokens.progress, applies: cell.hasProgress, count: cell.thisWeek?.progress,
-          average: cell.average.progress, kind: .progress)
+          average: cell.average?.progress, kind: .progress)
       }
     }
     .font(.caption)
@@ -360,7 +363,9 @@ private struct Series: View {
   let applies: Bool
   /// Nil on a future week: the average only (owner, 2026-11-28).
   let count: Int?
-  let average: Double
+  /// Nil when none of the four weeks before is known: no `avg`, and VoiceOver reads none
+  /// (owner, 2026-11-28, PR #77 round 1).
+  let average: Double?
   let kind: Kind
   @Environment(\.locale) private var locale
 
@@ -369,26 +374,33 @@ private struct Series: View {
       RoundedRectangle(cornerRadius: 1).fill(color).frame(width: 8, height: 8)
       if applies {
         if let count { Text(verbatim: "\(count)").monospacedDigit() }
-        Text("avg \(WeekFormat.average(average, locale: locale))")
-          .foregroundStyle(.secondary)
-          .monospacedDigit()
+        if let average {
+          Text("avg \(WeekFormat.average(average, locale: locale))")
+            .foregroundStyle(.secondary)
+            .monospacedDigit()
+        }
       } else {
         Text(verbatim: "—").foregroundStyle(.tertiary)
       }
     }
     .accessibilityElement(children: .ignore)
-    .accessibilityLabel(label)
+    .accessibilityLabel(label ?? Text(verbatim: ""))
+    .accessibilityHidden(applies && count == nil && average == nil)
   }
 
-  private var label: Text {
-    let shown = WeekFormat.average(average, locale: locale)
-    switch (kind, applies, count) {
-    case (.rhythm, true, let count?): return Text("rhythm \(count), average \(shown)")
-    case (.progress, true, let count?): return Text("progress \(count), average \(shown)")
-    case (.rhythm, true, nil): return Text("rhythm average \(shown)")
-    case (.progress, true, nil): return Text("progress average \(shown)")
-    case (.rhythm, false, _): return Text("rhythm not applicable")
-    case (.progress, false, _): return Text("progress not applicable")
+  private var label: Text? {
+    let shown = average.map { WeekFormat.average($0, locale: locale) }
+    switch (kind, applies, count, shown) {
+    case (.rhythm, true, let count?, let shown?): return Text("rhythm \(count), average \(shown)")
+    case (.progress, true, let count?, let shown?):
+      return Text("progress \(count), average \(shown)")
+    case (.rhythm, true, let count?, nil): return Text("rhythm \(count)")
+    case (.progress, true, let count?, nil): return Text("progress \(count)")
+    case (.rhythm, true, nil, let shown?): return Text("rhythm average \(shown)")
+    case (.progress, true, nil, let shown?): return Text("progress average \(shown)")
+    case (_, true, nil, nil): return nil
+    case (.rhythm, false, _, _): return Text("rhythm not applicable")
+    case (.progress, false, _, _): return Text("progress not applicable")
     }
   }
 }

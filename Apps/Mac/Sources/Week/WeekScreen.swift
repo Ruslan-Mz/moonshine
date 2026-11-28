@@ -51,7 +51,8 @@ struct WeekScreen: Equatable {
     let name: String
     /// Nil on a future week: the cell shows the average only (owner, 2026-11-28).
     let thisWeek: WeekCounts?
-    let average: WeekAverage
+    /// Nil when none of the four weeks before is known: no `avg` (owner, 2026-11-28).
+    let average: WeekAverage?
     let hasRhythm: Bool
     let hasProgress: Bool
 

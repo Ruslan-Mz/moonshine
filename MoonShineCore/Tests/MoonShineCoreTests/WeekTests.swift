@@ -278,7 +278,10 @@ import Testing
     let violin = LineAssignment.line(world.line("violin").id)
     world.session("Scales", line: violin, at: W.date(2026, 9, 22))
     world.task("Etude", line: violin, completed: W.date(2026, 9, 1))
-    let header = Overview(workspace: world.workspace, now: now).week(
+    // The window from W35's Monday, so all four weeks before W39 are known (PR #77 round 1).
+    var workspace = world.workspace
+    workspace.completedSince = W.date(2026, 8, 24, 0)
+    let header = Overview(workspace: workspace, now: now).week(
       containing: W.date(2026, 9, 23)
     ).header
     #expect(header.first?.thisWeek == WeekCounts(rhythm: 1))
@@ -304,6 +307,42 @@ import Testing
       #expect(future?.previousAverage == WeekAverage(rhythm: 0, progress: 1))
       #expect(future?.previousAverage == current?.previousAverage)
     }
+  }
+
+  // MARK: Known data (owner, 2026-11-28, PR #77 round 1)
+
+  /// The earlier of the provider's window start and the store's earliest completion: the store
+  /// keeps completions after they leave the window (ADR-0002).
+  @Test func knownSinceIsTheEarlierOfTheWindowStartAndTheEarliestCompletion() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.task("Kept from an old import", line: violin, completed: W.date(2026, 6, 10))
+    world.task("Undone", line: violin)
+    var workspace = world.workspace
+    workspace.completedSince = W.date(2026, 7, 6, 0)
+    #expect(Overview(workspace: workspace, now: now).knownSince == W.date(2026, 6, 10))
+    workspace.tasks.removeAll { $0.completedAt != nil }
+    #expect(Overview(workspace: workspace, now: now).knownSince == W.date(2026, 7, 6, 0))
+    workspace.completedSince = nil
+    #expect(Overview(workspace: workspace, now: now).knownSince == nil)
+  }
+
+  @Test func theHeaderAveragesOnlyKnownWeeksAndHasNoneWithoutOne() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.task("First", line: violin, completed: W.date(2026, 9, 1))  // W36
+    world.task("Second", line: violin, completed: W.date(2026, 9, 8))  // W37
+    var workspace = world.workspace
+    // The window starts on W36's Monday: W36 is known, the weeks before it are not.
+    workspace.completedSince = W.date(2026, 8, 31, 0)
+    let overview = Overview(workspace: workspace, now: now)
+    let header = { (date: Date) in overview.week(containing: date).header.first?.previousAverage }
+    #expect(header(W.date(2026, 9, 2)) == .some(nil))  // W36: no known week before it
+    #expect(header(W.date(2026, 9, 9)) == WeekAverage(rhythm: 0, progress: 1))  // over W36
+    #expect(header(W.date(2026, 9, 16)) == WeekAverage(rhythm: 0, progress: 1))  // W36–W37
+    #expect(header(now) == WeekAverage(rhythm: 0, progress: 0.5))  // W36–W39, four
+    // A future week follows the same rule: before the current week, known weeks only.
+    #expect(header(W.date(2026, 10, 7)) == WeekAverage(rhythm: 0, progress: 0.5))
   }
 
   @Test(arguments: [Date.distantPast, Date.distantFuture])

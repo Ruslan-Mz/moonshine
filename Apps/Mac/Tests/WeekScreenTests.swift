@@ -1,5 +1,6 @@
 import Foundation
 import MoonShineCore
+import SwiftUI
 import Testing
 
 @testable import MoonShineMac
@@ -161,15 +162,14 @@ private func date(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) ->
       next.days.allSatisfy { $0.summary.allSatisfy { if case .done = $0 { false } else { true } } })
   }
 
-  /// ‹ stops at the week holding the completion window's start, 6 July in Demo (owner,
-  /// 2026-11-28): an earlier week would read unknown data as nothing done.
-  @MainActor @Test func backStopsAtTheWeekHoldingTheWindowStart() async throws {
+  /// ‹ stops at the week where the store's data is known from: the earlier of the window start
+  /// and the earliest kept completion (owner, 2026-11-28, PR #77 round 1); 6 July in Demo.
+  @MainActor @Test func backStopsAtTheWeekTheDataIsKnownFrom() async throws {
     let overview = try await demoOverview()
     let navigation = WeekNavigation(overview)
     let july6 = ISOWeek(year: 2026, week: 28)
-    #expect(
-      overview.workspace.completedSince.map { ISOWeek(containing: $0, calendar: overview.calendar) }
-        == july6)
+    let known = try #require(overview.knownSince)
+    #expect(ISOWeek(containing: known, calendar: overview.calendar) == july6)
     #expect(navigation.earliest == july6)
     #expect(navigation.clamped(july6) == july6)
     #expect(navigation.clamped(ISOWeek(year: 2026, week: 27)) == july6)
@@ -194,13 +194,101 @@ private func date(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) ->
     #expect(navigation.clamped(ISOWeek(year: 2100, week: 1)) == navigation.latest)
   }
 
-  @Test func aStepThatReachesThisWeekIsNil() {
+  /// A completion kept from an earlier import, before the window, moves the stop back to it
+  /// (ADR-0002); with none, the stop is the window's week.
+  @Test func aKeptCompletionBeforeTheWindowMovesTheStopBack() {
+    let window = date(2026, 7, 6)  // W28's Monday
+    let kept = Self.item("Kept from an old import", completed: date(2026, 5, 13, 9))  // W20
+    let now = date(2026, 9, 30, 12)
+    let with = WeekNavigation(
+      Overview(
+        workspace: Workspace(timeZone: riga, tasks: [kept], completedSince: window), now: now))
+    #expect(with.earliest == ISOWeek(year: 2026, week: 20))
+    let without = WeekNavigation(
+      Overview(workspace: Workspace(timeZone: riga, completedSince: window), now: now))
+    #expect(without.earliest == ISOWeek(year: 2026, week: 28))
+  }
+
+  /// PR #77 round 1, Low: a window start after today (a clock set back) keeps this week shown.
+  @Test func aWindowStartAfterTodayKeepsThisWeek() {
+    let navigation = WeekNavigation(
+      Overview(
+        workspace: Workspace(timeZone: riga, completedSince: date(2026, 10, 14)),
+        now: date(2026, 9, 30, 12)))
+    #expect(navigation.earliest == navigation.current)
+    #expect(navigation.clamped(nil) == navigation.current)
+    #expect(!navigation.canStep(nil, by: -1))
+  }
+
+  /// PR #77 round 1, Medium: the shown week is held as the week itself, this week included, so
+  /// the rebuild at midnight from Sunday to Monday does not move it.
+  @Test func theShownWeekStaysPutAcrossMidnight() {
+    var shown: ISOWeek?
+    let binding = Binding(get: { shown }, set: { shown = $0 })
+    let sunday = WeekNavigation(
+      Overview(workspace: Workspace(timeZone: riga), now: date(2026, 10, 4, 23, 55)))
+    let before = WeekStepper(navigation: sunday, shown: binding)
+    before.hold()
+    #expect(shown == ISOWeek(year: 2026, week: 40))
+    let monday = WeekNavigation(
+      Overview(workspace: Workspace(timeZone: riga), now: date(2026, 10, 5, 0, 5)))
+    let after = WeekStepper(navigation: monday, shown: binding)
+    after.hold()
+    #expect(shown == ISOWeek(year: 2026, week: 40))
+    #expect(!after.isCurrent)
+    after.goToThisWeek()
+    #expect(shown == ISOWeek(year: 2026, week: 41))
+    #expect(after.isCurrent)
+  }
+
+  /// PR #77 round 1, Low: the toolbar's and the View menu's stepper.
+  @Test func theStepperStepsWithinTheBoundsAndGoesBackToThisWeek() {
+    var shown: ISOWeek?
     let navigation = WeekNavigation(
       Overview(workspace: Workspace(timeZone: riga), now: date(2026, 9, 30, 12)))
-    let next = navigation.step(nil, by: 1)
-    #expect(next == ISOWeek(year: 2026, week: 41))
-    #expect(navigation.step(next, by: -1) == nil)
-    #expect(navigation.step(nil, by: -1) == ISOWeek(year: 2026, week: 39))
+    let stepper = WeekStepper(
+      navigation: navigation, shown: Binding(get: { shown }, set: { shown = $0 }))
+    #expect(stepper.isCurrent)
+    stepper.step(by: 1)
+    #expect(shown == ISOWeek(year: 2026, week: 41))
+    #expect(!stepper.isCurrent)
+    stepper.step(by: -1)
+    #expect(shown == navigation.current)
+    #expect(stepper.isCurrent)
+    stepper.step(by: -1)
+    #expect(shown == ISOWeek(year: 2026, week: 39))
+    stepper.goToThisWeek()
+    #expect(shown == navigation.current)
+    shown = navigation.latest
+    #expect(!stepper.canStep(by: 1))
+    #expect(stepper.canStep(by: -1))
+    shown = navigation.earliest
+    #expect(!stepper.canStep(by: -1))
+  }
+
+  /// Averages over known weeks only, with none hidden (owner, 2026-11-28, PR #77 round 1): on
+  /// Demo, known from W28's Monday.
+  @MainActor @Test func averagesCountOnlyTheKnownWeeks() async throws {
+    let overview = try await demoOverview()
+    let stats = overview.stats
+    func week(_ number: Int) -> WeekScreen {
+      WeekScreen(overview, week: ISOWeek(year: 2026, week: number))
+    }
+    func mean(_ id: LineID, _ weeks: ClosedRange<Int>) -> WeekAverage {
+      let counts = weeks.map { stats.counts(.line(id), in: ISOWeek(year: 2026, week: $0)) }
+      let total = Double(counts.count)
+      return WeekAverage(
+        rhythm: Double(counts.map(\.rhythm).reduce(0, +)) / total,
+        progress: Double(counts.map(\.progress).reduce(0, +)) / total)
+    }
+    #expect(week(28).cells.allSatisfy { $0.average == nil })
+    #expect(week(29).cells.allSatisfy { $0.average == mean($0.id, 28...28) })
+    #expect(week(32).cells.allSatisfy { $0.average == mean($0.id, 28...31) })
+    // Demo has no completion in W28, so W29's averages are 0 over one week: shown, not hidden.
+    // Core's StatsTests pin one known week against four with data.
+    #expect(week(29).cells.allSatisfy { $0.average != nil })
+    // The future week's reference follows the same rule: the four known weeks before W40.
+    #expect(week(41).cells.allSatisfy { $0.average == mean($0.id, 36...39) })
   }
 
   /// A future week has no count, and the same average for every future week: the four full weeks

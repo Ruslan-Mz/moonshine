@@ -14,7 +14,7 @@ struct ViewCommands: Commands {
       Button("Week") {
         model.selection = .week
         // ⌘2 on Week goes back to this week, as it opens Week on it.
-        weekStepper?.goToToday()
+        weekStepper?.goToThisWeek()
       }
       .keyboardShortcut("2", modifiers: .command)
       Button("Lines") { model.selection = .lines }
@@ -27,7 +27,8 @@ struct ViewCommands: Commands {
       Button("Next Week") { weekStepper?.step(by: 1) }
         .keyboardShortcut(.rightArrow, modifiers: .command)
         .disabled(!(weekStepper?.canStep(by: 1) ?? false))
-      Button("Go to Today") { weekStepper?.goToToday() }
+      // Not `Go to Today`: the palette's command of that name opens Today (PR #77 round 1).
+      Button("Go to This Week") { weekStepper?.goToThisWeek() }
         .disabled(weekStepper?.isCurrent ?? true)
       Divider()
     }
