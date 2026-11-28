@@ -345,6 +345,22 @@ import Testing
     #expect(header(W.date(2026, 10, 7)) == WeekAverage(rhythm: 0, progress: 0.5))
   }
 
+  /// The bound is the start of the ISO week holding `knownSince`, the week ‹ stops at, so a kept
+  /// completion in mid-week makes its whole week known (owner, 2026-11-28, PR #77 round 2).
+  @Test func aMidWeekStopMakesItsWholeWeekKnown() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.task("Kept, Wednesday of W20", line: violin, completed: W.date(2026, 5, 13))
+    world.task("Kept, Wednesday of W21", line: violin, completed: W.date(2026, 5, 20))
+    var workspace = world.workspace
+    workspace.completedSince = W.date(2026, 7, 6, 0)
+    let overview = Overview(workspace: workspace, now: now)
+    let header = { (date: Date) in overview.week(containing: date).header.first?.previousAverage }
+    #expect(header(W.date(2026, 5, 13)) == .some(nil))  // W20, the stop: nothing known before it
+    #expect(header(W.date(2026, 5, 20)) == WeekAverage(rhythm: 0, progress: 1))  // over W20
+    #expect(header(W.date(2026, 5, 27)) == WeekAverage(rhythm: 0, progress: 1))  // W20–W21
+  }
+
   @Test(arguments: [Date.distantPast, Date.distantFuture])
   func anyDateGivesSevenDaysHoldingIt(date: Date) {
     let week = Overview(workspace: W().workspace, now: now).week(containing: date)

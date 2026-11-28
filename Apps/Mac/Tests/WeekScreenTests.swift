@@ -222,7 +222,7 @@ private func date(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) ->
 
   /// PR #77 round 1, Medium: the shown week is held as the week itself, this week included, so
   /// the rebuild at midnight from Sunday to Monday does not move it.
-  @Test func theShownWeekStaysPutAcrossMidnight() {
+  @MainActor @Test func theShownWeekStaysPutAcrossMidnight() {
     var shown: ISOWeek?
     let binding = Binding(get: { shown }, set: { shown = $0 })
     let sunday = WeekNavigation(
@@ -242,7 +242,7 @@ private func date(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) ->
   }
 
   /// PR #77 round 1, Low: the toolbar's and the View menu's stepper.
-  @Test func theStepperStepsWithinTheBoundsAndGoesBackToThisWeek() {
+  @MainActor @Test func theStepperStepsWithinTheBoundsAndGoesBackToThisWeek() {
     var shown: ISOWeek?
     let navigation = WeekNavigation(
       Overview(workspace: Workspace(timeZone: riga), now: date(2026, 9, 30, 12)))

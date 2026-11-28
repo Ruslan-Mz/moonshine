@@ -577,6 +577,11 @@ public struct Overview: Sendable {
     // for every future week (owner, 2026-11-28).
     let isFuture = week > stats.currentWeek
     let averageBefore = isFuture ? stats.currentWeek : week
+    // Known from the start of the week holding `knownSince`, the week ‹ stops at: a window
+    // starts on a Monday, and a kept completion's week is whole in the store (PR #77 round 2).
+    let knownFrom = knownSince.flatMap {
+      ISOWeek(containing: $0, calendar: calendar).horizon(calendar: calendar)?.start
+    }
     return WeekOverview(
       week: week,
       days: days.indices.map { index in
@@ -588,7 +593,7 @@ public struct Overview: Sendable {
       header: lineOrder.map { line in
         LineWeekHeader(
           line: line, thisWeek: isFuture ? nil : stats.counts(line, in: week),
-          previousAverage: stats.average(line, before: averageBefore, knownFrom: knownSince),
+          previousAverage: stats.average(line, before: averageBefore, knownFrom: knownFrom),
           hasRhythm: rhythmLines.contains(line), hasProgress: progressLines.contains(line))
       })
   }
