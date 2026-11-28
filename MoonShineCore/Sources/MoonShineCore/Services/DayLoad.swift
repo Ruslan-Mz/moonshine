@@ -108,7 +108,8 @@ public struct DayWindow: Hashable, Sendable {
 /// minutes: event and task bounds and "now" are floored to the minute before the union.
 public struct DayLoad: Hashable, Sendable {
   public let window: DateInterval
-  /// Events shown on the day (Show on, tentative and all-day included); nil without access.
+  /// Event rows shown on the day (Show on, tentative and all-day included), identical copies as
+  /// one; nil without access.
   public let eventCount: Int?
   /// The union of busy events inside the window; nil without access.
   public let inCalendarMinutes: Int?
@@ -155,8 +156,9 @@ public struct DayLoad: Hashable, Sendable {
       visibility.setting(for: event.calendarID, kind: event.calendarKind)
     }
     let shown = read.filter { $0.overlaps(dayInterval) && setting($0).show }
+    let counts = { (event: CalendarEvent) in Self.counts(event, visibility) }
     let busy: [DateInterval] = shown.compactMap { event in
-      guard !event.isAllDay, event.occupiesTime, setting(event).occupiesTime else { return nil }
+      guard counts(event) else { return nil }
       return clip(floorMinute(event.start), floorMinute(event.end), span)
     }
 
@@ -175,9 +177,16 @@ public struct DayLoad: Hashable, Sendable {
             taken.compactMap { clip($0.start, $0.end, DateInterval(start: from, end: span.end)) })
       }
     return DayLoad(
-      window: span, eventCount: shown.count, inCalendarMinutes: minutes(busyUnion),
+      window: span, eventCount: EventCopies.collapse(shown, counts: counts).count,
+      inCalendarMinutes: minutes(busyUnion),
       plannedMinutes: minutes(taken) - minutes(busyUnion), freeWholeWindowMinutes: wholeFree,
       freeFromNowMinutes: freeFromNow)
+  }
+
+  /// A timed event that takes time, from a calendar that counts as busy.
+  fileprivate static func counts(_ event: CalendarEvent, _ visibility: CalendarVisibility) -> Bool {
+    !event.isAllDay && event.occupiesTime
+      && visibility.setting(for: event.calendarID, kind: event.calendarKind).occupiesTime
   }
 
   fileprivate static func floorMinute(_ date: Date) -> Date {
@@ -243,6 +252,11 @@ public struct DayRail: Hashable, Sendable {
   public let marks: [Mark]
   /// At or after the window's end; time order.
   public let below: [Mark]
+  /// How many identical events a shown event stands for, where more than one.
+  public let copies: [CalendarEvent: Int]
+
+  /// 1 for an event that stands for itself alone.
+  public func copies(of event: CalendarEvent) -> Int { copies[event] ?? 1 }
 
   /// `tasks` as for `DayLoad.compute`; `deadlines` are the tasks whose due mark is amber.
   public static func compute(
@@ -259,9 +273,12 @@ public struct DayRail: Hashable, Sendable {
     let span = load.window
     func onDay(_ date: Date) -> Bool { date >= dayInterval.start && date < dayInterval.end }
 
-    let shown = (events.value ?? []).filter {
-      $0.overlaps(dayInterval) && visibility.setting(for: $0.calendarID, kind: $0.calendarKind).show
-    }
+    let rows = EventCopies.collapse(
+      (events.value ?? []).filter {
+        $0.overlaps(dayInterval)
+          && visibility.setting(for: $0.calendarID, kind: $0.calendarKind).show
+      }, counts: { DayLoad.counts($0, visibility) })
+    let shown = rows.map(\.event)
     var items: [Mark] = shown.filter { !$0.isAllDay }.map {
       Mark(kind: .event($0), start: DayLoad.floorMinute($0.start), end: DayLoad.floorMinute($0.end))
     }
@@ -291,7 +308,65 @@ public struct DayRail: Hashable, Sendable {
     return DayRail(
       load: load, allDay: shown.filter(\.isAllDay), above: ordered.filter(isAbove),
       marks: ordered.filter { !isAbove($0) && $0.start < span.end },
-      below: ordered.filter { !isAbove($0) && $0.start >= span.end })
+      below: ordered.filter { !isAbove($0) && $0.start >= span.end },
+      copies: Dictionary(
+        rows.filter { $0.copies > 1 }.map { ($0.event, $0.copies) },
+        uniquingKeysWith: { first, _ in first }))
+  }
+}
+
+/// Events with the same title, start, end and all-day flag, whatever their calendar, are one
+/// row (owner, 2026-11-27): an account that copies one meeting into a calendar three times shows
+/// it once. An untitled event never collapses (owner, 2026-11-28). EventKit gives events in no set order, so the copy that stands for the others is
+/// chosen, not found first: one that counts as busy, then one drawn normal, then by calendar
+/// and event id. The busy union still takes every copy.
+private struct EventCopies {
+  var event: CalendarEvent
+  var copies: Int
+
+  private struct Key: Hashable {
+    let title: String
+    let start: Date
+    let end: Date
+    let isAllDay: Bool
+  }
+
+  /// `counts`: the event takes busy time (its own rule and its calendar's).
+  static func collapse(_ events: [CalendarEvent], counts: (CalendarEvent) -> Bool)
+    -> [EventCopies]
+  {
+    var rows: [EventCopies] = []
+    var index: [Key: Int] = [:]
+    for event in events {
+      // An untitled event (`Busy`; empty or blank is nil) is often someone else's free/busy
+      // block: two at one time are two commitments (owner, 2026-11-28, PR #76 round 1).
+      guard let title = event.title else {
+        rows.append(EventCopies(event: event, copies: 1))
+        continue
+      }
+      let key = Key(title: title, start: event.start, end: event.end, isAllDay: event.isAllDay)
+      if let row = index[key] {
+        rows[row].copies += 1
+        if precedes(event, rows[row].event, counts) { rows[row].event = event }
+      } else {
+        index[key] = rows.count
+        rows.append(EventCopies(event: event, copies: 1))
+      }
+    }
+    return rows
+  }
+
+  private static func precedes(
+    _ a: CalendarEvent, _ b: CalendarEvent, _ counts: (CalendarEvent) -> Bool
+  ) -> Bool {
+    func rank(_ event: CalendarEvent) -> (Int, Int) {
+      (counts(event) ? 0 : 1, event.display == .normal ? 0 : 1)
+    }
+    if rank(a) != rank(b) { return rank(a) < rank(b) }
+    if a.calendarID.rawValue != b.calendarID.rawValue {
+      return a.calendarID.rawValue < b.calendarID.rawValue
+    }
+    return a.id < b.id
   }
 }
 

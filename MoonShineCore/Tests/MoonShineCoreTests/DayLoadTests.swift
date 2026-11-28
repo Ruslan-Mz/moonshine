@@ -22,10 +22,10 @@ struct RigaDay {
   static func event(
     _ start: Date, _ end: Date, calendar: CalendarID = work, kind: CalendarKind = .other,
     allDay: Bool = false,
-    display: EventDisplay = .normal, occupies: Bool = true
+    display: EventDisplay = .normal, occupies: Bool = true, title: String? = nil
   ) -> CalendarEvent {
     CalendarEvent(
-      id: UUID().uuidString, calendarID: calendar, calendarKind: kind, title: nil, start: start,
+      id: UUID().uuidString, calendarID: calendar, calendarKind: kind, title: title, start: start,
       end: end,
       isAllDay: allDay, display: display, occupiesTime: occupies)!
   }
@@ -423,6 +423,126 @@ extension RigaDay {
     let rail = R.rail([allDay, work])
     #expect(rail.allDay == [allDay])
     #expect(rail.marks.map { R.describe($0) } == ["event 13:00–14:00"])
+  }
+
+  // MARK: Identical events (owner, 2026-11-27): one row, whatever their calendar
+
+  static let copy = "Invented sync"
+  static let home = CalendarID("home")
+
+  @Test func threeIdenticalCopiesAreOneRowOfThree() {
+    let copies = (0..<3).map { _ in R.event(R.at(13), R.at(14), title: Self.copy) }
+    let rail = R.rail(copies)
+    #expect(rail.marks.map { R.describe($0) } == ["event 13:00–14:00"])
+    guard case .event(let shown) = rail.marks.first?.kind else {
+      Issue.record("no event row")
+      return
+    }
+    #expect(copies.contains(shown))
+    #expect(rail.copies(of: shown) == 3)
+    // `N events` counts rows.
+    #expect(rail.load.eventCount == 1)
+    #expect(R.load(copies).eventCount == 1)
+  }
+
+  @Test func anotherEndOrTitleIsAnotherRow() {
+    let first = R.event(R.at(13), R.at(14), title: Self.copy)
+    let longer = R.event(R.at(13), R.at(14, 30), title: Self.copy)
+    let renamed = R.event(R.at(13), R.at(14), title: "Invented other")
+    for pair in [[first, longer], [first, renamed]] {
+      let rail = R.rail(pair)
+      #expect(rail.marks.count == 2)
+      #expect(rail.copies.isEmpty)
+      #expect(rail.load.eventCount == 2)
+    }
+  }
+
+  /// An untitled event (`Busy`), often a free/busy block of someone else's calendar, never
+  /// collapses (owner, 2026-11-28, PR #76 round 1): two at one time are two commitments.
+  @Test func untitledEventsNeverCollapse() {
+    let blank = R.event(R.at(10), R.at(11), title: "  ")
+    let none = R.event(R.at(10), R.at(11), calendar: Self.home)
+    let rail = R.rail([blank, none])
+    #expect(rail.marks.count == 2)
+    #expect(rail.copies.isEmpty)
+    #expect(rail.load.eventCount == 2)
+    #expect(rail.load.inCalendarMinutes == 60)
+    let titled = R.event(R.at(10), R.at(11), title: Self.copy)
+    #expect(R.rail([none, titled]).marks.count == 2)
+    let three = (0..<3).map { _ in R.event(R.at(10), R.at(11), title: Self.copy) }
+    let copies = R.rail(three)
+    #expect(copies.marks.count == 1)
+    #expect(copies.copies.values.first == 3)
+  }
+
+  /// Each field of the key tells rows apart: a start, or the all-day flag.
+  @Test func anotherStartOrAllDayFlagIsAnotherRow() {
+    let first = R.event(R.at(13), R.at(14), title: Self.copy)
+    let later = R.event(R.at(13, 30), R.at(14), title: Self.copy)
+    #expect(R.rail([first, later]).marks.count == 2)
+    let day = R.event(R.at(0), R.at(0, day: 2), title: Self.copy)
+    let allDay = R.event(R.at(0), R.at(0, day: 2), allDay: true, title: Self.copy)
+    let rail = R.rail([day, allDay])
+    #expect(rail.copies.isEmpty)
+    #expect(rail.load.eventCount == 2)
+  }
+
+  /// The row is drawn from the copy that counts, whatever order the store gives: a tentative
+  /// copy in one calendar and an accepted one in another draw one normal row.
+  @Test func theRowStandsForTheCopyThatCounts() {
+    let tentative = R.event(
+      R.at(13), R.at(14), calendar: Self.home, display: .tentative, occupies: false,
+      title: Self.copy)
+    let accepted = R.event(R.at(13), R.at(14), title: Self.copy)
+    for order in [[tentative, accepted], [accepted, tentative]] {
+      let rail = R.rail(order)
+      guard case .event(let shown) = rail.marks.first?.kind else {
+        Issue.record("no event row")
+        continue
+      }
+      #expect(shown == accepted)
+      #expect(rail.copies(of: accepted) == 2)
+      #expect(rail.load.inCalendarMinutes == 60)
+    }
+    // Neither counts: the same calendar order picks the same copy either way.
+    let other = R.event(
+      R.at(13), R.at(14), display: .tentative, occupies: false, title: Self.copy)
+    let picked = [[tentative, other], [other, tentative]].map { order -> CalendarEvent? in
+      if case .event(let shown) = R.rail(order).marks.first?.kind { shown } else { nil }
+    }
+    #expect(picked[0] == picked[1])
+  }
+
+  /// Another calendar's copy counts; a hidden calendar's is left out before the collapse.
+  @Test func copiesAcrossCalendarsAndAHiddenOne() {
+    let work = R.event(R.at(13), R.at(14), title: Self.copy)
+    let home = R.event(R.at(13), R.at(14), calendar: Self.home, title: Self.copy)
+    // By calendar id, `home` stands for both.
+    #expect(R.rail([work, home]).copies == [home: 2])
+    let hidden = CalendarVisibility([Self.home: CalendarSetting(show: false, countsAsBusy: true)])
+    let rail = R.rail([work, home], visibility: hidden)
+    #expect(rail.marks.count == 1)
+    #expect(rail.copies.isEmpty)
+    #expect(rail.copies(of: work) == 1)
+  }
+
+  @Test func allDayCopiesAreOneRow() throws {
+    let copies = (0..<2).map { _ in
+      R.event(R.at(0), R.at(0, day: 2), allDay: true, title: Self.copy)
+    }
+    let rail = R.rail(copies)
+    #expect(rail.allDay.count == 1)
+    let shown = try #require(rail.allDay.first)
+    #expect(copies.contains(shown))
+    #expect(rail.copies(of: shown) == 2)
+  }
+
+  @Test func theBusyTotalIsOneCopys() {
+    let one = R.load([R.event(R.at(13), R.at(14), title: Self.copy)])
+    let three = R.load((0..<3).map { _ in R.event(R.at(13), R.at(14), title: Self.copy) })
+    #expect(three.inCalendarMinutes == one.inCalendarMinutes)
+    #expect(three.freeWholeWindowMinutes == one.freeWholeWindowMinutes)
+    #expect(three.inCalendarMinutes == 60)
   }
 
   @Test func anotherDaysTimesGiveNoMark() {

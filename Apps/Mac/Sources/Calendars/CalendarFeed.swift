@@ -44,7 +44,8 @@ final class CalendarFeed {
     following = Task { [weak self] in
       for await _ in changes { self?.read() }
     }
-    // Access changed in System Settings is seen when the owner switches back.
+    // A revoked access is seen when the owner switches back; a new grant reaches the app only
+    // after it is reopened (owner, 2026-11-27, the live check of #74), so Settings says so.
     activation = center.addObserver(
       forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
     ) { [weak self] _ in

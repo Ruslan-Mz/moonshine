@@ -59,6 +59,18 @@ enum CalendarRow: Equatable, CaseIterable {
   /// The row offers `Open System Settings` rather than `Connect calendars…` and `Not now`.
   var opensSystemSettings: Bool { self != .connect }
 
+  /// `Then reopen MoonShine.` after the link, where access is turned on in System Settings:
+  /// macOS shows a new grant to a reopened app (owner, 2026-11-27, the live check of #74).
+  var reopens: Bool { opensSystemSettings }
+
+  static let reopen: LocalizedStringResource = "Then reopen MoonShine."
+
+  static func reopen(in locale: Locale) -> String {
+    var resource = reopen
+    resource.locale = locale
+    return String(localized: resource)
+  }
+
   private static func hides(pressed: Date, now: Date, calendar: Calendar) -> Bool {
     let pressed = calendar.startOfDay(for: pressed)
     let today = calendar.startOfDay(for: now)
@@ -98,6 +110,7 @@ struct CalendarAccessRow: View {
         HStack(spacing: 12) {
           if row.opensSystemSettings {
             Button("Open System Settings") { openTarget(.calendarPrivacySettings) }
+            if row.reopens { Text(CalendarRow.reopen).foregroundStyle(.secondary) }
           } else {
             Button("Connect calendars…") { input.connect() }.disabled(input.isConnecting)
             Button("Not now") { input.notNow() }
@@ -154,6 +167,7 @@ struct DayRailView: View {
         HStack(spacing: 6) {
           CalendarBar(color: color(event))
           title(event)
+          CopiesText(copies: rail.copies(of: event))
           Text("all day").foregroundStyle(.tertiary)
         }
         .frame(height: 16)
@@ -185,7 +199,7 @@ struct DayRailView: View {
   private var reading: RailReading {
     RailReading(
       now: now, dayStart: dayStart, zone: zone, locale: locale, lines: screen.lineNames,
-      selected: selected)
+      selected: selected, copies: rail.copies)
   }
 
   private func scale(_ timeline: DayTimeline) -> some View {
@@ -267,8 +281,9 @@ struct DayRailView: View {
       DayRailRow(
         mark: row.mark, now: now, dayStart: dayStart,
         zone: zone, emoji: emoji(row.mark), color: eventColor(row.mark),
-        range: row.showsRange ? range(row.mark) : nil, isSelected: isSelected(row.mark),
-        reading: reading.row(row.mark, inside: row.inside), reveal: reveal
+        range: row.showsRange ? range(row.mark) : nil, copies: copies(row.mark),
+        isSelected: isSelected(row.mark), reading: reading.row(row.mark, inside: row.inside),
+        reveal: reveal
       )
       .frame(height: row.height)
       .padding(.leading, Self.gutter)
@@ -331,7 +346,7 @@ struct DayRailView: View {
       .accessibilityHidden(true)
       DayRailRow(
         mark: mark, now: now, dayStart: dayStart, zone: zone, emoji: emoji(mark),
-        color: eventColor(mark), range: earlier ? range(mark) : nil,
+        color: eventColor(mark), range: earlier ? range(mark) : nil, copies: copies(mark),
         isSelected: isSelected(mark), reading: reading.row(mark), reveal: reveal)
     }
     .frame(height: 22)
@@ -369,6 +384,10 @@ struct DayRailView: View {
     }
   }
 
+  private func copies(_ mark: DayRail.Mark) -> Int {
+    if case .event(let event) = mark.kind { rail.copies(of: event) } else { 1 }
+  }
+
   private func eventColor(_ mark: DayRail.Mark) -> Color? {
     if case .event(let event) = mark.kind { color(event) } else { nil }
   }
@@ -403,6 +422,8 @@ private struct DayRailRow: View {
   let color: Color?
   /// `17:45–18:15` for a span inside another or a row from before the window.
   let range: String?
+  /// How many identical events an event row stands for.
+  let copies: Int
   let isSelected: Bool
   let reading: String
   let reveal: (TaskItemID) -> Void
@@ -414,6 +435,7 @@ private struct DayRailRow: View {
       HStack(alignment: .top, spacing: 6) {
         CalendarBar(color: color ?? Tokens.paused)
         title(event).padding(.top, 3)
+        CopiesText(copies: copies).padding(.top, 3)
         Spacer(minLength: 0)
         rangeText.padding(.top, 4)
       }
@@ -537,6 +559,23 @@ private struct Selection: ViewModifier {
   }
 }
 
+/// `×3` after an event's title when it stands for identical copies (owner, 2026-11-27); its
+/// tooltip and VoiceOver read `3 copies of this event`. Nothing for one.
+private struct CopiesText: View {
+  let copies: Int
+
+  var body: some View {
+    if copies > 1 {
+      Text(verbatim: "×\(copies)")
+        .foregroundStyle(.tertiary)
+        .monospacedDigit()
+        .fixedSize()
+        .help(Text("\(copies) copies of this event"))
+        .accessibilityLabel(Text("\(copies) copies of this event"))
+    }
+  }
+}
+
 /// The 3 pt leading bar in a calendar's colour (`design/components.md` § CalendarDot).
 private struct CalendarBar: View {
   let color: Color
@@ -600,6 +639,8 @@ struct RailReading {
   /// A task's line; a task with no line found has no line term.
   let lines: [TaskItemID: TodayScreen.LineName]
   let selected: TaskItemID?
+  /// `DayRail.copies`: an event row reads its count. No default, so no caller drops it.
+  let copies: [CalendarEvent: Int]
 
   /// `Day, 15 items with a time, 1 before 08:00. Shortened: 08:30 to 10:05, 10:35 to 11:40.
   /// Now 14:40, during Draft the summary.`
@@ -640,11 +681,16 @@ struct RailReading {
     let start = TodayFormat.markTime(mark.start, dayStart: dayStart, timeZone: zone, locale: locale)
     let when = mark.isSpan ? range(mark.start, mark.end) : start
     switch mark.kind {
-    case .event:
-      let reading = localized("\(when), \(title(mark)), event")
+    case .event(let event):
+      var reading = localized("\(when), \(title(mark)), event")
       let minutes = Int(mark.start.timeIntervalSince(now) / 60)
-      guard mark.start > now, minutes > 0 else { return reading }
-      return localized("\(reading), \(localized("in \(minutes) minutes"))")
+      if mark.start > now, minutes > 0 {
+        reading = localized("\(reading), \(localized("in \(minutes) minutes"))")
+      }
+      if let count = copies[event], count > 1 {
+        reading = localized("\(reading), \(Self.copies(count, locale))")
+      }
+      return reading
     case .planned(let item):
       return task(when, item, estimate: true, deadline: false)
     case .due(let item, let isDeadline):
@@ -652,6 +698,11 @@ struct RailReading {
         Self.due(start, isDeadline: isDeadline, locale), item, estimate: false, deadline: isDeadline
       )
     }
+  }
+
+  /// `3 copies of this event`, the `×3` tooltip's words.
+  static func copies(_ count: Int, _ locale: Locale) -> String {
+    localized("\(count) copies of this event", locale)
   }
 
   static func due(_ time: String, isDeadline: Bool, _ locale: Locale) -> String {
