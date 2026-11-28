@@ -1737,6 +1737,22 @@
         }
       }
     },
+    "Go to This Week": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go to This Week"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перейти к текущей неделе"
+          }
+        }
+      }
+    },
     "Horizon": {
       "localizations": {
         "en": {
@@ -2141,6 +2157,22 @@
         }
       }
     },
+    "Next Week": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next Week"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Следующая неделя"
+          }
+        }
+      }
+    },
     "Next actions": {
       "localizations": {
         "en": {
@@ -2169,6 +2201,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Следующие шаги (%lld)"
+          }
+        }
+      }
+    },
+    "Next week (⌘→)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next week (⌘→)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Следующая неделя (⌘→)"
           }
         }
       }
@@ -2729,6 +2777,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Нажмите ⌘R, чтобы прочитать OmniFocus"
+          }
+        }
+      }
+    },
+    "Previous Week": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous Week"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Предыдущая неделя"
+          }
+        }
+      }
+    },
+    "Previous week (⌘←)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous week (⌘←)"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Предыдущая неделя (⌘←)"
           }
         }
       }
@@ -4505,6 +4585,22 @@
         }
       }
     },
+    "progress %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "progress %lld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "продвижение %lld"
+          }
+        }
+      }
+    },
     "progress %lld, average %@": {
       "localizations": {
         "en": {
@@ -4517,6 +4613,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "продвижение %1$lld, в среднем %2$@"
+          }
+        }
+      }
+    },
+    "progress average %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "progress average %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "продвижение в среднем %@"
           }
         }
       }
@@ -4605,6 +4717,22 @@
         }
       }
     },
+    "rhythm %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "rhythm %lld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ритм %lld"
+          }
+        }
+      }
+    },
     "rhythm %lld, average %@": {
       "localizations": {
         "en": {
@@ -4617,6 +4745,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "ритм %1$lld, в среднем %2$@"
+          }
+        }
+      }
+    },
+    "rhythm average %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "rhythm average %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ритм в среднем %@"
           }
         }
       }

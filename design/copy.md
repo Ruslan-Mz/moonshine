@@ -295,3 +295,20 @@ Reminder texts are user data, shown as written.
 | Quota chip (ADR-0020)                                                                                                                                                  | `2 of 2 ✓` · `0 of 1 · this week` · `time · 1 of 4 · by Sun` · `last week: 1 of 2` · `2 of 2 ✓ (carried)` · `at least 1 of 4`      | `2 из 2 ✓` · `0 из 1 · эта неделя` · `пора · 1 из 4 · до вс` · `прошлая неделя: 1 из 2` · `2 из 2 ✓ (перенесено)` · `не меньше 1 из 4` |
 
 RU plurals: неделя / недели / недель подряд; линия / линии / линий; практика / практики / практик. The kind of an entry (`diary`, `report`) is the owner's word from the vault and is shown as written.
+
+## Week navigation (S5-1b)
+
+Owner, 2026-11-28 (PR #77 and its round 1). The toolbar's `‹ Today ›` keeps `Today` (`Сегодня`, the catalog's existing key). Week's View menu item is `Go to This Week`, not `Go to Today`, which is the palette's command for the Today screen.
+
+| Context                                                                                          | EN                     | RU                           |
+| ------------------------------------------------------------------------------------------------ | ---------------------- | ---------------------------- |
+| View menu, ⌘← (Week only)                                                                        | `Previous Week`        | `Предыдущая неделя`          |
+| View menu, ⌘→ (Week only)                                                                        | `Next Week`            | `Следующая неделя`           |
+| View menu, no key (Week only)                                                                    | `Go to This Week`      | `Перейти к текущей неделе`   |
+| Toolbar chevron, help                                                                            | `Previous week (⌘←)`   | `Предыдущая неделя (⌘←)`     |
+| Toolbar chevron, help                                                                            | `Next week (⌘→)`       | `Следующая неделя (⌘→)`      |
+| Strip cell, VoiceOver, future week (the average only)                                            | `rhythm average 4.0`   | `ритм в среднем 4,0`         |
+| Strip cell, VoiceOver, future week (the average only)                                            | `progress average 1.0` | `продвижение в среднем 1,0`  |
+| Strip cell, VoiceOver, no known week for the average                                             | `rhythm 4`             | `ритм 4`                     |
+| Strip cell, VoiceOver, no known week for the average                                             | `progress 1`           | `продвижение 1`              |
+| Palette, `Go to Today ⌘1` (S5-3, usage period; no catalog key yet; `screens/command-palette.md`) | `Go to Today`          | `Перейти к сегодняшнему дню` |

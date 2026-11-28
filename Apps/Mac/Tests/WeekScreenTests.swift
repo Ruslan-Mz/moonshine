@@ -1,5 +1,6 @@
 import Foundation
 import MoonShineCore
+import SwiftUI
 import Testing
 
 @testable import MoonShineMac
@@ -138,6 +139,214 @@ private func date(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) ->
     #expect(!screen.noPlan.isEmpty)
     #expect(screen.noPlan.allSatisfy { $0.lineName.map(active.contains) == true })
     #expect(screen.noPlan.allSatisfy { $0.due == nil })
+  }
+
+  // MARK: S5-1b, another week (owner, 2026-11-28)
+
+  @MainActor @Test func lastAndNextWeekOnDemo() async throws {
+    let overview = try await demoOverview()
+    let navigation = WeekNavigation(overview)
+    #expect(navigation.current == ISOWeek(year: 2026, week: 40))
+    #expect(WeekScreen(overview).isCurrent)
+    let last = WeekScreen(
+      overview, week: navigation.current.adding(-1, calendar: overview.calendar))
+    #expect(last.week == 39)
+    #expect(!last.isCurrent)
+    #expect(last.days.allSatisfy { $0.isPast && !$0.isToday })
+    #expect(last.firstDay == date(2026, 9, 21))
+    let next = WeekScreen(overview, week: navigation.current.adding(1, calendar: overview.calendar))
+    #expect(next.week == 41)
+    #expect(!next.isCurrent)
+    #expect(next.days.allSatisfy { !$0.isPast && !$0.isToday })
+    #expect(
+      next.days.allSatisfy { $0.summary.allSatisfy { if case .done = $0 { false } else { true } } })
+  }
+
+  /// ‹ stops at the week where the store's data is known from: the earlier of the window start
+  /// and the earliest kept completion (owner, 2026-11-28, PR #77 round 1); 6 July in Demo.
+  @MainActor @Test func backStopsAtTheWeekTheDataIsKnownFrom() async throws {
+    let overview = try await demoOverview()
+    let navigation = WeekNavigation(overview)
+    let july6 = ISOWeek(year: 2026, week: 28)
+    let known = try #require(overview.knownSince)
+    #expect(ISOWeek(containing: known, calendar: overview.calendar) == july6)
+    #expect(navigation.earliest == july6)
+    #expect(navigation.clamped(july6) == july6)
+    #expect(navigation.clamped(ISOWeek(year: 2026, week: 27)) == july6)
+    #expect(WeekScreen(overview, week: ISOWeek(year: 2026, week: 27)).week == 28)
+    #expect(navigation.canStep(ISOWeek(year: 2026, week: 29), by: -1))
+    #expect(!navigation.canStep(july6, by: -1))
+    #expect(navigation.step(july6, by: -1) == july6)
+    #expect(navigation.canStep(july6, by: 1))
+  }
+
+  @Test func withNoWindowStartBothWaysReachTenYears() {
+    let navigation = WeekNavigation(
+      Overview(workspace: Workspace(timeZone: riga), now: date(2026, 9, 30, 12)))
+    let calendar = navigation.calendar
+    #expect(
+      navigation.earliest == navigation.current.adding(-WeekNavigation.reach, calendar: calendar))
+    #expect(
+      navigation.latest == navigation.current.adding(WeekNavigation.reach, calendar: calendar))
+    #expect(navigation.canStep(nil, by: -1))
+    #expect(!navigation.canStep(navigation.latest, by: 1))
+    #expect(navigation.step(navigation.latest, by: 1) == navigation.latest)
+    #expect(navigation.clamped(ISOWeek(year: 2100, week: 1)) == navigation.latest)
+  }
+
+  /// A completion kept from an earlier import, before the window, moves the stop back to it
+  /// (ADR-0002); with none, the stop is the window's week.
+  @Test func aKeptCompletionBeforeTheWindowMovesTheStopBack() {
+    let window = date(2026, 7, 6)  // W28's Monday
+    let kept = Self.item("Kept from an old import", completed: date(2026, 5, 13, 9))  // W20
+    let now = date(2026, 9, 30, 12)
+    let with = WeekNavigation(
+      Overview(
+        workspace: Workspace(timeZone: riga, tasks: [kept], completedSince: window), now: now))
+    #expect(with.earliest == ISOWeek(year: 2026, week: 20))
+    let without = WeekNavigation(
+      Overview(workspace: Workspace(timeZone: riga, completedSince: window), now: now))
+    #expect(without.earliest == ISOWeek(year: 2026, week: 28))
+  }
+
+  /// PR #77 round 1, Low: a window start after today (a clock set back) keeps this week shown.
+  @Test func aWindowStartAfterTodayKeepsThisWeek() {
+    let navigation = WeekNavigation(
+      Overview(
+        workspace: Workspace(timeZone: riga, completedSince: date(2026, 10, 14)),
+        now: date(2026, 9, 30, 12)))
+    #expect(navigation.earliest == navigation.current)
+    #expect(navigation.clamped(nil) == navigation.current)
+    #expect(!navigation.canStep(nil, by: -1))
+  }
+
+  /// PR #77 round 1, Medium: the shown week is held as the week itself, this week included, so
+  /// the rebuild at midnight from Sunday to Monday does not move it.
+  @MainActor @Test func theShownWeekStaysPutAcrossMidnight() {
+    var shown: ISOWeek?
+    let binding = Binding(get: { shown }, set: { shown = $0 })
+    let sunday = WeekNavigation(
+      Overview(workspace: Workspace(timeZone: riga), now: date(2026, 10, 4, 23, 55)))
+    let before = WeekStepper(navigation: sunday, shown: binding)
+    before.hold()
+    #expect(shown == ISOWeek(year: 2026, week: 40))
+    let monday = WeekNavigation(
+      Overview(workspace: Workspace(timeZone: riga), now: date(2026, 10, 5, 0, 5)))
+    let after = WeekStepper(navigation: monday, shown: binding)
+    after.hold()
+    #expect(shown == ISOWeek(year: 2026, week: 40))
+    #expect(!after.isCurrent)
+    after.goToThisWeek()
+    #expect(shown == ISOWeek(year: 2026, week: 41))
+    #expect(after.isCurrent)
+  }
+
+  /// PR #77 round 1, Low: the toolbar's and the View menu's stepper.
+  @MainActor @Test func theStepperStepsWithinTheBoundsAndGoesBackToThisWeek() {
+    var shown: ISOWeek?
+    let navigation = WeekNavigation(
+      Overview(workspace: Workspace(timeZone: riga), now: date(2026, 9, 30, 12)))
+    let stepper = WeekStepper(
+      navigation: navigation, shown: Binding(get: { shown }, set: { shown = $0 }))
+    #expect(stepper.isCurrent)
+    stepper.step(by: 1)
+    #expect(shown == ISOWeek(year: 2026, week: 41))
+    #expect(!stepper.isCurrent)
+    stepper.step(by: -1)
+    #expect(shown == navigation.current)
+    #expect(stepper.isCurrent)
+    stepper.step(by: -1)
+    #expect(shown == ISOWeek(year: 2026, week: 39))
+    stepper.goToThisWeek()
+    #expect(shown == navigation.current)
+    shown = navigation.latest
+    #expect(!stepper.canStep(by: 1))
+    #expect(stepper.canStep(by: -1))
+    shown = navigation.earliest
+    #expect(!stepper.canStep(by: -1))
+  }
+
+  /// Averages over known weeks only, with none hidden (owner, 2026-11-28, PR #77 round 1): on
+  /// Demo, known from W28's Monday.
+  @MainActor @Test func averagesCountOnlyTheKnownWeeks() async throws {
+    let overview = try await demoOverview()
+    let stats = overview.stats
+    func week(_ number: Int) -> WeekScreen {
+      WeekScreen(overview, week: ISOWeek(year: 2026, week: number))
+    }
+    func mean(_ id: LineID, _ weeks: ClosedRange<Int>) -> WeekAverage {
+      let counts = weeks.map { stats.counts(.line(id), in: ISOWeek(year: 2026, week: $0)) }
+      let total = Double(counts.count)
+      return WeekAverage(
+        rhythm: Double(counts.map(\.rhythm).reduce(0, +)) / total,
+        progress: Double(counts.map(\.progress).reduce(0, +)) / total)
+    }
+    #expect(week(28).cells.allSatisfy { $0.average == nil })
+    #expect(week(29).cells.allSatisfy { $0.average == mean($0.id, 28...28) })
+    #expect(week(32).cells.allSatisfy { $0.average == mean($0.id, 28...31) })
+    // Demo has no completion in W28, so W29's averages are 0 over one week: shown, not hidden.
+    // Core's StatsTests pin one known week against four with data.
+    #expect(week(29).cells.allSatisfy { $0.average != nil })
+    // The future week's reference follows the same rule: the four known weeks before W40.
+    #expect(week(41).cells.allSatisfy { $0.average == mean($0.id, 36...39) })
+  }
+
+  /// A future week has no count, and the same average for every future week: the four full weeks
+  /// before the current one (owner, 2026-11-28).
+  @MainActor @Test func aFutureWeeksStripShowsTheAverageOnly() async throws {
+    let overview = try await demoOverview()
+    let current = WeekScreen(overview)
+    let w41 = WeekScreen(overview, week: ISOWeek(year: 2026, week: 41))
+    let w43 = WeekScreen(overview, week: ISOWeek(year: 2026, week: 43))
+    #expect(current.cells.allSatisfy { $0.thisWeek != nil })
+    #expect(w41.cells.allSatisfy { $0.thisWeek == nil })
+    #expect(w41.cells.map(\.average) == current.cells.map(\.average))
+    #expect(w43.cells.map(\.average) == w41.cells.map(\.average))
+    #expect(current.cells.contains { $0.average != WeekAverage(rhythm: 0, progress: 0) })
+  }
+
+  /// In Riga, not Demo's Moscow, which has no summer time.
+  @Test func weeksAcrossTheDaylightSavingEndAndTheYearEnd() throws {
+    let overview = Overview(workspace: Workspace(timeZone: riga), now: date(2026, 9, 30, 12))
+    // W43: summer time ends in Riga on Sunday 25 October, a 25-hour day.
+    let w43 = WeekScreen(overview, week: ISOWeek(year: 2026, week: 43))
+    #expect(w43.week == 43)
+    #expect(w43.days.map(\.start) == (19...25).map { date(2026, 10, $0) })
+    let sunday = try #require(w43.days.last)
+    #expect(date(2026, 10, 26).timeIntervalSince(sunday.start) == TimeInterval(25 * 3600))
+    // 2026 has 53 ISO weeks: W53 starts Monday 28 December, 2027-W01 on 4 January.
+    let calendar = overview.calendar
+    let w53 = WeekScreen(
+      overview, week: ISOWeek(year: 2026, week: 40).adding(13, calendar: calendar))
+    #expect(w53.week == 53)
+    #expect(w53.firstDay == date(2026, 12, 28))
+    #expect(w53.days.count == 7)
+    let w01 = WeekScreen(
+      overview, week: ISOWeek(year: 2026, week: 40).adding(14, calendar: calendar))
+    #expect(w01.week == 1)
+    #expect(w01.firstDay == date(2027, 1, 4))
+    #expect(w01.days.count == 7)
+  }
+
+  /// PR #75 round 2's deferred Low: the due text's window starts at the week's Monday 00:00.
+  @Test func dueTextIsOnlyForTheShownWeeksOwnDays() {
+    let tasks = [
+      Self.item(
+        "Planned last Wednesday", planned: date(2026, 9, 23, 9), due: date(2026, 9, 27, 23, 59)),
+      Self.item(
+        "Planned Tuesday, due last Sunday", planned: date(2026, 9, 29, 9),
+        due: date(2026, 9, 27, 23, 59)),
+    ]
+    let overview = Overview(
+      workspace: Workspace(timeZone: riga, tasks: tasks), now: date(2026, 9, 30, 12))
+    let w39 = WeekScreen(overview, week: ISOWeek(year: 2026, week: 39))
+    let last = w39.days.flatMap(\.cards).first { $0.title == "Planned last Wednesday" }
+    #expect(last?.due?.date == date(2026, 9, 27, 23, 59))
+    let w40 = WeekScreen(overview)
+    let cards = Dictionary(uniqueKeysWithValues: w40.days.flatMap(\.cards).map { ($0.title, $0) })
+    #expect(cards["Planned last Wednesday"] == nil)
+    #expect(cards["Planned Tuesday, due last Sunday"] != nil)
+    #expect(cards["Planned Tuesday, due last Sunday"]?.due == nil)
   }
 
   // MARK: Format

@@ -234,4 +234,137 @@ import Testing
     #expect(sunday.end == date(26))
     #expect(sunday.end.timeIntervalSince(sunday.start) == 25 * 3600)
   }
+
+  // MARK: S5-1b, another week (owner, 2026-11-28)
+
+  @Test func weekIsTheWeekContainingNow() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.task("Tuesday", line: violin, planned: W.date(2026, 9, 29, 9))
+    let overview = Overview(workspace: world.workspace, now: now)
+    #expect(overview.week() == overview.week(containing: now))
+  }
+
+  @Test func nextWeekPlacesItsTasksAndHasNoCompletions() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.task("This Tuesday", line: violin, planned: W.date(2026, 9, 29, 9))
+    world.task("Next Tuesday", line: violin, planned: W.date(2026, 10, 6, 9))
+    world.task("Next Sunday, due", line: violin, due: W.date(2026, 10, 11, 9))
+    world.task("Done today", line: violin, completed: W.date(2026, 9, 30, 9))
+    let week = Overview(workspace: world.workspace, now: now).week(
+      containing: W.date(2026, 10, 7))
+    #expect(week.week == ISOWeek(year: 2026, week: 41))
+    #expect(week.days.first?.day.start == W.date(2026, 10, 5, 0))
+    #expect(placement(week) == ["Next Tuesday": [1], "Next Sunday, due": [6]])
+    #expect(
+      week.days.flatMap(\.items).filter(\.hasDueBadge).map(\.task.title) == ["Next Sunday, due"])
+  }
+
+  @Test func lastWeekShowsItsCompletionsAndTheTasksStillOpenFromIt() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.task("Done last Tuesday", line: violin, completed: W.date(2026, 9, 22, 10))
+    world.task("Open from last Thursday", line: violin, planned: W.date(2026, 9, 24, 9))
+    world.task("This Tuesday", line: violin, planned: W.date(2026, 9, 29, 9))
+    let week = Overview(workspace: world.workspace, now: now).week(
+      containing: W.date(2026, 9, 23))
+    #expect(week.week == ISOWeek(year: 2026, week: 39))
+    #expect(placement(week) == ["Done last Tuesday": [1], "Open from last Thursday": [3]])
+  }
+
+  @Test func aPastWeeksHeaderCountsThatWeekAgainstTheFourBeforeIt() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.session("Scales", line: violin, at: W.date(2026, 9, 22))
+    world.task("Etude", line: violin, completed: W.date(2026, 9, 1))
+    // The window from W35's Monday, so all four weeks before W39 are known (PR #77 round 1).
+    var workspace = world.workspace
+    workspace.completedSince = W.date(2026, 8, 24, 0)
+    let header = Overview(workspace: workspace, now: now).week(
+      containing: W.date(2026, 9, 23)
+    ).header
+    #expect(header.first?.thisWeek == WeekCounts(rhythm: 1))
+    // W35–W38: one etude in W36.
+    #expect(header.first?.previousAverage == WeekAverage(rhythm: 0, progress: 0.25))
+  }
+
+  /// A future week has no count: `■ 0` would read as a failure before the week starts. Its
+  /// average is the four full weeks before the current one, the same for every future week.
+  @Test func aFutureWeekHasNoCountAndTheAverageBeforeTheCurrentWeek() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    for day in [1, 8, 15, 22] {
+      world.task("Etude \(day)", line: violin, completed: W.date(2026, 9, day))
+    }
+    world.session("Scales", line: violin, at: W.date(2026, 9, 29))
+    let overview = Overview(workspace: world.workspace, now: now)
+    let current = overview.week().header.first
+    #expect(current?.thisWeek == WeekCounts(rhythm: 1))
+    for date in [W.date(2026, 10, 7), W.date(2026, 10, 21)] {
+      let future = overview.week(containing: date).header.first
+      #expect(future?.thisWeek == nil)
+      #expect(future?.previousAverage == WeekAverage(rhythm: 0, progress: 1))
+      #expect(future?.previousAverage == current?.previousAverage)
+    }
+  }
+
+  // MARK: Known data (owner, 2026-11-28, PR #77 round 1)
+
+  /// The earlier of the provider's window start and the store's earliest completion: the store
+  /// keeps completions after they leave the window (ADR-0002).
+  @Test func knownSinceIsTheEarlierOfTheWindowStartAndTheEarliestCompletion() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.task("Kept from an old import", line: violin, completed: W.date(2026, 6, 10))
+    world.task("Undone", line: violin)
+    var workspace = world.workspace
+    workspace.completedSince = W.date(2026, 7, 6, 0)
+    #expect(Overview(workspace: workspace, now: now).knownSince == W.date(2026, 6, 10))
+    workspace.tasks.removeAll { $0.completedAt != nil }
+    #expect(Overview(workspace: workspace, now: now).knownSince == W.date(2026, 7, 6, 0))
+    workspace.completedSince = nil
+    #expect(Overview(workspace: workspace, now: now).knownSince == nil)
+  }
+
+  @Test func theHeaderAveragesOnlyKnownWeeksAndHasNoneWithoutOne() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.task("First", line: violin, completed: W.date(2026, 9, 1))  // W36
+    world.task("Second", line: violin, completed: W.date(2026, 9, 8))  // W37
+    var workspace = world.workspace
+    // The window starts on W36's Monday: W36 is known, the weeks before it are not.
+    workspace.completedSince = W.date(2026, 8, 31, 0)
+    let overview = Overview(workspace: workspace, now: now)
+    let header = { (date: Date) in overview.week(containing: date).header.first?.previousAverage }
+    #expect(header(W.date(2026, 9, 2)) == .some(nil))  // W36: no known week before it
+    #expect(header(W.date(2026, 9, 9)) == WeekAverage(rhythm: 0, progress: 1))  // over W36
+    #expect(header(W.date(2026, 9, 16)) == WeekAverage(rhythm: 0, progress: 1))  // W36–W37
+    #expect(header(now) == WeekAverage(rhythm: 0, progress: 0.5))  // W36–W39, four
+    // A future week follows the same rule: before the current week, known weeks only.
+    #expect(header(W.date(2026, 10, 7)) == WeekAverage(rhythm: 0, progress: 0.5))
+  }
+
+  /// The bound is the start of the ISO week holding `knownSince`, the week ‹ stops at, so a kept
+  /// completion in mid-week makes its whole week known (owner, 2026-11-28, PR #77 round 2).
+  @Test func aMidWeekStopMakesItsWholeWeekKnown() {
+    var world = W()
+    let violin = LineAssignment.line(world.line("violin").id)
+    world.task("Kept, Wednesday of W20", line: violin, completed: W.date(2026, 5, 13))
+    world.task("Kept, Wednesday of W21", line: violin, completed: W.date(2026, 5, 20))
+    var workspace = world.workspace
+    workspace.completedSince = W.date(2026, 7, 6, 0)
+    let overview = Overview(workspace: workspace, now: now)
+    let header = { (date: Date) in overview.week(containing: date).header.first?.previousAverage }
+    #expect(header(W.date(2026, 5, 13)) == .some(nil))  // W20, the stop: nothing known before it
+    #expect(header(W.date(2026, 5, 20)) == WeekAverage(rhythm: 0, progress: 1))  // over W20
+    #expect(header(W.date(2026, 5, 27)) == WeekAverage(rhythm: 0, progress: 1))  // W20–W21
+  }
+
+  @Test(arguments: [Date.distantPast, Date.distantFuture])
+  func anyDateGivesSevenDaysHoldingIt(date: Date) {
+    let week = Overview(workspace: W().workspace, now: now).week(containing: date)
+    #expect(week.days.count == 7)
+    #expect(week.days.contains { $0.day.contains(date) })
+  }
 }

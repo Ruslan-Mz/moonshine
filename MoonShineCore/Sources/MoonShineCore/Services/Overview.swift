@@ -124,8 +124,10 @@ public struct WeekDay: Hashable, Sendable {
 /// A line's week, for every line and Life ops; Week's screen picks the strip's cells.
 public struct LineWeekHeader: Hashable, Sendable {
   public let line: LineAssignment
-  public let thisWeek: WeekCounts
-  public let previousAverage: WeekAverage
+  /// Nil on a future week, which has no count yet (owner, 2026-11-28).
+  public let thisWeek: WeekCounts?
+  /// Over the known weeks only; nil when none of them is known (owner, 2026-11-28).
+  public let previousAverage: WeekAverage?
   /// The store holds a completed occurrence of the line: rhythm applies (owner, 2026-11-27).
   public let hasRhythm: Bool
   /// The store holds a completed one-off task of the line: progress applies. Neither: the
@@ -294,6 +296,11 @@ public struct Overview: Sendable {
   public let stats: Stats
   public let tracer: Tracer
   public let deadlineRule: DeadlineRule
+  /// Where the store's completions are known from: the earlier of the provider's window start
+  /// and the earliest completion the store keeps (ADR-0002; owner, 2026-11-28). It assumes an
+  /// import at least every 12 weeks, so the kept completions have no gap from the earliest on.
+  /// Nil when neither is known.
+  public let knownSince: Date?
   /// Nil when every due date is a deadline.
   private let deadlines: Set<TaskItemID>?
 
@@ -313,6 +320,9 @@ public struct Overview: Sendable {
     self.tracer = Tracer(workspace: workspace, now: now)
     self.deadlineRule = deadlineRule
     self.deadlines = deadlineRule.deadlineTasks(in: workspace)
+    let earliest = workspace.tasks.lazy.filter { $0.status == .completed }.compactMap(\.completedAt)
+      .min()
+    self.knownSince = [workspace.completedSince, earliest].compactMap { $0 }.min()
   }
 
   /// Whether a task's due date counts as a deadline under the rule; urgency and the due badge
@@ -515,8 +525,14 @@ public struct Overview: Sendable {
   }
 
   public func week() -> WeekOverview {
-    let week = ISOWeek(containing: now, calendar: calendar)
-    let range = week.horizon(calendar: calendar) ?? day(containing: now)
+    week(containing: now)
+  }
+
+  /// The week holding `date` (S5-1b). Tasks are placed as they stand now, and completions shown
+  /// up to today, whatever the week.
+  public func week(containing date: Date) -> WeekOverview {
+    let week = ISOWeek(containing: date, calendar: calendar)
+    let range = week.horizon(calendar: calendar) ?? day(containing: date)
     let days = (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: range.start) }
       .map { day(containing: $0) }
     let activeLines = Set(workspace.lines.filter { $0.state == .active }.map(\.id))
@@ -557,6 +573,15 @@ public struct Overview: Sendable {
         progressLines.insert(task.line)
       }
     }
+    // A future week has no count, and its average is the one before the current week, the same
+    // for every future week (owner, 2026-11-28).
+    let isFuture = week > stats.currentWeek
+    let averageBefore = isFuture ? stats.currentWeek : week
+    // Known from the start of the week holding `knownSince`, the week ‹ stops at: a window
+    // starts on a Monday, and a kept completion's week is whole in the store (PR #77 round 2).
+    let knownFrom = knownSince.flatMap {
+      ISOWeek(containing: $0, calendar: calendar).horizon(calendar: calendar)?.start
+    }
     return WeekOverview(
       week: week,
       days: days.indices.map { index in
@@ -567,8 +592,8 @@ public struct Overview: Sendable {
       noPlan: noPlan,
       header: lineOrder.map { line in
         LineWeekHeader(
-          line: line, thisWeek: stats.counts(line, in: week),
-          previousAverage: stats.average(line, before: week),
+          line: line, thisWeek: isFuture ? nil : stats.counts(line, in: week),
+          previousAverage: stats.average(line, before: averageBefore, knownFrom: knownFrom),
           hasRhythm: rhythmLines.contains(line), hasProgress: progressLines.contains(line))
       })
   }

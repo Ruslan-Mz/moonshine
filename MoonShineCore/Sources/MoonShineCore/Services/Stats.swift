@@ -120,6 +120,23 @@ public struct Stats: Sendable {
       progress: Double(previous.map(\.counts.progress).reduce(0, +)) / total)
   }
 
+  /// The mean over the known weeks among the `weeks` before `week` (owner, 2026-11-28): a week is
+  /// known when it starts on or after `knownFrom`, so a partly covered week does not count. Nil
+  /// when none is known; with no bound, every week is known.
+  public func average(
+    _ line: LineAssignment, before week: ISOWeek, weeks: Int = 4, knownFrom: Date?
+  ) -> WeekAverage? {
+    guard let knownFrom else { return average(line, before: week, weeks: weeks) }
+    let known = series(line, endingAt: week.adding(-1, calendar: calendar), count: weeks).filter {
+      $0.week.horizon(calendar: calendar).map { $0.start >= knownFrom } ?? false
+    }
+    guard !known.isEmpty else { return nil }
+    let total = Double(known.count)
+    return WeekAverage(
+      rhythm: Double(known.map(\.counts.rhythm).reduce(0, +)) / total,
+      progress: Double(known.map(\.counts.progress).reduce(0, +)) / total)
+  }
+
   /// The counts of the day around `date` (owner, 2026-10-27): a session counts on every day one
   /// of its completions falls on; weeks keep its first completion.
   public func dayCounts(_ line: LineAssignment, on date: Date) -> WeekCounts {
