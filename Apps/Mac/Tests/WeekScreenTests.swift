@@ -51,7 +51,7 @@ private func date(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) ->
       Overview(workspace: Workspace(timeZone: riga, tasks: tasks), now: date(2026, 9, 30, 12)))
   }
 
-  private static func task(
+  private static func item(
     _ title: String, planned: Date? = nil, due: Date? = nil, estimate: Int? = nil,
     completed: Date? = nil
   ) -> TaskItem {
@@ -65,8 +65,8 @@ private func date(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) ->
 
   @Test func aZeroTermIsLeftOut() {
     let screen = Self.week([
-      Self.task("Today, estimated", planned: date(2026, 9, 30, 18), estimate: 30),
-      Self.task("Friday, no estimate", planned: date(2026, 10, 2, 9)),
+      Self.item("Today, estimated", planned: date(2026, 9, 30, 18), estimate: 30),
+      Self.item("Friday, no estimate", planned: date(2026, 10, 2, 9)),
     ])
     // Tuesday, past, nothing done; today, nothing done yet; Friday, no estimate.
     #expect(screen.days[1].summary.isEmpty)
@@ -78,9 +78,9 @@ private func date(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) ->
   @Test func dueTextIsForOpenCardsDueInsideTheWeek() {
     let tuesday = date(2026, 9, 29, 9)
     let screen = Self.week([
-      Self.task("Due next Monday 00:00", planned: tuesday, due: date(2026, 10, 5)),
-      Self.task("Due Sunday 23:59", planned: tuesday, due: date(2026, 10, 4, 23, 59)),
-      Self.task("Done, due Friday", due: date(2026, 10, 2, 12), completed: tuesday),
+      Self.item("Due next Monday 00:00", planned: tuesday, due: date(2026, 10, 5)),
+      Self.item("Due Sunday 23:59", planned: tuesday, due: date(2026, 10, 4, 23, 59)),
+      Self.item("Done, due Friday", due: date(2026, 10, 2, 12), completed: tuesday),
     ])
     let cards = Dictionary(uniqueKeysWithValues: screen.days[1].cards.map { ($0.title, $0) })
     #expect(cards["Due next Monday 00:00"]?.due == nil)
