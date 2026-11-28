@@ -65,6 +65,22 @@ export function sleepWatch(everyMs = 10_000, wall = Date.now, mono = () => Numbe
   };
 }
 
+/// A sign of life for a session waiting on a review (P-GX, owner 2026-11-28): on an event, once
+/// `everyMs` has passed since the start or the last line, writes `review: <n> events`, counts only.
+/// A stream that stops writes nothing. The clock can be given for tests.
+export function heartbeat(write, everyMs = 300_000, now = () => Number(process.hrtime.bigint() / 1_000_000n)) {
+  let last = now();
+  let events = 0;
+  return {
+    event() {
+      events += 1;
+      if (now() - last < everyMs) return;
+      last = now();
+      write(`review: ${events} events\n`);
+    },
+  };
+}
+
 /// The process's start time as ps prints it, or null when ps fails or prints nothing.
 export function startTime(pid) {
   const result = spawnSync("/bin/ps", ["-o", "lstart=", "-p", String(pid)], { env: psEnv, encoding: "utf8" });

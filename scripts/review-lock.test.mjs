@@ -327,6 +327,30 @@ test("the sleep watch adds up the wall clock's steps beyond the monotonic clock'
   watch.stop();
 });
 
+// P-GX (owner, 2026-11-28): a session waiting on a review sees its output grow.
+test("the heartbeat prints the event count at most every 5 minutes, counts only", async () => {
+  const { lock } = await guardCopy();
+  const written = [];
+  let now = 1_000;
+  const beat = lock.heartbeat((line) => written.push(line), 300_000, () => now);
+  beat.event();
+  now += 299_999;
+  beat.event();
+  assert.deepEqual(written, [], "nothing before 5 minutes");
+  now += 1;
+  beat.event();
+  assert.deepEqual(written, ["review: 3 events\n"]);
+  now += 299_999;
+  beat.event();
+  assert.equal(written.length, 1, "nothing again before the next 5 minutes");
+  now += 1;
+  beat.event();
+  assert.deepEqual(written, ["review: 3 events\n", "review: 5 events\n"]);
+  now += 3_600_000;
+  assert.equal(written.length, 2, "no event, no line: a stopped stream prints nothing");
+  for (const line of written) assert.match(line, /^review: \d+ events\n$/);
+});
+
 test("a stopped run's record is not named like a lock", async () => {
   const { lock, state } = await guardCopy();
   const path = lock.stoppedPath("7", head);

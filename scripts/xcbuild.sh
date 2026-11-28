@@ -8,7 +8,9 @@
 # 2. MoonShine.xcodeproj removed, so nothing planted in it survives, and generated again;
 # 3. the package pin: the generated project is not committed, so its Package.resolved would not be
 #    either; the app's package graph is the Adapters package's, whose committed file pins it too;
-# 4. xcodebuild with the fixed flags.
+# 4. xcodebuild with the fixed flags, through scripts/xcbuild-run.mjs: under caffeinate -i where it
+#    exists, in its own process group, within 30 awake minutes (exit 5), and for `test` with
+#    per-test limits (P-GX, owner 2026-11-28).
 # Tests: node --test scripts/xcbuild.test.mjs
 set -eu
 
@@ -34,7 +36,7 @@ here=$(cd "$(dirname "$0")" && pwd -P)
 root=$(pwd -P)
 [ -f "$root/project.yml" ] && [ ! -L "$root/project.yml" ] || fail "run it from the repository root, where project.yml is a file."
 
-for file in xcbuild.sh check-project-scripts.mjs; do
+for file in xcbuild.sh check-project-scripts.mjs xcbuild-run.mjs; do
   cmp -s "$here/$file" "$root/scripts/$file" ||
     echo "xcbuild: warning: the installed $file differs from this checkout's scripts/$file. Reinstall the guard after the change is merged (CLAUDE.md → Commands → Guard); the installed copy runs." >&2
 done
@@ -68,5 +70,12 @@ xcodegen generate --spec "$root/project.yml"
 target=$root/MoonShine.xcodeproj/project.xcworkspace/xcshareddata/swiftpm
 mkdir -p "$target"
 cp "$root/Adapters/Package.resolved" "$target/Package.resolved"
-exec xcodebuild -project MoonShine.xcodeproj -scheme MoonShineMac -destination platform=macOS,arch=arm64 \
-  -derivedDataPath DerivedData -onlyUsePackageVersionsFromResolvedFile "$1"
+# Idle sleep cannot cut the run, as for review; a closed lid still does.
+awake=
+command -v caffeinate > /dev/null 2>&1 && awake="caffeinate -i"
+# Swift Testing takes the maximum as its per-test limit; the default allowance is XCTest's.
+timeouts=
+[ "$1" = test ] && timeouts="-test-timeouts-enabled YES -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 300"
+# $awake and $timeouts split into words on purpose: each is empty or fixed text.
+exec node "$here/xcbuild-run.mjs" $awake xcodebuild -project MoonShine.xcodeproj -scheme MoonShineMac -destination platform=macOS,arch=arm64 \
+  -derivedDataPath DerivedData -onlyUsePackageVersionsFromResolvedFile $timeouts "$1"

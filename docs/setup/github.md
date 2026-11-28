@@ -77,7 +77,7 @@ P-AM3 (owner, 2026-11-25). The sandbox denies a session's writes to `.claude/set
 4. each author worktree, by its state (owner, PR #71 round 1). Worktrees share the main checkout's refs, so step 1 serves them. `git -C <worktree> branch --show-current` prints nothing when the worktree is detached, and the slice branch's name when it is on one:
    - idle or detached: `git -C <worktree> switch --detach origin/main`;
    - mid-slice on its own branch: never detach it. `git -C <worktree> merge origin/main` merges the change into the slice branch, and the session then pushes as usual, with no non-fast-forward;
-5. when the merge also changed `scripts/guard/`, `scripts/xcbuild.sh` or `scripts/check-project-scripts.mjs`, the guard's reinstall (CLAUDE.md → Commands → Guard).
+5. when the merge also changed `scripts/guard/`, `scripts/xcbuild.sh`, `scripts/xcbuild-run.mjs` or `scripts/check-project-scripts.mjs`, the guard's reinstall (CLAUDE.md → Commands → Guard).
 
 **When a fast-forward or a switch stopped halfway.** git writes the files first and moves `HEAD` and the index last. A stop leaves `HEAD` where it was, with some of the new commit's files written over it. The session stops and tells the owner, and touches nothing. The owner checks with `git -C <checkout> status` that every changed or untracked path is one the stopped merge or switch was writing, and that no other work is uncommitted. Then:
 

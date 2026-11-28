@@ -18,6 +18,8 @@ const plainPaths = [
   /^Apps\/Mac\/Resources\/Localizable\.xcstrings$/,
   /^Apps\/Mac\/Tests\/[^/]+\.swift$/,
   /^MoonShineCore\/Tests\/(?:[^/]+\/)*[^/]+\.swift$/,
+  // P-GX (owner, 2026-11-28): the adapter tests get the app's test scan, not a path verdict.
+  /^Adapters\/Tests\/(?:[^/]+\/)*[^/]+\.swift$/,
   /^MoonShineCore\/Sources\/MoonShineCore\/Services\/(?:Overview|Stats|Trace|DayLoad)\.swift$/,
   /^MoonShineCore\/Sources\/MoonShineFixtures\/[^/]+\.swift$/,
   /^fixtures\/(?:[^/]+\/)*(?:[^/]+\.(?:md|json|ya?ml|txt)|\.gitkeep)$/,
@@ -33,7 +35,8 @@ export const instructions = /(?:^|\/)(?:claude\.md|claude\.local\.md|\.claude|\.
 const toolConfig =
   /(?:^|\/)(?:\.prettierrc[^/]*|\.prettierignore|prettier\.config\.[^/]*|\.eslintrc[^/]*|eslint\.config\.[^/]*|package(?:-lock)?\.json|\.npmrc|\.nvmrc|[jt]sconfig[^/]*\.json|\.editorconfig|\.gitattributes|\.gitignore|node_modules)(?:\/|$)/i;
 
-const testPath = /^(?:Apps\/Mac\/Tests|MoonShineCore\/Tests)\//;
+const testPath = /^(?:Apps\/Mac\/Tests|MoonShineCore\/Tests|Adapters\/Tests)\//;
+const adapterTestPath = /^Adapters\/Tests\//;
 
 const names = (list) => list.join("|");
 // A whole word: `Process`, not `ProcessInfo`; `actor`, not `MainActor`.
@@ -52,13 +55,22 @@ const call = (list) => new RegExp(`\\.(?:${names(list)})\\s*\\(`);
 // another name passes; every plain pull request still has its full review (owner, 2026-11-11).
 const onModel = (list) => new RegExp(`(?<![A-Za-z0-9_])(?:model|appModel)\\s*\\.\\s*(?:${names(list)})(?![A-Za-z0-9_])`);
 
-// `](scheme:`, the target of a markdown link, also in a String Catalog's values.
-const markdownLink = /\]\(\s*[A-Za-z][A-Za-z0-9+.-]*:/;
+// `](scheme:` or `](<scheme:`, the target of a markdown link, and an autolink `<scheme://`, also in
+// a String Catalog's values (P-GX: no other check reads a catalog's links).
+const markdownLink = /\]\(\s*<?\s*[A-Za-z][A-Za-z0-9+.-]*:|<[A-Za-z][A-Za-z0-9+.-]*:\/\//;
 
 const modelActions = ["select", "refresh", "approveHeldRemoval", "chooseVault", "setSource", "setVaultBookmark", "closeStores"];
 
 // [kind, pattern, also in test files]
 const tokens = [
+  // P-GX (owner, 2026-11-28): the adapters' live entries, which a test must never reach (rule 5):
+  // the EventKit store, directly or through the provider's store-less init; the OmniFocus bridge's
+  // osascript runner, named or as the bridge's default (a call wrapped before `runner:` stays risky);
+  // and the CLI's entry point and the statics that read the real data folder, OmniFocus or a vault.
+  ["live source", word(["SystemEventStore", "ProcessScriptRunner"]), true],
+  ["live source", /(?<![A-Za-z0-9_])EventKitCalendarProvider\s*(?:\.init\s*)?\(\s*\)/, true],
+  ["live source", /(?<![A-Za-z0-9_])OmniFocusBridge\s*(?:\.init\s*)?\((?!.*(?<![A-Za-z0-9_])runner\s*:)/, true],
+  ["live source", /(?<![A-Za-z0-9_])MoonShineImport\s*\.\s*(?:main|applicationSupport|incremental|probe|vault|bridge|usage)(?![A-Za-z0-9_])/, true],
   ["concurrency", /(?<![A-Za-z0-9_])Task\s*[{(<.]/, true],
   ["concurrency", member(["task"]), true],
   ["concurrency", word(["async", "await"]), false],
@@ -87,10 +99,18 @@ const tokens = [
   ["URL", part(["URLSession", "openURL", "onOpenURL", "AsyncImage", "byReferencing", "NetService", "getStreamsToHost", "NSURLConnection"]), true],
   ["URL", part(["CFStreamCreate\\w*Socket", "CFSocket", "CF(?:Read|Write)Stream"]), true],
   ["URL", cCall(["socket", "connect", "bind", "sendto"]), true],
-  ["URL", /(?<![A-Za-z0-9_])Link\s*\(/, true],
+  // `Link(…)`, `Link<Text>(…)` and `Link.init(…)`; `NavigationLink` and `SettingsLink` pass.
+  ["URL", /(?<![A-Za-z0-9_])Link\s*(?:<|(?:\.init\s*)?\()/, true],
+  // The other openers of scripts/check-vault-writes.mjs, AM's second layer (S4-5, P-GX): the URL
+  // action, Launch Services, Apple events, web content, text views and Safari.
+  ["URL", word(["OpenURLAction", "WKWebView", "WebView", "WebPage", "NSTextView", "SFSafariViewController"]), true],
+  ["URL", part(["LSOpen", "AESendMessage", "UIApplication\\s*\\.\\s*shared\\s*\\.\\s*open"]), true],
   // A markdown link opens the browser on a click, as `Link` does: in a string literal, which `Text`
-  // reads as markdown, in `AttributedString(markdown:)`, or as the `.link` attribute.
-  ["URL", part(["AttributedString\\s*\\(\\s*markdown", "\\.link\\s*="]), true],
+  // reads as markdown, in `AttributedString(markdown:)`, or as the `.link` attribute (set, as a key,
+  // subscripted, in a dictionary literal, or added). `.link(` is left to check-vault-writes.mjs:
+  // here it would catch `items.link(to:)`, which P-AM keeps plain.
+  ["URL", part(["AttributedString\\s*(?:\\.init\\s*)?\\(\\s*markdown", "\\.link\\s*=", "Key\\.link(?![A-Za-z0-9_])", "\\[\\s*\\.link\\s*\\]"]), true],
+  ["URL", part(["[[,]\\s*\\.link\\s*:", "^\\s*\\.link\\s*:", "addAttribute\\s*\\(\\s*\\.link(?![A-Za-z0-9_])"]), true],
   ["URL", markdownLink, true],
   ["drag, pasteboard or sharing", part(["onDrop", "dropDestination", "draggable", "NSItemProvider", "NSPasteboard", "UIPasteboard", "ShareLink", "NSSharingService"]), true],
   ["drag, pasteboard or sharing", part(["copyable", "cuttable", "PasteButton", "pasteDestination", "onPasteCommand", "onCopyCommand", "onCutCommand", "onDrag", "exportableToServices", "importableFromServices", "importsItemProviders"]), true],
@@ -114,6 +134,9 @@ const importModules = new Set([
 ]);
 // `import Synchronization` stays risky in tests too: a lock is concurrency (rule 2).
 const testableModules = new Set(["MoonShineCore", "MoonShineFixtures", "MoonShineMac"]);
+// The Adapters package's own modules, imported plain or @testable in its tests only (P-GX, owner
+// 2026-11-28): what a test reaches live through them is a "live source" token.
+const adapterModules = new Set(["ObsidianAdapter", "OmniFocusAdapter", "CalendarAdapter", "SQLiteStore", "moonshine_import"]);
 // An import statement, not the word in a comment or a string (#70; P-AM3, owner 2026-11-25): where
 // Swift may start one on a scanned line (its start, a lone CR, which ends a Swift line but not git's,
 // `;`, or the end of a block comment), after attributes and access modifiers (`public import`).
@@ -138,7 +161,11 @@ const conformanceLength = 400;
 const conformance =
   /^([ \t]{0,40}(?:(?:@\w{1,40}|public|package|internal|fileprivate|private|final|indirect)[ \t]{1,8}){0,6}(struct|enum|class|extension|protocol)[ \t]{1,8}[A-Za-z_]\w{0,80}[ \t]{0,8}:[ \t]{0,8})([\w.]{1,80}(?:[ \t]{0,8},[ \t]{0,8}[\w.]{1,80}){0,20})([ \t]{0,8}(?:\{[ \t]{0,8}(?:\}[ \t]{0,8})?)?(?:\/\/.*)?)$/;
 // `.task` where it cannot be SwiftUI's modifier: a property chain or an enum case pattern.
+// P-GX (owner, 2026-11-28): and an implicit member in expression position, right after `(`, `,`,
+// `[`, `: ` or `= `, where it is the app's `OpenTarget.task(_:)`: the modifier needs a view before it.
+// `.task(reload)` at a line's start is the modifier with a function and stays risky.
 const taskNotModifier = [
+  /(?<=(?:[(,[]|[:=]\s)\s*)\.\s*task(?=\s*\()/g,
   /\.\s*task(?=\s*\.)/g,
   /(?<=(?<![A-Za-z0-9_])case\s+)\.\s*task(?=\s*\(\s*let(?![A-Za-z0-9_]))/g,
   /(?<=(?<![A-Za-z0-9_])case\s+let\s+)\.\s*task(?=\s*\()/g,
@@ -148,14 +175,19 @@ const taskNotModifier = [
 // the review still reads every plain pull request. A new receiver needs a reviewed edit of this list.
 const taskReceivers = [
   [/^Apps\/Mac\/(?:Sources\/Today|Tests)\//, ["TodayTableRow"]],
+  [/^Apps\/Mac\/(?:Sources|Tests)\//, ["OpenTarget"]],
   [testPath, ["world", "TestWorld"]],
   [/^MoonShineCore\/Tests\/MoonShineCoreTests\/DayLoadTests\.swift$/, ["RigaDay", "R"]],
 ].map(([path, list]) => [path, new RegExp(`(?<=(?<![A-Za-z0-9_.])(?:${names(list)})\\s*)\\.\\s*task(?=\\s*\\()`, "g")]);
 // In test files, `typealias X = Y` for one name `Y`, unless a token needs text after `Y`
-// (`Task {`, `Link(`, `Bundle(path:`, `URL(filePath:`, `NSAttributedString(url:`), which the alias would hide. `Y` is still
+// (`Task {`, `Link(`, `Bundle(path:`, `URL(filePath:`, `NSAttributedString(url:`, `OmniFocusBridge(`), which the alias would hide. `Y` is still
 // scanned. scripts/plain-rules.test.mjs reads these names from this file's patterns.
 const aliasOfOneName = /^(\s*(?:(?:public|package|internal|fileprivate|private)\s+)?)typealias(\s+[A-Za-z_]\w*\s*=\s*([A-Za-z_]\w*)\s*(?:\/\/.*)?)$/;
-const namesNeedingText = new Set(["Task", "Link", "Bundle", "URL", "NSAttributedString", "AttributedString"]);
+const namesNeedingText = new Set([
+  "Task", "Link", "Bundle", "URL", "NSAttributedString", "AttributedString",
+  // P-GX: the live sources and UIApplication's opener.
+  "EventKitCalendarProvider", "OmniFocusBridge", "MoonShineImport", "UIApplication",
+]);
 
 /// The line as the tokens scan it: P-AM's shapes taken out.
 function scanned(text, path, inTests) {
@@ -182,7 +214,8 @@ function riskyToken(text, path) {
     const plainImport = /^\s*(@testable\s+)?import\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:\/\/.*)?$/.exec(text);
     if (!plainImport) return "an import";
     const [, testable, module] = plainImport;
-    if (testable ? !(inTests && testableModules.has(module)) : !importModules.has(module)) return "an import";
+    const ownAdapter = adapterTestPath.test(path) && adapterModules.has(module);
+    if (!ownAdapter && (testable ? !(inTests && testableModules.has(module)) : !importModules.has(module))) return "an import";
   }
   const line = scanned(text, path, inTests);
   for (const [kind, pattern, inTestFiles] of tokens) {

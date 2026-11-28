@@ -1,10 +1,11 @@
 // Tests for scripts/xcbuild.sh, the one way to build the Mac app (H1c): node --test scripts/xcbuild.test.mjs
-// Each test runs an installed copy (the script and the check, as the guard installer copies them)
-// in a temporary repository folder, with stub `xcodegen` and `xcodebuild` and a `node` stub that
-// logs and runs this node. Started: /bin/sh, the stubs, node, and the tools the script starts from
-// /usr/bin and /bin (dirname, cmp, rm, mkdir, cp, id, getconf, env, find) (CLAUDE.md rule 5).
+// Each test runs an installed copy (the script, the check and the runner, as the guard installer
+// copies them) in a temporary repository folder, with stub `xcodegen`, `xcodebuild` and `caffeinate`
+// and a `node` stub that logs and runs this node. Started: /bin/sh, the stubs, node, and the tools
+// the script and the stubs start from /usr/bin and /bin (dirname, cmp, rm, mkdir, cp, id, getconf,
+// env, find, sleep) (CLAUDE.md rule 5).
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import {
   appendFileSync,
   chmodSync,
@@ -25,10 +26,12 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 const scripts = dirname(fileURLToPath(import.meta.url));
-const files = ["xcbuild.sh", "check-project-scripts.mjs"];
+const files = ["xcbuild.sh", "check-project-scripts.mjs", "xcbuild-run.mjs"];
 const tracked = "CODE_SIGN_IDENTITY = -\nCODE_SIGN_STYLE = Manual\n";
+// P-GX: per-test limits for `test` only.
+const timeouts = "-test-timeouts-enabled YES -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 300 ";
 const xcodebuildArgs = (action) =>
-  `xcodebuild -project MoonShine.xcodeproj -scheme MoonShineMac -destination platform=macOS,arch=arm64 -derivedDataPath DerivedData -onlyUsePackageVersionsFromResolvedFile ${action}`;
+  `xcodebuild -project MoonShine.xcodeproj -scheme MoonShineMac -destination platform=macOS,arch=arm64 -derivedDataPath DerivedData -onlyUsePackageVersionsFromResolvedFile ${action === "test" ? timeouts : ""}${action}`;
 
 function stub(path, body) {
   writeFileSync(path, `#!/bin/sh\n${body}\n`);
@@ -60,7 +63,12 @@ function setUp() {
     join(bin, "xcodegen"),
     `echo "xcodegen $*" >> '${log}'\n/usr/bin/env > '${root}/env-xcodegen'\nmkdir -p MoonShine.xcodeproj\n[ -z "\${FAIL_XCODEGEN:-}" ]`,
   );
-  stub(join(bin, "xcodebuild"), `echo "xcodebuild $*" >> '${log}'\n/usr/bin/env > '${root}/env-xcodebuild'\n[ -z "\${FAIL_XCODEBUILD:-}" ]`);
+  // SLOW_XCODEBUILD: the build writes its pid and waits as a hung run does, in the same process.
+  stub(
+    join(bin, "xcodebuild"),
+    `echo "xcodebuild $*" >> '${log}'\n/usr/bin/env > '${root}/env-xcodebuild'\nif [ -n "\${SLOW_XCODEBUILD:-}" ]; then echo $$ > '${root}/pid'; exec /bin/sleep 60; fi\n[ -z "\${FAIL_XCODEBUILD:-}" ] || exit "$FAIL_XCODEBUILD"`,
+  );
+  stub(join(bin, "caffeinate"), `echo "caffeinate $*" >> '${log}'\nshift\nexec "$@"`);
   stub(join(bin, "xcrun"), `echo "xcrun $*" >> '${log}'`);
   return { root, repo, installed, bin, log, searchOnly: [] };
 }
@@ -74,14 +82,23 @@ function run(work, args, { cwd = work.repo, env = {} } = {}) {
   return { ...result, log: readFileSync(work.log, "utf8").split("\n").filter(Boolean) };
 }
 
+/// Runs `body` on a fresh setUp and removes it afterwards; an async body is awaited first.
 function withWork(body) {
   const work = setUp();
-  try {
-    return body(work);
-  } finally {
+  const clean = () => {
     for (const path of work.searchOnly) chmodSync(path, 0o755);
     rmSync(work.root, { recursive: true, force: true });
+  };
+  let result;
+  try {
+    result = body(work);
+  } catch (error) {
+    clean();
+    throw error;
   }
+  if (typeof result?.then === "function") return result.finally(clean);
+  clean();
+  return result;
 }
 
 for (const action of ["build", "test"]) {
@@ -89,7 +106,13 @@ for (const action of ["build", "test"]) {
     withWork((work) => {
       const result = run(work, [action]);
       assert.equal(result.status, 0, result.stderr);
-      assert.deepEqual(result.log, ["node", `xcodegen generate --spec ${work.repo}/project.yml`, xcodebuildArgs(action)]);
+      assert.deepEqual(result.log, [
+        "node",
+        `xcodegen generate --spec ${work.repo}/project.yml`,
+        "node",
+        `caffeinate -i ${xcodebuildArgs(action)}`,
+        xcodebuildArgs(action),
+      ]);
       const pinned = join(work.repo, "MoonShine.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved");
       assert.equal(readFileSync(pinned, "utf8"), '{ "pins": [] }\n');
       assert.ok(!result.stderr.includes("warning"), result.stderr);
@@ -188,16 +211,19 @@ test("an edited checkout copy warns and never runs: the installed copy does", ()
     writeFileSync(join(work.repo, "project.yml"), "name: Shine\n");
     const result = run(work, ["build"]);
     assert.equal(result.status, 1);
-    for (const file of files) {
+    for (const file of ["xcbuild.sh", "check-project-scripts.mjs"]) {
       assert.ok(result.stderr.includes(`the installed ${file} differs from this checkout's scripts/${file}`), result.stderr);
     }
+    assert.ok(!result.stderr.includes("the installed xcbuild-run.mjs differs"), result.stderr);
     assert.ok(result.stderr.includes("Reinstall the guard after the change is merged"), result.stderr);
     assert.ok(result.stdout.includes("the project is named MoonShine"), result.stdout);
   });
 });
 
 // The owner's env -i run (2026-11-07): XcodeGen needs the user name, which env -i drops.
-// The shell itself sets PWD, OLDPWD, SHLVL and _, so they are left out of the comparison.
+// The shell itself sets PWD, OLDPWD, SHLVL and _, so they are left out of the comparison; so is
+// __CF_USER_TEXT_ENCODING, which CoreFoundation in node adds on macOS from the user's own settings,
+// never from the caller (P-GX: xcodebuild now starts from node).
 
 function systemTemp() {
   const result = spawnSync("/usr/bin/getconf", ["DARWIN_USER_TEMP_DIR"], { encoding: "utf8" });
@@ -216,7 +242,7 @@ test("XcodeGen and xcodebuild get exactly HOME, PATH, USER, LOGNAME, TMPDIR and 
           .split("\n")
           .filter(Boolean)
           .map((line) => [line.slice(0, line.indexOf("=")), line.slice(line.indexOf("=") + 1)])
-          .filter(([name]) => !["PWD", "OLDPWD", "SHLVL", "_"].includes(name)),
+          .filter(([name]) => !["PWD", "OLDPWD", "SHLVL", "_", "__CF_USER_TEXT_ENCODING"].includes(name)),
       );
       assert.deepEqual(seen, {
         HOME: work.root,
@@ -364,5 +390,109 @@ test("summary refuses a bundle it cannot list, or one with a folder it cannot li
       assert.ok(result.stderr.includes("cannot list the newest result bundle"), result.stderr);
       assert.deepEqual(result.log, []);
     });
+  }
+});
+
+// P-GX (owner, 2026-11-28): a test run sat for 4.5 h after the lid closed. The build runs under
+// caffeinate, in its own process group, within a time limit of its own.
+
+function gone(pid) {
+  try {
+    process.kill(pid, 0);
+    return false;
+  } catch (error) {
+    return error.code === "ESRCH";
+  }
+}
+
+/// Polls until the pid is gone, bounded against the runner's 10 s grace; returns the wait in ms.
+function waitGone(pid) {
+  const start = Date.now();
+  while (!gone(pid) && Date.now() - start < 15_000) spawnSync("/bin/sleep", ["0.1"]);
+  return Date.now() - start;
+}
+
+function stubPid(work) {
+  return Number(readFileSync(join(work.root, "pid"), "utf8").trim());
+}
+
+test("a build past the time limit stops with exit 5, one reason line, and nothing left running", () => {
+  withWork((work) => {
+    const result = run(work, ["test"], { env: { SLOW_XCODEBUILD: "1", MOONSHINE_XCBUILD_TEST_LIMIT: "1" } });
+    assert.equal(result.status, 5, result.stderr);
+    const reasons = result.stderr.split("\n").filter((line) => line.includes("time limit"));
+    assert.deepEqual(reasons, [
+      "xcbuild: stopped at the time limit of 1 awake seconds, lowered for a test; nothing more ran. A closed lid or a test host that cannot start leaves a run waiting (CLAUDE.md → Commands).",
+    ]);
+    const waited = waitGone(stubPid(work));
+    console.log(`the stub was gone after ${waited} ms`);
+    assert.ok(gone(stubPid(work)), "the build's process is still running");
+  });
+});
+
+for (const [name, env, status] of [
+  ["a build inside the limit", {}, 0],
+  ["a failing build inside the limit", { FAIL_XCODEBUILD: "65" }, 65],
+]) {
+  test(`${name} keeps its own status and leaves nothing waiting on the output`, () => {
+    withWork((work) => {
+      const start = Date.now();
+      // A watcher left holding the output would keep spawnSync waiting up to the limit (60 s).
+      const result = spawnSync("/bin/sh", [join(work.installed, "xcbuild.sh"), "build"], {
+        cwd: work.repo,
+        env: { PATH: `${work.bin}:/usr/bin:/bin`, HOME: work.root, MOONSHINE_XCBUILD_TEST_LIMIT: "60", ...env },
+        encoding: "utf8",
+        timeout: 30_000,
+      });
+      console.log(`${name}: ${Date.now() - start} ms`);
+      assert.equal(result.error, undefined, "the run waited on the output");
+      assert.equal(result.status, status, result.stderr);
+      assert.ok(!result.stderr.includes("time limit"), result.stderr);
+    });
+  });
+}
+
+test("a signal to the build stops the build's process group first", async () => {
+  await withWork(async (work) => {
+    const child = spawn("/bin/sh", [join(work.installed, "xcbuild.sh"), "test"], {
+      cwd: work.repo,
+      env: { PATH: `${work.bin}:/usr/bin:/bin`, HOME: work.root, SLOW_XCODEBUILD: "1" },
+      stdio: "ignore",
+    });
+    const closed = new Promise((resolve) => child.on("close", (code, signal) => resolve({ code, signal })));
+    const start = Date.now();
+    while (!existsSync(join(work.root, "pid")) && Date.now() - start < 15_000) await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.ok(existsSync(join(work.root, "pid")), "the stub build never started");
+    child.kill("SIGTERM");
+    const { code } = await closed;
+    assert.equal(code, 143);
+    const waited = waitGone(stubPid(work));
+    console.log(`the stub was gone after ${waited} ms`);
+    assert.ok(gone(stubPid(work)), "the build's process outlived the signal");
+  });
+});
+
+for (const value of ["0", "-1", "abc", "1e3", "99999", "1800", "08", "010", " 5", "5 "]) {
+  test(`a test limit of ${JSON.stringify(value)} is ignored: the build runs to its end`, () => {
+    withWork((work) => {
+      const result = run(work, ["build"], { env: { MOONSHINE_XCBUILD_TEST_LIMIT: value } });
+      assert.equal(result.status, 0, result.stderr);
+    });
+  });
+}
+
+test("the runner alone: no command is a usage error, and a bad limit keeps 1800 s", () => {
+  const runner = join(scripts, "xcbuild-run.mjs");
+  const none = spawnSync(process.execPath, [runner], { encoding: "utf8" });
+  assert.equal(none.status, 2);
+  assert.ok(none.stderr.includes("usage"), none.stderr);
+  for (const value of ["08", "1e3", "0x10"]) {
+    const start = Date.now();
+    const result = spawnSync(process.execPath, [runner, "/bin/sleep", "2"], {
+      env: { PATH: "/usr/bin:/bin", MOONSHINE_XCBUILD_TEST_LIMIT: value },
+      encoding: "utf8",
+    });
+    assert.equal(result.status, 0, `${value}: ${result.stderr}`);
+    assert.ok(Date.now() - start >= 1_900, `${value} stopped the run early`);
   }
 });

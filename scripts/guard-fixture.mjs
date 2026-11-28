@@ -1,6 +1,6 @@
 // Throwaway repositories for the guard tests (pre-push, gh-post, install-guard). Each has a bare
 // `origin` whose `main` holds copies of scripts/guard/, scripts/install-guard.sh and the build's
-// scripts/xcbuild.sh and scripts/check-project-scripts.mjs, which the installer installs from. git reads no global or system config. Every deny-list entry in the tests
+// scripts/xcbuild.sh, scripts/check-project-scripts.mjs and scripts/xcbuild-run.mjs, which the installer installs from. git reads no global or system config. Every deny-list entry in the tests
 // is invented.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -60,7 +60,7 @@ export function repository({ env = {} } = {}) {
   ok({ ...work, cwd: root }, "init", "-q", work.cwd);
   ok(work, "remote", "add", "origin", work.remote);
   cpSync(join(scripts, "guard"), join(work.cwd, "scripts", "guard"), { recursive: true });
-  for (const file of ["install-guard.sh", "xcbuild.sh", "check-project-scripts.mjs"]) {
+  for (const file of ["install-guard.sh", "xcbuild.sh", "check-project-scripts.mjs", "xcbuild-run.mjs"]) {
     cpSync(join(scripts, file), join(work.cwd, "scripts", file));
   }
   writeFileSync(join(work.cwd, "README.md"), "hello\n");
