@@ -457,6 +457,24 @@ extension RigaDay {
     }
   }
 
+  /// An untitled event (`Busy`), often a free/busy block of someone else's calendar, never
+  /// collapses (owner, 2026-11-28, PR #76 round 1): two at one time are two commitments.
+  @Test func untitledEventsNeverCollapse() {
+    let blank = R.event(R.at(10), R.at(11), title: "  ")
+    let none = R.event(R.at(10), R.at(11), calendar: Self.home)
+    let rail = R.rail([blank, none])
+    #expect(rail.marks.count == 2)
+    #expect(rail.copies.isEmpty)
+    #expect(rail.load.eventCount == 2)
+    #expect(rail.load.inCalendarMinutes == 60)
+    let titled = R.event(R.at(10), R.at(11), title: Self.copy)
+    #expect(R.rail([none, titled]).marks.count == 2)
+    let three = (0..<3).map { _ in R.event(R.at(10), R.at(11), title: Self.copy) }
+    let copies = R.rail(three)
+    #expect(copies.marks.count == 1)
+    #expect(copies.copies.values.first == 3)
+  }
+
   /// Each field of the key tells rows apart: a start, or the all-day flag.
   @Test func anotherStartOrAllDayFlagIsAnotherRow() {
     let first = R.event(R.at(13), R.at(14), title: Self.copy)

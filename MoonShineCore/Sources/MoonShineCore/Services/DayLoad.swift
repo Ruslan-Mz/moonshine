@@ -317,7 +317,7 @@ public struct DayRail: Hashable, Sendable {
 
 /// Events with the same title, start, end and all-day flag, whatever their calendar, are one
 /// row (owner, 2026-11-27): an account that copies one meeting into a calendar three times shows
-/// it once. EventKit gives events in no set order, so the copy that stands for the others is
+/// it once. An untitled event never collapses (owner, 2026-11-28). EventKit gives events in no set order, so the copy that stands for the others is
 /// chosen, not found first: one that counts as busy, then one drawn normal, then by calendar
 /// and event id. The busy union still takes every copy.
 private struct EventCopies {
@@ -325,7 +325,7 @@ private struct EventCopies {
   var copies: Int
 
   private struct Key: Hashable {
-    let title: String?
+    let title: String
     let start: Date
     let end: Date
     let isAllDay: Bool
@@ -338,8 +338,13 @@ private struct EventCopies {
     var rows: [EventCopies] = []
     var index: [Key: Int] = [:]
     for event in events {
-      let key = Key(
-        title: event.title, start: event.start, end: event.end, isAllDay: event.isAllDay)
+      // An untitled event (`Busy`; empty or blank is nil) is often someone else's free/busy
+      // block: two at one time are two commitments (owner, 2026-11-28, PR #76 round 1).
+      guard let title = event.title else {
+        rows.append(EventCopies(event: event, copies: 1))
+        continue
+      }
+      let key = Key(title: title, start: event.start, end: event.end, isAllDay: event.isAllDay)
       if let row = index[key] {
         rows[row].copies += 1
         if precedes(event, rows[row].event, counts) { rows[row].event = event }
