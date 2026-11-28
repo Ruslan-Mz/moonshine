@@ -4112,7 +4112,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "прогресс %1$lld, в среднем %2$@"
+            "value": "продвижение %1$lld, в среднем %2$@"
           }
         }
       }
@@ -4128,7 +4128,7 @@
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "прогресс не применим"
+            "value": "продвижение не применимо"
           }
         }
       }

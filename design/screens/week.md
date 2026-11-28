@@ -13,14 +13,14 @@ artboards: [mockups/Week.dc.html, mockups/Week-Dark.dc.html]
 Toolbar: `Week 40`, subtitle `28 September – 4 October 2026 · ISO week`; ‹ Today › buttons. No right rail.
 
 1. **Line strip** (top): legend (rhythm / progress swatches, "Week in progress — Mon to Thu"), then one cell per line in a 9-column grid. Each cell shows emoji + name, `■ 4  avg 4.0` (rhythm) and `■ 1  avg 1.0` (progress) — Violin, W40; averages over the previous 4 full weeks (W36–W39), derived from `demo-data.md`. Plain numbers, no colour for up or down. "—" where a series doesn't apply (a line without repeating tasks has no rhythm). No cell for a paused line or for Life ops; a series applies when the store holds a completion of its kind for the line; a line with none at all reads `no completions since 6 July` (owner, 2026-11-27).
-2. **Days**: 7 equal columns Mon–Sun. Header: weekday + date (today: filled accent circle, column tinted with `selection`) + a summary (`5 done` for past days, `≈ 2 h 50 min` estimated for future days). Cards: checkbox + title (2 lines max), then line emoji + name, estimate and a due badge when the task is a deadline (deadline rule, `settings.md` § Deadlines) due in this week; a due date in this week that is not a deadline is plain secondary text (`due Fri 12:00`). More than ~6 → `+ N more` link (opens Today-style list of that day).
+2. **Days**: 7 equal columns Mon–Sun. Header: weekday + date (today: filled accent circle, column tinted with `selection`) + a summary (`5 done` for past days, `≈ 2 h 50 min` estimated for future days). Cards: checkbox + title (2 lines max), then line emoji + name, estimate and a due badge when the task is a deadline (deadline rule, `settings.md` § Deadlines) due in this week; a due date in this week that is not a deadline is plain secondary text (`due Fri 12:00`). More than ~6 → `+ N more` link: a popover of the day's other cards, in the same order (owner, 2026-11-27; it was "opens Today-style list of that day").
 3. **No plan tray** (bottom, 188 high): `No plan` + caption + count; a 4-column grid of compact cards (emoji, title, estimate). Caption on the right: "Drag onto a day to plan — comes with the Act phase".
 
 ## Data
 
 - Placement: effective planned ?? defer ?? due. Each task appears once. Placed tasks are open leaf tasks (not the parent of another available or blocked task), available or blocked with an effective defer date after now, outside on-hold projects: the rule of Estimated this week on Lines (`docs/specs/phase-1-see.md` → S4-2a, S5; owner, 2026-11-12 and 2026-11-13).
 - Past days show completed tasks (checked, **dimmed**) and tasks still open from that day (resolved open question, draft-2).
-- Day headers (owner, 2026-11-27): a past day `5 done`; today `3 done · ≈ 8 h`; a future day `≈ 2 h 50 min`; a zero term is left out. Today's `≈ …` sums the open tasks placed on today only, while Today's subtitle also counts From earlier, so the two estimates differ by design: neither is to be changed to match the other. Its `N done` is Today's done count.
+- Day headers (owner, 2026-11-27): a past day `5 done`; today `6 done · ≈ …` (Demo's Thursday has Today's six done; the mockup draws `3 done`); a future day `≈ 2 h 50 min`; a zero term is left out. Today's `≈ …` sums the open tasks placed on today only, while Today's subtitle also counts From earlier, so the two estimates differ by design: neither is to be changed to match the other. Its `N done` is Today's done count.
 - No plan: available tasks in **active** lines with no planned, defer or due date (mirrors the "Без плана" perspective), by the placement rule above, so leaf tasks only and none of an on-hold project (owner, 2026-11-27).
 - Strip: per line, this week's rhythm and progress vs the mean of the previous 4 ISO weeks (Stats service).
 - Tasks with the reminder tag (ADR-0017, S4 bridge) are in no day column, no tray and no strip count (`today.md` § Reminders).
@@ -52,6 +52,8 @@ Each section has a "seen" circle (draft-2 mockup). **Phase 1: the state is ephem
 - [ ] Tray lists only active lines' undated available tasks.
 
 ## Calendar (draft-3)
+
+**Not in phase 1 (owner, 2026-11-27):** calendar events in Week moved to the usage period (`docs/specs/phase-1-see.md` → S5). Kept here as the design for then.
 
 Artboards: `Week-Cal`, `Week-Cal-RU`, `Week-CalReview` (+ `-Dark`).
 

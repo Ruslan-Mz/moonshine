@@ -27,16 +27,66 @@ private func date(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) ->
   @MainActor @Test func pastDaysCountDoneFutureDaysEstimateTodayBoth() async throws {
     let overview = try await demoOverview()
     let screen = WeekScreen(overview)
-    for day in screen.days[0..<3] {
-      #expect(day.summary.allSatisfy { if case .done = $0 { true } else { false } })
-    }
-    for day in screen.days[4...] {
-      #expect(day.summary.allSatisfy { if case .estimate = $0 { true } else { false } })
+    let core = overview.week().days
+    for index in 0..<3 {
+      #expect(core[index].doneCount > 0)
+      #expect(screen.days[index].summary == [.done(core[index].doneCount)])
     }
     // Thursday's done count is Today's (owner, 2026-11-27): both count every task done today.
     let done = overview.today().totals.done
-    #expect(done > 0)
-    #expect(screen.days[3].summary.first == .done(done))
+    #expect(done == 6)
+    #expect(core[3].estimateMinutes > 0)
+    #expect(screen.days[3].summary == [.done(done), .estimate(core[3].estimateMinutes)])
+    for index in 4..<7 {
+      let minutes = core[index].estimateMinutes
+      #expect(screen.days[index].summary == (minutes > 0 ? [.estimate(minutes)] : []))
+    }
+    #expect(core[4..<7].contains { $0.estimateMinutes > 0 })
+  }
+
+  // MARK: A constructed week (Wed 30 Sep 2026, W40, in Riga)
+
+  private static func week(_ tasks: [TaskItem]) -> WeekScreen {
+    WeekScreen(
+      Overview(workspace: Workspace(timeZone: riga, tasks: tasks), now: date(2026, 9, 30, 12)))
+  }
+
+  private static func task(
+    _ title: String, planned: Date? = nil, due: Date? = nil, estimate: Int? = nil,
+    completed: Date? = nil
+  ) -> TaskItem {
+    TaskItem(
+      id: .generate(), refs: [], title: title, projectID: nil, parentTaskID: nil, tagIDs: [],
+      status: completed == nil ? .available : .completed, flagged: false, plannedAt: planned,
+      deferUntil: nil, dueAt: due, effectivePlannedAt: planned, effectiveDeferUntil: nil,
+      effectiveDueAt: due, estimateMinutes: estimate, completedAt: completed, modifiedAt: nil,
+      occurrenceOf: nil, line: .lifeOps)
+  }
+
+  @Test func aZeroTermIsLeftOut() {
+    let screen = Self.week([
+      Self.task("Today, estimated", planned: date(2026, 9, 30, 18), estimate: 30),
+      Self.task("Friday, no estimate", planned: date(2026, 10, 2, 9)),
+    ])
+    // Tuesday, past, nothing done; today, nothing done yet; Friday, no estimate.
+    #expect(screen.days[1].summary.isEmpty)
+    #expect(screen.days[2].summary == [.estimate(30)])
+    #expect(screen.days[4].summary.isEmpty)
+    #expect(screen.days[4].cards.count == 1)
+  }
+
+  @Test func dueTextIsForOpenCardsDueInsideTheWeek() {
+    let tuesday = date(2026, 9, 29, 9)
+    let screen = Self.week([
+      Self.task("Due next Monday 00:00", planned: tuesday, due: date(2026, 10, 5)),
+      Self.task("Due Sunday 23:59", planned: tuesday, due: date(2026, 10, 4, 23, 59)),
+      Self.task("Done, due Friday", due: date(2026, 10, 2, 12), completed: tuesday),
+    ])
+    let cards = Dictionary(uniqueKeysWithValues: screen.days[1].cards.map { ($0.title, $0) })
+    #expect(cards["Due next Monday 00:00"]?.due == nil)
+    #expect(cards["Due Sunday 23:59"]?.due?.date == date(2026, 10, 4, 23, 59))
+    #expect(cards["Done, due Friday"]?.isCompleted == true)
+    #expect(cards["Done, due Friday"]?.due == nil)
   }
 
   @MainActor @Test func theFridayTaskIsADeadlineOnlyUnderAllDueDates() async throws {
