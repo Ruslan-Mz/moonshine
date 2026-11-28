@@ -5,6 +5,7 @@ import SwiftUI
 /// that adds a screen need not touch AppModel.swift.
 enum SidebarItem: Hashable {
   case today
+  case week
   case lines
 }
 
@@ -16,9 +17,10 @@ struct RootView: View {
 
   var body: some View {
     NavigationSplitView {
-      // Week and Month join with their slices (S5).
+      // Month joins with its view in the usage period (owner, 2026-10-28).
       List(selection: $model.selection) {
         Label("Today", systemImage: "sun.max").tag(SidebarItem.today)
+        Label("Week", systemImage: "calendar").tag(SidebarItem.week)
         Label("Lines", systemImage: "chart.bar").tag(SidebarItem.lines)
       }
       .navigationSplitViewColumnWidth(min: 180, ideal: Self.sidebarWidth)
@@ -50,6 +52,7 @@ struct RootView: View {
       let zone = overview.workspace.timeZone
       Group {
         switch model.selection {
+        case .week: WeekView(screen: WeekScreen(overview))
         case .lines: LinesDetail(overview: overview)
         case .today, nil: TodayDetail(model: model, overview: overview)
         }
